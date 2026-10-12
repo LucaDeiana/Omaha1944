@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Omaha 1944</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#000;font-family:Georgia,serif;color:#eee}
+canvas{display:block}
+#hud{position:fixed;inset:0;pointer-events:none}
+#cross{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px}
+#cross:before,#cross:after{content:"";position:absolute;background:#fff;opacity:.8}
+#cross:before{left:8px;top:0;width:2px;height:18px}
+#cross:after{top:8px;left:0;height:2px;width:18px}
+#cross.hit:before,#cross.hit:after{background:#f33}
+#stats{position:absolute;left:20px;bottom:18px;font-size:20px;text-shadow:0 0 4px #000}
+#ammo{position:absolute;right:24px;bottom:18px;font-size:26px;text-align:right;text-shadow:0 0 4px #000}
+#obj{position:absolute;top:16px;left:50%;transform:translateX(-50%);font-size:18px;text-align:center;background:rgba(0,0,0,.4);padding:8px 16px;border-radius:4px}
+#info{position:absolute;top:16px;right:20px;font-size:14px;text-align:right;text-shadow:0 0 4px #000;line-height:1.5}
+#blood{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(160,0,0,.9));opacity:0}
+#msg{position:absolute;top:38%;width:100%;text-align:center;font-size:34px;text-shadow:0 0 8px #000;opacity:0;transition:opacity .6s}
+#menu{position:fixed;inset:0;background:rgba(10,12,14,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:16px;box-sizing:border-box}
+#menu h1{font-size:48px;margin:0 0 6px;letter-spacing:3px}
+#menu p{max-width:620px;line-height:1.6;color:#ccc}
+#menu button{font:inherit;font-size:22px;padding:12px 40px;margin-top:14px;background:#5a6b3a;color:#fff;border:2px solid #9aab6a;cursor:pointer}
+kbd{background:#333;padding:1px 6px;border-radius:3px;font-family:monospace}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div id="blood"></div>
+  <div id="cross"></div>
+  <div id="obj"></div>
+  <div id="info"></div>
+  <div id="stats"></div>
+  <div id="ammo"></div>
+  <div id="msg"></div>
+</div>
+<div id="menu">
+  <h1>OMAHA 1944</h1>
+  <p><b>6 giugno 1944, ore 06:30 — Settore Dog Green.</b><br>
+  Le corazzate bombardano la costa mentre il tuo mezzo da sbarco Higgins si avvicina alla spiaggia.
+  Sopravvivi allo sbarco, avanza tra gli ostacoli insieme ai tuoi compagni e neutralizza i bunker MG42 sulla scogliera.</p>
+  <p><kbd>WASD</kbd> muoviti &nbsp; <kbd>Shift</kbd> corri &nbsp; <kbd>C</kbd> accovacciati &nbsp; <kbd>Mouse</kbd> mira/spara<br>
+  <kbd>R</kbd> ricarica &nbsp; <kbd>G</kbd> granata &nbsp; <kbd>Esc</kbd> pausa</p>
+  <button id="start">INIZIA LO SBARCO</button>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+const R=Math.random, rnd=(a,b)=>a+R()*(b-a), V3=THREE.Vector3, clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const $=id=>document.getElementById(id);
+
+// ---------- Renderer ----------
+const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));
+renderer.setSize(innerWidth,innerHeight);
+document.body.prepend(renderer.domElement);
+const scene=new THREE.Scene();
+const SKY=0x8d979e;
+scene.background=new THREE.Color(SKY);
+scene.fog=new THREE.Fog(SKY,60,1100);
+const camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,0.1,1600);
+camera.rotation.order='YXZ';
+scene.add(camera);
+scene.add(new THREE.HemisphereLight(0xc4ccd4,0x5a5040,0.95));
+const sun=new THREE.DirectionalLight(0xfff0d8,0.55); sun.position.set(-100,200,120); scene.add(sun);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+const M={
+  allyUni:new THREE.MeshLambertMaterial({color:0x6b6a45}), allyHelm:new THREE.MeshLambertMaterial({color:0x4d5230}),
+  enUni:new THREE.MeshLambertMaterial({color:0x5c6466}), enHelm:new THREE.MeshLambertMaterial({color:0x3e4446}),
+  skin:new THREE.MeshLambertMaterial({color:0xc9a184}), gun:new THREE.MeshLambertMaterial({color:0x3a2a1a}),
+  boat:new THREE.MeshLambertMaterial({color:0x5d6a58}), ramp:new THREE.MeshLambertMaterial({color:0x4f5a4a}),
+  steel:new THREE.MeshLambertMaterial({color:0x2a2a2a}), concrete:new THREE.MeshLambertMaterial({color:0x8c8a82}),
+  slit:new THREE.MeshBasicMaterial({color:0x0a0a0a}), ship:new THREE.MeshLambertMaterial({color:0x56616b}),
+  sand:new THREE.MeshLambertMaterial({color:0x8b7d5a}),
+};
+
+// ---------- Terrain ----------
+const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
+function H(x,z){
+  if(z>0) return Math.max(-7,-z*0.04);
+  if(z>-60) return -z*0.04+Math.sin(x*0.3+z*0.2)*0.05;
+  const t=smooth((-60-z)/22);
+  return 2.4+t*(12+Math.sin(x*0.07)*2)+Math.sin(x*0.5)*Math.cos(z*0.4)*0.35*t;
+}
+{
+  const g=new THREE.PlaneGeometry(520,520,130,130); g.rotateX(-Math.PI/2); g.translate(0,0,110);
+  const p=g.attributes.position, col=[], c=new THREE.Color();
+  for(let i=0;i<p.count;i++){
+    const x=p.getX(i), z=p.getZ(i), y=H(x,z); p.setY(i,y);
+    if(z>3) c.setHex(0x4d5a4e); else if(z>-58) c.setHex(0xc4b088).offsetHSL(0,0,rnd(-.03,.03));
+    else if(y<6) c.setHex(0x9a9168); else c.setHex(0x5f6c3c).offsetHSL(0,0,rnd(-.04,.04));
+    col.push(c.r,c.g,c.b);
+  }
+  g.setAttribute('color',new THREE.Float32BufferAttribute(col,3)); g.computeVertexNormals();
+  scene.add(new THREE.Mesh(g,new THREE.MeshLambertMaterial({vertexColors:true})));
+  const w=new THREE.Mesh(new THREE.PlaneGeometry(4000,4000),new THREE.MeshPhongMaterial({color:0x3b5866,transparent:true,opacity:.86,shininess:80}));
+  w.rotation.x=-Math.PI/2; w.position.y=0.3; scene.add(w);
+}
+
+// ---------- Hedgehogs (instanced) ----------
+const covers=[];
+{
+  const N=70, im=new THREE.InstancedMesh(new THREE.BoxGeometry(.22,.22,2.6),M.steel,N*3);
+  const m=new THREE.Matrix4(), q=new THREE.Quaternion(), s=new V3(1,1,1), e=new THREE.Euler();
+  const rots=[[0,0,0],[Math.PI/2,Math.PI/4,0],[Math.PI/4,Math.PI/2,Math.PI/2]];
+  for(let i=0;i<N;i++){
+    const x=rnd(-120,120), z=rnd(-48,-4), y=H(x,z)+.8;
+    covers.push({x,z});
+    rots.forEach((r,j)=>{e.set(r[0],r[1],r[2]);q.setFromEuler(e);m.compose(new V3(x,y,z),q,s);im.setMatrixAt(i*3+j,m);});
+  }
+  scene.add(im);
+  // seawall / shingle
+  for(let x=-130;x<130;x+=8){const b=new THREE.Mesh(new THREE.BoxGeometry(8.2,1,1.2),M.sand);b.position.set(x+4,H(x+4,-57)+.4,-57);scene.add(b);}
+}
+
+// ---------- Soldiers ----------
+const G={leg:new THREE.BoxGeometry(.38,.85,.25),torso:new THREE.BoxGeometry(.5,.62,.3),head:new THREE.SphereGeometry(.14,8,6),
+  helm:new THREE.SphereGeometry(.19,8,5,0,Math.PI*2,0,Math.PI/2),rifle:new THREE.BoxGeometry(.06,.07,1.05),bag:new THREE.BoxGeometry(1.8,.7,.6)};
+function makeSoldier(ally){
+  const g=new THREE.Group(); g.rotation.order='YXZ';
+  const u=ally?M.allyUni:M.enUni;
+  const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);g.add(m);};
+  add(G.leg,u,0,.43,0); add(G.torso,u,0,1.16,0); add(G.head,M.skin,0,1.6,0);
+  add(G.helm,ally?M.allyHelm:M.enHelm,0,1.63,0); add(G.rifle,M.gun,.2,1.22,-.4);
+  scene.add(g);
+  return {g,pos:g.position,ally,alive:true,fireT:rnd(1,3),ph:R()*10};
+}
+function kill(s){
+  if(!s.alive)return; s.alive=false;
+  s.g.scale.y=1; s.g.rotation.x=-Math.PI/2*(R()<.5?1:-1)*.95; s.pos.y=H(s.pos.x,s.pos.z)+.2;
+}
+
+// ---------- Boats ----------
+const boats=[];
+const BG={floor:new THREE.BoxGeometry(3.4,.3,7),side:new THREE.BoxGeometry(.2,1.6,7),back:new THREE.BoxGeometry(3.4,1.9,.3),ramp:new THREE.BoxGeometry(3.4,1.9,.15)};
+function makeBoat(x,z0,speed){
+  const b=new THREE.Group();
+  const add=(geo,px,py,pz,mat=M.boat)=>{const m=new THREE.Mesh(geo,mat);m.position.set(px,py,pz);b.add(m);};
+  add(BG.floor,0,-.2,0); add(BG.side,-1.7,.6,0); add(BG.side,1.7,.6,0); add(BG.back,0,.75,3.5);
+  const pivot=new THREE.Group(); pivot.position.set(0,-.25,-3.5); b.add(pivot);
+  const r=new THREE.Mesh(BG.ramp,M.ramp); r.position.y=.95; pivot.add(r);
+  b.position.set(x,.25,z0); scene.add(b);
+  const bo={g:b,pivot,x,speed,landed:false,rampA:0}; boats.push(bo); return bo;
+}
+
+// ---------- Allies ----------
+const allies=[];
+const boatXs=[-72,-48,-24,0,24,48,72];
+boatXs.forEach(x=>{
+  const bo=makeBoat(x,x===0?260:rnd(250,275),x===0?10:rnd(9.6,10.6));
+  let k=0;
+  for(let row=0;row<3;row++)for(let col=0;col<3;col++){
+    if(x===0&&row===2&&col===1)continue; // posto del giocatore
+    if(++k>8)break;
+    const a=makeSoldier(true);
+    a.boat=bo; a.off=new V3((col-1)*.95,-.05,row*1.5-1.8); a.state='boat'; a.leave=k*.45+rnd(0,.3);
+    allies.push(a);
+  }
+});
+function pickCover(a){
+  const p=a.pos;
+  if(p.z>-56){
+    let best=null,bd=1e9;
+    for(const c of covers){
+      if(c.z<p.z-4&&c.z>p.z-20&&Math.abs(c.x-p.x)<16){const d=Math.abs(c.x-p.x)+R()*12;if(d<bd){bd=d;best=c;}}
+    }
+    if(best) return new V3(best.x+rnd(-.8,.8),0,best.z+1.3);
+    return new V3(p.x+rnd(-4,4),0,-55.5);
+  }
+  // assalto: verso il nemico vivo più vicino
+  let e=nearest(p,enemies,400);
+  if(e) return new V3(e.pos.x+rnd(-5,5),0,Math.max(e.pos.z+rnd(3,9),-84));
+  return new V3(p.x+rnd(-6,6),0,-88);
+}
+function nearest(p,list,max){let b=null,bd=max*max;for(const s of list){if(!s.alive)continue;const dx=s.pos.x-p.x,dz=s.pos.z-p.z,d=dx*dx+dz*dz;if(d<bd){bd=d;b=s;}}return b;}
+
+// ---------- Enemies & bunkers ----------
+const enemies=[];
+function addEnemy(x,z,mg){
+  const e=makeSoldier(false); e.mg=mg; e.base=H(x,z); e.pos.set(x,e.base,z); e.g.rotation.y=Math.PI;
+  e.burst=0; e.tgt=null; e.retT=0; e.duckT=rnd(1,4); e.duck=false; enemies.push(e);
+  if(!mg){const b=new THREE.Mesh(G.bag,M.sand);b.position.set(x,e.base+.35,z+.9);scene.add(b);}
+  return e;
+}
+const bunkers=[];
+[-60,0,60].forEach(x=>{
+  const y=H(x,-82), b=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.BoxGeometry(8,4,7),M.concrete); body.position.y=1.4; b.add(body);
+  const roof=new THREE.Mesh(new THREE.BoxGeometry(9,.8,8),M.concrete); roof.position.y=3.6; b.add(roof);
+  const slit=new THREE.Mesh(new THREE.BoxGeometry(4.5,.55,.1),M.slit); slit.position.set(0,1.75,3.52); b.add(slit);
+  b.position.set(x,y-1,-82); scene.add(b);
+  const e=addEnemy(x,-78.9,true); e.pos.y=y-1.25+.2; e.base=e.pos.y; bunkers.push(e);
+});
+for(let i=0;i<26;i++){const x=-110+i*8.6+rnd(-2,2); if(bunkers.some(b=>Math.abs(b.pos.x-x)<6))continue; addEnemy(x,-86+rnd(-1,1),false);}
+
+// ---------- Ships ----------
+const shipGuns=[];
+function makeShip(x,z,len,big){
+  const s=new THREE.Group();
+  const add=(w,h,d,px,py,pz)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M.ship);m.position.set(px,py,pz);s.add(m);return m;};
+  add(len,big?8:5,big?24:10,0,big?3:2,0);
+  add(len*.25,big?10:6,big?12:6,0,big?11:6,0); add(4,big?14:8,4,len*.05,big?20:11,0);
+  const nT=big?4:2;
+  for(let i=0;i<nT;i++){
+    const tx=(i<nT/2?-1:1)*len*(.18+.12*(i%2)), ty=big?8:5;
+    add(big?10:5,big?3:2,big?9:5,tx,ty,0);
+    const bar=add(big?.8:.4,big?.8:.4,big?12:6,tx,ty+.4,big?-7:-4);
+    shipGuns.push({p:new V3(x+tx,ty+.5,z-(big?13:7)),big,t:rnd(1,6)});
+  }
+  s.position.set(x,0,z); scene.add(s);
+}
+makeShip(-280,720,180,true); makeShip(60,800,190,true); makeShip(340,700,170,true);
+makeShip(-140,430,80,false); makeShip(190,460,80,false);
+
+// ---------- FX pools ----------
+const fxGeo=new THREE.SphereGeometry(1,8,6), fx=[];
+for(let i=0;i<70;i++){const m=new THREE.Mesh(fxGeo,new THREE.MeshBasicMaterial({transparent:true,depthWrite:false}));m.visible=false;scene.add(m);fx.push({m,life:0});}
+let fxi=0;
+function puff(p,color,size,life,grow,rise,op){const f=fx[fxi];fxi=(fxi+1)%fx.length;f.m.visible=true;f.m.position.copy(p);f.m.material.color.setHex(color);f.m.material.opacity=op;f.size=size;f.life=f.max=life;f.grow=grow;f.rise=rise;f.op=op;f.m.scale.setScalar(size);}
+const debGeo=new THREE.BoxGeometry(.3,.3,.3), deb=[];
+const debMat=new THREE.MeshLambertMaterial({color:0x5a4a35});
+for(let i=0;i<120;i++){const m=new THREE.Mesh(debGeo,debMat);m.visible=false;scene.add(m);deb.push({m,v:new V3(),life:0});}
+let debi=0;
+function explosion(p,size,water){
+  puff(p,0xffa040,size*.6,.35,2.2,0,1);
+  puff(p.clone().add(new V3(0,size*.4,0)),water?0xdde6ea:0x3a3530,size*.8,water?1.4:3.5,1.8,water?2:3,.75);
+  for(let i=0;i<8;i++){const d=deb[debi];debi=(debi+1)%deb.length;d.m.visible=true;d.m.position.copy(p);d.v.set(rnd(-1,1)*size*2,rnd(2,5)*size,rnd(-1,1)*size*2);d.life=2;d.m.material=debMat;}
+}
+
+// tracers: a single LineSegments
+const TN=500, tArr=new Float32Array(TN*6), tr=[]; let ti=0;
+const tGeo=new THREE.BufferGeometry(); tGeo.setAttribute('position',new THREE.BufferAttribute(tArr,3));
+scene.add(new THREE.LineSegments(tGeo,new THREE.LineBasicMaterial({color:0xffe08a,fog:false})));
+for(let i=0;i<TN;i++)tr.push({on:false,a:new V3(),d:new V3(),len:0,s:0});
+function tracer(a,b){const t=tr[ti];ti=(ti+1)%TN;t.on=true;t.a.copy(a);t.d.subVectors(b,a);t.len=t.d.length();t.d.normalize();t.s=0;}
+
+// grenades
+const grenades=[], grGeo=new THREE.SphereGeometry(.09,6,5);
+
+// ---------- Audio ----------
+let AC=null, noise=null, voices=0;
+function initAudio(){
+  if(AC)return; AC=new (window.AudioContext||window.webkitAudioContext)();
+  noise=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate); const d=noise.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=R()*2-1;
+}
+function sfx(type,pos,delay=0){
+  if(!AC||voices>28)return;
+  const cfg={gun:[3500,.18,.9,120],mg:[1800,.09,.5,180],boom:[380,1.6,1.4,700],ship:[160,2.6,1.2,2500],click:[5000,.04,.4,5],whiz:[6000,.12,.25,40]}[type];
+  const d=pos?pos.distanceTo(camera.position):0, att=Math.pow(clamp(1-d/cfg[3],0,1),1.5);
+  const vol=cfg[2]*(type==='ship'?Math.max(att,.25):att); if(vol<.02)return;
+  const t=AC.currentTime+delay, s=AC.createBufferSource(), f=AC.createBiquadFilter(), g=AC.createGain();
+  s.buffer=noise; s.playbackRate.value=type==='boom'||type==='ship'?.6:1;
+  f.type='lowpass'; f.frequency.value=cfg[0]*(1-.6*clamp(d/cfg[3],0,1));
+  g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.001,t+cfg[1]);
+  s.connect(f);f.connect(g);g.connect(AC.destination); s.start(t,R()); s.stop(t+cfg[1]+.05);
+  voices++; s.onended=()=>voices--;
+}
+
+// ---------- Player ----------
+const P={pos:new V3(),yaw:0,pitch:0,hp:100,ammo:8,res:96,gren:4,crouch:false,reload:0,cd:0,inBoat:true,dead:false,kills:0,boat:boats.find(b=>b.x===0),recoil:0,shake:0,hurt:0,moving:false,sprint:false};
+const keys={};
+const view=new THREE.Group(); camera.add(view); view.position.set(.22,-.24,-.45);
+{const s=new THREE.Mesh(new THREE.BoxGeometry(.07,.09,.75),M.gun);view.add(s);
+ const b=new THREE.Mesh(new THREE.BoxGeometry(.035,.035,.5),M.steel);b.position.set(0,.04,-.5);view.add(b);}
+const flash=new THREE.Mesh(new THREE.SphereGeometry(.07,6,5),new THREE.MeshBasicMaterial({color:0xffcc66}));flash.position.set(0,.04,-.8);flash.visible=false;view.add(flash);
+
+let running=false, started=false, over=false, phase='boat', time=0;
+$('start').onclick=()=>{initAudio();AC.resume();renderer.domElement.requestPointerLock();};
+renderer.domElement.addEventListener('click',()=>{if(started&&!running&&!over)renderer.domElement.requestPointerLock();});
+document.addEventListener('pointerlockchange',()=>{
+  running=document.pointerLockElement===renderer.domElement;
+  if(running){$('menu').style.display='none';if(!started){started=true;showMsg('6 giugno 1944 — Omaha Beach',4);}}
+  else if(!over){$('menu').style.display='flex';$('start').textContent='RIPRENDI';}
+});
+document.addEventListener('mousemove',e=>{if(!running)return;P.yaw-=e.movementX*.0022;P.pitch=clamp(P.pitch-e.movementY*.0022,-1.45,1.45);});
+let mouseDown=false;
+document.addEventListener('mousedown',e=>{if(running&&e.button===0)mouseDown=true;});
+document.addEventListener('mouseup',()=>mouseDown=false);
+document.addEventListener('keydown',e=>{keys[e.code]=true;if(!running)return;
+  if(e.code==='KeyR')startReload(); if(e.code==='KeyC')P.crouch=!P.crouch; if(e.code==='KeyG')throwGrenade();});
+document.addEventListener('keyup',e=>keys[e.code]=false);
+
+let msgT=0;
+function showMsg(t,d=3){$('msg').textContent=t;$('msg').style.opacity=1;msgT=d;}
+function startReload(){if(P.reload>0||P.ammo===8||P.res<=0||P.inBoat)return;P.reload=2;sfx('click');}
+function hurtPlayer(d){if(P.dead||over)return;P.hp-=d;P.hurt=Math.min(1,P.hurt+d/40);P.shake+=d/60;if(P.hp<=0){P.hp=0;P.dead=true;end(false);}}
+
+function raySphere(o,d,c,r){const ox=o.x-c.x,oy=o.y-c.y,oz=o.z-c.z,b=ox*d.x+oy*d.y+oz*d.z,cc=ox*ox+oy*oy+oz*oz-r*r,h=b*b-cc;if(h<0)return -1;const t=-b-Math.sqrt(h);return t>0?t:-1;}
+const tmpV=new V3(), dirV=new V3();
+function playerShoot(){
+  if(P.inBoat||P.reload>0||P.cd>0||P.dead)return;
+  if(P.ammo<=0){startReload();return;}
+  P.ammo--; P.cd=.22; P.recoil=1; P.pitch+=.025; flash.visible=true; setTimeout(()=>flash.visible=false,40);
+  sfx('gun'); mouseDown=false;
+  camera.getWorldPosition(tmpV); camera.getWorldDirection(dirV);
+  const spr=P.moving?(P.sprint?.05:.02):.004;
+  dirV.x+=rnd(-spr,spr);dirV.y+=rnd(-spr,spr);dirV.normalize();
+  let best=null,bt=1e9;
+  for(const e of enemies){
+    if(!e.alive)continue;
+    const c=e.pos, sc=e.g.scale.y;
+    let t=raySphere(tmpV,dirV,new V3(c.x,c.y+1.6*sc,c.z),.2);
+    if(!e.mg){const t2=raySphere(tmpV,dirV,new V3(c.x,c.y+1.15*sc,c.z),.38);if(t2>0&&(t<0||t2<t))t=t2;}
+    if(t>0&&t<bt){bt=t;best=e;}
+  }
+  // occlusione del terreno
+  const maxT=Math.min(bt,400);
+  for(let s=1;s<maxT;s+=1.5){const x=tmpV.x+dirV.x*s,y=tmpV.y+dirV.y*s,z=tmpV.z+dirV.z*s;
+    if(y<H(x,z)){puff(new V3(x,H(x,z)+.2,z),z>0?0xdde6ea:0x6a5a40,.3,.6,1.5,.5,.7);return;}}
+  if(best){kill(best);P.kills++;$('cross').classList.add('hit');setTimeout(()=>$('cross').classList.remove('hit'),150);}
+  if(P.ammo===0)startReload();
+}
+function throwGrenade(){
+  if(P.gren<=0||P.inBoat||P.dead)return; P.gren--;
+  camera.getWorldPosition(tmpV); camera.getWorldDirection(dirV);
+  const m=new THREE.Mesh(grGeo,M.steel); m.position.copy(tmpV); scene.add(m);
+  grenades.push({m,v:dirV.clone().multiplyScalar(19).add(new V3(0,4,0)),t:2.6});
+}
+
+// ---------- Damage ----------
+function blast(p,r,o){
+  for(const e of enemies){if(e.alive&&(!e.mg||o.mg)&&e.pos.distanceTo(p)<r&&R()<o.ep){kill(e);if(o.byP)P.kills++;}}
+  if(o.ap)for(const a of allies){if(a.alive&&a.state!=='boat'&&a.pos.distanceTo(p)<r&&R()<o.ap)kill(a);}
+  if(!P.inBoat){const d=P.pos.distanceTo(p);if(d<r*1.5)hurtPlayer((1-d/(r*1.5))*o.pd);P.shake+=Math.max(0,1-d/60)*.6;}
+}
+
+// ---------- Enemy AI ----------
+function targetPos(t){
+  if(t.k==='p')return P.dead||P.inBoat?null:new V3(P.pos.x,P.pos.y+(P.crouch?.8:1.2),P.pos.z);
+  if(t.k==='b')return t.b.landed&&t.b.rampA>=1?null:new V3(t.b.g.position.x+rnd(-1.5,1.5),t.b.g.position.y+rnd(.3,1.5),t.b.g.position.z+rnd(-3,3));
+  return t.a.alive&&t.a.state!=='boat'?new V3(t.a.pos.x,t.a.pos.y+1*t.a.g.scale.y,t.a.pos.z):null;
+}
+function pickTarget(e){
+  const c=[], p=e.pos;
+  for(const a of allies)if(a.alive&&a.state!=='boat'&&Math.abs(a.pos.x-p.x)<120&&a.pos.z-p.z<190)c.push({k:'a',a});
+  if(!P.inBoat&&!P.dead&&P.pos.distanceTo(p)<170)for(let i=0;i<4;i++)c.push({k:'p'});
+  for(const b of boats)if(!(b.landed&&b.rampA>=1)&&b.g.position.z<170&&Math.abs(b.x-p.x)<90)c.push({k:'b',b});
+  return c.length?c[(R()*c.length)|0]:null;
+}
+function enemyShot(e,tp){
+  const from=new V3(e.pos.x,e.pos.y+1.4,e.pos.z-.6), d=from.distanceTo(tp), t=e.tgt;
+  let p=(e.mg?.055:.28)*Math.max(0,1-d/200);
+  if(t.k==='b')p=0;
+  if(t.k==='a'&&t.a.state==='cover')p*=.4;
+  if(t.k==='p'){p*=.6;if(P.crouch)p*=.55;if(P.sprint)p*=.75;if(covers.some(c=>Math.abs(c.x-P.pos.x)<1.6&&c.z<P.pos.z&&P.pos.z-c.z<2.5))p*=.45;if(P.pos.z<-57&&P.pos.z>-60&&P.crouch)p*=.3;}
+  const hit=R()<p, to=tp.clone();
+  if(!hit){to.x+=rnd(-2.5,2.5);to.y+=rnd(-1,1.8);to.z+=rnd(-2,2);}
+  to.sub(from).multiplyScalar(hit?1:1.4).add(from);
+  tracer(from,to); sfx(e.mg?'mg':'gun',e.pos);
+  if(hit){if(t.k==='a')kill(t.a);else if(t.k==='p'){hurtPlayer(e.mg?rnd(10,18):rnd(22,35));}}
+  else{
+    if(t.k==='p'&&R()<.3)sfx('whiz',tp);
+    if(R()<.25){const gy=H(to.x,to.z);if(to.y<gy+1.5)puff(new V3(to.x,Math.max(gy,.3),to.z),to.z>0?0xdde6ea:0x8a7a5a,.25,.5,1.6,.6,.6);}
+  }
+}
+function updEnemy(e,dt){
+  if(!e.alive)return;
+  e.retT-=dt;
+  if(!e.tgt||e.retT<=0||!targetPos(e.tgt)){e.tgt=pickTarget(e);e.retT=rnd(1.5,4);}
+  if(!e.mg){
+    e.duckT-=dt; if(e.duckT<=0){e.duck=!e.duck;e.duckT=e.duck?rnd(1,3):rnd(3,7);}
+    e.pos.y=e.base-(e.duck?.75:0);
+  }
+  if(!e.tgt||e.duck)return;
+  const tp=targetPos(e.tgt); if(!tp)return;
+  e.g.rotation.y=Math.atan2(-(tp.x-e.pos.x),-(tp.z-e.pos.z));
+  e.fireT-=dt;
+  if(e.fireT<=0){
+    if(e.mg){
+      if(e.burst<=0)e.burst=(rnd(12,30))|0;
+      enemyShot(e,tp); e.burst--; e.fireT=e.burst>0?.085:rnd(1.2,2.8);
+    } else {enemyShot(e,tp);e.fireT=rnd(1.6,3.5);}
+  }
+}
+
+// ---------- Ally AI ----------
+function updAlly(a,dt){
+  if(!a.alive)return;
+  if(a.state==='boat'){
+    a.pos.copy(a.boat.g.position).add(a.off);
+    if(a.boat.rampA>=1){a.leave-=dt;if(a.leave<=0){a.state='move';a.target=pickCover(a);}}
+    return;
+  }
+  const p=a.pos;
+  if(a.state==='move'){
+    const dx=a.target.x-p.x,dz=a.target.z-p.z,d=Math.hypot(dx,dz);
+    if(d<.6){a.state='cover';a.wait=p.z<-55&&p.z>-62?rnd(6,14):rnd(2,6);}
+    else{
+      const sp=(p.z>0?2:p.z<-60?2.6:4.3)*dt;
+      p.x+=dx/d*sp;p.z+=dz/d*sp;a.g.rotation.y=Math.atan2(-dx,-dz);
+    }
+    p.y=H(p.x,p.z)+Math.abs(Math.sin(time*9+a.ph))*.07; a.g.scale.y=1;
+  } else {
+    a.g.scale.y=.72; p.y=H(p.x,p.z);
+    a.wait-=dt; a.fireT-=dt;
+    const e=nearest(p,enemies,170);
+    if(e){
+      a.g.rotation.y=Math.atan2(-(e.pos.x-p.x),-(e.pos.z-p.z));
+      if(a.fireT<=0){
+        a.fireT=rnd(1.3,3);
+        const from=new V3(p.x,p.y+1,p.z), to=new V3(e.pos.x,e.pos.y+1.3,e.pos.z), d=from.distanceTo(to);
+        let ph=(d<25?.35:.07)*(e.mg?.25:1)*(e.duck?.2:1);
+        if(R()<ph)kill(e); else {to.x+=rnd(-2,2);to.y+=rnd(-1,1.5);}
+        tracer(from,to); sfx('gun',p);
+      }
+      if(d2(p,e.pos)<3.5&&R()<dt*.8)kill(e);
+    }
+    if(a.wait<=0){a.state='move';a.target=pickCover(a);}
+  }
+}
+const d2=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
+
+// ---------- Artillery ----------
+let mortT=8, landedAll=false;
+function updArtillery(dt){
+  for(const g of shipGuns){
+    g.t-=dt; if(g.t>0)continue; g.t=g.big?rnd(5,9):rnd(3,6);
+    puff(g.p,0xffd080,g.big?7:4,.25,1.6,0,1); puff(g.p,0x9a9a9a,g.big?6:3,3,1.5,3,.6);
+    sfx('ship',g.p,g.p.distanceTo(camera.position)/340*.5);
+    const alive=enemies.filter(e=>e.alive&&!e.mg);
+    let tp=alive.length&&R()<.7?alive[(R()*alive.length)|0].pos.clone().add(new V3(rnd(-9,9),0,rnd(-6,6))):new V3(rnd(-140,140),0,rnd(-100,-70));
+    tp.y=H(tp.x,tp.z);
+    setTimeout(()=>{if(over)return;explosion(tp,g.big?5:3,false);sfx('boom',tp);blast(tp,g.big?7:4.5,{ep:phase==='boat'?.25:.5,pd:60});},2800);
+  }
+  if(phase!=='beach')return;
+  mortT-=dt; if(mortT>0)return; mortT=rnd(1.8,3.5);
+  let c;
+  if(R()<.22&&!P.dead)c=P.pos.clone().add(new V3(rnd(-12,12),0,rnd(-10,10)));
+  else{const al=allies.filter(a=>a.alive&&a.state!=='boat'&&a.pos.z>-58);c=al.length?al[(R()*al.length)|0].pos.clone().add(new V3(rnd(-8,8),0,rnd(-8,8))):new V3(rnd(-80,80),0,rnd(-50,15));}
+  c.y=Math.max(H(c.x,c.z),.3);
+  explosion(c,2.8,c.z>2); sfx('boom',c); blast(c,4,{ap:.85,ep:0,pd:85});
+}
+
+// ---------- Main loop ----------
+function update(dt){
+  time+=dt;
+  // boats
+  for(const b of boats){
+    const g=b.g.position;
+    if(!b.landed){
+      g.z-=b.speed*dt; g.y=.25+Math.sin(time*1.6+b.x)*.18; b.g.rotation.x=Math.sin(time*1.3+b.x)*.04;
+      if(g.z<=7){g.z=7;b.landed=true;g.y=.15;b.g.rotation.x=0;}
+    } else if(b.rampA<1){b.rampA=Math.min(1,b.rampA+dt*.9);b.pivot.rotation.x=-b.rampA*1.42;}
+  }
+  if(phase==='boat'&&P.boat.g.position.z<150&&!landedAll){landedAll=true;showMsg('Trenta secondi! Teste giù!',3);}
+  // player
+  if(P.inBoat){
+    P.pos.copy(P.boat.g.position).add(new V3(0,-.05,2.2));
+    if(P.boat.rampA>=1){P.inBoat=false;phase='beach';showMsg('RAMPA GIÙ! MUOVITI, MUOVITI!',3);}
+  } else if(!P.dead&&!over){
+    const f=(keys.KeyW?1:0)-(keys.KeyS?1:0), s=(keys.KeyD?1:0)-(keys.KeyA?1:0);
+    P.sprint=keys.ShiftLeft&&f>0&&!P.crouch; P.moving=f||s;
+    if(P.moving){
+      let sp=P.crouch?2.2:P.sprint?7.2:4.4; if(P.pos.z>0)sp*=.55; if(P.pos.z<-60&&P.pos.z>-82)sp*=.8;
+      const l=Math.hypot(f,s), sy=Math.sin(P.yaw), cy=Math.cos(P.yaw);
+      P.pos.x+=((-sy*f+cy*s)/l)*sp*dt; P.pos.z+=((-cy*f-sy*s)/l)*sp*dt;
+    }
+    P.pos.x=clamp(P.pos.x,-200,200); P.pos.z=clamp(P.pos.z,-140,30);
+    for(const c of covers){const dx=P.pos.x-c.x,dz=P.pos.z-c.z,d=Math.hypot(dx,dz);if(d<.9&&d>0){P.pos.x=c.x+dx/d*.9;P.pos.z=c.z+dz/d*.9;}}
+    P.pos.y=H(P.pos.x,P.pos.z);
+    if(mouseDown)playerShoot();
+    if(P.reload>0){P.reload-=dt;if(P.reload<=0){const n=Math.min(8-P.ammo,P.res);P.ammo+=n;P.res-=n;}}
+    if(P.pos.z<-82&&P.pos.y>12&&!P.topMsg){P.topMsg=true;showMsg('Sei sulla scogliera! Elimina i bunker MG42 — usa le granate (G)',4);}
+    if(P.pos.z>-60&&P.pos.z<-54&&!P.wallMsg){P.wallMsg=true;showMsg('Al riparo del terrapieno — ora sali!',3);}
+  }
+  P.cd-=dt;
+  // camera
+  const eye=P.inBoat?1.45:P.crouch?1.0:1.62;
+  const bob=P.moving&&!P.inBoat?Math.sin(time*(P.sprint?13:9))*.05:0;
+  camera.position.set(P.pos.x,Math.max(P.pos.y+eye+bob,P.inBoat?0:.55),P.pos.z);
+  P.shake=Math.max(0,P.shake-dt*1.5);
+  camera.rotation.set(P.pitch+rnd(-1,1)*P.shake*.04,P.yaw+rnd(-1,1)*P.shake*.04,0);
+  P.recoil=Math.max(0,P.recoil-dt*8); view.position.set(.22,-.24+bob*.3-(P.reload>0?.15:0),-.45+P.recoil*.07);
+  view.rotation.x=P.reload>0?-.5:P.recoil*.1;
+  view.visible=!P.inBoat||P.boat.rampA>0;
+  // AI
+  for(const a of allies)updAlly(a,dt);
+  for(const e of enemies)updEnemy(e,dt);
+  updArtillery(dt);
+  // grenades
+  for(let i=grenades.length-1;i>=0;i--){
+    const g=grenades[i]; g.v.y-=9.8*dt; g.m.position.addScaledVector(g.v,dt);
+    const gy=H(g.m.position.x,g.m.position.z)+.09;
+    if(g.m.position.y<gy){g.m.position.y=gy;g.v.y*=-.3;g.v.x*=.5;g.v.z*=.5;}
+    g.t-=dt; if(g.t<=0){explosion(g.m.position.clone(),2,false);sfx('boom',g.m.position);blast(g.m.position,6.5,{ep:1,mg:true,ap:.5,pd:90,byP:true});scene.remove(g.m);grenades.splice(i,1);}
+  }
+  // fx
+  for(const f of fx){if(f.life<=0)continue;f.life-=dt;const k=1-f.life/f.max;
+    if(f.life<=0){f.m.visible=false;continue;} f.m.scale.setScalar(f.size*(1+k*f.grow)); f.m.position.y+=f.rise*dt; f.m.material.opacity=f.op*(1-k);}
+  for(const d of deb){if(d.life<=0)continue;d.life-=dt;d.v.y-=12*dt;d.m.position.addScaledVector(d.v,dt);d.m.rotation.x+=dt*5;if(d.life<=0||d.m.position.y<H(d.m.position.x,d.m.position.z)-.5){d.life=0;d.m.visible=false;}}
+  for(let i=0;i<TN;i++){const t=tr[i],o=i*6;
+    if(!t.on){if(tArr[o]!==0||tArr[o+3]!==0)tArr.fill(0,o,o+6);continue;}
+    t.s+=400*dt; if(t.s>t.len+4){t.on=false;continue;}
+    const s1=Math.min(t.s,t.len),s0=Math.max(0,t.s-5);
+    tArr[o]=t.a.x+t.d.x*s0;tArr[o+1]=t.a.y+t.d.y*s0;tArr[o+2]=t.a.z+t.d.z*s0;
+    tArr[o+3]=t.a.x+t.d.x*s1;tArr[o+4]=t.a.y+t.d.y*s1;tArr[o+5]=t.a.z+t.d.z*s1;}
+  tGeo.attributes.position.needsUpdate=true;
+  // HUD
+  P.hurt=Math.max(0,P.hurt-dt*.5); $('blood').style.opacity=Math.max(P.hurt,P.hp<35?.45:0);
+  msgT-=dt; if(msgT<=0)$('msg').style.opacity=0;
+  if(!over&&enemies.every(e=>!e.alive))end(true);
+}
+let hudT=0;
+function hud(){
+  const aA=allies.filter(a=>a.alive).length, eA=enemies.filter(e=>e.alive).length, bA=bunkers.filter(b=>b.alive).length;
+  $('stats').innerHTML=`❤ ${Math.ceil(P.hp)} &nbsp; ${P.crouch?'[accovacciato]':''}`;
+  $('ammo').innerHTML=P.reload>0?'Ricarica…':`${P.ammo} / ${P.res}<br><span style="font-size:16px">Granate: ${P.gren}</span>`;
+  $('info').innerHTML=`Alleati vivi: ${aA}<br>Nemici: ${eA}<br>Bunker MG42: ${bA}<br>Uccisioni: ${P.kills}`;
+  $('obj').textContent=phase==='boat'?`Avvicinamento a Omaha Beach — ${Math.max(0,Math.round((P.boat.g.position.z-7)/P.boat.speed))} s`
+    :P.pos.z>-55?'Raggiungi il terrapieno ai piedi della scogliera usando gli ostacoli come copertura'
+    :'Sali sulla scogliera e neutralizza i bunker MG42';
+}
+function end(win){
+  over=true; document.exitPointerLock();
+  $('menu').style.display='flex';
+  $('menu').innerHTML=win?`<h1>SPIAGGIA CONQUISTATA</h1><p>La testa di ponte è sicura. Uccisioni: ${P.kills} — Compagni sopravvissuti: ${allies.filter(a=>a.alive).length}</p><button onclick="location.reload()">GIOCA ANCORA</button>`
+    :`<h1>CADUTO IN AZIONE</h1><p>Uccisioni: ${P.kills}</p><button onclick="location.reload()">RIPROVA</button>`;
+}
+
+let last=performance.now();
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt=Math.min(.05,(now-last)/1000); last=now;
+  if(running&&!over){update(dt);hudT-=dt;if(hudT<=0){hudT=.15;hud();}}
+  renderer.render(scene,camera);
+}
+P.pos.copy(P.boat.g.position); camera.position.set(0,1.7,262); hud();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
