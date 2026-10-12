@@ -92,10 +92,10 @@ const SURF = {
     float v=.84+.09*tw+.05*wv; v*=.86+.24*n; v*=mix(1.,.72,smoothstep(.55,.8,grime));
     c=vec3(v); h=tw*.5+wv*.3+n*.2; r=.96;}`,
   metal: `void surf(vec2 uv,out vec3 c,out float h,out float r){
-    float n=pfbm(uv*8.,vec2(8.),5); float chip=smoothstep(.7,.74,pfbm(uv*36.+3.,vec2(36.),3))*.6;
+    float n=pfbm(uv*8.,vec2(8.),5); float chip=smoothstep(.76,.79,pfbm(uv*48.+3.,vec2(48.),3))*.35;
     float streak=pfbm(vec2(uv.x*30.,uv.y*3.),vec2(30.,3.),3);
     float v=.9+.12*n; v*=mix(1.,.78,streak*smoothstep(.4,.8,n));
-    c=mix(vec3(v),vec3(.45,.34,.26),chip); h=.5+n*.3-chip*.3; r=mix(.55,.85,chip);}`,
+    c=mix(vec3(v),vec3(.45,.34,.26),chip); h=.5+n*.3-chip*.3; r=mix(.82,.93,chip);}`,
   gunwood: `void surf(vec2 uv,out vec3 c,out float h,out float r){
     float d=pfbm(vec2(uv.x*3.,uv.y*12.),vec2(3.,12.),4);
     float g=sin((uv.x*40.+d*6.)*6.283)*.5+.5; g=pow(g,3.);
@@ -176,14 +176,15 @@ function buildTextures() {
   genSurface('grain', 32, { normal: false });
 }
 
-// materiale con mappatura triplanare in coordinate mondo (edifici, bunker, scafi)
+// materiale con mappatura triplanare in coordinate dell'oggetto: la texture resta
+// solidale all'oggetto anche quando si muove (barche, aerei, torrette)
 function triMaterial(tex, scale, o = {}) {
-  const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: tex.map, normalMap: tex.normal, roughness: o.rough ?? 1, metalness: o.metal || 0 });
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: tex.map, normalMap: tex.normal, roughness: o.rough ?? 1, metalness: o.metal || 0, side: o.side || THREE.FrontSide, transparent: !!o.transparent, opacity: o.opacity ?? 1 });
   m.onBeforeCompile = sh => {
     sh.uniforms.uTri = { value: scale }; sh.uniforms.uTriN = { value: o.nStr ?? .8 };
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vTriP;varying vec3 vTriN;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvTriP=(modelMatrix*vec4(transformed,1.)).xyz;vTriN=normalize(mat3(modelMatrix)*objectNormal);');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uTri,uTriN;varying vec3 vTriP;varying vec3 vTriN;')
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vTriP;varying vec3 vTriN;varying mat3 vTriM;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvTriP=transformed;vTriN=normalize(objectNormal);vTriM=normalMatrix;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uTri,uTriN;varying vec3 vTriP;varying vec3 vTriN;varying mat3 vTriM;')
       .replace('#include <map_fragment>', `
         vec3 bw=pow(abs(vTriN),vec3(4.));bw/=dot(bw,vec3(1.));
         vec2 tx=vTriP.zy*uTri,ty=vTriP.xz*uTri,tz=vTriP.xy*uTri;
@@ -193,7 +194,7 @@ function triMaterial(tex, scale, o = {}) {
       .replace('#include <normal_fragment_maps>', `
         vec3 nx=texture2D(normalMap,tx).xyz*2.-1.,ny=texture2D(normalMap,ty).xyz*2.-1.,nz=texture2D(normalMap,tz).xyz*2.-1.;
         vec3 wn=normalize(vTriN+uTriN*(bw.x*vec3(0.,nx.y,nx.x)+bw.y*vec3(ny.x,0.,ny.y)+bw.z*vec3(nz.x,nz.y,0.)));
-        normal=normalize((viewMatrix*vec4(wn,0.)).xyz);`);
+        normal=normalize(vTriM*wn);`);
   };
   return m;
 }

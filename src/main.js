@@ -68,8 +68,9 @@ document.addEventListener('pointerlockchange', () => {
   if (!locked && GAME.started && !GAME.over) {
     $('pause').classList.remove('hidden'); mouseL = false; P.trigger = false; P.adsHeld = false; for (const k in KEYS) KEYS[k] = false;
     if (window.speechSynthesis) speechSynthesis.cancel();
+    if (AU.ctx) AU.ctx.suspend();
   }
-  if (locked) $('pause').classList.add('hidden');
+  if (locked) { $('pause').classList.add('hidden'); if (AU.ctx) AU.ctx.resume(); }
 });
 
 let last = performance.now();

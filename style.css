@@ -102,3 +102,12 @@ kbd { background: #2a2e2a; border: 1px solid #4a5040; padding: 1px 7px; border-r
 #navZoom { display: none; position: absolute; inset: 0; background: radial-gradient(ellipse 34vh 30vh at 38% 50%, transparent 98%, #000 100%), radial-gradient(ellipse 34vh 30vh at 62% 50%, transparent 98%, #000 100%); }
 #navZoom .bino { position: absolute; inset: 0; background: linear-gradient(#000, #000) 50% 50% / 30% 1px no-repeat, linear-gradient(#000, #000) 50% 50% / 1px 30% no-repeat; }
 #planehud { display: none; position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); text-align: center; font-size: 16px; text-shadow: 0 0 4px #000; }
+
+/* mirino a schermo più leggibile */
+#cross i { background: rgba(255, 255, 255, .95); box-shadow: 0 0 0 1px rgba(0, 0, 0, .75), 0 0 4px rgba(0, 0, 0, .6); }
+#cross i:nth-child(1) { width: 3px; height: 10px; left: -1.5px; top: calc(-10px - var(--g)); }
+#cross i:nth-child(2) { width: 3px; height: 10px; left: -1.5px; top: var(--g); }
+#cross i:nth-child(3) { width: 10px; height: 3px; top: -1.5px; left: calc(-10px - var(--g)); }
+#cross i:nth-child(4) { width: 10px; height: 3px; top: -1.5px; left: var(--g); }
+#cross:after { content: ""; position: absolute; left: -2px; top: -2px; width: 4px; height: 4px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, .8); }
+#hitm { width: 34px; height: 34px; margin: -17px; }

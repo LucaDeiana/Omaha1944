@@ -777,54 +777,15 @@ function buildGrass() {
   WORLD.grassMat = mat;
 }
 
-// ---------- flotta ----------
-function addShip(mb, x, z, len, beam, kind, player) {
-  const hullH = { bb: 11, cl: 8, dd: 6, lst: 7 }[kind], draft = hullH * .45, deckY = hullH - draft;
-  const s = new THREE.Shape();
-  s.moveTo(-len / 2, -beam * .42); s.lineTo(len * .22, -beam / 2); s.quadraticCurveTo(len * .42, -beam * .35, len / 2, 0);
-  s.quadraticCurveTo(len * .42, beam * .35, len * .22, beam / 2); s.lineTo(-len / 2, beam * .42); s.lineTo(-len / 2, -beam * .42);
-  const g = new THREE.ExtrudeGeometry(s, { depth: hullH, bevelEnabled: false, curveSegments: 8 }); g.rotateX(-PI / 2);
-  const hc = kind === 'lst' ? 0x8a9198 : 0x87919a, sc = 0x9aa3ab;
-  mb.mat = 'paint';
-  mb.add(g, hc, x, -draft, z);
-  mb.add(U.box, 0x6a5a48, x - len * .05, deckY + .02, z, 0, 0, 0, len * .8, .05, beam * .82);
-  if (kind === 'lst') { mb.add(U.box, sc, x - len * .35, deckY + 3, z, 0, 0, 0, len * .15, 6, beam * .8); return; }
-  mb.add(U.box, sc, x, deckY + 2, z, 0, 0, 0, len * .22, 4, beam * .55);
-  mb.add(U.box, sc, x - len * .02, deckY + 5.5, z, 0, 0, 0, len * .12, 3.5, beam * .42);
-  mb.add(U.box, 0x7f888f, x, deckY + 8, z, 0, 0, 0, len * .05, 2.2, beam * .3);
-  for (let i = 0; i < 10; i++) mb.add(U.box, 0x22262a, x - len * .02 + rnd(-.04, .04) * len, deckY + 5.6 + rnd(-1, 1), z - beam * .21, 0, 0, 0, .8, .5, .1);
-  const fun = kind === 'dd' ? [x + len * .05, x - len * .1] : [x + len * .08];
-  for (const fx of fun) { mb.add(U.cyl12, 0x747d84, fx, deckY + 6, z, 0, 0, 0, beam * .09, 7, beam * .11); addEmitter(new V3(fx, deckY + 9.5, z), 'stack', kind === 'bb' ? 2 : 1.2); }
-  mb.add(U.cyl, 0x5d666d, x - len * .03, deckY + 16, z, 0, 0, 0, .5, 22, .5);
-  for (const sx of [-1, 1]) mb.add(U.cyl, 0x5d666d, x - len * .03 + sx * 3, deckY + 12, z, 0, 0, sx * .15, .25, 14, .25);
-  mb.add(U.box, 0x5d666d, x - len * .03, deckY + 22, z, 0, 0, 0, .3, .3, beam * .7);
-  for (let i = 0; i < 8; i++) { const ax = x + (i / 7 - .5) * len * .5; for (const sz of [-1, 1]) { mb.add(U.cyl12, 0x6f787f, ax, deckY + .6, z + sz * beam * .38, 0, 0, 0, .9, .6, .9); mb.add(U.cyl, 0x30363b, ax, deckY + 1.2, z + sz * beam * .38 - .8, PI / 2 - .6, 0, 0, .06, 2, .06); } }
-  mb.add(U.box, 0x7a838a, x, deckY + 1.2, z - beam * .48, 0, 0, 0, len * .75, .9, .05);
-  const tur = kind === 'bb' ? [-.36, -.24, .24, .36] : kind === 'cl' ? [-.32, -.2, .22, .32] : [-.3, .25, .36];
-  const big = kind === 'bb', bl = big ? 13 : kind === 'cl' ? 8 : 5;
-  for (const t of tur) {
-    const tx = x + t * len, ty = deckY + (Math.abs(t) < .3 ? 2.2 : 1.2);
-    if (player && t === .24) { WORLD.texasT = { x: tx, y: ty, z, beam, bl }; continue; }
-    mb.add(U.cyl12, sc, tx, ty, z, 0, 0, 0, beam * .2, 1.6, beam * .2);
-    mb.add(U.box, sc, tx, ty + 1, z - beam * .06, 0, 0, 0, beam * .32, 1.8, beam * .3);
-    const nb = big ? 2 : kind === 'cl' ? 3 : 1;
-    for (let b = 0; b < nb; b++) {
-      const bx = tx + (b - (nb - 1) / 2) * (big ? 1.4 : .9);
-      mb.add(U.cyl12, 0x4a5258, bx, ty + 1.3 + bl * .5 * Math.sin(.2), z - beam * .2 - bl * .5 * Math.cos(.2), PI / 2 - .2, 0, 0, big ? .35 : .22, bl, big ? .35 : .22);
-    }
-    WORLD.shipGuns.push({ p: new V3(tx, ty + 1.3 + bl * Math.sin(.2), z - beam * .2 - bl * Math.cos(.2)), big, t: rnd(1, 9) });
-  }
-}
+// ---------- flotta (modelli dettagliati in models.js) ----------
 function buildFleet() {
-  const mb = new MB();
-  addShip(mb, -230, 780, 175, 32, 'bb', true);
-  addShip(mb, 190, 840, 175, 32, 'bb');
-  addShip(mb, 470, 720, 165, 20, 'cl');
-  addShip(mb, -470, 700, 150, 18, 'cl');
-  addShip(mb, -110, 430, 105, 11, 'dd'); addShip(mb, 70, 390, 105, 11, 'dd'); addShip(mb, 280, 460, 105, 11, 'dd');
-  for (let i = 0; i < 9; i++) addShip(mb, srnd(-900, 900), srnd(1250, 1700), 100, 15, 'lst');
-  mb.mat = 'paint';
-  for (let i = 0; i < 22; i++) { const x = srnd(-700, 700), z = srnd(520, 1100); mb.add(U.box, 0x7f8a85, x, .5, z, 0, srnd(-.2, .2), 0, 4, 2, 11); }
+  const tx = placeShip('bb', -230, 780, { skipTurret: 1, rails: true });
+  placeShip('bb', 190, 840);
+  placeShip('cl', 470, 720); placeShip('cl', -470, 700);
+  placeShip('dd', -110, 430); placeShip('dd', 70, 390); placeShip('dd', 280, 460);
+  for (let i = 0; i < 8; i++) placeShip('lst', srnd(-900, 900), srnd(1250, 1700));
+  const mb = new MB(); mb.mat = 'paint';
+  for (let i = 0; i < 22; i++) { const x = srnd(-700, 700), z = srnd(520, 1100); mb.add(U.box, 0x55625a, x, .5, z, 0, srnd(-.2, .2), 0, 4, 2, 11); }
   mb.mat = 'vc';
   for (let i = 0; i < 6; i++) {
     const x = srnd(-900, 900), z = srnd(1250, 1700), y = srnd(90, 130);
@@ -832,20 +793,12 @@ function buildFleet() {
     mb.add(U.cyl, 0x333333, x, y / 2, z, 0, 0, 0, .1, y, .1);
   }
   scene.add(groupMesh(mb.buildGroups(), false));
-  // torretta manovrabile della USS Texas (modalità artigliere navale)
-  const T = WORLD.texasT, tg = new THREE.Group(); tg.position.set(T.x, T.y, T.z);
-  const tb = new MB(); tb.mat = 'paint';
-  tb.add(U.cyl12, 0x9aa3ab, 0, 0, 0, 0, 0, 0, T.beam * .2, 1.6, T.beam * .2);
-  tb.add(U.box, 0x9aa3ab, 0, 1, -T.beam * .02, 0, 0, 0, T.beam * .34, 2, T.beam * .32);
-  tb.add(U.box, 0x8a939b, 0, 2.05, .5, 0, 0, 0, T.beam * .3, .15, T.beam * .26);
-  for (const sx of [-1, 1]) tb.add(U.cyl12, 0x6a737a, sx * 2.2, 2.4, 2, PI / 2, 0, 0, .35, 1.2, .35);
-  const house = groupMesh(tb.buildGroups()); tg.add(house);
-  const pitch = new THREE.Group(); pitch.position.set(0, 1.3, -T.beam * .17); tg.add(pitch);
-  const bb = new MB(); bb.mat = 'paint';
-  for (const bx of [-.7, .7]) { bb.add(U.cyl12, 0x4a5258, bx, 0, -T.bl / 2, PI / 2, 0, 0, .36, T.bl, .36); bb.add(U.cyl12, 0x3a4248, bx, 0, -T.bl + .3, PI / 2, 0, 0, .42, .6, .42); }
-  pitch.add(groupMesh(bb.buildGroups()));
-  scene.add(tg);
-  WORLD.texas = { g: tg, pitch, yaw: 0, elev: .1, muzzles: [new V3(-.7, 0, -T.bl), new V3(.7, 0, -T.bl)], cam: new V3(T.x + 14, T.y + 9, T.z + 6) };
+  // torretta B della USS Texas manovrabile dal giocatore
+  const sg = tx.g, tp = tx.o.turretPos, s = tx.o.turretS;
+  const pt = buildPlayerTurret(s), wp = tp.clone().applyMatrix4(sg.matrixWorld);
+  pt.g.position.copy(wp); scene.add(pt.g);
+  const cam = new V3(0, tp.y + 8.5, tp.z - 15).applyMatrix4(sg.matrixWorld);
+  WORLD.texas = { g: pt.g, pitch: pt.pitch, yaw: 0, elev: .1, muzzles: pt.muzzles, cam };
 }
 
 // ---------- costruzione ----------

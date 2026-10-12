@@ -19,6 +19,7 @@ function initWeapons() {
   VM.skin = new THREE.MeshStandardMaterial({ color: col(0xc9997a), roughness: .62 });
   VM.bake = new THREE.MeshStandardMaterial({ color: col(0x2c1a10), roughness: .4 });
   VM.glass = new THREE.MeshStandardMaterial({ color: col(0x203040), roughness: .05, metalness: .6 });
+  VM.sight = new THREE.MeshStandardMaterial({ color: col(0x0c0c0c), roughness: .85, metalness: .2 });
   VM.flash = new THREE.MeshBasicMaterial({ color: new THREE.Color(7, 4.5, 1.6), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, map: TEX.fire.map });
   vmRoot = new THREE.Group(); camera.add(vmRoot);
   const fp = new THREE.PlaneGeometry(1, 1);
@@ -56,6 +57,27 @@ function hand(parent, p, side) {
   return h;
 }
 
+// mire metalliche: la linea di mira passa a quota 'y'; in mira si allinea al centro dello schermo
+function addSights(g, kind, y, rz, fz, mat, hood, x = 0) {
+  const S = VM.sight;
+  if (kind === 'aperture') {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(.0058, .0024, 8, 20), S); ring.position.set(x, y, rz); g.add(ring);
+    part(g, U.box, mat, x, y - .012, rz, .022, .012, .016);
+    for (const sx of [-1, 1]) part(g, U.box, mat, x + sx * .0095, y - .002, rz, .005, .02, .012);
+  } else if (kind === 'notch') {
+    for (const sx of [-1, 1]) part(g, U.box, S, x + sx * .0055, y - .003, rz, .006, .009, .006);
+    part(g, U.box, mat, x, y - .01, rz, .02, .008, .012);
+  } else if (kind === 'frame') {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(.006, .0018, 8, 20), S); ring.position.set(x, y, rz); g.add(ring);
+    for (const [w, h, dx, dy] of [[.04, .003, 0, .02], [.04, .003, 0, -.02], [.003, .04, .02, 0], [.003, .04, -.02, 0], [.002, .03, 0, 0], [.03, .0015, 0, 0]]) part(g, U.box, S, x + dx, y + dy, fz, w, h, .003);
+    return;
+  }
+  // mirino anteriore: lama con protezioni
+  part(g, U.box, S, x, y - .006, fz, .0042, .012, .005);
+  part(g, U.box, mat, x, y - .016, fz, .016, .01, .014);
+  if (hood) { const hd = new THREE.Mesh(new THREE.TorusGeometry(.01, .0018, 6, 14, PI), mat); hd.position.set(x, y - .006, fz); g.add(hd); }
+  else for (const sx of [-1, 1]) part(g, U.box, mat, x + sx * .009, y - .004, fz, .003, .018, .01);
+}
 // costruzione delle armi (usate anche a terra)
 function buildGun(id) {
   const g = new THREE.Group(); let i = {};
@@ -72,10 +94,7 @@ function buildGun(id) {
     if (id === 'garand') {
       prof(g, [[.07, 0], [.07, .035], [.04, .05], [-.05, .05], [-.14, .04], [-.17, .03], [-.17, 0]], .03, Mt);
       CZ(g, Mt, 0, .012, -.84, .013, .12);
-      part(g, U.box, Mt, 0, .058, -.905, .022, .012, .012); part(g, U.box, Mt, 0, .066, -.905, .004, .018, .006);
-      for (const sx of [-1, 1]) part(g, U.box, Mt, sx * .009, .068, -.905, .003, .02, .01);
-      part(g, U.box, Mt, 0, .062, .055, .024, .02, .022);
-      for (const sx of [-1, 1]) { const kb = CZ(g, Mt, sx * .018, .062, .055, .006, .01); kb.rotation.set(0, 0, PI / 2); }
+      addSights(g, 'aperture', .068, .055, -.905, Mt);
       part(g, U.box, Mt, .02, .022, -.3, .008, .014, .42); part(g, U.box, Mt, .026, .025, -.08, .014, .02, .03);
       mag = new THREE.Group(); mag.position.set(0, .052, -.045); g.add(mag);
       part(mag, U.box, VM.brass, 0, 0, 0, .022, .012, .062);
@@ -89,8 +108,7 @@ function buildGun(id) {
       part(hd, U.sph, Mt, .05, id === 'kar98' ? -.025 : -.016, 0, .012, .012, .012);
       mag = new THREE.Group(); mag.position.set(0, .046, -.04); g.add(mag);
       for (let k = 0; k < 5; k++) CZ(mag, VM.brass, 0, 0, -.02 + k * .01, .005, .03);
-      part(g, U.box, Mt, 0, .05, -.18, .016, .016, .03); part(g, U.box, Mt, 0, .05, -.86, id === 'kar98' ? .018 : .006, .022, .012);
-      if (id === 'kar98') CZ(g, Mt, 0, .044, -.86, .013, .03);
+      if (id === 'kar98') addSights(g, 'notch', .06, -.17, -.86, Mt, true);
       if (id === 'springfield') {
         CZ(g, VM.blue, 0, .085, -.04, .013, .3); CZ(g, VM.blue, 0, .085, .135, .019, .07); CZ(g, VM.blue, 0, .085, -.205, .018, .05);
         part(g, U.box, VM.blue, 0, .062, .04, .012, .03, .016); part(g, U.box, VM.blue, 0, .062, -.12, .012, .03, .016);
@@ -99,21 +117,21 @@ function buildGun(id) {
         CZ(g, VM.glass, 0, .085, .171, .016, .004);
       }
     }
-    i = { mag, bolt, muzzle: new V3(0, .03, -1.01), port: new V3(.02, .05, -.04), hip: new V3(.16, -.17, -.32), ads: new V3(0, -.069, -.18), grip: new V3(0, -.045, .065), fore: new V3(0, -.014, -.38), magOut: new V3(0, .2, 0) };
+    i = { mag, bolt, muzzle: new V3(0, .03, -1.01), port: new V3(.02, .05, -.04), hip: new V3(.16, -.17, -.32), ads: new V3(0, -.068, -.17), grip: new V3(0, -.045, .065), fore: new V3(0, -.014, -.38), magOut: new V3(0, .2, 0) };
     if (id === 'springfield') i.ads = new V3(0, -.085, -.12);
-    if (id === 'kar98') i.ads = new V3(0, -.063, -.18);
+    if (id === 'kar98') i.ads = new V3(0, -.06, -.16);
   } else if (id === 'thompson') {
     prof(g, [[.36, .01], [.36, -.09], [.14, -.045], [.1, -.03], [.1, .015], [.16, .02]], .04, VM.wood);
     prof(g, [[.1, 0], [.1, .055], [-.16, .055], [-.18, .04], [-.18, 0]], .044, VM.metal);
     prof(g, [[.04, 0], [.065, -.1], [.025, -.112], [0, -.02]], .032, VM.wood);
     prof(g, [[-.18, .01], [-.18, -.028], [-.33, -.024], [-.34, .012]], .042, VM.wood);
     CZ(g, VM.metal, 0, .035, -.32, .0145, .28); CZ(g, VM.metal, 0, .035, -.46, .017, .015);
-    part(g, U.box, VM.metal, 0, .07, .075, .022, .02, .02); part(g, U.box, VM.metal, 0, .063, -.445, .004, .018, .008);
+    addSights(g, 'aperture', .078, .075, -.445, VM.metal);
     const ck = CZ(g, VM.metal, .03, .045, -.05, .007, .02); ck.rotation.set(0, 0, PI / 2);
     part(g, U.box, VM.metal, 0, -.022, .02, .006, .03, .07);
     const mag = new THREE.Group(); mag.position.set(0, -.09, -.11); g.add(mag);
     part(mag, U.box, VM.metal, 0, 0, 0, .028, .17, .048); part(mag, U.box, VM.metal, 0, -.085, 0, .032, .01, .052);
-    i = { mag, muzzle: new V3(0, .035, -.47), port: new V3(.025, .05, -.02), hip: new V3(.15, -.16, -.3), ads: new V3(0, -.078, -.22), grip: new V3(0, -.055, .03), fore: new V3(0, -.012, -.27), magOut: new V3(0, -.25, .05), charge: new V3(.03, .045, -.05) };
+    i = { mag, muzzle: new V3(0, .035, -.47), port: new V3(.025, .05, -.02), hip: new V3(.15, -.16, -.3), ads: new V3(0, -.078, -.2), grip: new V3(0, -.055, .03), fore: new V3(0, -.012, -.27), magOut: new V3(0, -.25, .05), charge: new V3(.03, .045, -.05) };
   } else if (id === 'bar') {
     prof(g, [[.45, .02], [.45, -.1], [.3, -.07], [.12, -.03], [.1, .02], [.3, .03]], .046, VM.wood);
     prof(g, [[.1, -.02], [.125, -.11], [.075, -.118], [.05, -.02]], .034, VM.wood);
@@ -121,16 +139,16 @@ function buildGun(id) {
     prof(g, [[-.3, 0], [-.3, .045], [-.52, .04], [-.52, 0]], .05, VM.wood);
     CZ(g, VM.metal, 0, .045, -.6, .014, .6); CZ(g, VM.metal, 0, .01, -.6, .012, .3); CZ(g, VM.metal, 0, .045, -.93, .019, .07);
     for (let k = 0; k < 3; k++) part(g, U.box, VM.metal, 0, .045, -.91 - k * .015, .045, .004, .004);
-    part(g, U.box, VM.metal, 0, .082, .1, .018, .022, .03); part(g, U.box, VM.metal, 0, .072, -.9, .005, .024, .01);
+    addSights(g, 'aperture', .086, .1, -.9, VM.metal);
     for (const sx of [-1, 1]) { const l = CZ(g, VM.metal, sx * .025, .02, -.7, .005, .36, 6); l.rotation.x = PI / 2 + .04; }
     const mag = new THREE.Group(); mag.position.set(0, -.05, -.12); g.add(mag);
     part(mag, U.box, VM.metal, 0, 0, 0, .036, .1, .076);
-    i = { mag, muzzle: new V3(0, .045, -.97), port: new V3(.028, .04, -.05), hip: new V3(.17, -.17, -.3), ads: new V3(0, -.085, -.18), grip: new V3(0, -.06, .085), fore: new V3(0, -.02, -.4), magOut: new V3(0, -.25, 0), charge: new V3(-.03, .03, -.2) };
+    i = { mag, muzzle: new V3(0, .045, -.97), port: new V3(.028, .04, -.05), hip: new V3(.17, -.17, -.3), ads: new V3(0, -.086, -.17), grip: new V3(0, -.06, .085), fore: new V3(0, -.02, -.4), magOut: new V3(0, -.25, 0), charge: new V3(-.03, .03, -.2) };
   } else if (id === 'colt') {
     const slide = new THREE.Group(); g.add(slide);
     prof(slide, [[.04, .03], [.04, .06], [-.17, .06], [-.17, .035], [-.02, .03]], .028, VM.metal);
     for (let k = 0; k < 6; k++) part(slide, U.box, VM.metal, 0, .045, .01 + k * .005, .03, .022, .002);
-    part(slide, U.box, VM.metal, 0, .066, -.16, .004, .01, .008); part(slide, U.box, VM.metal, 0, .066, .03, .016, .01, .008);
+    addSights(slide, 'notch', .071, .03, -.16, VM.metal);
     prof(g, [[.04, .03], [.03, .01], [-.12, .012], [-.12, .03]], .027, VM.metal);
     prof(g, [[.035, .012], [.062, -.085], [.025, -.095], [0, 0]], .033, VM.wood2);
     CZ(g, VM.metal, 0, .045, -.17, .008, .01);
@@ -138,7 +156,7 @@ function buildGun(id) {
     part(g, U.box, VM.metal, 0, -.005, -.045, .006, .025, .05);
     const mag = new THREE.Group(); mag.position.set(0, -.08, .015); g.add(mag);
     part(mag, U.box, VM.metal, 0, 0, 0, .024, .012, .04);
-    i = { mag, slide, muzzle: new V3(0, .045, -.19), port: new V3(.016, .05, -.04), hip: new V3(.13, -.14, -.32), ads: new V3(0, -.072, -.3), grip: new V3(0, -.04, .02), fore: new V3(-.012, -.065, .03), magOut: new V3(0, -.2, 0) };
+    i = { mag, slide, muzzle: new V3(0, .045, -.19), port: new V3(.016, .05, -.04), hip: new V3(.13, -.14, -.32), ads: new V3(0, -.071, -.28), grip: new V3(0, -.04, .02), fore: new V3(-.012, -.065, .03), magOut: new V3(0, -.2, 0) };
   } else if (id === 'bazooka') {
     const tube = new THREE.Mesh(new THREE.CylinderGeometry(.046, .046, 1.45, 20, 1, true), VM.olive); tube.rotation.x = PI / 2; tube.position.z = -.3; g.add(tube);
     const flare = new THREE.Mesh(new THREE.CylinderGeometry(.07, .048, .14, 20, 1, true), VM.olive); flare.rotation.x = -PI / 2; flare.position.z = .46; g.add(flare);
@@ -146,12 +164,12 @@ function buildGun(id) {
     prof(g, [[.18, -.04], [.18, -.1], [-.08, -.08], [-.08, -.04]], .045, VM.wood);
     prof(g, [[-.04, -.04], [-.02, -.13], [-.06, -.135], [-.08, -.04]], .03, VM.metal);
     prof(g, [[-.33, -.04], [-.31, -.13], [-.35, -.135], [-.37, -.04]], .03, VM.metal);
-    part(g, U.box, VM.metal, -.066, .045, -.55, .01, .06, .024); part(g, U.box, VM.metal, -.066, .03, -.2, .012, .02, .01);
+    addSights(g, 'frame', .045, -.2, -.55, VM.metal, false, -.066);
     part(g, U.box, VM.olive, 0, -.065, -.22, .04, .05, .1);
     const mag = new THREE.Group(); mag.position.set(0, 0, -1.09); g.add(mag);
     const wh = new THREE.Mesh(new THREE.ConeGeometry(.042, .16, 16), VM.olive); wh.rotation.x = -PI / 2; wh.position.z = -.06; mag.add(wh);
     CZ(mag, VM.olive, 0, 0, .04, .04, .07);
-    i = { mag, muzzle: new V3(0, 0, -1.05), hip: new V3(.2, -.13, -.25), ads: new V3(.066, -.075, -.25), grip: new V3(0, -.11, -.04), fore: new V3(0, -.11, -.34), magOut: new V3(0, 0, -.5) };
+    i = { mag, muzzle: new V3(0, 0, -1.05), hip: new V3(.2, -.13, -.25), ads: new V3(.066, -.045, -.22), grip: new V3(0, -.11, -.04), fore: new V3(0, -.11, -.34), magOut: new V3(0, 0, -.5) };
   } else if (id === 'mp40') {
     CZ(g, VM.blue, 0, .03, -.1, .02, .3); for (let k = 0; k < 8; k++) CZ(g, VM.blue, 0, .03, -.2 + k * .025, .022, .006);
     CZ(g, VM.blue, 0, .03, -.33, .01, .16); CZ(g, VM.blue, 0, .03, -.41, .013, .02);
@@ -160,11 +178,11 @@ function buildGun(id) {
     prof(g, [[.05, .01], [.07, -.09], [.03, -.1], [.01, 0]], .032, VM.bake);
     for (const sx of [-1, 1]) part(g, U.box, VM.blue, sx * .012, 0, .16, .006, .012, .25);
     part(g, U.box, VM.blue, 0, -.03, .29, .03, .07, .01);
-    part(g, U.box, VM.blue, 0, .057, 0, .012, .014, .012); part(g, U.box, VM.blue, 0, .052, -.4, .012, .016, .01);
+    addSights(g, 'notch', .064, 0, -.4, VM.blue, true);
     const ck = CZ(g, VM.blue, -.025, .03, -.05, .007, .02); ck.rotation.set(0, 0, PI / 2);
     const mag = new THREE.Group(); mag.position.set(0, -.09, -.17); g.add(mag);
     part(mag, U.box, VM.blue, 0, 0, 0, .022, .2, .035);
-    i = { mag, muzzle: new V3(0, .03, -.43), port: new V3(.022, .04, -.05), hip: new V3(.15, -.15, -.3), ads: new V3(0, -.066, -.22), grip: new V3(0, -.045, .04), fore: new V3(0, -.1, -.17), magOut: new V3(0, -.25, 0), charge: new V3(-.03, .03, -.05) };
+    i = { mag, muzzle: new V3(0, .03, -.43), port: new V3(.022, .04, -.05), hip: new V3(.15, -.15, -.3), ads: new V3(0, -.064, -.2), grip: new V3(0, -.045, .04), fore: new V3(0, -.1, -.17), magOut: new V3(0, -.25, 0), charge: new V3(-.03, .03, -.05) };
   }
   i.group = g; return i;
 }

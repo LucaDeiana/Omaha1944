@@ -3,17 +3,22 @@
 //  Audio: banchi di campioni sintetizzati offline, spazializzazione,
 //  eco della scogliera, ambiente, motori, voci (inglese / tedesco)
 // ============================================================
-const AU = { ctx: null, ready: false, buf: {}, voices: 0, battle: 1, loops: [] };
+const AU = { ctx: null, ready: false, buf: {}, voices: 0, battle: 1, loops: [], active: [], last: {} };
+const MAX_VOICES = 64;
+const fin = v => Number.isFinite(v);
 
 function initAudio() {
   if (AU.ctx) { AU.ctx.resume(); return Promise.resolve(); }
-  const c = AU.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const c = AU.ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
   AU.master = c.createGain(); AU.master.gain.value = SETTINGS.volume;
-  AU.out = c.createGain(); AU.out.gain.value = 1;
+  AU.out = c.createGain(); AU.out.gain.value = .8;
   AU.muffle = c.createBiquadFilter(); AU.muffle.type = 'lowpass'; AU.muffle.frequency.value = 19000;
+  // compressore morbido + limitatore finale: niente distorsione né "buchi" quando i suoni si accavallano
   const comp = c.createDynamicsCompressor();
-  comp.threshold.value = -12; comp.knee.value = 10; comp.ratio.value = 6; comp.attack.value = .002; comp.release.value = .3;
-  AU.out.connect(AU.muffle); AU.muffle.connect(comp); comp.connect(AU.master); AU.master.connect(c.destination);
+  comp.threshold.value = -20; comp.knee.value = 18; comp.ratio.value = 3.5; comp.attack.value = .006; comp.release.value = .18;
+  const lim = c.createDynamicsCompressor();
+  lim.threshold.value = -2; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = .001; lim.release.value = .06;
+  AU.out.connect(AU.muffle); AU.muffle.connect(comp); comp.connect(AU.master); AU.master.connect(lim); lim.connect(c.destination);
   const sr = c.sampleRate;
   const ir = c.createBuffer(2, sr * 3, sr);
   for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < d.length; i++) { const t = i / sr; d[i] = (R() * 2 - 1) * Math.pow(1 - i / d.length, 2.6) * (t < .02 ? t / .02 : 1); } }
@@ -164,6 +169,16 @@ async function buildBank() {
     for (let k = 0; k < 140; k++) { const t = R() * 9.8; oN(oc, dst, t, .04, { type: 'bandpass', f: 700 + R() * 700, q: 1, v: .05 + R() * .08 }); }
   }, 1);
   await Promise.all(jobs);
+  // anelli senza scatti: dissolvenza incrociata tra la fine e l'inizio
+  for (const n of ['eng_p47', 'eng_fw', 'eng_boat', 'eng_bomber', 'surf', 'wind', 'battle']) {
+    const b = AU.buf[n] && AU.buf[n][0]; if (!b) continue;
+    const L = b.length, F = Math.floor(Math.min(L * .3, sr * (L > sr * 2 ? 1.5 : .25))), src = b.getChannelData(0);
+    const nb = c.createBuffer(1, L - F, sr), out = nb.getChannelData(0);
+    for (let i = 0; i < L - F; i++) out[i] = i < F ? src[i] * (i / F) + src[L - F + i] * (1 - i / F) : src[i];
+    AU.buf[n] = [nb];
+  }
+  // normalizzazione dei campioni (nessun campione oltre 0 dB)
+  for (const n in AU.buf) for (const b of AU.buf[n]) { const d = b.getChannelData(0); let mx = 0; for (let i = 0; i < d.length; i += 4) mx = Math.max(mx, Math.abs(d[i])); if (mx > .98) { const k = .98 / mx; for (let i = 0; i < d.length; i++) d[i] *= k; } }
   AU.ready = true;
   startAmbience();
 }
@@ -184,28 +199,49 @@ function spatial(pos, ref = 30) {
     rev: clamp(.05 + d / 320, .05, .8), d
   };
 }
+// gestione delle voci: elenco dei suoni attivi con istante di fine; se il limite è
+// raggiunto si interrompe il suono più debole/vecchio invece di scartare quelli nuovi
+function voiceSlot(vol) {
+  const now = AU.ctx.currentTime, a = AU.active;
+  for (let i = a.length - 1; i >= 0; i--) if (a[i].end <= now) a.splice(i, 1);
+  AU.voices = a.length;
+  if (a.length < MAX_VOICES) return true;
+  let wi = -1, wv = vol;
+  for (let i = 0; i < a.length; i++) { const v = a[i].vol * (1 - (now - a[i].start) / Math.max(.05, a[i].end - a[i].start)); if (v < wv) { wv = v; wi = i; } }
+  if (wi < 0) return false;
+  const w = a[wi]; a.splice(wi, 1);
+  try { w.g.gain.setTargetAtTime(0, now, .01); w.src.stop(now + .05); } catch (e) { }
+  return true;
+}
 function play(name, pos, o = {}) {
-  if (!AU.ready) return null;
+  if (!AU.ready || AU.ctx.state !== 'running') return null;
   const list = AU.buf[name]; if (!list) return null;
+  if (pos && !(fin(pos.x) && fin(pos.y) && fin(pos.z))) return null;
   const sp = o.sp || spatial(pos, o.ref || 30), vol = (o.vol ?? 1) * sp.vol;
-  if (vol < .004) return null;
-  if (AU.voices > 110 && vol < .25) return null;
-  const c = AU.ctx, t = c.currentTime + (o.delay || 0) + (o.noDelay ? 0 : sp.delay);
-  const src = c.createBufferSource(); src.buffer = pick(list); src.playbackRate.value = (o.rate || 1) * (1 + (R() - .5) * (o.var ?? .08));
-  const g = c.createGain(); g.gain.value = vol; src.connect(g);
+  if (!fin(vol) || !fin(sp.pan) || !fin(sp.lp) || !fin(sp.delay) || vol < .004) return null;
+  // stesso suono lontano ripetuto nello stesso istante: si accorpa
+  const c = AU.ctx, now = c.currentTime;
+  if (vol < .3) { const lt = AU.last[name] || 0; if (now - lt < .025) return null; AU.last[name] = now; }
+  if (!voiceSlot(vol)) return null;
+  const t = now + Math.min(4, (o.delay || 0) + (o.noDelay ? 0 : sp.delay));
+  const src = c.createBufferSource(); src.buffer = pick(list); src.playbackRate.value = clamp((o.rate || 1) * (1 + (R() - .5) * (o.var ?? .08)), .25, 4);
+  const g = c.createGain(); g.gain.value = Math.min(vol, 2); src.connect(g);
   let last = g;
-  if (sp.lp < 19000) { const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = sp.lp; last.connect(f); last = f; }
-  if (c.createStereoPanner && sp.pan) { const p = c.createStereoPanner(); p.pan.value = sp.pan; last.connect(p); last = p; }
+  if (sp.lp < 19000) { const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = clamp(sp.lp, 80, 20000); last.connect(f); last = f; }
+  if (c.createStereoPanner && sp.pan) { const p = c.createStereoPanner(); p.pan.value = clamp(sp.pan, -1, 1); last.connect(p); last = p; }
   last.connect(AU.out);
-  const s = c.createGain(); s.gain.value = sp.rev * (o.revMul ?? 1); last.connect(s); s.connect(AU.rev);
-  src.start(t); AU.voices++; src.onended = () => AU.voices--;
-  // eco sulla scogliera (spiaggia aperta)
-  if (o.echo && sp.d > 15 && camera.position.z > -110 && vol > .02) {
+  const rv = clamp(sp.rev * (o.revMul ?? 1), 0, 1);
+  if (rv > .02) { const s = c.createGain(); s.gain.value = rv; last.connect(s); s.connect(AU.rev); }
+  src.start(t);
+  const dur = src.buffer.duration / src.playbackRate.value;
+  AU.active.push({ src, g, vol, start: t, end: t + dur });
+  // eco sulla scogliera (spiaggia aperta), solo per i suoni abbastanza forti
+  if (o.echo && pos && sp.d > 15 && camera.position.z > -110 && vol > .05 && AU.active.length < MAX_VOICES - 8) {
     const e = c.createBufferSource(); e.buffer = src.buffer; e.playbackRate.value = src.playbackRate.value;
-    const eg = c.createGain(); eg.gain.value = vol * .28; const ef = c.createBiquadFilter(); ef.type = 'lowpass'; ef.frequency.value = 900;
-    e.connect(ef); ef.connect(eg); eg.connect(AU.out); eg.connect(AU.rev);
-    const ed = (Math.abs(camera.position.z + 85) + Math.abs(pos.z + 85)) / 343 + .05;
-    e.start(t + ed); AU.voices++; e.onended = () => AU.voices--;
+    const eg = c.createGain(); eg.gain.value = Math.min(vol * .28, 1); const ef = c.createBiquadFilter(); ef.type = 'lowpass'; ef.frequency.value = 900;
+    e.connect(ef); ef.connect(eg); eg.connect(AU.out);
+    const ed = Math.min(3, (Math.abs(camera.position.z + 85) + Math.abs(pos.z + 85)) / 343 + .05);
+    e.start(t + ed); AU.active.push({ src: e, g: eg, vol: vol * .28, start: t + ed, end: t + ed + dur });
   }
   return src;
 }
@@ -218,7 +254,11 @@ function loopSound(name, vol = 0) {
   last.connect(AU.out); src.start();
   const h = {
     src, g, f, pan,
-    set(v, p = 0, rate = 1, lp = 20000) { const t = c.currentTime; g.gain.setTargetAtTime(v, t, .08); if (pan) pan.pan.setTargetAtTime(p, t, .08); src.playbackRate.setTargetAtTime(rate, t, .1); f.frequency.setTargetAtTime(lp, t, .1); },
+    set(v, p = 0, rate = 1, lp = 20000) {
+      if (!fin(v) || !fin(p) || !fin(rate) || !fin(lp)) return;
+      const t = c.currentTime; g.gain.setTargetAtTime(clamp(v, 0, 2), t, .08); if (pan) pan.pan.setTargetAtTime(clamp(p, -1, 1), t, .08);
+      src.playbackRate.setTargetAtTime(clamp(rate, .3, 3), t, .1); f.frequency.setTargetAtTime(clamp(lp, 80, 20000), t, .1);
+    },
     at(pos, v, rate = 1, ref = 120) { const sp = spatial(pos, ref); this.set(v * sp.vol, sp.pan, rate, sp.lp); },
     stop() { try { src.stop(); } catch (e) { } }
   };
@@ -298,16 +338,21 @@ function updateAudio(dt) {
 // ============================================================
 //  Parlato: voci di sintesi del browser in inglese e tedesco
 // ============================================================
-const SPEECH = { en: null, de: null, pending: 0, last: 0 };
+const SPEECH = { en: [], de: [], good: { en: false, de: false }, pending: 0, last: 0 };
+// usa solo voci neurali/naturali (Edge: "Online (Natural)", Chrome: "Google"); le voci di sistema
+// robotiche vengono escluse e sostituite da grida sintetizzate
 function initSpeech() {
   if (!window.speechSynthesis) return;
   const choose = () => {
     const vs = speechSynthesis.getVoices();
-    const best = lang => {
-      const c = vs.filter(v => v.lang && v.lang.toLowerCase().startsWith(lang));
-      return c.find(v => /natural|online/i.test(v.name) && /guy|christopher|eric|davis|tony|conrad|killian|male/i.test(v.name)) || c.find(v => /natural|online/i.test(v.name)) || c.find(v => /google/i.test(v.name)) || c.find(v => /david|mark|stefan|male/i.test(v.name)) || c[0] || null;
-    };
-    SPEECH.en = best('en-us') || best('en'); SPEECH.de = best('de');
+    for (const lang of ['en', 'de']) {
+      const all = vs.filter(v => v.lang && v.lang.toLowerCase().startsWith(lang === 'en' ? 'en-' : 'de'));
+      const nat = all.filter(v => /natural|online|neural/i.test(v.name));
+      const male = nat.filter(v => /guy|christopher|eric|roger|steffan|davis|tony|andrew|brian|conrad|killian|florian|ralf|ryan|thomas|william|liam/i.test(v.name));
+      const goo = all.filter(v => /google/i.test(v.name));
+      SPEECH[lang] = male.length ? male : nat.length ? nat : goo;
+      SPEECH.good[lang] = SPEECH[lang].length > 0;
+    }
   };
   choose(); speechSynthesis.onvoiceschanged = choose;
 }
@@ -340,12 +385,13 @@ function shout(lang, cat, pos, o = {}) {
   if (vol < .06) return;
   if (o.sub && d < 40) subLine(lang === 'en' ? 'Soldato USA' : 'Soldato tedesco', text, IT[text]);
   if (!SETTINGS.voices || !window.speechSynthesis) return;
+  if (!SPEECH.good[lang]) { if (pos && !o.priority) sfxVoice(pos, lang === 'en' ? 'yell' : 'yell'); return; }
   const now = performance.now();
   if (!o.priority && (SPEECH.pending > 1 || now - SPEECH.last < 700)) return;
   if (o.priority && SPEECH.pending > 1) speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = lang === 'en' ? 'en-US' : 'de-DE'; const v = SPEECH[lang]; if (v) u.voice = v;
-  u.rate = o.rate || rnd(1.05, 1.3); u.pitch = o.pitch || rnd(.75, 1.15); u.volume = Math.min(1, vol * SETTINGS.volume * 1.1);
+  u.lang = lang === 'en' ? 'en-US' : 'de-DE'; u.voice = pick(SPEECH[lang]);
+  u.rate = o.rate || rnd(1.08, 1.22); u.pitch = o.pitch || rnd(.92, 1.04); u.volume = Math.min(1, vol * SETTINGS.volume * 1.1);
   SPEECH.pending++; SPEECH.last = now;
   u.onend = u.onerror = () => { SPEECH.pending = Math.max(0, SPEECH.pending - 1); };
   speechSynthesis.speak(u);

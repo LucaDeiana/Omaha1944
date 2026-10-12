@@ -284,16 +284,34 @@ function updateFX(dt) {
 }
 
 // ---------- sporco, sangue e acqua sull'obiettivo ----------
-let lensCtx, lensSplats = [], lensDirty = false;
-function initLens() { const cv = $('lens'); cv.width = innerWidth / 2; cv.height = innerHeight / 2; lensCtx = cv.getContext('2d'); addEventListener('resize', () => { cv.width = innerWidth / 2; cv.height = innerHeight / 2; }); }
+let lensCtx, lensSplats = [], lensDirty = false, LSPR = null;
+function lensSprites() {
+  const mk = (kind, seed) => {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 128; const g = cv.getContext('2d'), rr = seeded(seed);
+    const n = kind === 'blood' ? 1 : 14;
+    for (let i = 0; i < n; i++) {
+      const x = 64 + (rr() - .5) * (kind === 'blood' ? 10 : 80), y = 64 + (rr() - .5) * (kind === 'blood' ? 10 : 80), r = kind === 'blood' ? 34 + rr() * 14 : 3 + rr() * 9;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      const c = kind === 'blood' ? '95,4,4' : kind === 'water' ? '210,225,230' : '62,48,32';
+      gr.addColorStop(0, 'rgba(' + c + ',' + (kind === 'water' ? .35 : .85) + ')'); gr.addColorStop(.7, 'rgba(' + c + ',' + (kind === 'water' ? .2 : .55) + ')'); gr.addColorStop(1, 'rgba(' + c + ',0)');
+      g.fillStyle = gr; g.beginPath();
+      for (let k = 0; k <= 24; k++) { const an = k / 24 * TAU, q = r * (.75 + .5 * rr()); g.lineTo(x + Math.cos(an) * q, y + Math.sin(an) * q); }
+      g.fill();
+    }
+    if (kind === 'blood') for (let i = 0; i < 9; i++) { const an = rr() * TAU, d = 30 + rr() * 26, r = 2 + rr() * 5; g.fillStyle = 'rgba(95,4,4,.8)'; g.beginPath(); g.arc(64 + Math.cos(an) * d, 64 + Math.sin(an) * d, r, 0, TAU); g.fill(); }
+    return cv;
+  };
+  LSPR = { dirt: [1, 2, 3, 4].map(k => mk('dirt', k * 77)), blood: [1, 2, 3].map(k => mk('blood', k * 91)), water: [1, 2].map(k => mk('water', k * 13)) };
+}
+function initLens() { const cv = $('lens'); const fit = () => { cv.width = innerWidth / 2; cv.height = innerHeight / 2; }; fit(); lensCtx = cv.getContext('2d'); addEventListener('resize', fit); lensSprites(); }
 function lensSplat(kind, amount) {
   if (kind === 'water' && gradePass) { LENS.wet = Math.min(1, LENS.wet + amount); return; }
-  const W = lensCtx.canvas.width, Hh = lensCtx.canvas.height, n = Math.round(4 + amount * 14);
+  const W = lensCtx.canvas.width, Hh = lensCtx.canvas.height, n = Math.round(1 + amount * (kind === 'blood' ? 3 : 4));
   for (let i = 0; i < n; i++) {
-    const edge = R() < .7, x = edge ? (R() < .5 ? rnd(0, W * .25) : rnd(W * .75, W)) : rnd(0, W), y = edge ? rnd(0, Hh) : (R() < .5 ? rnd(0, Hh * .3) : rnd(Hh * .7, Hh));
-    lensSplats.push({ kind, x, y, r: rnd(4, 18) * (kind === 'blood' ? 1.2 : 1) * (.5 + amount), a: Math.min(1, .5 + amount), drip: kind === 'blood' ? rnd(0, 30) : 0, seed: R() });
+    const edge = R() < .75, x = edge ? (R() < .5 ? rnd(0, W * .22) : rnd(W * .78, W)) : rnd(0, W), y = edge ? rnd(0, Hh) : (R() < .5 ? rnd(0, Hh * .25) : rnd(Hh * .75, Hh));
+    lensSplats.push({ img: pick(LSPR[kind]), x, y, s: rnd(.4, 1.1) * (kind === 'blood' ? 1.1 : 1) * (.6 + amount * .6), rot: R() * TAU, a: Math.min(.9, .45 + amount * .5), kind, drip: 0 });
   }
-  if (lensSplats.length > 140) lensSplats.splice(0, lensSplats.length - 140);
+  if (lensSplats.length > 40) lensSplats.splice(0, lensSplats.length - 40);
   lensDirty = true;
 }
 const LENS = { wet: 0 };
@@ -303,13 +321,9 @@ function updateLens(dt) {
   if (!lensSplats.length) { if (lensDirty) { lensCtx.clearRect(0, 0, lensCtx.canvas.width, lensCtx.canvas.height); lensDirty = false; } return; }
   const g = lensCtx; g.clearRect(0, 0, g.canvas.width, g.canvas.height);
   for (let i = lensSplats.length - 1; i >= 0; i--) {
-    const s = lensSplats[i]; s.a -= dt * (s.kind === 'blood' ? .12 : .2);
+    const s = lensSplats[i]; s.a -= dt * (s.kind === 'blood' ? .1 : .16); if (s.kind === 'blood') s.drip += dt * 6;
     if (s.a <= 0) { lensSplats.splice(i, 1); continue; }
-    const c = s.kind === 'blood' ? `rgba(90,0,0,${s.a * .85})` : s.kind === 'water' ? `rgba(200,215,220,${s.a * .25})` : `rgba(70,55,38,${s.a * .8})`;
-    g.fillStyle = c; g.beginPath();
-    for (let k = 0; k < 7; k++) { const an = k / 7 * TAU, rr = s.r * (.7 + .5 * hash2(k, s.seed * 1000 | 0)); g.lineTo(s.x + Math.cos(an) * rr, s.y + Math.sin(an) * rr); }
-    g.fill();
-    if (s.drip) { g.fillRect(s.x - 1.5, s.y, 3, s.drip * (1 - s.a) + 4); }
+    g.save(); g.globalAlpha = s.a; g.translate(s.x, s.y + s.drip); g.rotate(s.rot); g.scale(s.s, s.s * (1 + s.drip * .004)); g.drawImage(s.img, -64, -64); g.restore();
   }
   lensDirty = true;
 }

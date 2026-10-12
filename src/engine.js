@@ -99,7 +99,7 @@ function initEngine() {
   buildTextures();
   MAT.vc = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .88, metalness: .02 });
   MAT.vcMetal = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .55, metalness: .45 });
-  MAT.paint = triMaterial(TEX.metal, .5, { metal: .12, rough: 1, nStr: .5 });
+  MAT.paint = triMaterial(TEX.metal, .5, { metal: 0, rough: 1, nStr: .5 });
   MAT.concrete = triMaterial(TEX.concrete, .32, { nStr: 1 });
   MAT.stone = triMaterial(TEX.stone, .28, { nStr: 1.2 });
   MAT.roof = triMaterial(TEX.roof, .35, { nStr: 1 });

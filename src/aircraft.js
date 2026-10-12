@@ -11,56 +11,12 @@ const _a1 = new V3(), _a2 = new V3(), _a3 = new V3(), _aq = new THREE.Quaternion
 function lathe(pts, seg) { const g = new THREE.LatheGeometry(pts.map(p => new THREE.Vector2(p[1], p[0])), seg); g.rotateX(PI / 2); return g; }
 function planform(pts, thick) { const s = new THREE.Shape(); s.moveTo(pts[0][0], pts[0][1]); for (const p of pts.slice(1)) s.lineTo(p[0], p[1]); const g = new THREE.ExtrudeGeometry(s, { depth: thick, bevelEnabled: true, bevelThickness: thick * .3, bevelSize: thick * .3, bevelSegments: 1 }); g.translate(0, 0, -thick / 2); g.rotateX(-PI / 2); return g; }
 function finG(pts, thick) { const s = new THREE.Shape(); s.moveTo(pts[0][0], pts[0][1]); for (const p of pts.slice(1)) s.lineTo(p[0], p[1]); const g = new THREE.ExtrudeGeometry(s, { depth: thick, bevelEnabled: false }); g.translate(0, 0, -thick / 2); g.rotateY(-PI / 2); return g; }
-function buildPlaneGeos() {
-  // P-47 Thunderbolt
-  let mb = new MB(); mb.mat = 'paint';
-  const od = 0x6a7050, gr = 0x9aa0a0, w = 0xe6e3da, b = 0x151515;
-  mb.add(lathe([[-5.6, 0], [-5.55, .6], [-5.3, .8], [-4.6, .86], [-3, .86], [-1, .8], [1, .64], [3, .46], [5, .24], [5.7, .08]], 18), od, 0, 0, 0);
-  mb.add(planform([[-6.2, -.3], [-6, .6], [-3, 1.25], [0, 1.45], [3, 1.25], [6, .6], [6.2, -.3], [3, -1.05], [0, -1.25], [-3, -1.05]], .22), od, 0, -.35, -.8);
-  mb.add(planform([[-2.4, -.2], [-2.3, .4], [0, .7], [2.3, .4], [2.4, -.2], [0, -.5]], .12), od, 0, .1, 4.9);
-  mb.add(finG([[3.9, 0], [5.6, .1], [5.8, 1.9], [5.1, 2.1], [4.5, .5]], .1), od, 0, .2, 0);
-  for (let i = 0; i < 5; i++) { const c = i % 2 ? b : w; for (const sx of [-1, 1]) mb.add(U.box, c, sx * (3.3 + i * .32), -.2, -.8, 0, 0, 0, .32, .26, 2.4); mb.add(new THREE.CylinderGeometry(.56 - i * .04, .58 - i * .04, .3, 18, 1, true), c, 0, 0, 2.4 + i * .3, PI / 2, 0, 0); }
-  mb.mat = 'vc';
-  mb.add(U.sph, 0x1d2a33, 0, .78, -.9, 0, 0, 0, .42, .38, 1.1);
-  mb.add(new THREE.CylinderGeometry(.84, .84, .5, 20, 1, true), 0x2b2b2b, 0, 0, -5.35, PI / 2, 0, 0);
-  for (const sx of [-1, 1]) for (let k = 0; k < 4; k++) mb.add(U.cyl, 0x222222, sx * (2.3 + k * .3), -.32, -2.3, PI / 2, 0, 0, .03, .7, .03);
-  PGEO.p47 = mb.buildGroups();
-  // Fw 190
-  mb = new MB(); mb.mat = 'paint';
-  const fg = 0x6f756c, fy = 0xc9a43a;
-  mb.add(lathe([[-4.4, 0], [-4.35, .55], [-4.1, .72], [-3.5, .74], [-2, .7], [0, .6], [2, .42], [3.8, .22], [4.4, .06]], 18), fg, 0, 0, 0);
-  mb.add(planform([[-5.2, -.3], [-5, .5], [0, 1.25], [5, .5], [5.2, -.3], [0, -1.1]], .2), fg, 0, -.3, -.6);
-  mb.add(planform([[-1.8, -.2], [-1.7, .35], [0, .6], [1.7, .35], [1.8, -.2], [0, -.4]], .1), fg, 0, .1, 3.8);
-  mb.add(finG([[3, 0], [4.4, .1], [4.5, 1.5], [3.9, 1.6], [3.4, .4]], .1), fg, 0, .15, 0);
-  mb.add(new THREE.CylinderGeometry(.74, .74, .45, 20, 1, true), fy, 0, 0, -4.15, PI / 2, 0, 0);
-  for (const sx of [-1, 1]) { mb.add(U.box, 0x111111, sx * 3.2, -.18, -.6, 0, 0, 0, 1, .22, .14); mb.add(U.box, 0xeeeeee, sx * 3.2, -.17, -.6, 0, 0, 0, .14, .23, 1); }
-  mb.mat = 'vc'; mb.add(U.sph, 0x1d2a33, 0, .62, -.6, 0, 0, 0, .36, .32, .95);
-  PGEO.fw190 = mb.buildGroups();
-  // B-26 Marauder
-  mb = new MB(); mb.mat = 'paint';
-  mb.add(lathe([[-8.5, 0], [-8.3, .7], [-7.5, 1.05], [-5, 1.1], [3, 1.05], [6, .7], [8.5, .25], [9, .05]], 18), od, 0, 0, 0);
-  mb.add(planform([[-9.8, -.4], [-9.6, .7], [0, 1.6], [9.6, .7], [9.8, -.4], [0, -1.6]], .3), od, 0, .3, -1);
-  mb.add(planform([[-3.6, -.2], [-3.5, .5], [0, .9], [3.5, .5], [3.6, -.2], [0, -.6]], .14), od, 0, 1.6, 7.4);
-  mb.add(finG([[5.6, 0], [8.6, .2], [8.9, 3.8], [7.6, 4], [6.6, .8]], .14), od, 0, .4, 0);
-  for (const sx of [-1, 1]) { mb.add(lathe([[-2.6, 0], [-2.5, .55], [-1.8, .75], [1, .7], [3, .3]], 14), od, sx * 3.4, .1, -1.2); for (let i = 0; i < 5; i++) mb.add(U.box, i % 2 ? b : w, sx * 3.4, -.25 - 0 * i, -1.6 + i * .35, 0, 0, 0, 1.2, .5, .32); }
-  mb.mat = 'vc'; mb.add(U.sph, 0x1d2a33, 0, .9, -6.2, 0, 0, 0, .7, .45, 1.2); mb.add(U.sph, 0x1d2a33, 0, 0, -8.4, 0, 0, 0, .65, .65, .5);
-  PGEO.b26 = mb.buildGroups();
-  // elica
-  mb = new MB(); mb.mat = 'paint';
-  mb.add(new THREE.ConeGeometry(.32, .7, 14), 0x333333, 0, 0, -.25, -PI / 2, 0, 0);
-  for (let k = 0; k < 4; k++) mb.add(U.box, 0x1a1a1a, 0, 0, 0, 0, 0, k * PI / 2, .22, 1.9, .05).add(U.box, 0xd8c040, 0, 0, 0, 0, 0, k * PI / 2, .23, .12, .055);
-  PGEO.prop = mb.buildGroups();
-}
+function buildPlaneGeos() { for (const t of ['p47', 'fw190', 'b26']) buildPlaneData(t); PGEO.ready = true; }
 
 class Plane {
   constructor(type, team, pos, vel, path) {
-    this.type = type; this.team = team; this.g = groupMesh(PGEO[type]);
-    this.props = [];
-    const props = type === 'b26' ? [[-3.4, .1, -3.9], [3.4, .1, -3.9]] : [[0, 0, type === 'fw190' ? -4.5 : -5.75]];
-    for (const p of props) {
-      const pr = groupMesh(PGEO.prop, false); pr.position.set(...p); this.g.add(pr); this.props.push(pr);
-      const disc = new THREE.Mesh(new THREE.CircleGeometry(1.9, 24), new THREE.MeshBasicMaterial({ color: 0x222222, transparent: true, opacity: .18, depthWrite: false, side: THREE.DoubleSide })); disc.position.set(p[0], p[1], p[2] - .05); this.g.add(disc);
-    }
+    this.type = type; this.team = team; this.g = makePlaneModel(type);
+    this.props = this.g.userData.props;
     this.pos = this.g.position; this.pos.copy(pos); this.vel = vel.clone(); this.q = this.g.quaternion;
     this.hp = type === 'b26' ? 900 : 350; this.alive = true; this.path = path || []; this.pi = 0; this.fireT = 0; this.bombs = type === 'b26' ? 6 : 2; this.bombT = 0;
     this.crash = false; this.age = 0; this.roll = 0;
@@ -86,7 +42,7 @@ class Plane {
   }
   update(dt) {
     this.age += dt;
-    for (const p of this.props) p.rotation.z += dt * 60;
+    for (const p of this.props) { p.rotation.z += dt * 47; p.userData.disc.material.opacity = .14; }
     if (this.crash) {
       this.vel.y -= 9.8 * dt * 1.4; this.vel.multiplyScalar(1 - .1 * dt); this.roll += dt * 2;
       this.pos.addScaledVector(this.vel, dt); this.orient(this.roll);
@@ -238,41 +194,33 @@ function updateAircraft(dt) {
 //  Modalità pilota: P-47 in prima persona
 // ============================================================
 function buildCockpit() {
-  const g = new THREE.Group();
-  const mb = new MB(); mb.mat = 'paint';
-  const dk = 0x3a3d33, od = 0x6a7050;
-  mb.add(U.box, dk, 0, -.42, -.75, -.25, 0, 0, 1.05, .5, .12);
-  mb.add(U.box, 0x2a2c26, 0, -.12, -.85, -.1, 0, 0, .9, .08, .25);
-  for (const sx of [-1, 1]) { mb.add(U.box, od, sx * .5, -.35, -.2, 0, 0, 0, .06, .5, 1.6); mb.add(U.box, 0x2a2c26, sx * .47, -.1, -.2, 0, 0, sx * -.4, .04, .05, 1.6); }
-  for (const sx of [-1, 1]) mb.add(U.box, 0x222222, sx * .36, .28, -.95, .35, sx * .15, sx * .5, .03, .7, .03);
-  mb.add(U.box, 0x222222, 0, .55, -.6, 0, 0, 0, .7, .03, .03); mb.add(U.box, 0x222222, 0, .58, -.2, 0, 0, 0, .9, .03, .03);
-  mb.add(U.box, 0x444444, 0, -.7, -.35, 0, 0, 0, .04, .5, .04);
-  mb.add(U.box, 0x333333, 0, -.42, -.38, 0, 0, 0, .06, .1, .06);
-  mb.add(U.box, od, 0, -.6, -2.5, 0, 0, 0, 1.2, .5, 3);
+  // interno della cabina in coordinate dell'aereo (il modello esterno resta visibile)
+  const g = new THREE.Group(), mb = new MB(); mb.mat = 'paint';
+  const dk = 0x2c3122, gr = 0x3e4232;
+  for (const sx of [-1, 1]) { mb.add(U.box, dk, sx * .4, .45, -.65, 0, 0, 0, .03, .8, 1.6); mb.add(U.box, gr, sx * .37, .62, -.6, 0, 0, 0, .08, .08, 1.1); mb.add(U.box, 0x222222, sx * .37, .7, -.5, 0, 0, 0, .05, .04, .5); mb.add(U.box, 0x2a2c26, sx * .4, .86, -.65, 0, 0, 0, .06, .04, 1.6); }
+  mb.add(U.box, dk, 0, .05, -.65, 0, 0, 0, .8, .04, 1.6);
+  mb.add(U.box, 0x2a2c26, 0, .88, -1.38, -.35, 0, 0, .8, .05, .22);
+  mb.add(U.box, dk, 0, .42, -1.46, 0, 0, 0, .8, .9, .05); mb.add(U.box, dk, 0, .3, .2, 0, 0, 0, .8, .6, .05);
+  mb.add(cylG2(.025, .03, .55, 8), 0x333333, 0, .08, -.62, -.25, 0, 0); mb.add(U.box, 0x222222, 0, .37, -.68, 0, 0, 0, .06, .1, .05);
+  mb.add(U.box, 0x333333, -.4, .38, -.75, .3, 0, 0, .04, .2, .04); mb.add(U.sph, 0xaa2222, -.4, .48, -.78, 0, 0, 0, .025, .025, .025);
+  mb.add(U.box, 0x6a5a3a, 0, .22, -.15, 0, 0, 0, .55, .08, .5); mb.add(U.box, 0x6a5a3a, 0, .55, .12, -.15, 0, 0, .55, .7, .08);
+  mb.add(U.box, 0x2a2c26, 0, .78, -1.24, 0, 0, 0, .12, .1, .14);
   g.add(groupMesh(mb.buildGroups(), false));
-  // cruscotto con strumenti disegnati su canvas
+  for (const m of g.children) m.traverse(o => { if (o.isMesh) o.material = o.material.clone(), o.material.side = THREE.DoubleSide; });
   const cv = document.createElement('canvas'); cv.width = 512; cv.height = 192;
   const tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding;
-  const panel = new THREE.Mesh(new THREE.PlaneGeometry(1, .375), new THREE.MeshStandardMaterial({ map: tex, roughness: .7 }));
-  panel.position.set(0, -.33, -.69); panel.rotation.x = -.25; g.add(panel);
-  // collimatore a riflessione
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(.84, .315), new THREE.MeshStandardMaterial({ map: tex, roughness: .7 }));
+  panel.position.set(0, .66, -1.4); panel.rotation.x = -.18; g.add(panel);
   const sc = document.createElement('canvas'); sc.width = sc.height = 128; const sg = sc.getContext('2d');
   sg.strokeStyle = 'rgba(255,170,70,1)'; sg.lineWidth = 3; sg.beginPath(); sg.arc(64, 64, 50, 0, TAU); sg.stroke();
   sg.beginPath(); sg.moveTo(64, 20); sg.lineTo(64, 52); sg.moveTo(64, 76); sg.lineTo(64, 108); sg.moveTo(20, 64); sg.lineTo(52, 64); sg.moveTo(76, 64); sg.lineTo(108, 64); sg.stroke();
   sg.fillStyle = 'rgba(255,170,70,1)'; sg.beginPath(); sg.arc(64, 64, 3, 0, TAU); sg.fill();
-  const st = new THREE.CanvasTexture(sc);
-  const sight = new THREE.Mesh(new THREE.PlaneGeometry(.16, .16), new THREE.MeshBasicMaterial({ map: st, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, color: new THREE.Color(2.5, 1.6, .7) }));
-  sight.position.set(0, .02, -.82); g.add(sight);
-  const glass = new THREE.Mesh(new THREE.PlaneGeometry(.18, .14), new THREE.MeshStandardMaterial({ color: 0x334455, transparent: true, opacity: .15, roughness: .05, metalness: .5 }));
-  glass.position.set(0, .02, -.83); g.add(glass);
-  const prop = groupMesh(PGEO.prop, false); prop.position.set(0, -.15, -4.6); g.add(prop);
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(1.95, 32), new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: .14, depthWrite: false })); disc.position.set(0, -.15, -4.65); g.add(disc);
-  const wing = new MB(); wing.mat = 'paint';
-  wing.add(planform([[-6.2, -.3], [-6, .6], [-3, 1.25], [0, 1.45], [3, 1.25], [6, .6], [6.2, -.3], [3, -1.05], [0, -1.25], [-3, -1.05]], .22), 0x6a7050, 0, -1.2, -.4);
-  for (let i = 0; i < 5; i++) for (const sx of [-1, 1]) wing.add(U.box, i % 2 ? 0x151515 : 0xe6e3da, sx * (3.3 + i * .32), -1.05, -.4, 0, 0, 0, .32, .26, 2.4);
-  g.add(groupMesh(wing.buildGroups(), false));
+  const sight = new THREE.Mesh(new THREE.PlaneGeometry(.14, .14), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, color: new THREE.Color(2.5, 1.6, .7) }));
+  sight.position.set(0, 1.0, -1.22); g.add(sight);
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(.16, .13), new THREE.MeshStandardMaterial({ color: 0x334455, transparent: true, opacity: .15, roughness: .05, metalness: .5 }));
+  glass.position.set(0, 1.0, -1.23); g.add(glass);
   g.traverse(o => { if (o.isMesh) o.frustumCulled = false; });
-  PL.cockpit = g; PL.prop = prop; PL.gctx = cv.getContext('2d'); PL.gtex = tex;
+  PL.cockpit = g; PL.gctx = cv.getContext('2d'); PL.gtex = tex;
 }
 function drawGauges() {
   const g = PL.gctx, me = PL.me; if (!g || !me) return;
@@ -297,12 +245,12 @@ function drawGauges() {
   PL.gtex.needsUpdate = true;
 }
 function enterPlane() {
-  if (!PGEO.p47) return;
+  if (!PGEO.ready) return;
   if (!PL.cockpit) buildCockpit();
   const start = new V3(rnd(-80, 40), 380, 1100);
   const me = new Plane('p47', 'A', start, new V3(0, -5, -120), []); me.player = true; me.hp = 450;
-  me.g.visible = false; PL.me = me; PL.throttle = .85; PL.stickX = PL.stickY = PL.rudder = 0; PL.bombs = 2; PL.rearm = 0; PL.av = new V3();
-  camera.add(PL.cockpit); PL.cockpit.visible = true;
+  PL.me = me; PL.throttle = .85; PL.stickX = PL.stickY = PL.rudder = 0; PL.bombs = 2; PL.rearm = 0; PL.av = new V3();
+  me.g.add(PL.cockpit); PL.cockpit.visible = true; if (me.g.userData.pilot) me.g.userData.pilot.visible = false;
   P.mode = 'plane'; P.dead = false;
   scene.fog.density = FOG_BASE * .45;
   showMsg('P-47 Thunderbolt — 8 × .50 cal, 2 bombe da 500 lb', 4);
@@ -310,7 +258,7 @@ function enterPlane() {
 }
 function exitPlane() {
   if (PL.me) { PL.me.remove(); PL.me = null; }
-  if (PL.cockpit) { PL.cockpit.visible = false; camera.remove(PL.cockpit); }
+  if (PL.cockpit && PL.cockpit.parent) PL.cockpit.parent.remove(PL.cockpit);
   scene.fog.density = FOG_BASE;
 }
 const _pfw = new V3(), _pup = new V3(), _prt = new V3(), _F = new V3(), _vn = new V3();
@@ -342,7 +290,6 @@ function updatePlane(dt) {
   me.pos.addScaledVector(v, dt);
   me.g.updateMatrixWorld();
   for (const p of me.props) p.rotation.z += dt * 60 * PL.throttle;
-  PL.prop.rotation.z += dt * (20 + 60 * PL.throttle);
   // armi
   PL.gunT -= dt;
   if ((mouseL || KEYS.Space) && PL.gunT <= 0 && !me.crash) {
@@ -359,7 +306,7 @@ function updatePlane(dt) {
   if (me.crash && !PL.crashMsg) { PL.crashMsg = true; showMsg('Colpito! Stai precipitando!', 3); }
   if (Math.abs(me.pos.x) > 2400 || Math.abs(me.pos.z) > 2400 || me.pos.y > 2500) { const back = _a2.set(-me.pos.x, 300 - me.pos.y, -me.pos.z).normalize(); v.lerp(back.multiplyScalar(V), dt * .3); }
   // camera in cabina
-  const head = _a3.set(0, 1.05, .45).applyQuaternion(me.q).add(me.pos);
+  const head = me.g.localToWorld(_a3.set(0, 1.0, -.36));
   camera.position.copy(head);
   camera.quaternion.copy(me.q);
   camera.rotateY(P.lookYaw || 0); camera.rotateX(P.lookPitch || 0);

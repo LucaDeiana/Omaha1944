@@ -95,13 +95,13 @@ function mergeGeos(parts) {
   const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), cl = new Float32Array(nv * 3), uvs = new Float32Array(nv * 2), idx = new Uint32Array(ni);
   let vo = 0, io = 0; const v = new V3(), nm = new THREE.Matrix3();
   for (const p of parts) {
-    const g = p.g, pa = g.attributes.position, na = g.attributes.normal, ua = g.attributes.uv, c = p.c;
+    const g = p.g, pa = g.attributes.position, na = g.attributes.normal, ua = g.attributes.uv, c = p.c, ca = p.vc ? g.attributes.color : null;
     nm.getNormalMatrix(p.m);
     for (let i = 0; i < pa.count; i++) {
       const k = (vo + i) * 3;
       v.fromBufferAttribute(pa, i).applyMatrix4(p.m); pos[k] = v.x; pos[k + 1] = v.y; pos[k + 2] = v.z;
       v.fromBufferAttribute(na, i).applyMatrix3(nm).normalize(); nor[k] = v.x; nor[k + 1] = v.y; nor[k + 2] = v.z;
-      cl[k] = c.r; cl[k + 1] = c.g; cl[k + 2] = c.b;
+      if (ca) { cl[k] = ca.getX(i) * c.r; cl[k + 1] = ca.getY(i) * c.g; cl[k + 2] = ca.getZ(i) * c.b; } else { cl[k] = c.r; cl[k + 1] = c.g; cl[k + 2] = c.b; }
       if (ua) { uvs[(vo + i) * 2] = ua.getX(i) * (p.uvs || 1); uvs[(vo + i) * 2 + 1] = ua.getY(i) * (p.uvs || 1); }
     }
     if (g.index) { for (let i = 0; i < g.index.count; i++) idx[io + i] = g.index.getX(i) + vo; io += g.index.count; }
@@ -139,6 +139,12 @@ class MB {
     if (this.base) m.premultiply(this.base);
     this.parts.push({ g, c: typeof c === 'number' ? col(c) : c, m, mat: this.mat });
     return this;
+  }
+  // aggiunge una geometria con i suoi colori per vertice
+  addG(g, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, s = 1, tint = 0xffffff) {
+    _e.set(rx, ry, rz); _q.setFromEuler(_e); _p.set(x, y, z); _s.set(s, s, s);
+    const m = new THREE.Matrix4().compose(_p, _q, _s); if (this.base) m.premultiply(this.base);
+    this.parts.push({ g, c: col(tint), m, mat: this.mat, vc: true }); return this;
   }
   build() { return mergeGeos(this.parts); }
   buildGroups() { const g = {}; for (const p of this.parts) (g[p.mat] || (g[p.mat] = [])).push(p); const o = {}; for (const k in g) o[k] = mergeGeos(g[k]); return o; }
