@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Omaha 1944</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=Special+Elite&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="hud" class="hidden">
+  <div id="vignette"></div>
+  <div id="blood"></div>
+  <div id="scope"><div class="reticle"></div></div>
+  <div id="cross"><i></i><i></i><i></i><i></i></div>
+  <div id="hitm"></div>
+  <div id="dmgdir"></div>
+  <canvas id="compass" width="360" height="34"></canvas>
+  <div id="obj"><div id="objT"></div><div id="objS"></div></div>
+  <div id="markers"></div>
+  <div id="info"></div>
+  <div id="feed"></div>
+  <div id="subs"></div>
+  <div id="msg"></div>
+  <div id="interact"><span id="intT"></span><div id="intBar"><i></i></div></div>
+  <div id="gwarn"><span>⚠ GRANATA</span></div>
+  <div id="hpbox"><div id="stance"></div><div id="hpbar"><i></i></div></div>
+  <div id="wbox"><div id="wname"></div><div id="wammo"></div><div id="wextra"></div></div>
+  <div id="fade"></div>
+</div>
+
+<div id="menu" class="screen">
+  <div class="panel">
+    <div class="kicker">Operazione Overlord · 6 giugno 1944</div>
+    <h1>OMAHA 1944</h1>
+    <p class="lead">Settore Dog Green, ore 06:30. Le corazzate <i>Texas</i> e <i>Arkansas</i> martellano la costa mentre il tuo mezzo da sbarco Higgins attraversa le onde.
+      Sopravvivi allo sbarco, apri un varco nel filo spinato, conquista la scogliera, distruggi i bunker MG42 e la batteria da 88, libera Colleville-sur-Mer e resisti al contrattacco.</p>
+    <div class="grid">
+      <div class="opts">
+        <label>Qualità grafica <select id="optQuality"></select></label>
+        <label>Difficoltà <select id="optDiff"></select></label>
+        <label>Sensibilità mouse <span id="sensV"></span><input id="optSens" type="range" min=".3" max="2.5" step=".05"></label>
+        <label>Campo visivo <span id="fovV"></span><input id="optFov" type="range" min="60" max="95" step="1"></label>
+        <button id="startBtn">INIZIA LO SBARCO</button>
+        <div id="netErr" class="hidden err">Impossibile caricare la libreria grafica: serve una connessione a internet.</div>
+      </div>
+      <div class="keys">
+        <div><kbd>W A S D</kbd> movimento</div>
+        <div><kbd>Shift</kbd> corsa</div>
+        <div><kbd>Spazio</kbd> salto</div>
+        <div><kbd>C</kbd> accovacciati · <kbd>Z</kbd> a terra</div>
+        <div><kbd>Click sx</kbd> fuoco · <kbd>Click dx</kbd> mira</div>
+        <div><kbd>R</kbd> ricarica · <kbd>G</kbd> granata</div>
+        <div><kbd>1 2 3</kbd> / rotella armi · <kbd>Q</kbd> arma precedente</div>
+        <div><kbd>E</kbd> interagisci / raccogli</div>
+        <div><kbd>Esc</kbd> pausa</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="loading" class="screen hidden"><div class="panel center"><h2>OMAHA 1944</h2><div id="loadT">Caricamento…</div></div></div>
+
+<div id="pause" class="screen hidden">
+  <div class="panel center small">
+    <h2>PAUSA</h2>
+    <label>Sensibilità mouse <input id="pSens" type="range" min=".3" max="2.5" step=".05"></label>
+    <label>Campo visivo <input id="pFov" type="range" min="60" max="95" step="1"></label>
+    <button id="resumeBtn">RIPRENDI</button>
+    <button id="restartBtn" class="ghost">RICOMINCIA DALL'INIZIO</button>
+  </div>
+</div>
+
+<div id="end" class="screen hidden">
+  <div class="panel center small">
+    <h2 id="endTitle"></h2>
+    <div id="endText"></div>
+    <button id="againBtn">GIOCA ANCORA</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script>if (!window.THREE) document.addEventListener('DOMContentLoaded', () => { document.getElementById('netErr').classList.remove('hidden'); document.getElementById('startBtn').disabled = true; });</script>
+<script src="src/config.js"></script>
+<script src="src/engine.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/fx.js"></script>
+<script src="src/world.js"></script>
+<script src="src/soldier.js"></script>
+<script src="src/weapons.js"></script>
+<script src="src/player.js"></script>
+<script src="src/mission.js"></script>
+<script src="src/hud.js"></script>
+<script src="src/main.js"></script>
+</body>
+</html>

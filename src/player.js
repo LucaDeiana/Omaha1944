@@ -1,0 +1,225 @@
+"use strict";
+// ============================================================
+//  Giocatore: input, movimento, posture, acqua, danni, interazioni
+// ============================================================
+const KEYS = {};
+let mouseL = false;
+const P = {
+  pos: new V3(), prev: new V3(), vel: new V3(), yaw: 0, pitch: 0, vy: 0, grounded: true,
+  hp: 100, dead: false, deathT: 0, inBoat: true, boat: null,
+  stance: 0, eyeH: 1.0, sprint: false, stamina: 1, moveK: 0, bobPh: 0, stepT: 0, swim: false, depth: 0,
+  inv: [{ id: 'garand', mag: 8, res: 72 }, null, { id: 'colt', mag: 7, res: 28 }], cur: 0, prevSlot: 2, nades: 4, charges: 0, carry: null,
+  fireCD: 0, reloadT: 0, reloadDur: 1, switchT: 0, throwT: 0, boltT: 0, flashT: 0, trigger: false, adsHeld: false, adsK: 0,
+  recoil: 0, kickP: 0, kickY: 0, bloom: 0, shake: 0, hurt: 0, supp: 0, regenT: 0,
+  interacting: false, intT: 0, intTarget: null, ePressed: false, roll: 0,
+  slot() { return this.inv[this.cur]; },
+  targetable() { return !this.dead && !this.inBoat; },
+  chest(o) { return o.set(this.pos.x, this.pos.y + [1.25, .86, .32][this.stance], this.pos.z); },
+  hitMul() {
+    let m = .6;
+    if (this.stance === 1) m *= .6; else if (this.stance === 2) m *= .35;
+    if (this.sprint && this.moveK > .5) m *= .7;
+    if (this.swim) m *= .6;
+    return m;
+  },
+  damage(a, from, blast) {
+    if (this.dead || MISSION.godT > 0) return;
+    this.hp -= a; this.regenT = 5.5;
+    this.hurt = Math.min(1, this.hurt + a / 45); this.shake = Math.min(1.5, this.shake + a / 50);
+    if (from) damageIndicator(from);
+    sfxThud();
+    if (this.hp <= 0) { this.hp = 0; this.die(); }
+  },
+  nearMiss(from) { this.supp = Math.min(1, this.supp + .16); if (R() < .55) sfxWhiz(from); },
+  die() {
+    this.dead = true; this.deathT = 0; STATS.deaths++;
+    this.trigger = false; mouseL = false; this.adsHeld = false;
+    showMsg('Sei stato colpito', 2.5);
+  },
+};
+
+function initInput() {
+  addEventListener('keydown', e => {
+    if (['Space', 'Tab'].includes(e.code)) e.preventDefault();
+    const first = !KEYS[e.code]; KEYS[e.code] = true;
+    if (!GAME.running || !first) return;
+    const c = e.code;
+    if (c === 'KeyR') startReload();
+    else if (c === 'KeyC' || c === 'ControlLeft') { if (!P.swim) P.stance = P.stance === 1 ? 0 : 1; }
+    else if (c === 'KeyZ') { if (!P.swim && !P.inBoat) P.stance = P.stance === 2 ? 0 : 2; }
+    else if (c === 'KeyG') throwPlayerNade();
+    else if (c === 'Digit1') selectSlot(0);
+    else if (c === 'Digit2') selectSlot(1);
+    else if (c === 'Digit3') selectSlot(2);
+    else if (c === 'KeyQ') selectSlot(P.prevSlot);
+    else if (c === 'KeyE') P.ePressed = true;
+  });
+  addEventListener('keyup', e => { KEYS[e.code] = false; });
+  addEventListener('mousemove', e => {
+    if (!GAME.running) return;
+    const s = .0021 * SETTINGS.sens * (camera.fov / SETTINGS.fov);
+    P.yaw -= e.movementX * s; P.pitch = clamp(P.pitch - e.movementY * s, -1.5, 1.5);
+    swayX = clamp(swayX - e.movementX * .00011, -.025, .025); swayY = clamp(swayY + e.movementY * .00011, -.025, .025);
+  });
+  addEventListener('mousedown', e => {
+    if (!GAME.running) return;
+    if (e.button === 0) { mouseL = true; P.trigger = true; }
+    if (e.button === 2) P.adsHeld = true;
+  });
+  addEventListener('mouseup', e => { if (e.button === 0) { mouseL = false; P.trigger = false; } if (e.button === 2) P.adsHeld = false; });
+  addEventListener('contextmenu', e => e.preventDefault());
+  addEventListener('wheel', e => {
+    if (!GAME.running) return;
+    const dir = e.deltaY > 0 ? 1 : -1;
+    for (let k = 1; k <= 3; k++) { const i = (P.cur + dir * k + 3) % 3; if (P.inv[i]) { selectSlot(i); break; } }
+  });
+}
+function selectSlot(i) {
+  if (i === P.cur || !P.inv[i] || P.carry || P.dead) return;
+  P.prevSlot = P.cur; P.cur = i; P.switchT = .45; P.reloadT = 0; P.boltT = 0; sfxMech('pick');
+}
+
+const _pp = new V3();
+function updatePlayer(dt) {
+  MISSION.godT = Math.max(0, MISSION.godT - dt);
+  if (P.dead) {
+    P.deathT += dt;
+    $('fade').style.opacity = clamp((P.deathT - 1) / 1.4, 0, 1);
+    if (P.deathT > 3.3) respawn();
+    updateCamera(dt); updateViewmodel(dt); return;
+  }
+  P.fireCD -= dt; P.switchT = Math.max(0, P.switchT - dt); P.throwT = Math.max(0, P.throwT - dt);
+  if (P.reloadT > 0) { P.reloadT -= dt; if (P.reloadT <= 0) { P.reloadT = 0; finishReload(); } }
+  P.bloom = Math.max(0, P.bloom - dt * .06);
+  P.regenT -= dt; if (P.regenT <= 0 && P.hp < 100) P.hp = Math.min(100, P.hp + dt * 12);
+  P.hurt = Math.max(0, P.hurt - dt * .55); P.supp = Math.max(0, P.supp - dt * .3); P.shake = Math.max(0, P.shake - dt * 1.8);
+
+  const s = P.slot(), w = s ? WEAPONS[s.id] : null;
+  const canAds = !P.sprint && !P.swim && !P.carry && P.reloadT <= 0 && P.switchT <= 0 && !P.inBoat;
+  P.adsK = clamp(P.adsK + (P.adsHeld && canAds ? 1 : -1) * dt * 7, 0, 1);
+
+  if (P.inBoat) {
+    P.boat.toWorld(_pp.set(0, .47, 2.2), P.pos);
+    P.moveK = 0;
+    if (P.boat.open) { P.inBoat = false; P.pos.y = P.boat.y + .45; onPlayerDisembark(); }
+    updateCamera(dt); updateViewmodel(dt); return;
+  }
+
+  // --- movimento ---
+  const f = (KEYS.KeyW ? 1 : 0) - (KEYS.KeyS ? 1 : 0), st = (KEYS.KeyD ? 1 : 0) - (KEYS.KeyA ? 1 : 0);
+  P.sprint = !!KEYS.ShiftLeft && f > 0 && P.stance !== 2 && P.stamina > .05 && !P.swim && P.adsK < .3;
+  if (P.sprint && P.stance === 1) P.stance = 0;
+  let sp = [4.3, 2.2, 1.0][P.stance];
+  if (P.sprint) sp = 6.9;
+  sp *= (w && w.speedMul) || 1;
+  if (P.adsK > .5) sp *= .6;
+  if (P.carry) sp *= .85;
+  const g0 = H(P.pos.x, P.pos.z), wl = P.pos.z > -10 ? waterLevel(P.pos.x, P.pos.z, GAME.time) : -99;
+  let boatFloor = -99;
+  for (const b of WORLD.boats) if (b.landed && Math.abs(P.pos.x - b.x) < 1.5 && P.pos.z > b.z - 7.1 && P.pos.z < b.z + 5) boatFloor = Math.max(boatFloor, b.y + .45);
+  P.depth = Math.max(0, wl - Math.max(g0, boatFloor));
+  P.swim = P.depth > 1.4;
+  if (P.depth > .15) sp *= clamp(1 - P.depth * .42, .4, 1);
+  if (P.swim) { sp = 1.9; P.stance = 0; }
+  P.stamina = clamp(P.stamina + (P.sprint && (f || st) ? -.16 : .11) * dt, 0, 1);
+  const sy = Math.sin(P.yaw), cy = Math.cos(P.yaw);
+  let mx = 0, mz = 0;
+  if (f || st) { const l = Math.hypot(f, st); mx = (-sy * f + cy * st) / l; mz = (-cy * f - sy * st) / l; }
+  const acc = P.grounded ? 10 : 2;
+  P.vel.x = lerp(P.vel.x, mx * sp, Math.min(1, dt * acc)); P.vel.z = lerp(P.vel.z, mz * sp, Math.min(1, dt * acc));
+  P.prev.copy(P.pos);
+  P.pos.x += P.vel.x * dt; P.pos.z += P.vel.z * dt;
+  pushOut(P.pos, .38, P.stance === 2 ? .5 : 1.7);
+  applyWire(P.pos, P.prev);
+  for (const o of OBST) {
+    const dx = P.pos.x - o.x, dz = P.pos.z - o.z, d2 = dx * dx + dz * dz, rr = o.r + .3;
+    if (d2 < rr * rr && d2 > 0) { const d = Math.sqrt(d2); P.pos.x = o.x + dx / d * rr; P.pos.z = o.z + dz / d * rr; }
+  }
+  P.pos.x = clamp(P.pos.x, -235, 235); P.pos.z = clamp(P.pos.z, -440, 40);
+  let ground = Math.max(H(P.pos.x, P.pos.z), boatFloor);
+  if (P.swim) ground = Math.max(ground, wl - 1.4);
+  if (KEYS.Space && P.grounded && P.stance === 0 && !P.swim && P.depth < .6) { P.vy = 4.8; P.grounded = false; }
+  P.vy -= 18 * dt; P.pos.y += P.vy * dt;
+  if (P.pos.y <= ground) { if (!P.grounded && P.vy < -7) P.shake += .25; P.pos.y = ground; P.vy = 0; P.grounded = true; }
+  else if (P.grounded && P.pos.y - ground < .7 && P.vy <= 0) { P.pos.y = ground; P.vy = 0; }
+  else P.grounded = false;
+  if (inMinefield(P.pos.x, P.pos.z)) checkMines(P.pos);
+
+  const spd = Math.hypot(P.vel.x, P.vel.z);
+  P.moveK = clamp(spd / 4.3, 0, 1.6); P.bobPh += dt * spd * 2.3;
+  P.stepT -= dt * spd;
+  if (P.stepT <= 0 && P.grounded) { P.stepT = P.sprint ? 2.5 : 2.1; sfxStep(P.depth > .1, P.sprint); }
+
+  if (s && mouseL && (w.auto || P.trigger)) playerFire();
+  updateInteract(dt);
+  updateCamera(dt); updateViewmodel(dt);
+}
+
+function updateInteract(dt) {
+  let best = null, bd = 1e9;
+  for (const it of MISSION.interactables) {
+    if (!it.active()) continue;
+    const d = Math.hypot(P.pos.x - it.pos.x, P.pos.z - it.pos.z);
+    if (d < it.r && d < bd && Math.abs(P.pos.y - it.pos.y) < 3) { best = it; bd = d; }
+  }
+  for (const pk of WORLD.pickups) {
+    const d = Math.hypot(P.pos.x - pk.pos.x, P.pos.z - pk.pos.z);
+    if (d < 1.8 && d < bd) { best = { pickup: pk, label: `Premi E per raccogliere: ${WEAPONS[pk.id].name}` }; bd = d; }
+  }
+  for (const c of WORLD.crates) {
+    const d = Math.hypot(P.pos.x - c.x, P.pos.z - c.z);
+    if (d < 2.3 && d < bd) { best = { crate: c, label: 'Premi E per rifornirti di munizioni e granate' }; bd = d; }
+  }
+  P.intTarget = best;
+  const box = $('interact');
+  if (!best || P.dead) { P.intT = 0; P.interacting = false; box.style.display = 'none'; P.ePressed = false; return; }
+  box.style.display = 'block'; $('intT').textContent = best.label;
+  if (best.hold) {
+    if (KEYS.KeyE) { P.interacting = true; P.intT += dt / best.hold; if (P.intT >= 1) { P.intT = 0; P.interacting = false; best.done(); } }
+    else { P.intT = 0; P.interacting = false; }
+    $('intBar').style.display = 'block'; $('intBar').firstChild.style.width = (P.intT * 100) + '%';
+  } else {
+    $('intBar').style.display = 'none';
+    if (P.ePressed) {
+      if (best.pickup) takePickup(best.pickup);
+      else if (best.crate) resupply();
+      else best.done();
+    }
+  }
+  P.ePressed = false;
+}
+function resupply() {
+  for (const s of P.inv) if (s) { const w = WEAPONS[s.id]; s.res = Math.max(s.res, w.res); }
+  P.nades = Math.max(P.nades, 5);
+  sfxMech('pick'); feed('Munizioni e granate rifornite');
+}
+
+function updateCamera(dt) {
+  const eyeT = P.inBoat ? .98 : P.swim ? (waterLevel(P.pos.x, P.pos.z, GAME.time) - P.pos.y) + .22 : [1.62, 1.05, .42][P.stance];
+  P.eyeH = lerp(P.eyeH, eyeT, Math.min(1, dt * 9));
+  P.kickP = lerp(P.kickP, 0, Math.min(1, dt * 10)); P.kickY = lerp(P.kickY, 0, Math.min(1, dt * 10));
+  const bobY = Math.sin(P.bobPh) * .035 * P.moveK;
+  let y = P.pos.y + P.eyeH + bobY, roll = 0;
+  if (P.dead) { const k = clamp(P.deathT / .8, 0, 1); y = P.pos.y + lerp(P.eyeH, .25, k); roll = k * .5; }
+  if (P.inBoat) roll = P.boat.g.rotation.z;
+  camera.position.set(P.pos.x, y, P.pos.z);
+  const sh = P.shake * .035;
+  camera.rotation.set(P.pitch + P.kickP + rnd(-sh, sh) + (P.inBoat ? P.boat.g.rotation.x : 0), P.yaw + P.kickY + rnd(-sh, sh), roll + Math.sin(P.bobPh * .5) * .006 * P.moveK);
+  const s = P.slot(), w = s ? WEAPONS[s.id] : null;
+  let fov = SETTINGS.fov + (P.sprint && P.moveK > .5 ? 6 : 0);
+  if (w && P.adsK > 0) fov = lerp(fov, w.fov, P.adsK * P.adsK);
+  if (Math.abs(camera.fov - fov) > .01) { camera.fov = fov; camera.updateProjectionMatrix(); }
+}
+
+function respawn() {
+  const c = MISSION.checkpoint;
+  P.pos.set(c.pos.x, H(c.pos.x, c.pos.z), c.pos.z); P.yaw = c.yaw; P.pitch = 0;
+  P.hp = 100; P.dead = false; P.deathT = 0; P.vel.set(0, 0, 0); P.vy = 0; P.stance = 0; P.hurt = 0; P.supp = 0; P.shake = 0;
+  for (const s of P.inv) if (s) { const w = WEAPONS[s.id]; s.res = Math.max(s.res, w.mag * 3); if (s.mag === 0) s.mag = Math.min(w.mag, s.res); }
+  P.nades = Math.max(P.nades, 3); P.charges = Math.max(P.charges, MISSION.minCharges || 0);
+  P.carry = null; P.reloadT = 0; P.switchT = .5;
+  for (let i = projectiles.length - 1; i >= 0; i--) if (projectiles[i].team === 'E') { scene.remove(projectiles[i].m); projectiles.splice(i, 1); }
+  MISSION.godT = 3.5;
+  $('fade').style.opacity = 0;
+  showMsg('Ritorno all\'ultimo checkpoint', 2.5);
+}
