@@ -47,17 +47,19 @@ function col(h) {
 }
 
 // ---------- Impostazioni ----------
+const DPR = devicePixelRatio || 1;
 const QUALITY = {
-  basso: { label: 'Basso', pr: .8, shadows: 0, post: false, bloom: false, terrainStep: 2, allies: 26, enemyMul: .7, grass: 0, lights: 1, particles: .5, shadowDist: 0, corpses: 35 },
-  medio: { label: 'Medio', pr: 1, shadows: 1024, post: true, bloom: false, terrainStep: 1.4, allies: 38, enemyMul: .85, grass: 5000, lights: 2, particles: .8, shadowDist: 40, corpses: 60 },
-  alto: { label: 'Alto', pr: Math.min(devicePixelRatio || 1, 1.5), shadows: 2048, post: true, bloom: true, terrainStep: 1, allies: 52, enemyMul: 1, grass: 12000, lights: 4, particles: 1, shadowDist: 60, corpses: 90 },
+  basso: { label: 'Basso', pr: Math.min(DPR, .9), prMin: .55, shadows: 0, shadowDist: 0, post: false, bloom: false, fxaa: false, terrainStep: 1.6, tex: 256, allyAlive: 45, enemyAlive: 55, allySlots: 140, enemySlots: 120, grass: 0, lights: 1, particles: .55, lod: 0, waveBoats: 3, gibs: 6, ragdolls: 8 },
+  medio: { label: 'Medio', pr: Math.min(DPR, 1), prMin: .65, shadows: 1024, shadowDist: 45, post: true, bloom: true, fxaa: true, terrainStep: 1.15, tex: 512, allyAlive: 75, enemyAlive: 85, allySlots: 230, enemySlots: 190, grass: 6000, lights: 2, particles: .8, lod: 26, waveBoats: 4, gibs: 12, ragdolls: 16 },
+  alto: { label: 'Alto', pr: Math.min(DPR, 1.5), prMin: .7, shadows: 2048, shadowDist: 60, post: true, bloom: true, fxaa: true, terrainStep: .85, tex: 1024, allyAlive: 110, enemyAlive: 120, allySlots: 330, enemySlots: 270, grass: 14000, lights: 4, particles: 1, lod: 45, waveBoats: 6, gibs: 20, ragdolls: 26 },
+  ultra: { label: 'Ultra', pr: Math.min(DPR, 2), prMin: .75, shadows: 4096, shadowDist: 80, post: true, bloom: true, fxaa: true, terrainStep: .7, tex: 1024, allyAlive: 150, enemyAlive: 150, allySlots: 430, enemySlots: 330, grass: 24000, lights: 4, particles: 1.25, lod: 70, waveBoats: 7, gibs: 30, ragdolls: 40 },
 };
 const DIFF = {
   recluta: { label: 'Recluta', dmg: .45, acc: .7 },
   regolare: { label: 'Regolare', dmg: .75, acc: .9 },
   veterano: { label: 'Veterano', dmg: 1.15, acc: 1.1 },
 };
-const SETTINGS = { quality: 'medio', diff: 'regolare', sens: 1, fov: 72 };
+const SETTINGS = { quality: 'medio', diff: 'regolare', sens: 1, fov: 72, gore: true, voices: true, dynres: true, volume: .85, fps: false };
 try { Object.assign(SETTINGS, JSON.parse(localStorage.getItem('omaha_settings') || '{}')); } catch (e) { }
 function saveSettings() { try { localStorage.setItem('omaha_settings', JSON.stringify(SETTINGS)); } catch (e) { } }
 let Q = QUALITY[SETTINGS.quality] || QUALITY.medio, D = DIFF[SETTINGS.diff] || DIFF.regolare;
@@ -76,13 +78,13 @@ const WEAPONS = {
 
 // ---------- Armi dell'IA ----------
 const AIW = {
-  rifle: { rate: [1.7, 3.4], acc: .3, range: 190, burst: [1, 1], bi: 0, dmg: [24, 40], tracer: .15 },
-  smg: { rate: [1.1, 2.4], acc: .13, range: 75, burst: [4, 8], bi: .1, dmg: [12, 20], tracer: .3 },
-  bar: { rate: [1.4, 2.8], acc: .14, range: 220, burst: [3, 6], bi: .14, dmg: [18, 28], tracer: .6 },
-  mg: { rate: [1.0, 2.4], acc: .055, range: 280, burst: [12, 30], bi: .055, dmg: [13, 22], tracer: 1 },
-  sniper: { rate: [4, 7], acc: .55, range: 340, burst: [1, 1], bi: 0, dmg: [45, 70], tracer: 0 },
+  rifle: { rate: [1.6, 3.2], acc: .3, range: 200, burst: [1, 1], bi: 0, dmg: [30, 55], tracer: .12 },
+  smg: { rate: [1.0, 2.2], acc: .13, range: 80, burst: [4, 9], bi: .1, dmg: [16, 26], tracer: .25 },
+  bar: { rate: [1.3, 2.6], acc: .14, range: 230, burst: [3, 7], bi: .14, dmg: [25, 40], tracer: .5 },
+  mg: { rate: [.7, 1.8], acc: .07, range: 320, burst: [15, 40], bi: .05, dmg: [25, 45], tracer: .35 },
+  sniper: { rate: [4, 7], acc: .55, range: 380, burst: [1, 1], bi: 0, dmg: [55, 90], tracer: 0 },
   medic: { rate: [2, 4], acc: .15, range: 60, burst: [1, 1], bi: 0, dmg: [15, 25], tracer: 0 },
-};
+}
 const AISND = { A: { rifle: 'garand', smg: 'thompson', bar: 'bar', medic: 'colt' }, E: { rifle: 'kar98', smg: 'mp40', mg: 'mg42', sniper: 'kar98' } };
 
 // ---------- Costruttore di geometrie unite (colori per vertice) ----------
@@ -90,16 +92,17 @@ const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Eul
 function mergeGeos(parts) {
   let nv = 0, ni = 0;
   for (const p of parts) { const g = p.g; nv += g.attributes.position.count; ni += g.index ? g.index.count : g.attributes.position.count; }
-  const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), cl = new Float32Array(nv * 3), idx = new Uint32Array(ni);
+  const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), cl = new Float32Array(nv * 3), uvs = new Float32Array(nv * 2), idx = new Uint32Array(ni);
   let vo = 0, io = 0; const v = new V3(), nm = new THREE.Matrix3();
   for (const p of parts) {
-    const g = p.g, pa = g.attributes.position, na = g.attributes.normal, c = p.c;
+    const g = p.g, pa = g.attributes.position, na = g.attributes.normal, ua = g.attributes.uv, c = p.c;
     nm.getNormalMatrix(p.m);
     for (let i = 0; i < pa.count; i++) {
       const k = (vo + i) * 3;
       v.fromBufferAttribute(pa, i).applyMatrix4(p.m); pos[k] = v.x; pos[k + 1] = v.y; pos[k + 2] = v.z;
       v.fromBufferAttribute(na, i).applyMatrix3(nm).normalize(); nor[k] = v.x; nor[k + 1] = v.y; nor[k + 2] = v.z;
       cl[k] = c.r; cl[k + 1] = c.g; cl[k + 2] = c.b;
+      if (ua) { uvs[(vo + i) * 2] = ua.getX(i) * (p.uvs || 1); uvs[(vo + i) * 2 + 1] = ua.getY(i) * (p.uvs || 1); }
     }
     if (g.index) { for (let i = 0; i < g.index.count; i++) idx[io + i] = g.index.getX(i) + vo; io += g.index.count; }
     else { for (let i = 0; i < pa.count; i++) idx[io + i] = vo + i; io += pa.count; }
@@ -109,12 +112,13 @@ function mergeGeos(parts) {
   out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
   out.setAttribute('color', new THREE.BufferAttribute(cl, 3));
+  out.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   out.setIndex(new THREE.BufferAttribute(idx, 1));
   out.computeBoundingSphere(); out.computeBoundingBox();
   return out;
 }
 class MB {
-  constructor() { this.parts = []; this.base = null; }
+  constructor() { this.parts = []; this.base = null; this.mat = 'vc'; }
   setBase(x, y, z, rx = 0, ry = 0, rz = 0, s = 1) {
     this.base = new THREE.Matrix4().compose(new V3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz, 'YXZ')), new V3(s, s, s));
     return this;
@@ -124,7 +128,7 @@ class MB {
     _e.set(rx, ry, rz); _q.setFromEuler(_e); _p.set(x, y, z); _s.set(sx, sy, sz);
     const m = new THREE.Matrix4().compose(_p, _q, _s);
     if (this.base) m.premultiply(this.base);
-    this.parts.push({ g, c: typeof c === 'number' ? col(c) : c, m });
+    this.parts.push({ g, c: typeof c === 'number' ? col(c) : c, m, mat: this.mat });
     return this;
   }
   // cilindro tra due punti
@@ -133,10 +137,11 @@ class MB {
     const q = new THREE.Quaternion().setFromUnitVectors(new V3(0, 1, 0), d.clone().normalize());
     const m = new THREE.Matrix4().compose(a.clone().addScaledVector(d, .5), q, new V3(r, len, r));
     if (this.base) m.premultiply(this.base);
-    this.parts.push({ g, c: typeof c === 'number' ? col(c) : c, m });
+    this.parts.push({ g, c: typeof c === 'number' ? col(c) : c, m, mat: this.mat });
     return this;
   }
   build() { return mergeGeos(this.parts); }
+  buildGroups() { const g = {}; for (const p of this.parts) (g[p.mat] || (g[p.mat] = [])).push(p); const o = {}; for (const k in g) o[k] = mergeGeos(g[k]); return o; }
 }
 // geometrie unitarie condivise
 const U = {

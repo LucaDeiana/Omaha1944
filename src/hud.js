@@ -16,6 +16,7 @@ function feed(text) {
   setTimeout(() => { d.style.opacity = 0; setTimeout(() => d.remove(), 600); }, 3500);
   while ($('feed').children.length > 5) $('feed').lastChild.remove();
 }
+function subLine(who, text, it) { say(who, '<i>«' + text + '»</i>' + (it ? ' — ' + it : '')); }
 function showMsg(text, dur = 3) { $('msg').textContent = text; $('msg').style.opacity = 1; msgT = dur; }
 function damageIndicator(from) {
   const a = Math.atan2(from.x - P.pos.x, from.z - P.pos.z);
@@ -80,7 +81,15 @@ function updateHUD(dt) {
   const low = P.hp < 35 && !P.dead ? .35 + Math.sin(GAME.time * 5) * .1 : 0;
   if (gradePass) { gradePass.uniforms.uDamage.value = Math.max(P.hurt * .8, low); gradePass.uniforms.uSupp.value = P.supp; $('blood').style.opacity = 0; }
   else $('blood').style.opacity = Math.max(P.hurt, low);
+  $('naval').style.display = P.mode === 'naval' ? 'block' : 'none';
+  $('planehud').style.display = P.mode === 'plane' ? 'block' : 'none';
+  $('cross').style.display = P.mode === 'foot' ? 'block' : 'none';
+  $('wbox').style.display = $('hpbox').style.display = P.mode === 'foot' ? 'block' : 'none';
+  if (gradePass) { gradePass.uniforms.uShock.value = P.shock; gradePass.uniforms.uFlash.value = Math.max(0, gradePass.uniforms.uFlash.value - dt * 2); }
   hudT -= dt; if (hudT > 0) return; hudT = .1;
+  if (P.mode === 'naval') { $('navInfo').innerHTML = (NAV.target ? 'Distanza: <b>' + Math.round(NAV.range) + ' m</b>' : 'Nessun bersaglio') + '<br>' + (NAV.reload > 0 ? 'Ricarica: ' + NAV.reload.toFixed(1) + ' s' : NAV.ready ? '<b class="ok">PRONTO AL FUOCO</b>' : 'Brandeggio torretta…') + '<br><small>Click sx: fuoco · Click dx: binocolo · B: cambia ruolo</small>'; $('navZoom').style.display = NAV.zoom ? 'block' : 'none'; }
+  if (P.mode === 'plane' && PL.me) $('planeInfo').innerHTML = 'Velocità ' + Math.round(PL.me.vel.length() * 3.6) + ' km/h · Quota ' + Math.round(PL.me.pos.y) + ' m · Manetta ' + Math.round(PL.throttle * 100) + '% · ' + PL.G.toFixed(1) + ' G<br>Bombe: ' + PL.bombs + (PL.bombs < 2 ? ' (riarmo ' + Math.max(0, Math.ceil(PL.rearm)) + ' s)' : '') + ' · Scafo ' + Math.max(0, Math.round(PL.me.hp / 4.5)) + '%<br><small>Mouse: cloche · W/S: manetta · A/D: timone · Click sx/Spazio: mitragliatrici · Click dx/F: bomba · B: cambia ruolo</small>';
+  if (SETTINGS.fps) $('fps').textContent = Math.round(FPS.v) + ' fps · ' + Math.round(DYN.scale * 100) + '% ris.';
   $('objT').textContent = MISSION.title; $('objS').textContent = MISSION.objText;
   $('hpbar').firstChild.style.width = P.hp + '%';
   $('hpbar').firstChild.style.background = P.hp < 35 ? '#b33' : '#c8c0a0';

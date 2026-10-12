@@ -1,191 +1,101 @@
 "use strict";
 // ============================================================
-//  Soldati: modelli articolati, animazioni, IA alleata e nemica
+//  Soldati: animazione procedurale, IA alleata e nemica,
+//  feriti, medici, soppressione, grida, ragdoll alla morte
 // ============================================================
 const allies = [], enemies = [], corpses = [];
-const SGEO = {};
-const SCOL = {
-  A: { jacket: 0x6b6845, pants: 0x5e5b3e, web: 0x8f8660, pack: 0x6e6a4d, helm: 0x4a4f33, skin: 0xc69a7a, legging: 0x9b8f6c, boot: 0x4a3524, wood: 0x6b4423 },
-  E: { jacket: 0x5d6660, pants: 0x535b57, web: 0x26231f, pack: 0x4f4a3c, helm: 0x4d5550, skin: 0xc9a083, legging: 0x1c1a18, boot: 0x1c1a18, wood: 0x5a3a20 },
-};
-const T1 = new V3(), T2 = new V3(), T3 = new V3(), T4 = new V3();
-
-function buildSoldierGeos(team, kind) {
-  const C = SCOL[team], met = 0x262626;
-  // --- busto con braccia e arma (spazio della colonna, origine all'anca) ---
-  const t = new MB();
-  t.add(U.box, C.pants, 0, .06, 0, 0, 0, 0, .36, .24, .24);
-  t.add(U.box, C.jacket, 0, .4, 0, .05, 0, 0, .44, .52, .26);
-  t.add(U.box, C.web, 0, .16, 0, 0, 0, 0, .46, .07, .28);
-  for (const x of [-.15, -.05, .05, .15]) t.add(U.box, C.web, x, .16, -.15, 0, 0, 0, .08, .1, .05);
-  t.add(U.cyl, C.skin, 0, .7, 0, 0, 0, 0, .06, .1, .06);
-  if (team === 'A') {
-    t.add(U.box, C.pack, 0, .44, .2, 0, 0, 0, .32, .34, .15);
-    t.add(U.cyl, 0x7a7350, 0, .64, .2, 0, 0, PI / 2, .07, .34, .07);
-    t.add(U.box, C.web, -.12, .42, 0, 0, 0, 0, .05, .5, .28); t.add(U.box, C.web, .12, .42, 0, 0, 0, 0, .05, .5, .28);
-    t.add(U.box, 0x5a4a35, .18, .1, .14, .3, 0, 0, .06, .28, .04);
-    if (kind === 'medic') { t.add(U.box, 0xe8e6de, -.24, .52, 0, 0, 0, 0, .02, .09, .13); t.add(U.box, 0xb01010, -.25, .52, 0, 0, 0, 0, .02, .06, .02); }
-  } else {
-    t.add(U.cyl, 0x5a625a, .14, .2, .16, 0, 0, 0, .06, .26, .06);
-    t.add(U.box, C.pack, -.1, .2, .16, 0, 0, 0, .14, .14, .08);
-    t.add(U.box, 0x3d3a33, -.13, .32, -.15, 0, 0, 0, .07, .12, .04);
-  }
-  // braccia e arma
-  const grip = new V3(.12, .43, -.16), fore = new V3(.07, .47, -.52), shR = new V3(.25, .57, 0), shL = new V3(-.25, .57, 0);
-  let lHand = fore.clone();
-  const wood = C.wood;
-  if (kind === 'rifle' || kind === 'sniper') {
-    t.add(U.box, wood, grip.x, grip.y - .02, grip.z + .16, 0, 0, 0, .055, .1, .4);
-    t.add(U.box, wood, grip.x, grip.y + .02, grip.z - .3, 0, 0, 0, .05, .06, .5);
-    t.add(U.cyl, met, grip.x, grip.y + .05, grip.z - .62, PI / 2, 0, 0, .013, .5, .013);
-    if (kind === 'sniper') t.add(U.cyl, met, grip.x, grip.y + .11, grip.z - .12, PI / 2, 0, 0, .022, .3, .022);
-  } else if (kind === 'smg') {
-    if (team === 'A') {
-      t.add(U.box, wood, grip.x, grip.y - .01, grip.z + .14, 0, 0, 0, .05, .09, .3);
-      t.add(U.box, met, grip.x, grip.y + .03, grip.z - .14, 0, 0, 0, .05, .07, .3);
-      t.add(U.cyl, met, grip.x, grip.y + .04, grip.z - .38, PI / 2, 0, 0, .015, .24, .015);
-      t.add(U.box, met, grip.x, grip.y - .08, grip.z - .14, 0, 0, 0, .035, .18, .06);
-    } else {
-      t.add(U.cyl, met, grip.x, grip.y + .03, grip.z - .12, PI / 2, 0, 0, .025, .34, .025);
-      t.add(U.box, met, grip.x, grip.y - .1, grip.z - .2, 0, 0, 0, .03, .22, .04);
-      t.add(U.box, met, grip.x, grip.y, grip.z + .12, 0, 0, 0, .02, .05, .22);
-    }
-    lHand = new V3(.08, .38, -.36);
-  } else if (kind === 'bar') {
-    t.add(U.box, wood, grip.x, grip.y - .02, grip.z + .18, 0, 0, 0, .055, .11, .4);
-    t.add(U.box, met, grip.x, grip.y + .03, grip.z - .2, 0, 0, 0, .06, .09, .45);
-    t.add(U.cyl, met, grip.x, grip.y + .05, grip.z - .65, PI / 2, 0, 0, .016, .5, .016);
-    t.add(U.box, met, grip.x, grip.y - .06, grip.z - .16, 0, 0, 0, .04, .12, .08);
-  } else if (kind === 'mg') {
-    t.add(U.box, met, grip.x, grip.y + .02, grip.z - .2, 0, 0, 0, .08, .11, .6);
-    t.add(U.cyl, met, grip.x, grip.y + .04, grip.z - .68, PI / 2, 0, 0, .035, .45, .035);
-    t.add(U.box, met, grip.x, grip.y, grip.z + .18, 0, 0, 0, .05, .1, .3);
-    t.add(U.box, 0xa0823c, grip.x - .1, grip.y - .02, grip.z - .2, 0, 0, .4, .14, .03, .18);
-    lHand = new V3(.04, .44, -.28);
-  }
-  if (kind === 'medic') { lHand = new V3(-.18, .25, -.15); }
-  const elR = new V3(.28, .32, .02), elL = new V3(-.14, .34, -.22);
-  t.between(shR, elR, .062, C.jacket); t.between(elR, grip, .052, C.jacket);
-  if (kind === 'medic') { t.between(shL, new V3(-.28, .32, 0), .062, C.jacket); t.between(new V3(-.28, .32, 0), lHand, .052, C.jacket); }
-  else { t.between(shL, elL, .062, C.jacket); t.between(elL, lHand, .052, C.jacket); }
-  t.add(U.sph, C.skin, grip.x, grip.y - .02, grip.z + .02, 0, 0, 0, .045, .045, .05);
-  t.add(U.sph, C.skin, lHand.x, lHand.y - .02, lHand.z, 0, 0, 0, .045, .045, .05);
-  // --- testa ed elmetto ---
-  const h = new MB();
-  h.add(U.sph, C.skin, 0, .1, 0, 0, 0, 0, .1, .118, .108);
-  h.add(U.box, C.skin, 0, .09, -.105, 0, 0, 0, .025, .04, .03);
-  if (team === 'A') {
-    h.add(U.hemi, C.helm, 0, .135, 0, 0, 0, 0, .145, .125, .155);
-    h.add(U.cyl12, C.helm, 0, .132, 0, 0, 0, 0, .16, .014, .17);
-    if (kind === 'medic') for (const sx of [-1, 1]) { h.add(U.cyl12, 0xe8e6de, sx * .14, .2, 0, 0, 0, PI / 2, .045, .01, .045); h.add(U.box, 0xb01010, sx * .147, .2, 0, 0, 0, 0, .008, .055, .016); h.add(U.box, 0xb01010, sx * .147, .2, 0, 0, 0, 0, .008, .016, .055); }
-  } else {
-    h.add(U.hemi, C.helm, 0, .14, 0, 0, 0, 0, .14, .13, .15);
-    h.add(U.skirt, C.helm, 0, .105, .005, 0, 0, 0, .14, .07, .15);
-  }
-  // --- gambe ---
-  const th = new MB(); th.add(U.box, C.pants, 0, -.22, 0, 0, 0, 0, .15, .46, .17);
-  const sh = new MB(); sh.add(U.box, C.pants, 0, -.18, 0, 0, 0, 0, .13, .36, .15);
-  sh.add(U.box, C.legging, 0, -.33, 0, 0, 0, 0, .145, .2, .16);
-  sh.add(U.box, C.boot, 0, -.44, -.04, 0, 0, 0, .14, .1, .27);
-  return { torso: t.build(), head: h.build(), thigh: th.build(), shin: sh.build() };
-}
-
-function makeSoldierModel(team, kind) {
-  const key = team + kind;
-  const G = SGEO[key] || (SGEO[key] = buildSoldierGeos(team, kind));
-  const root = new THREE.Group(); root.rotation.order = 'YXZ';
-  const hips = new THREE.Group(); hips.position.y = .95; root.add(hips);
-  const spine = new THREE.Group(); hips.add(spine);
-  const meshes = [];
-  const mk = (g, parent) => { const m = new THREE.Mesh(g, MAT.soldier); parent.add(m); meshes.push(m); return m; };
-  mk(G.torso, spine);
-  const neck = new THREE.Group(); neck.position.y = .68; spine.add(neck); mk(G.head, neck);
-  const legs = [];
-  for (const sx of [-1, 1]) {
-    const hip = new THREE.Group(); hip.position.x = sx * .1; hips.add(hip); mk(G.thigh, hip);
-    const knee = new THREE.Group(); knee.position.y = -.46; hip.add(knee); mk(G.shin, knee);
-    legs.push(hip, knee);
-  }
-  return { root, hips, spine, neck, hipL: legs[0], kneeL: legs[1], hipR: legs[2], kneeR: legs[3], meshes };
-}
+const T1 = new V3(), T2 = new V3(), T3 = new V3(), T4 = new V3(), T5 = new V3();
+const AI_BUDGET = { n: 0 };
 
 let soldierId = 0;
 class Soldier {
   constructor(team, kind, x, z, o = {}) {
     this.id = soldierId++; this.team = team; this.kind = kind; this.w = AIW[kind] || AIW.rifle;
     this.snd = AISND[team][kind] || 'garand';
-    this.m = makeSoldierModel(team, kind); this.root = this.m.root; this.pos = this.root.position;
-    scene.add(this.root);
+    this.body = makeBody(team, kind); this.root = this.body.root; this.pos = this.root.position;
     this.fixedY = o.y !== undefined;
-    this.pos.set(x, this.fixedY ? o.y : H(x, z), z);
+    this.pos.set(x, this.fixedY ? o.y : Hf(x, z), z);
     this.yaw = o.yaw !== undefined ? o.yaw : (team === 'A' ? 0 : PI); this.root.rotation.y = this.yaw;
     this.hp = 100; this.alive = true; this.state = o.state || (team === 'A' ? 'idle' : 'post');
     this.group = o.group || ''; this.squad = !!o.squad; this.name = o.name || '';
     this.inBunker = !!o.inBunker; this.inTrench = !!o.inTrench; this.stationary = !!o.stationary;
-    this.objective = o.objective || null; this.bunker = o.bunker || null;
-    this.crouch = 0; this.ph = R() * TAU; this.dest = null; this.wp = new V3(); this.cover = null; this.wait = rnd(.5, 2);
-    this.thinkT = R() * .5; this.thinkDt = .4; this.fireT = rnd(1, 3); this.burst = 0; this.target = null; this.tVis = false;
-    this.duck = R() < .5; this.duckT = rnd(.5, 3); this.nadeT = rnd(5, 14); this.fall = 0; this.fallDir = 1; this.fallTw = 0; this.supp = 0;
-    this.boat = null; this.off = null; this.leave = 0; this.moving = false; this.crouchRun = false; this.shadowOn = false;
-    this.speedMul = rnd(.88, 1.1); this.flee = false; this.removed = false; this.aim = 0; this.prev = new V3();
+    this.objective = o.objective || null; this.bunker = o.bunker || null; this.toPost = !!o.toPost; this.role = o.role || '';
+    this.crouch = 0; this.prone = 0; this.ph = R() * TAU; this.dest = null; this.wp = new V3(); this.cover = null; this.wait = rnd(.5, 2);
+    this.thinkT = R() * .5; this.thinkDt = .4; this.fireT = rnd(1, 3); this.burst = 0; this.target = null; this.tVis = false; this.vis = [];
+    this.duck = R() < .5; this.duckT = rnd(.5, 3); this.nadeT = rnd(5, 14); this.supp = 0; this.flinch = 0; this.shoutT = rnd(3, 12);
+    this.boat = null; this.off = null; this.leave = 0; this.moving = false; this.crouchRun = false;
+    this.speedMul = rnd(.88, 1.1); this.flee = false; this.removed = false; this.aim = 0; this.aimW = 0; this.prev = new V3(); this.vel = new V3();
+    this.wounded = false; this.woundT = 0; this.healer = null; this.healTarget = null; this.healT = 0; this.throwT = 0; this.sweep = 0;
     (team === 'A' ? allies : enemies).push(this);
   }
-  chest(out) { return out.set(this.pos.x, this.pos.y + lerp(1.22, .88, this.crouch), this.pos.z); }
-  head(out) { const c = this.crouch; return out.set(this.pos.x - Math.sin(this.yaw) * c * .2, this.pos.y + lerp(1.72, 1.24, c), this.pos.z - Math.cos(this.yaw) * c * .2); }
-  eye(out) { return out.set(this.pos.x, this.pos.y + lerp(1.62, 1.15, this.crouch), this.pos.z); }
-  muzzle(out) { return out.set(this.pos.x - Math.sin(this.yaw) * .7, this.pos.y + lerp(1.4, 1.02, this.crouch), this.pos.z - Math.cos(this.yaw) * .7); }
+  chest(out) { return out.set(this.pos.x, this.pos.y + lerp(lerp(1.22, .88, this.crouch), .3, Math.max(this.prone, this.wounded ? 1 : 0)), this.pos.z); }
+  head(out) { return out.set(0, .12, 0).applyMatrix4(this.body.neck.matrixWorld); }
+  eye(out) { return out.set(this.pos.x, this.pos.y + lerp(lerp(1.62, 1.15, this.crouch), .45, this.prone), this.pos.z); }
+  muzzle(out) { const f = .7 + this.prone * .3; return out.set(this.pos.x - Math.sin(this.yaw) * f, this.pos.y + lerp(lerp(1.4, 1.02, this.crouch), .35, this.prone), this.pos.z - Math.cos(this.yaw) * f); }
 
-  damage(a, from, byPlayer, zone) {
+  damage(a, from, byPlayer, zone, imp) {
     if (!this.alive) return false;
-    this.hp -= a; this.supp = Math.min(1, this.supp + .6);
-    if (this.hp <= 0) { this.die(from, byPlayer, zone); return true; }
-    if (from && this.team === 'E' && byPlayer) { this.target = P; this.tVis = true; this.duck = true; this.duckT = rnd(.6, 1.4); }
+    this.hp -= a; this.supp = Math.min(1, this.supp + .6); this.flinch = 1;
+    if (this.hp <= 0) {
+      if (this.team === 'A' && !this.wounded && zone !== 'head' && zone !== 'blast' && this.state !== 'boat' && R() < .28) { this.becomeWounded(); return false; }
+      this.die(from, byPlayer, zone, imp); return true;
+    }
+    if (from && this.team === 'E' && byPlayer) { this.target = P; this.tVis = true; this.duck = true; this.duckT = rnd(.6, 1.4); if (R() < .3) shout('de', 'medic', this.pos); }
     return false;
   }
-  die(from, byPlayer, zone) {
-    if (!this.alive) return;
-    this.alive = false; this.fall = 0;
-    if (from) {
-      const dx = this.pos.x - from.x, dz = this.pos.z - from.z;
-      this.fallDir = (dx * -Math.sin(this.yaw) + dz * -Math.cos(this.yaw)) > 0 ? -1 : 1;
-    } else this.fallDir = R() < .5 ? 1 : -1;
-    this.fallTw = rnd(-1, 1);
+  becomeWounded() {
+    this.wounded = true; this.hp = 1; this.state = 'wounded'; this.woundT = rnd(10, 30); this.dest = null; this.stationary = false;
     if (this.cover) { this.cover.occ--; this.cover = null; }
-    for (const m of this.m.meshes) m.castShadow = false;
+    hidePart(this.body, 'weapon');
+    sfxVoice(this.pos, pick(['scream', 'wail']));
+    if (P.pos.distanceTo(this.pos) < 30) shout('en', 'medic', this.pos, { sub: true });
+  }
+  heal() { this.wounded = false; this.hp = 45; this.state = 'idle'; this.wait = rnd(.5, 2); const p = this.body.parts.find(x => x.name === 'weapon'); if (p) p.hidden = false; }
+  die(from, byPlayer, zone, imp) {
+    if (!this.alive) return;
+    this.alive = false; if (this.state !== 'boat') this.state = 'dead';
+    if (this.cover) { this.cover.occ--; this.cover = null; }
     corpses.push(this);
-    if (corpses.length > Q.corpses) { const c = corpses.shift(); c.removed = true; scene.remove(c.root); }
+    const cap = Q.allySlots + Q.enemySlots - Q.allyAlive - Q.enemyAlive - 20;
+    while (corpses.length > cap) { const c = corpses.shift(); c.removed = true; c.body.removed = true; if (c.body.rag) { const i = RAGS.indexOf(c.body.rag); if (i >= 0) RAGS.splice(i, 1); } }
+    let impulse = imp, dir = null;
+    if (from) dir = this.chest(T3).sub(from).normalize();
+    if (!impulse && dir) impulse = { dir, power: zone === 'head' ? 1.2 : rnd(1.4, 2.8), joint: zone === 'head' ? 2 : zone === 'legs' ? (R() < .5 ? 10 : 13) : 15 };
+    if (impulse && impulse.blast) {
+      const d = this.chest(T4).distanceTo(impulse.blast);
+      if (d < impulse.power * .55) dismember(this, impulse.blast);
+    }
+    startRagdoll(this, impulse);
+    if (zone === 'head' && dir) { if (R() < .55) helmetOff(this, dir); if (SETTINGS.gore) bloodBurst(this.head(T4), .5); }
+    else if (R() < .35) sfxVoice(this.pos, pick(['scream', 'groan', 'yell']));
     onSoldierDeath(this, byPlayer, zone);
   }
-  setShadow(on) { if (on === this.shadowOn) return; this.shadowOn = on; for (const m of this.m.meshes) m.castShadow = on; }
 
   update(dt) {
-    if (!this.alive) {
-      if (this.fall < 1) {
-        this.fall = Math.min(1, this.fall + dt * 2.6);
-        const e = 1 - (1 - this.fall) ** 2, m = this.m;
-        this.root.rotation.x = e * PI / 2 * .95 * this.fallDir;
-        this.root.rotation.z = e * this.fallTw * .25;
-        m.hips.position.y = lerp(m.hips.position.y, .9, e); m.spine.rotation.x = 0;
-        m.hipL.rotation.x = e * .25 * this.fallDir; m.hipR.rotation.x = -e * .15; m.kneeL.rotation.x = -e * .4; m.kneeR.rotation.x = -e * .1;
-        if (!this.fixedY && this.state !== 'boat') this.pos.y = H(this.pos.x, this.pos.z) + .12 * e;
-      }
-      if (this.state === 'boat' && this.boat) this.boat.toWorld(this.off, this.pos);
-      return;
-    }
+    if (!this.alive) return;
     if (this.state === 'boat') {
       this.boat.toWorld(this.off, this.pos);
       this.yaw = this.boat.g.rotation.y; this.root.rotation.y = this.yaw;
       this.crouch = lerp(this.crouch, this.boat.open ? 0 : .8, dt * 3);
-      this.anim(dt, 0);
+      this.anim(dt, 0, this.boat.open ? 0 : 1);
       if (this.boat.open) {
         this.leave -= dt;
-        if (this.leave <= 0) { this.state = 'move'; this.dest = new V3(this.pos.x + rnd(-.5, .5), 0, this.boat.z - 10); this.crouchRun = false; this.thinkT = rnd(1.5, 3); }
+        if (this.leave <= 0) { this.state = 'move'; this.dest = new V3(this.pos.x + rnd(-1.2, 1.2), 0, this.boat.z - rnd(9, 14)); this.crouchRun = R() < .5; this.thinkT = rnd(1.5, 3); this.body.tint.multiplyScalar(.8); if (R() < .25) shout('en', 'move', this.pos); }
       }
       return;
     }
-    this.supp = Math.max(0, this.supp - dt * .25);
-    let sp = 0;
+    this.supp = Math.max(0, this.supp - dt * .2); this.flinch = Math.max(0, this.flinch - dt * 4);
     this.prev.copy(this.pos);
+    let sp = 0;
+    if (this.state === 'wounded') {
+      this.woundT -= dt;
+      if (this.woundT <= 0 && !this.healer) { this.die(null, false, 'body'); return; }
+      if (!this.healer && this.pos.z > -55) { this.pos.z -= .35 * dt; sp = .3; }
+      this.pos.y = Hf(this.pos.x, this.pos.z);
+      this.anim(dt, 0, 0);
+      if (R() < dt * .12) { sfxVoice(this.pos, pick(['groan', 'wail'])); if (R() < .3 && P.pos.distanceTo(this.pos) < 25) shout('en', 'medic', this.pos); }
+      return;
+    }
     if (this.dest && !this.stationary) {
       routeWaypoint(this.pos, this.dest, this.wp);
       const isDest = Math.abs(this.wp.x - this.dest.x) < .01 && Math.abs(this.wp.z - this.dest.z) < .01;
@@ -193,22 +103,22 @@ class Soldier {
       if (d < .5) { if (isDest) { this.dest = null; this.onArrive(); } }
       else {
         let v = (this.crouchRun ? 3.3 : 4.6) * this.speedMul;
-        if (this.flee) v = 5;
-        const depth = WATER_Y - H(this.pos.x, this.pos.z);
+        if (this.flee) v = 5.2;
+        if (this.prone > .5) v = 1.1;
+        const depth = WATER_Y - Hf(this.pos.x, this.pos.z);
         if (depth > 0) v *= clamp(1 - depth * .55, .3, 1);
         const step = Math.min(d, v * dt);
         this.pos.x += dx / d * step; this.pos.z += dz / d * step; sp = v;
-        const ty = Math.atan2(-dx, -dz);
-        this.yaw = angLerp(this.yaw, ty, dt * 8);
+        this.yaw = angLerp(this.yaw, Math.atan2(-dx, -dz), dt * 8);
       }
     }
     this.moving = sp > .5;
     if (!this.fixedY) {
       if (this.moving) { pushOut(this.pos, .35); applyWire(this.pos, this.prev); }
-      this.pos.y = H(this.pos.x, this.pos.z);
+      this.pos.y = Hf(this.pos.x, this.pos.z);
       if (this.moving && inMinefield(this.pos.x, this.pos.z)) checkMines(this.pos);
     }
-    // bersaglio e postura
+    this.vel.subVectors(this.pos, this.prev).multiplyScalar(1 / Math.max(dt, 1e-3));
     if (this.target && !this.moving) {
       const tp = targetChest(this.target, T2);
       if (tp) {
@@ -225,50 +135,65 @@ class Soldier {
       if (this.duckT <= 0) {
         this.duck = !this.duck;
         this.duckT = this.duck ? rnd(1.2, 3.5) * (1 + this.supp * 2) : rnd(2.2, 5);
-        if (this.kind === 'mg' || this.inBunker) this.duck = false;
+        if (this.kind === 'mg' || this.inBunker || this.role) this.duck = this.role === 'mortar';
       }
     } else this.duck = false;
+    const wantProne = this.team === 'A' && posted && this.supp > .55 && this.pos.z > -58 && (!this.cover || this.cover.kind !== 'bank');
+    this.prone = lerp(this.prone, wantProne ? 1 : 0, dt * 3);
     let wc = 0;
     if (this.moving) wc = this.crouchRun ? .35 : 0;
     else if (posted) wc = this.duck ? 1 : (this.inTrench || this.inBunker || this.kind === 'mg' ? 0 : (this.team === 'A' && this.cover && this.cover.kind === 'bank' ? .55 : .15));
-    if (this.state === 'boat') wc = .8;
+    if (this.role === 'mortar' || this.healT > 0) wc = 1;
     this.crouch = lerp(this.crouch, wc, dt * 6);
-
-    // fuoco
-    if (!this.duck && !this.moving && this.target && this.tVis && !this.flee) {
+    const firing = !this.duck && !this.moving && this.target && this.tVis && !this.flee && !this.role && !this.healTarget;
+    this.aimW = lerp(this.aimW, firing || (this.target && !this.moving) ? 1 : 0, dt * 5);
+    if (firing) {
       this.fireT -= dt;
       if (this.fireT <= 0) {
-        if (this.burst <= 0) this.burst = Math.round(rnd(this.w.burst[0], this.w.burst[1]));
+        if (this.burst <= 0) { this.burst = Math.round(rnd(this.w.burst[0], this.w.burst[1])); if (this.kind === 'mg' && this.vis.length > 1 && R() < .6) this.target = pick(this.vis); this.sweep = rnd(-1, 1); }
         this.fire(); this.burst--;
         this.fireT = this.burst > 0 ? this.w.bi * rnd(.85, 1.15) : rnd(this.w.rate[0], this.w.rate[1]) * (this.team === 'A' ? 1 : 1 / Math.max(.6, D.acc));
       }
     }
-    this.anim(dt, sp);
+    this.throwT = Math.max(0, this.throwT - dt);
+    if (this.healTarget) {
+      const w = this.healTarget;
+      if (!w.alive || !w.wounded) this.healTarget = null;
+      else if (this.pos.distanceTo(w.pos) < 1.4) { this.dest = null; this.healT += dt; if (this.healT > 5) { w.heal(); w.healer = null; this.healTarget = null; this.healT = 0; } }
+    }
+    const far = dist2Cam(this.pos) > 160 * 160;
+    if (!far || (CROWD.frame + this.id) % 3 === 0) this.anim(far ? dt * 3 : dt, sp, 0);
   }
 
-  anim(dt, sp) {
-    const m = this.m, run = clamp(sp / 4.5, 0, 1), cr = this.crouch;
+  anim(dt, sp, boatW) {
+    const b = this.body, run = clamp(sp / 4.5, 0, 1), cr = this.crouch, pr = this.prone, wd = this.wounded ? 1 : 0;
     this.ph += dt * (3 + sp * 2.1);
-    const s = Math.sin(this.ph), c = Math.cos(this.ph);
-    const still = run < .1;
-    m.hips.position.y = (still ? lerp(.95, .56, cr) : lerp(.95, .8, cr)) + Math.abs(c) * .05 * run;
+    const s = Math.sin(this.ph), c = Math.cos(this.ph), still = run < .1;
+    let hy = (still ? lerp(.95, .56, cr) : lerp(.95, .78, cr)) + Math.abs(c) * .05 * run;
+    hy = lerp(hy, .2, Math.max(pr, wd));
+    b.hips.position.set(0, hy, 0);
+    b.hips.rotation.set(-PI / 2 * .93 * pr + PI / 2 * .9 * wd, s * .06 * run, 0);
+    const crawl = pr * Math.min(1, sp);
     const base = still ? cr * 1.45 : cr * .45;
-    m.hipL.rotation.x = s * .8 * run + base; m.hipR.rotation.x = -s * .8 * run + base;
+    b.hipL.rotation.set((s * .8 * run + base) * (1 - pr) + s * .3 * crawl + wd * (.3 + Math.sin(this.ph * .7) * .2), 0, -.04 - pr * .12);
+    b.hipR.rotation.set((-s * .8 * run + base) * (1 - pr) - s * .3 * crawl + wd * .6, 0, .04 + pr * .12);
     const kb = still ? cr * 2.3 : cr * .7;
-    m.kneeL.rotation.x = -(Math.max(0, Math.sin(this.ph + 1.6)) * 1.2 * run + kb);
-    m.kneeR.rotation.x = -(Math.max(0, Math.sin(this.ph + 1.6 + PI)) * 1.2 * run + kb);
-    m.spine.rotation.x = -(.15 * run + cr * (still ? .3 : .45)) + this.aim * .8;
-    m.spine.rotation.y = s * .08 * run;
+    b.knL.rotation.x = -((Math.max(0, Math.sin(this.ph + 1.6)) * 1.25 * run + kb) * (1 - pr) + Math.max(0, s) * .8 * crawl + wd * .7);
+    b.knR.rotation.x = -((Math.max(0, Math.sin(this.ph + 1.6 + PI)) * 1.25 * run + kb) * (1 - pr) + Math.max(0, -s) * .8 * crawl + wd * 1.1);
+    const fl = this.flinch * .35;
+    b.spine.rotation.set((-(.15 * run + cr * (still ? .3 : .45)) + this.aim * .7) * (1 - pr) + pr * .35 + fl - wd * .3, s * .08 * run, 0);
+    b.neck.rotation.set(-this.aim * .3 + pr * .7 - fl * .5 + wd * .5, 0, 0);
+    if (wd) { solveArm(SH_R, T5.set(.06, .1, -.2), POLE_R, b.shR, b.elR); solveArm(SH_L, T5.set(-.06, .12, -.2), POLE_L, b.shL, b.elL); return; }
+    poseWeapon(b, this.aimW, this.kind === 'mg' && this.moving ? 1 : 0, boatW);
+    if (this.throwT > 0) { const k = 1 - this.throwT / .7; solveArm(SH_R, T5.set(.22, lerp(.75, .5, k), lerp(.25, -.55, k)), POLE_R, b.shR, b.elR); }
   }
 
   think() {
-    if (!this.alive || this.state === 'boat' || this.removed) return;
-    const d2 = dist2Cam(this.pos);
-    this.setShadow(Q.shadows > 0 && d2 < (Q.shadowDist * .75) ** 2);
+    if (!this.alive || this.state === 'boat' || this.removed || this.state === 'wounded') return;
     this.findTarget();
     if (this.team === 'A') this.thinkAlly(); else this.thinkEnemy();
+    this.shoutT -= this.thinkDt;
   }
-
   findTarget() {
     const r = this.w.range, me = this.pos, cands = [];
     const opp = this.team === 'A' ? enemies : allies;
@@ -279,22 +204,38 @@ class Soldier {
     }
     if (this.team === 'E' && P.targetable()) { const d2 = P.pos.distanceToSquared(me); if (d2 < r * r) cands.push([P, d2 * .5]); }
     cands.sort((a, b) => a[1] - b[1]);
-    this.target = null; this.tVis = false;
-    const eye = this.eye(T1);
-    for (let i = 0; i < Math.min(3, cands.length); i++) {
-      const c = cands[i][0], tp = c.chest(T2);
-      if (losClear(eye, tp)) { this.target = c; this.tVis = true; return; }
+    const had = this.target;
+    this.target = null; this.tVis = false; this.vis.length = 0;
+    const eye = this.eye(T1), nTest = this.kind === 'mg' ? 5 : 2;
+    for (let i = 0; i < Math.min(nTest, cands.length); i++) {
+      const c = cands[i][0];
+      if (losClear(eye, c.chest(T2))) { this.vis.push(c); if (!this.target) { this.target = c; this.tVis = true; } }
     }
-    if (cands.length) { this.target = cands[0][0]; return; }
-    if (this.team === 'E') {
-      const bs = WORLD.boats.filter(b => b.state === 'move' && b.z < 220 && Math.abs(b.x - me.x) < 120);
+    if (!this.target && cands.length) this.target = cands[0][0];
+    if (!this.target && this.team === 'E') {
+      const bs = WORLD.boats.filter(b => b.state === 'move' && b.z < 230 && Math.abs(b.x - me.x) < 130);
       if (bs.length) { this.target = { isBoat: true, b: pick(bs), chest: function (o) { const g = this.b.g.position; return o.set(g.x + rnd(-1.4, 1.4), g.y + rnd(.6, 2), g.z - 5 + rnd(-.3, 2)); } }; this.tVis = true; }
     }
+    if (this.tVis && this.target !== had && this.shoutT <= 0 && dist2Cam(this.pos) < 70 * 70) {
+      this.shoutT = rnd(10, 25);
+      if (this.team === 'E') shout('de', R() < .5 ? 'spot' : 'fire', this.pos);
+      else shout('en', R() < .5 ? 'cover' : 'move', this.pos);
+    }
   }
-
   thinkAlly() {
     const Z = MISSION.allyZone;
-    if (this.squad && !P.inBoat && P.pos.distanceTo(this.pos) > 28 && this.state !== 'move') this.wait = 0;
+    if (this.kind === 'medic' && !this.healTarget) {
+      let best = null, bd = 30 * 30;
+      for (const a of allies) if (a.wounded && a.alive && !a.healer) { const d = a.pos.distanceToSquared(this.pos); if (d < bd) { bd = d; best = a; } }
+      if (best) { best.healer = this; this.healTarget = best; this.healT = 0; this.dest = best.pos.clone(); this.state = 'move'; this.crouchRun = true; return; }
+    }
+    if (this.healTarget) { if (this.healTarget.alive && this.pos.distanceTo(this.healTarget.pos) > 1.4) { this.dest = this.healTarget.pos.clone(); this.state = 'move'; } return; }
+    if (this.squad && !P.inBoat && P.mode === 'foot' && P.pos.distanceTo(this.pos) > 28 && this.state !== 'move') this.wait = 0;
+    this.nadeT -= this.thinkDt;
+    if (this.target && this.target !== P && this.tVis && this.target.inTrench && this.nadeT <= 0 && MISSION.allyNadeCD <= 0) {
+      const d = this.target.pos.distanceTo(this.pos);
+      if (d > 10 && d < 28) { throwNadeAt(this, this.target.pos, 'A'); this.nadeT = rnd(20, 40); MISSION.allyNadeCD = rnd(3, 6); if (dist2Cam(this.pos) < 50 * 50) shout('en', 'grenade', this.pos); }
+    }
     if (this.state === 'move') return;
     this.wait -= this.thinkDt;
     if (this.wait <= 0 && Z) this.pickCover(Z);
@@ -310,10 +251,7 @@ class Soldier {
       if (inMinefield(c.x, c.z)) continue;
       let s;
       if (Z.defend) s = -Math.hypot(c.x - Z.cx, c.z - Z.cz) * .25 - dist * .15 + R() * 6;
-      else {
-        const prog = p.z - c.z;
-        s = p.z - Z.zMin < 5 ? -dist * .3 + R() * 6 : -Math.abs(prog - Z.step) * .55 - Math.abs(dx) * .25 + R() * 8;
-      }
+      else { const prog = p.z - c.z; s = p.z - Z.zMin < 5 ? -dist * .3 + R() * 6 : -Math.abs(prog - Z.step) * .55 - Math.abs(dx) * .25 + R() * 8; }
       if (this.squad) { const dp = Math.hypot(c.x - P.pos.x, c.z - P.pos.z); s -= Math.max(0, dp - 12) * .9; }
       if (s > bs) { bs = s; best = c; }
     }
@@ -323,19 +261,21 @@ class Soldier {
     this.state = 'move'; this.crouchRun = this.supp > .2 || R() < .45;
   }
   onArrive() {
-    if (this.flee) { this.removed = true; scene.remove(this.root); this.alive = false; return; }
+    if (this.flee) { this.removed = true; this.body.removed = true; this.alive = false; return; }
     const Z = MISSION.allyZone;
     if (this.team === 'A') { this.state = 'cover'; this.wait = Z ? rnd(Z.wait[0], Z.wait[1]) : 4; }
+    else if (this.toPost) { this.state = 'post'; this.stationary = true; this.toPost = false; this.inTrench = this.pos.z < -84 && Math.abs(this.pos.z - trenchZ(this.pos.x)) < 2; this.yaw = PI; }
     else { this.state = this.state === 'assault' ? 'assault' : 'post'; this.wait = rnd(3, 7); }
     this.duck = true; this.duckT = rnd(.4, 1.2);
   }
   thinkEnemy() {
     if (this.flee) { if (!this.dest) { this.dest = new V3(this.pos.x + rnd(-40, 40), 0, -540); this.state = 'move'; } return; }
+    if (this.toPost && !this.dest && this.objective) { this.dest = this.objective.clone(); this.state = 'move'; this.crouchRun = R() < .6; }
     if (this.state === 'assault' && !this.dest) {
       this.wait -= this.thinkDt;
       if (this.wait <= 0) {
         const o = this.objective, dx = o.x - this.pos.x, dz = o.z - this.pos.z, d = Math.hypot(dx, dz);
-        if (d < 22) { this.state = 'hold'; }
+        if (d < 22) this.state = 'hold';
         else {
           const step = Math.min(rnd(10, 22), d - 15), nx = this.pos.x + dx / d * step + rnd(-6, 6), nz = this.pos.z + dz / d * step;
           let best = null, bd = 49;
@@ -345,9 +285,18 @@ class Soldier {
         }
       }
     }
-    if (this.target === P && this.tVis && !this.inBunker && this.kind !== 'mg' && !this.moving) {
-      const d = P.pos.distanceTo(this.pos);
-      if (d > 9 && d < 30) { this.nadeT -= this.thinkDt; if (this.nadeT <= 0 && MISSION.nadeCD <= 0) { throwEnemyNade(this); this.nadeT = rnd(18, 32); MISSION.nadeCD = rnd(6, 11) / D.acc; } }
+    const t = this.target;
+    if (t && this.tVis && !this.inBunker && this.kind !== 'mg' && !this.moving && !this.role && t.pos) {
+      const d = t.pos.distanceTo(this.pos);
+      if (d > 9 && d < 30) {
+        this.nadeT -= this.thinkDt;
+        const cd = t === P ? MISSION.nadeCD : MISSION.eNadeCD;
+        if (this.nadeT <= 0 && cd <= 0) {
+          throwNadeAt(this, t === P ? P.pos.clone().add(new V3(rnd(-2.5, 2.5) / D.acc, 0, rnd(-2.5, 2.5) / D.acc)) : t.pos, 'E');
+          this.nadeT = rnd(18, 32); if (t === P) MISSION.nadeCD = rnd(6, 11) / D.acc; else MISSION.eNadeCD = rnd(3, 6);
+          if (dist2Cam(this.pos) < 60 * 60) shout('de', 'grenade', this.pos, { priority: true });
+        }
+      }
     }
   }
 
@@ -359,23 +308,33 @@ class Soldier {
     if (this.supp > .3) p *= .6;
     if (t === P) { p *= P.hitMul(); if (!losClear(from, tp)) p = 0; }
     else if (t.isBoat) p = 0;
-    else { if (t.crouch > .5) p *= .55; if (t.inTrench) p *= .5; if (t.moving) p *= .75; if (t.state === 'cover') p *= .75; if (t.pos.z > -56.5) p *= 1.7; }
+    else {
+      if (t.crouch > .5) p *= .55; if (t.prone > .5) p *= .4; if (t.inTrench) p *= .5; if (t.moving) p *= .75; if (t.state === 'cover') p *= .75;
+      if (t.pos.z > -56.5) p *= 1.8;
+      if (t.state === 'move' && t.pos.z > 4 && this.kind === 'mg') p *= 1.6;
+    }
     const hit = R() < p, end = T3.copy(tp);
-    if (!hit) { end.x += rnd(-2.2, 2.2); end.y += rnd(-1.2, 1.6); end.z += rnd(-2.2, 2.2); end.sub(from).multiplyScalar(1.5).add(from); }
-    if (R() < this.w.tracer && d > 8) fxTracer(from, end);
+    if (!hit) {
+      const sw = this.kind === 'mg' ? this.sweep * 3 + Math.sin(this.burst * .7) * 2 : 0;
+      end.x += rnd(-2.2, 2.2) + sw; end.y += rnd(-1.2, 1.6); end.z += rnd(-2.2, 2.2);
+      end.sub(from).multiplyScalar(1.5).add(from);
+    }
+    const dir = T4.subVectors(tp, from).normalize();
+    if (R() < this.w.tracer && d > 8) fxTracer(from, end, this.kind === 'mg' ? 1.3 : 1);
     sfxShot(this.snd, from);
-    if (dist2Cam(from) < 160 * 160) fxMuzzle(from, T4.subVectors(tp, from).normalize(), this.kind === 'mg');
+    if (dist2Cam(from) < 180 * 180) fxMuzzle(from, dir, this.kind === 'mg');
     if (hit) {
       const dm = rnd(this.w.dmg[0], this.w.dmg[1]);
       if (t === P) P.damage(dm * D.dmg, from);
-      else { t.damage(dm * 1.8, from, false); if (dist2Cam(tp) < 120 * 120) fxImpact(tp.clone(), 'blood'); }
+      else { const zone = R() < .12 ? 'head' : R() < .2 ? 'legs' : 'body'; const hp = zone === 'head' ? t.head(T5) : tp.clone(); t.damage(dm * (zone === 'head' ? 4 : 1.8), from, false, zone); if (dist2Cam(tp) < 130 * 130) bloodHit(hp, dir, zone === 'head' ? 1.4 : 1); }
     } else {
-      if (t === P) P.nearMiss(from);
-      if (t.isBoat) { if (t.b === P.boat || dist2Cam(tp) < 60 * 60) { fxImpact(tp.clone(), 'metal'); sfxImpact(tp, 'metal'); } }
-      else if (R() < .35) {
-        const gx = end.x, gz = end.z, gy = H(gx, gz), wet = gz > -8 && gy < WATER_Y;
+      if (t === P) P.nearMiss(from, end);
+      else if (t.supp !== undefined) t.supp = Math.min(1, t.supp + .2);
+      if (t.isBoat) { if (t.b === P.boat || dist2Cam(tp) < 60 * 60) { fxImpact(tp.clone(), 'metal'); sfxImpact(tp, 'metal'); if (R() < .3) sfxRicochet(tp); } }
+      else if (R() < .45) {
+        const gx = end.x, gz = end.z, gy = Hf(gx, gz), wet = gz > -8 && gy < WATER_Y;
         const ip = new V3(gx, wet ? WATER_Y : gy, gz);
-        if (dist2Cam(ip) < 150 * 150) fxImpact(ip, wet ? 'water' : gz > -58 ? 'sand' : 'dirt');
+        if (dist2Cam(ip) < 160 * 160) { fxImpact(ip, wet ? 'water' : gz > -58 ? 'sand' : 'dirt'); if (dist2Cam(ip) < 25 * 25) { sfxImpact(ip, wet ? 'water' : 'sand'); if (R() < .15) sfxRicochet(ip); } }
       }
     }
   }
@@ -387,15 +346,27 @@ function targetChest(t, out) {
   if (t.isBoat) return t.b.state === 'move' ? t.chest(out) : null;
   return t.alive ? t.chest(out) : null;
 }
+function throwNadeAt(s, tgt, team) {
+  const from = s.eye(new V3()); from.y += .3;
+  const dx = tgt.x - from.x, dz = tgt.z - from.z, dh = Math.hypot(dx, dz), T = 1.1 + dh / 28, dy = Hf(tgt.x, tgt.z) - from.y;
+  const v = new V3(dx / T + rnd(-1, 1), (dy + 4.9 * T * T) / T, dz / T + rnd(-1, 1));
+  s.duck = false; s.duckT = 1.5; s.throwT = .7;
+  const n = spawnNade(from, v, team === 'E' ? 4.2 : 3.8, team, false);
+  n.warn = team === 'E';
+}
 
 function updateAI(dt) {
+  AI_BUDGET.n = 0;
   for (const list of [allies, enemies]) {
     for (const s of list) {
-      if (s.removed) continue;
+      if (s.removed || !s.alive) continue;
       s.update(dt);
       if (s.alive && s.state !== 'boat') {
         s.thinkT -= dt;
-        if (s.thinkT <= 0) { s.thinkDt = dist2Cam(s.pos) > 200 * 200 ? rnd(.8, 1.2) : rnd(.3, .5); s.thinkT = s.thinkDt; s.think(); }
+        if (s.thinkT <= 0 && AI_BUDGET.n < 30) {
+          AI_BUDGET.n++;
+          s.thinkDt = dist2Cam(s.pos) > 200 * 200 ? rnd(.9, 1.4) : rnd(.3, .55); s.thinkT = s.thinkDt; s.think();
+        }
       }
     }
   }

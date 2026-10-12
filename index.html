@@ -12,6 +12,7 @@
 <div id="hud" class="hidden">
   <div id="vignette"></div>
   <div id="blood"></div>
+  <canvas id="lens"></canvas>
   <div id="scope"><div class="reticle"></div></div>
   <div id="cross"><i></i><i></i><i></i><i></i></div>
   <div id="hitm"></div>
@@ -27,33 +28,54 @@
   <div id="gwarn"><span>⚠ GRANATA</span></div>
   <div id="hpbox"><div id="stance"></div><div id="hpbar"><i></i></div></div>
   <div id="wbox"><div id="wname"></div><div id="wammo"></div><div id="wextra"></div></div>
+  <div id="naval"><div id="navZoom"><div class="bino"></div></div><div class="navCross"></div><div id="navInfo"></div></div>
+  <div id="planehud"><div id="planeInfo"></div></div>
+  <div id="fps"></div>
   <div id="fade"></div>
+  <div id="spawn" class="hidden">
+    <div class="spPanel">
+      <h3>SCEGLI DOVE RIENTRARE</h3>
+      <div class="sp"><kbd>1</kbd> Ultimo checkpoint <small>a piedi, con la tua squadra</small></div>
+      <div class="sp" id="spWave"><kbd>2</kbd> Prossima ondata di sbarco <small>a bordo di un mezzo Higgins</small></div>
+      <div class="sp"><kbd>3</kbd> USS Texas <small>cannoni navali da 14 pollici sulla costa</small></div>
+      <div class="sp"><kbd>4</kbd> P-47 Thunderbolt <small>pilota: mitragliatrici e bombe</small></div>
+      <div class="spHint">Premi <kbd>B</kbd> durante il gioco per cambiare ruolo</div>
+    </div>
+  </div>
 </div>
 
 <div id="menu" class="screen">
   <div class="panel">
     <div class="kicker">Operazione Overlord · 6 giugno 1944</div>
     <h1>OMAHA 1944</h1>
-    <p class="lead">Settore Dog Green, ore 06:30. Le corazzate <i>Texas</i> e <i>Arkansas</i> martellano la costa mentre il tuo mezzo da sbarco Higgins attraversa le onde.
-      Sopravvivi allo sbarco, apri un varco nel filo spinato, conquista la scogliera, distruggi i bunker MG42 e la batteria da 88, libera Colleville-sur-Mer e resisti al contrattacco.</p>
+    <p class="lead">Settore Dog Green, ore 06:30. Le corazzate <i>Texas</i> e <i>Arkansas</i> martellano la costa mentre il tuo mezzo da sbarco attraversa le onde.
+      Le mitragliatrici falciano un'ondata dopo l'altra. Apri un varco nel filo spinato, conquista la scogliera, distruggi bunker e cannoni, libera Colleville-sur-Mer e resisti al contrattacco.
+      In ogni momento puoi passare ai cannoni della USS Texas o ai comandi di un P-47.</p>
     <div class="grid">
       <div class="opts">
         <label>Qualità grafica <select id="optQuality"></select></label>
         <label>Difficoltà <select id="optDiff"></select></label>
         <label>Sensibilità mouse <span id="sensV"></span><input id="optSens" type="range" min=".3" max="2.5" step=".05"></label>
         <label>Campo visivo <span id="fovV"></span><input id="optFov" type="range" min="60" max="95" step="1"></label>
+        <label>Volume <span id="volV"></span><input id="optVol" type="range" min="0" max="1" step=".05"></label>
+        <div class="checks">
+          <label><input id="optGore" type="checkbox"> Sangue e smembramenti</label>
+          <label><input id="optVoices" type="checkbox"> Voci dei soldati (inglese / tedesco)</label>
+          <label><input id="optDyn" type="checkbox"> Risoluzione dinamica (fluidità)</label>
+          <label><input id="optFps" type="checkbox"> Mostra FPS</label>
+        </div>
         <button id="startBtn">INIZIA LO SBARCO</button>
         <div id="netErr" class="hidden err">Impossibile caricare la libreria grafica: serve una connessione a internet.</div>
       </div>
       <div class="keys">
-        <div><kbd>W A S D</kbd> movimento</div>
-        <div><kbd>Shift</kbd> corsa</div>
-        <div><kbd>Spazio</kbd> salto</div>
+        <div><kbd>W A S D</kbd> movimento · <kbd>Shift</kbd> corsa · <kbd>Spazio</kbd> salto</div>
         <div><kbd>C</kbd> accovacciati · <kbd>Z</kbd> a terra</div>
         <div><kbd>Click sx</kbd> fuoco · <kbd>Click dx</kbd> mira</div>
-        <div><kbd>R</kbd> ricarica · <kbd>G</kbd> granata</div>
+        <div><kbd>R</kbd> ricarica · <kbd>G</kbd> granata · <kbd>V</kbd> calcio del fucile</div>
         <div><kbd>1 2 3</kbd> / rotella armi · <kbd>Q</kbd> arma precedente</div>
         <div><kbd>E</kbd> interagisci / raccogli</div>
+        <div><kbd>B</kbd> cambia ruolo: fanteria, corazzata, aereo</div>
+        <div class="sub">Aereo: mouse = cloche · <kbd>W/S</kbd> manetta · <kbd>A/D</kbd> timone · <kbd>F</kbd> bomba</div>
         <div><kbd>Esc</kbd> pausa</div>
       </div>
     </div>
@@ -67,7 +89,15 @@
     <h2>PAUSA</h2>
     <label>Sensibilità mouse <input id="pSens" type="range" min=".3" max="2.5" step=".05"></label>
     <label>Campo visivo <input id="pFov" type="range" min="60" max="95" step="1"></label>
+    <label>Volume <input id="pVol" type="range" min="0" max="1" step=".05"></label>
+    <div class="checks">
+      <label><input id="pGore" type="checkbox"> Sangue</label>
+      <label><input id="pVoices" type="checkbox"> Voci</label>
+      <label><input id="pDyn" type="checkbox"> Risoluzione dinamica</label>
+      <label><input id="pFps" type="checkbox"> FPS</label>
+    </div>
     <button id="resumeBtn">RIPRENDI</button>
+    <button id="roleBtn" class="ghost">CAMBIA RUOLO (fanteria / corazzata / aereo)</button>
     <button id="restartBtn" class="ghost">RICOMINCIA DALL'INIZIO</button>
   </div>
 </div>
@@ -83,18 +113,24 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/FXAAShader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 <script>if (!window.THREE) document.addEventListener('DOMContentLoaded', () => { document.getElementById('netErr').classList.remove('hidden'); document.getElementById('startBtn').disabled = true; });</script>
 <script src="src/config.js"></script>
+<script src="src/textures.js"></script>
 <script src="src/engine.js"></script>
 <script src="src/audio.js"></script>
 <script src="src/fx.js"></script>
 <script src="src/world.js"></script>
+<script src="src/crowd.js"></script>
+<script src="src/gore.js"></script>
 <script src="src/soldier.js"></script>
 <script src="src/weapons.js"></script>
+<script src="src/aircraft.js"></script>
+<script src="src/naval.js"></script>
 <script src="src/player.js"></script>
 <script src="src/mission.js"></script>
 <script src="src/hud.js"></script>

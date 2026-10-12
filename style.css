@@ -80,3 +80,25 @@ kbd { background: #2a2e2a; border: 1px solid #4a5040; padding: 1px 7px; border-r
 #endText table { margin: 0 auto; border-collapse: collapse; }
 #endText td { padding: 3px 14px; text-align: left; } #endText td:last-child { text-align: right; color: var(--hud); }
 @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } h1 { font-size: 44px; } }
+
+/* --- v3: obiettivo, ruoli, corazzata, aereo --- */
+#lens { position: absolute; inset: 0; width: 100%; height: 100%; }
+#fps { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font-size: 12px; color: #9f9; text-shadow: 0 0 2px #000; display: none; }
+.checks { margin: 6px 0 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; }
+.checks label { display: flex !important; align-items: center; gap: 6px; font-size: 13px; margin: 0 !important; }
+.keys .sub { font-size: 12px; color: #a9a391; }
+#spawn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, .55); pointer-events: none; }
+#spawn.hidden { display: none !important; }
+.spPanel { background: rgba(20, 22, 20, .92); border: 1px solid #4a5040; padding: 22px 28px; min-width: 420px; }
+.spPanel h3 { font-family: 'Special Elite', serif; font-weight: normal; letter-spacing: 3px; margin: 0 0 14px; color: var(--accent); }
+.sp { font-size: 18px; margin: 9px 0; }
+.sp small { display: block; font-size: 13px; color: #a9a391; margin-left: 36px; }
+.sp.off { opacity: .3; }
+.spHint { margin-top: 14px; font-size: 13px; color: #a9a391; }
+#naval { display: none; position: absolute; inset: 0; }
+#navInfo { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); text-align: center; font-size: 18px; text-shadow: 0 0 4px #000; }
+#navInfo .ok { color: #9f9; }
+.navCross { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px; border: 2px solid rgba(255, 220, 150, .8); border-radius: 50%; }
+#navZoom { display: none; position: absolute; inset: 0; background: radial-gradient(ellipse 34vh 30vh at 38% 50%, transparent 98%, #000 100%), radial-gradient(ellipse 34vh 30vh at 62% 50%, transparent 98%, #000 100%); }
+#navZoom .bino { position: absolute; inset: 0; background: linear-gradient(#000, #000) 50% 50% / 30% 1px no-repeat, linear-gradient(#000, #000) 50% 50% / 1px 30% no-repeat; }
+#planehud { display: none; position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); text-align: center; font-size: 16px; text-shadow: 0 0 4px #000; }
