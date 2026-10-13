@@ -242,7 +242,7 @@ const STAGES = [
     },
     update(dt) {
       if (!MISSION.flags.placed) {
-        MISSION.objText = P.carry ? 'Infila il tubo Bangalore sotto il filo spinato' : 'Prendi il tubo Bangalore dalla cassa';
+        MISSION.objText = (P.carry ? 'Infila il tubo Bangalore sotto il filo spinato' : 'Apri un varco nel filo: Bangalore dalla cassa') + ' — oppure granate, bazooka, Texas (B) o aereo';
         MISSION.markers = [P.carry ? { pos: new V3(BREACH_X, H(BREACH_X, WIRE_Z) + 1.5, WIRE_Z), label: 'Filo spinato' } : { pos: BANG_POS.clone().add(new V3(0, 1.4, 0)), label: 'Bangalore' }];
       } else { MISSION.bangT -= dt; MISSION.markers = []; MISSION.objText = `Fuoco nel buco! Allontanati! ${Math.max(0, Math.ceil(MISSION.bangT))}`; }
     }
@@ -376,6 +376,11 @@ function setStage(i) {
   MISSION.stage = i; MISSION.stageT = 0; MISSION.markers = []; MISSION.interactables = [];
   const st = (PT === 'E' ? AXIS_STAGES : STAGES)[i]; MISSION.title = st.title; st.start();
   if (i > 0) showMsg(st.title, 3);
+}
+function onWireGap(x) {
+  feed('Varco aperto nel filo spinato');
+  if (PT === 'A' && MISSION.stage === 2 && !MISSION.flags.placed) { if (P.carry === 'bangalore') P.carry = null; say(N.sarge, 'Il filo è saltato! Tutti attraverso il varco!'); setStage(3); }
+  else if (PT === 'E') say(NA.obg, 'Il reticolato è squarciato! Passano da lì!');
 }
 function placeBangalore() {
   P.carry = null; MISSION.flags.placed = true; MISSION.bangT = 5;

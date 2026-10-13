@@ -431,6 +431,7 @@ const _ex = new V3();
 function explode(p, radius, dmg, o = {}) {
   const wet = p.z > -9 && Hf(p.x, p.z) < WATER_Y && p.y < WATER_Y + .8;
   fxExplosion(p, radius / 4.5, wet); sfxBoom(p, radius / 5, wet);
+  if (radius >= 4 && Math.abs(p.z - WIRE_Z) < 2.6 && addWireGap(p.x)) onWireGap(p.x);
   for (const list of [allies, enemies]) for (const s of list) {
     if (!s.alive || s.removed) continue;
     if (s.state === 'boat' && !o.boat) continue;

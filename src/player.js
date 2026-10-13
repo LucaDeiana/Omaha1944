@@ -186,7 +186,7 @@ function updatePlayer(dt) {
     if (d2 < rr * rr && d2 > 0) { const d = Math.sqrt(d2); P.pos.x = o.x + dx / d * rr; P.pos.z = o.z + dz / d * rr; }
   }
   if (P.onShip) { if (shipDeckY(P.pos.x, P.pos.z) < 0) { P.pos.x = P.prev.x; P.pos.z = P.prev.z; } }
-  else { P.pos.x = clamp(P.pos.x, -MAPX + 20, MAPX - 20); P.pos.z = clamp(P.pos.z, -MAPX + 60, 40); }
+  else { P.pos.x = clamp(P.pos.x, -MAPX + 20, MAPX - 20); P.pos.z = clamp(P.pos.z, -MAPX + 60, 115); }
   let ground = Math.max(Hf(P.pos.x, P.pos.z), boatFloor, P.onShip ? Math.max(shipFloor, shipDeckY(P.pos.x, P.pos.z)) : -99);
   if (P.swim) ground = Math.max(ground, wl - 1.4);
   if (KEYS.Space && P.grounded && P.stance === 0 && !P.swim && P.depth < .6) { P.vy = 4.8; P.grounded = false; }

@@ -13,7 +13,7 @@ const HEDGES = [{ z: -170, gaps: [[-40, -20], [55, 68]] }, { z: -218, gaps: [[-4
 for (const h of HEDGES) for (let x = -MAPX; x < MAPX; x += 180) if (Math.abs(x) > 230) h.gaps.push([x, x + 14]);
 for (const d of DRAWS) if (d !== -30) for (const h of HEDGES) h.gaps.push([d - 10, d + 10]);
 const WORLD = {
-  wireBreached: false, bunkers: [], flaks: [], boats: [], shipGuns: [], crates: [], pickups: [], shells: [], bombard: 'bluff', villageY: 0,
+  wireBreached: false, wireGaps: [], bunkers: [], flaks: [], boats: [], shipGuns: [], crates: [], pickups: [], shells: [], bombard: 'bluff', villageY: 0,
   mortarPits: [[-125, -103], [-58, -106], [32, -104], [112, -102]].map(([x, z]) => ({ x, z })), aaSites: [[-75, -110], [5, -112], [75, -108]].map(([x, z]) => ({ x, z })),
   texas: null,
 };
@@ -176,14 +176,21 @@ function pushOut(p, r, h = 1.7) {
     }
   }
 }
-function wireBlocks(x) { return x > -205 && x < 205 && (!WORLD.wireBreached || Math.abs(x - BREACH_X) > 3.4); }
+function wireGapsNow() { const g = WORLD.wireGaps.slice(); if (WORLD.wireBreached) g.push([BREACH_X - 3, BREACH_X + 3]); return g; }
+function inWireGap(x, m = .4) { return wireGapsNow().some(g => x > g[0] - m && x < g[1] + m); }
+function wireBlocks(x) { return x > -205 && x < 205 && !inWireGap(x); }
+// un'esplosione abbastanza forte sul reticolato apre un varco
+function addWireGap(x) {
+  if (x < -200 || x > 200 || inWireGap(x, -1)) return false;
+  WORLD.wireGaps.push([x - 2.6, x + 2.6]); buildWire(); return true;
+}
 function applyWire(p, prev) {
   if (!wireBlocks(p.x)) return;
   if (prev.z >= WIRE_Z && p.z < WIRE_Z + .5) p.z = Math.max(p.z, WIRE_Z + .5);
   else if (prev.z < WIRE_Z && p.z > WIRE_Z - .5) p.z = Math.min(p.z, WIRE_Z - .5);
 }
 const BARRIERS = [
-  { z: WIRE_Z, gaps: () => WORLD.wireBreached ? [[BREACH_X - 3, BREACH_X + 3]] : [] },
+  { z: WIRE_Z, gaps: () => wireGapsNow() },
   { z: -170, gaps: () => HEDGES[0].gaps },
   { z: -218, gaps: () => HEDGES[1].gaps },
   { z: -250, gaps: () => [[-200, -92], [-40, -22], [40, 52], [92, 200]] },
@@ -607,14 +614,14 @@ function buildStatic() {
   const S = new MB();
   // --- ostacoli della spiaggia ---
   S.mat = 'paint';
-  for (let i = 0; i < 330; i++) {
-    const x = i < 130 ? srnd(-195, 195) : srnd(-MAPX + 40, MAPX - 40), z = srnd(-49, 78), y = H(x, z), ry = srnd(0, PI);
+  for (let i = 0; i < 450; i++) {
+    const x = i < 250 ? srnd(-195, 195) : srnd(-MAPX + 40, MAPX - 40), z = srnd(-49, 78), y = H(x, z), ry = srnd(0, PI);
     S.add(U.box, 0x6a5a4c, x, y + .7, z, PI / 4, ry, 0, .17, .17, 2.4);
     S.add(U.box, 0x6a5a4c, x, y + .7, z, -PI / 4, ry, 0, .17, .17, 2.4);
     S.add(U.box, 0x705e50, x, y + .7, z, 0, ry + PI / 2, PI / 4, .17, 2.4, .17);
     addCover(x + rnd(-.3, .3), z + 1.35, 'hh'); OBST.push({ x, z, r: .9 });
   }
-  for (let i = 0; i < 18; i++) {
+  for (let i = 0; i < 34; i++) {
     const x = srnd(-185, 185), z = srnd(-10, 82), y = H(x, z), ry = srnd(-.25, .25);
     S.setBase(x, y, z, 0, ry, 0);
     for (const fx of [-1.4, 0, 1.4]) S.add(U.box, 0x6b5d50, fx, 1.3, 0, 0, 0, 0, .14, 2.6, .14);
@@ -635,6 +642,20 @@ function buildStatic() {
     addSolid(x - 2, H(x, z) - 1, z - 2, x + 2, H(x, z) + 2.6, z + 2, 'tank');
     addCover(x, z + 3.6, 'tank'); addCover(x + 1.5, z + 3.4, 'tank');
   });
+  // altri relitti di carri e barricate di sacchi e rottami
+  for (let i = 0; i < 12; i++) {
+    const x = srnd(-190, 190), z = srnd(-48, 60);
+    addSherman(S, x, H(x, z) - .3, z, srnd(0, TAU), true); addSolid(x - 2, H(x, z) - 1, z - 2, x + 2, H(x, z) + 2.6, z + 2, 'tank');
+    addCover(x, z + 3.6, 'tank'); addCover(x + 1.6, z + 3.4, 'tank'); addCover(x - 1.6, z + 3.4, 'tank');
+    if (i % 3 === 0) addEmitter(new V3(x, H(x, z) + 2.4, z), 'smoke', .8);
+  }
+  for (let i = 0; i < 30; i++) {
+    const x = srnd(-195, 195), z = srnd(-50, 66), y = H(x, z), ry = srnd(-.3, .3);
+    S.setBase(x, y, z, 0, ry, 0); S.mat = 'sack';
+    for (let k = 0; k < 5; k++) for (let l = 0; l < 2; l++) S.add(U.box, pick([0x8a7f5e, 0x7d7353, 0x93886a]), -1.6 + k * .8 + l * .4, .2 + l * .36, 0, 0, srnd(-.1, .1), 0, .78, .36, .5);
+    S.clearBase(); addSolid(x - 2, y - .5, z - .35, x + 2, y + .8, z + .35, 'sand');
+    addCover(x - .8, z + 1, 'sand'); addCover(x + .8, z + 1, 'sand');
+  }
   [[-60, 3, .35, .25], [80, 1, -.5, -.3], [150, 4, .2, .3], [-130, 2, -.25, .2], [20, -2, .6, .4], [-175, 5, -.2, -.25]].forEach(([x, z, ry, rz], i) => { addLCVPWreck(S, x, z, ry, rz); if (i % 2) addEmitter(new V3(x, WATER_Y + 1, z), 'fire', .7); });
   for (let i = 0; i < 90; i++) {
     const x = srnd(-180, 180), z = srnd(-50, -2), y = H(x, z);
@@ -757,9 +778,10 @@ function buildStatic() {
 function buildWire() {
   if (wireLines) { scene.remove(wireLines); wireLines.geometry.dispose(); }
   const pts = [];
-  const coil = (x0, x1, z, yOff) => {
+  const coil = (x0, x1, z, yOff, main) => {
     let prev = null;
     for (let x = x0; x <= x1; x += .2) {
+      if (main && inWireGap(x, .6)) { prev = null; continue; }
       const a = x * 3.1, p = new V3(x, H(x, z) + yOff + .45 + Math.sin(a) * .45, z + Math.cos(a) * .45);
       if (prev) pts.push(prev, p); prev = p;
       if (R() < .25) { const b = p.clone().add(new V3(rnd(-.05, .05), rnd(-.05, .05), rnd(-.05, .05))); pts.push(p, b); }
@@ -767,12 +789,7 @@ function buildWire() {
   };
   for (let x = -200; x < 200; x += 8) {
     const x1 = x + 8;
-    if (WORLD.wireBreached && x1 > BREACH_X - 3.6 && x < BREACH_X + 3.6) {
-      if (x < BREACH_X - 3.6) coil(x, BREACH_X - 3.6, WIRE_Z, 0);
-      if (x1 > BREACH_X + 3.6) coil(BREACH_X + 3.6, x1, WIRE_Z, 0);
-      continue;
-    }
-    coil(x, x1, WIRE_Z, 0);
+    coil(x, x1, WIRE_Z, 0, true);
   }
   for (let i = 0; i < 25; i++) { const x = srnd(-170, 170), z = srnd(-82, -66); if (Math.abs(x - BREACH_X) > 8) coil(x, x + srnd(3, 7), z, -.1); }
   const g = new THREE.BufferGeometry().setFromPoints(pts);
@@ -860,7 +877,7 @@ function buildWorld(step) {
   buildGrass();
   buildFleet();
   for (const x of [-100, 15, 100]) makeBunker(x);
-  for (const x of [-1200, -650, 470, 980]) makeBunker(x, true);
+  for (const x of [-1200, -650, 470, 980, -170, -58, 57, 168]) makeBunker(x, true);
   makeFlak(-5, -194); makeFlak(48, -196);
 }
 
