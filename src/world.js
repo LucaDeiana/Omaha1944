@@ -420,8 +420,23 @@ class Boat {
     this.spray = 0;
   }
   get landed() { return this.state === 'landed'; }
+  cycle(dt) {
+    if (this.state === 'landed' && this.ramp >= 1 && !NET.client) {
+      const aboard = allies.some(a => a.boat === this && a.alive && a.state === 'boat') || (P.boat === this && P.inBoat);
+      this.emptyT = aboard ? 0 : (this.emptyT || 0) + dt;
+      if (this.emptyT > 7) { this.state = 'return'; if (this.sol) for (const s of this.sol) s.on = false; this.sol = null; }
+    } else if (this.state === 'return') {
+      if (this.ramp > 0) { this.ramp = Math.max(0, this.ramp - dt * .7); this.pivot.rotation.x = -1.45 * smooth(this.ramp); }
+      else { this.g.rotation.y = lerp(this.g.rotation.y, PI, Math.min(1, dt * .5)); this.z += this.speed * 1.1 * dt * Math.min(1, this.g.rotation.y / 2); if (this.z > 520) { this.state = 'reload'; this.g.visible = false; this.reloadT = rnd(10, 20); } }
+    } else if (this.state === 'reload') {
+      this.reloadT -= dt;
+      if (this.reloadT <= 0) { if (boatReload(this)) { this.state = 'move'; this.g.visible = true; this.g.rotation.y = 0; this.ramp = 0; this.pivot.rotation.x = 0; this.emptyT = 0; } else this.reloadT = 4; }
+    }
+  }
   get open() { return this.state === 'landed' && this.ramp >= 1; }
   update(dt, t) {
+    this.cycle(dt);
+    if (this.state === 'reload') return;
     if (this.state === 'move') {
       this.z -= this.speed * dt;
       // spruzzi della prua
@@ -442,7 +457,7 @@ class Boat {
       this.ramp = Math.min(1, this.ramp + dt * .85); this.pivot.rotation.x = -1.45 * smooth(this.ramp);
       if (this.ramp >= 1) { const p = new V3(this.x, WATER_Y, this.z - 7); fxImpact(p, 'water'); play('imp_water', p, { ref: 20, vol: 1.5, rate: .6 }); }
     }
-    let y = .32 + waveH(this.x, this.z, t) * (this.state === 'move' ? 1 : .35);
+    let y = .32 + waveH(this.x, this.z, t) * (this.state === 'move' || this.state === 'return' ? 1 : .35);
     const pitch = this.state === 'move' ? (waveH(this.x, this.z - 4, t) - waveH(this.x, this.z + 4, t)) * .1 : 0;
     if (this.state === 'sunk') { this.sinkT += dt; y -= Math.min(1.7, this.sinkT * .25); this.g.rotation.z = Math.min(.35, this.sinkT * .05); }
     this.y = y;

@@ -86,7 +86,7 @@ function initMission() {
   fp('springfield', -58, trenchZ(-58) + .2); fp('springfield', 10, -56); fp('kar98zf', -142, -103); fp('kar98zf', 122, -105); fp('bar', 40, trenchZ(40) + .2); fp('bazooka', -20, -160, 3); fp('thompson', -40, -200);
   addCrate(-26, -55.4); addCrate(-38, trenchZ(-38) + .3); addCrate(-24, -163); addCrate(14, -276); addCrate(-32, -110);
   addBangaloreCrate(-36, -55.3);
-  setStage(0);
+  setStage(0); initConvoy();
 }
 
 const TRENCH_POSTS = [];
@@ -119,6 +119,20 @@ function spawnBeachHolders() {
   }
 }
 function releaseHolders() { for (const a of allies) if (a.alive && a.group === 'hold') { a.stationary = false; a.forceProne = false; a.state = 'idle'; a.wait = rnd(0, 4); } }
+// ricarica un mezzo tornato alle navi: riparte pieno se c'è posto per altri soldati
+function boatReload(b) {
+  const room = Q.allyAlive - aliveA(); if (room < 5) return false;
+  const front = P.mode === 'foot' ? clamp(P.pos.x, -MAPX + 200, MAPX - 200) : rnd(-200, 200);
+  b.x = R() < .5 ? front + rnd(-220, 220) : rnd(-MAPX + 120, MAPX - 120); b.z = rnd(470, 520); b.stopZ = 82; b.speed = rnd(8.4, 9.6);
+  b.g.position.set(b.x, 0, b.z); b.doom = R() < .08 ? rnd(30, 150) : undefined;
+  fillBoat(b, Math.min(room, Math.round(rnd(8, 12))), false);
+  return true;
+}
+// flotta di mezzi in rotazione continua tra le navi e la spiaggia
+function ensureFleet() {
+  const want = Q.waveBoats * 3 + 6, have = WORLD.boats.filter(b => b.state !== 'sunk').length;
+  for (let i = have; i < want; i++) { const b = new Boat(0, 520, 9, 82); b.state = 'reload'; b.g.visible = false; b.reloadT = rnd(2, 40); }
+}
 function spawnWave(withPlayer) {
   const room = Math.max(0, Q.allyAlive - aliveA());
   const nb = withPlayer ? Math.max(1, Math.min(Q.waveBoats, Math.ceil(room / 8))) : Math.min(Q.waveBoats, Math.floor(room / 6));
@@ -532,11 +546,11 @@ function updateMission(dt) {
   // ondate di sbarco continue
   if (MISSION.stage >= 1) {
     MISSION.waveT -= dt;
-    if (MISSION.waveT <= 0) { MISSION.waveT = PT === 'E' ? rnd(25, 40) : MISSION.stage <= 4 ? rnd(30, 45) : rnd(55, 80); spawnWave(false); }
+    if (MISSION.waveT <= 0) { MISSION.waveT = 10; ensureFleet(); }
   }
   if (MISSION.stage >= 1 && MISSION.stage <= (PT === 'E' ? 2 : 4)) {
     MISSION.reinfT -= dt;
-    if (MISSION.reinfT <= 0) { MISSION.reinfT = rnd(12, 20); reinforceTrench(); }
+    if (MISSION.reinfT <= 0) { MISSION.reinfT = rnd(12, 20); }
   }
   for (const b of WORLD.boats) if (b.doom !== undefined && b.state === 'move' && b.z < b.doom) {
     b.doom = undefined; const p = b.g.position.clone(); p.y += 1;

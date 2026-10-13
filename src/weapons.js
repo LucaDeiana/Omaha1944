@@ -444,7 +444,7 @@ function explode(p, radius, dmg, o = {}) {
       let dm = dmg * (1 - d / radius);
       if (s.inTrench && d > 2) dm *= .5;
       if (s.prone > .5) dm *= .6;
-      if (o.ship) dm *= s.team === 'E' && R() < .25 ? 1 : .12;
+      if (o.ship) dm *= s.team === 'E' && R() < .12 ? 1 : .08;
       s.damage(dm, p, !!o.byPlayer && s.team !== PT, 'blast', { blast: p.clone(), power: radius * 1.6 });
     } else if (d < radius * 2.5) s.supp = Math.min(1, s.supp + .5);
   }

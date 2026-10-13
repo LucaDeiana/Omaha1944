@@ -8,6 +8,8 @@ const T1 = new V3(), T2 = new V3(), T3 = new V3(), T4 = new V3(), T5 = new V3();
 const AI_BUDGET = { n: 0 };
 
 let soldierId = 0;
+// qualità dei ripari: più alta = più protetto
+const COVER_Q = { bank: 7, tank: 6, sand: 6, bunker: 6, trench: 5, wallN: 5, house: 6, church: 6, ruin: 5, gate: 3, crater: 3.5, hh: 2.5 };
 class Soldier {
   constructor(team, kind, x, z, o = {}) {
     this.id = soldierId++; this.team = team; this.kind = kind; this.w = AIW[kind] || AIW.rifle;
@@ -25,6 +27,7 @@ class Soldier {
     this.duck = R() < .5; this.duckT = rnd(.5, 3); this.nadeT = rnd(5, 14); this.supp = 0; this.flinch = 0; this.shoutT = rnd(3, 12);
     this.boat = null; this.off = null; this.leave = 0; this.moving = false; this.crouchRun = false;
     this.speedMul = rnd(.88, 1.1); this.flee = false; this.removed = false; this.aim = 0; this.aimW = 0; this.prev = new V3(); this.vel = new V3();
+    this.bound = R() < .5 ? 0 : 1;
     this.wounded = false; this.woundT = 0; this.healer = null; this.healTarget = null; this.healT = 0; this.throwT = 0; this.sweep = 0;
     (team === 'A' ? allies : enemies).push(this);
   }
@@ -244,7 +247,13 @@ class Soldier {
     }
     if (this.state === 'move') return;
     this.wait -= this.thinkDt * (MISSION.suppT > 0 || PT === 'E' ? 3 : 1);
-    if (this.wait <= 0 && (Z || Math.abs(this.pos.x) > 215)) this.pickCover(Z);
+    if (this.wait <= 0 && (Z || Math.abs(this.pos.x) > 215)) {
+      // avanzata a sbalzi: metà della squadra copre mentre l'altra si muove, e mai sotto fuoco intenso
+      const pinned = this.supp > (MISSION.suppT > 0 ? .55 : .3) && this.cover;
+      const myTurn = (Math.floor(GAME.time / 6) + this.bound) % 2 === 0 || MISSION.suppT > 0 || !this.cover;
+      if (pinned || !myTurn) { this.wait = rnd(1.2, 2.6); if (pinned && R() < .08 && dist2Cam(this.pos) < 50 * 50) shout('en', 'cover', this.pos); return; }
+      this.pickCover(Z);
+    }
   }
   pickCover(Z) {
     const p = this.pos;
@@ -259,6 +268,8 @@ class Soldier {
       let s;
       if (Z.defend) s = -Math.hypot(c.x - Z.cx, c.z - Z.cz) * .25 - dist * .15 + R() * 6;
       else { const prog = p.z - c.z; s = p.z - Z.zMin < 5 ? -dist * .3 + R() * 6 : -Math.abs(prog - Z.step) * .55 - Math.abs(dx) * .25 + R() * 8; }
+      s += COVER_Q[c.kind] || 2;
+      if (this.supp > .3) s -= dist * .35;
       if (this.squad) { const dp = Math.hypot(c.x - P.pos.x, c.z - P.pos.z); s -= Math.max(0, dp - 12) * .9; }
       if (s > bs) { bs = s; best = c; }
     }
@@ -319,8 +330,8 @@ class Soldier {
     else if (t.isBoat) p = 0;
     else {
       if (t.crouch > .5) p *= .55; if (t.prone > .5) p *= .4; if (t.inTrench) p *= .5; if (t.moving) p *= .75; if (t.state === 'cover') p *= .75;
-      if (t.pos.z > -56.5) p *= 1.8;
-      if (t.state === 'move' && t.pos.z > 4 && this.kind === 'mg') p *= 1.6;
+      if (t.pos.z > -56.5) p *= 1.15;
+      if (t.state === 'move' && t.pos.z > 4 && this.kind === 'mg') p *= 1.25;
     }
     const hit = R() < p, end = T3.copy(tp);
     if (!hit) {
