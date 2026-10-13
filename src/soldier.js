@@ -290,7 +290,7 @@ class Soldier {
     if (this.flee) { if (!this.dest) { this.dest = new V3(this.pos.x + rnd(-40, 40), 0, -540); this.state = 'move'; } return; }
     if (this.toPost && !this.dest && this.objective) { this.dest = this.objective.clone(); this.state = 'move'; this.crouchRun = R() < .6; }
     if (this.state === 'assault' && !this.dest) {
-      this.wait -= this.thinkDt;
+      this.wait -= this.thinkDt * (this.supp > .45 ? .25 : 1);
       if (this.wait <= 0) {
         const o = this.objective, dx = o.x - this.pos.x, dz = o.z - this.pos.z, d = Math.hypot(dx, dz);
         if (d < 22) this.state = 'hold';

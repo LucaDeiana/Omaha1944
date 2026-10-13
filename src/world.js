@@ -96,10 +96,14 @@ function bunkerStep(x, z) {
   for (const b of WORLD.bunkers.concat(WORLD.extraBunkers || [])) if (Math.abs(x - b.x) < 2.2 && z > b.z + 1.7 && z < b.z + 2.7) return b.base + 1;
   return -99;
 }
+const COMM_X = [-122, -42, 44, 122];
+// postazioni Tobruk con torretta di carro lungo la trincea
+const TOBRUK_X = [-148, -78, -16, 70, 142];
 function H(x, z) {
   let y = H0(x, z);
   if (z > 100) return y;
   if (z < -84 && z > -97 && x > -165 && x < 165) { const d = Math.abs(z - trenchZ(x)); if (d < 1.7) y -= 1.8 * smooth((1.7 - d) / .6); }
+  if (z < -86 && z > -140) for (const x0 of COMM_X) { if (Math.abs(x - x0) > 8 || z > trenchZ(x0) - .5) continue; const zz = ((-z) % 10) / 10, cx = x0 + (zz < .5 ? zz : 1 - zz) * 10 - 2.5, d = Math.abs(x - cx); if (d < 1.4) y -= 1.7 * smooth((1.4 - d) / .5) * smooth((trenchZ(x0) - .5 - z) / 2); }
   for (const mp of WORLD.mortarPits) { const d = Math.hypot(x - mp.x, z - mp.z); if (d < 2.6) y -= .8 * smooth((2.6 - d) / 1); }
   if (z < -160 && z > -225) y += hedgeH(x, z);
   if (z < -235 && z > -345 && x > -120 && x < 120) {
@@ -988,7 +992,22 @@ function buildWorld(step) {
   for (const x of BUNKER_XS) makeBunker(x);
   for (const x of BUNKER_XX) makeBunker(x, true);
   makeFlak(-5, -194); makeFlak(48, -196);
-  buildCity(); buildTrees();
+  buildCity(); buildTrees(); buildTobruks();
+}
+function buildTobruks() {
+  WORLD.tobruks = [];
+  for (const x of TOBRUK_X) {
+    const z = trenchZ(x) + 3.4, y = H(x, z), mb = new MB(); mb.mat = 'concrete';
+    for (let a = 0; a < TAU; a += TAU / 14) mb.add(U.box, 0xa8a49a, Math.cos(a) * 1.5, .25, Math.sin(a) * 1.5, 0, -a, 0, .5, .9, .75);
+    mb.add(U.cyl12, 0x9a968c, 0, -.2, 0, 0, 0, 0, 1.9, .3, 1.9);
+    const base = groupMesh(mb.buildGroups()); base.position.set(x, y, z); scene.add(base);
+    const tm = new MB(); tm.mat = 'paint';
+    tm.add(U.cyl, 0x5a5a48, 0, .45, 0, 0, PI / 8, 0, .62, .7, .62); tm.add(U.cyl12, 0x4a4a3a, 0, .85, 0, 0, 0, 0, .35, .15, .35);
+    tm.add(U.cyl12, 0x2a2a26, 0, .45, -.85, PI / 2, 0, 0, .06, .9, .06); tm.add(U.box, 0x4a4a3a, 0, .45, -.55, 0, 0, 0, .3, .25, .2);
+    const tur = groupMesh(tm.buildGroups()); tur.position.set(x, y + .55, z); tur.rotation.y = PI; scene.add(tur);
+    addSolid(x - 1.8, y - 1, z - 1.8, x + 1.8, y + .6, z + 1.8, 'sand'); addCover(x, z - 2.2, 'trench');
+    WORLD.tobruks.push({ x, z, base: y - 1.9, slitY: y + .95, door: new V3(x, y, z - 2.6), destroyed: false, tur, turret: true, get neutralized() { return this.destroyed || !this.gunner || !this.gunner.alive; }, destroy() { if (this.destroyed) return; this.destroyed = true; burnMeshes(tur); burnMeshes(base); tur.rotation.z = .5; } });
+  }
 }
 
 function updateWorld(dt, t) {

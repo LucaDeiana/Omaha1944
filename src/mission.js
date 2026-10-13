@@ -99,6 +99,7 @@ function spawnBeachDefenders() {
   }
   for (const x of [-140, -65, -30, 30, 55, 135]) addEnemy('mg', x + 2, trenchZ(x + 2) + .3, { state: 'post', stationary: true, inTrench: true, group: 'beach' });
   for (const b of WORLD.bunkers) { b.gunner = addEnemy('mg', b.x, b.z + 2.5, { y: b.base + 1.2, state: 'post', stationary: true, inBunker: true, bunker: b, group: 'beach' }); b.gunner.supB = b; }
+  for (const b of WORLD.tobruks || []) { b.gunner = addEnemy('mg', b.x, b.z, { y: b.base + 1.1, state: 'post', stationary: true, inBunker: true, group: 'beach' }); b.gunner.supB = b; }
   for (const [x, z] of [[-140, -104], [125, -106], [-20, -110], [-80, -96], [60, -98], [160, -100], [-180, -98], [0, -100]]) addEnemy('sniper', x, z, { state: 'post', stationary: true, group: 'beach' });
   for (const [x, z] of [[-80, -74], [-5, -77], [60, -73], [140, -75], [-130, -72], [95, -79], [-110, -78], [-50, -75], [120, -71]]) addEnemy('rifle', x, z, { state: 'post', stationary: true, group: 'beach' });
   for (const mp of WORLD.mortarPits) for (let i = 0; i < 2; i++) addEnemy('rifle', mp.x + (i ? 1.2 : -1.2), mp.z, { state: 'post', stationary: true, group: 'beach', role: 'mortar' });

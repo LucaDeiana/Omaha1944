@@ -16,6 +16,10 @@ function initStations() {
       label: 'Premi E per prendere la MG42 del bunker',
     });
   }
+  for (const b of WORLD.tobruks || []) STATIONS.push({
+    type: 'mg', b, occupant: null, yaw0: PI, arc: 1.7, entry: new V3(b.x, Hf(b.x, b.z - 2.4), b.z - 2.4), cam: new V3(b.x, b.slitY + .15, b.z),
+    usable() { return !b.destroyed && (PT === 'E' || b.neutralized); }, label: 'Premi E per entrare nella torretta Tobruk',
+  });
   for (const a of WORLD.aaSites) {
     if (!a.mesh) continue;
     const p = new V3(a.x, Hf(a.x, a.z), a.z);
@@ -85,7 +89,8 @@ function stationMouse(mx, my) {
   if (P.mode === 'flak') { const s = .0021 * SETTINGS.sens * (camera.fov / 70); P.yaw -= mx * s; P.pitch = clamp(P.pitch - my * s, -.08, 1.4); return; }
   if (P.mode === 'mg') {
     const s = .0021 * SETTINGS.sens;
-    P.yaw = clamp(P.yaw - mx * s, STN.cur.yaw0 - .85, STN.cur.yaw0 + .85); P.pitch = clamp(P.pitch - my * s, -.42, .16);
+    const arc = STN.cur.arc || .85; P.yaw = clamp(P.yaw - mx * s, STN.cur.yaw0 - arc, STN.cur.yaw0 + arc);
+    if (STN.cur.b && STN.cur.b.tur) STN.cur.b.tur.rotation.y = P.yaw; P.pitch = clamp(P.pitch - my * s, -.42, .16);
   } else if (P.mode === 'mortar') {
     const k = .45 * SETTINGS.sens;
     STN.tgt.x -= mx * k; STN.tgt.z -= my * k;
