@@ -693,6 +693,13 @@ function buildStatic() {
   for (let x = -MAPX + 40; x < MAPX - 40; x += srnd(3, 10)) if (Math.abs(x) > 200) S.add(U.box, 0x6a5a47, x, H(x, BANK_Z + .8) + .55, BANK_Z + .8, srnd(-.2, .1), srnd(-.3, .3), srnd(-.15, .15), .15, 1.3, .15);
   for (let x = -MAPX + 40; x < MAPX - 40; x += 4) if (Math.abs(x) > 200) { S.mat = 'paint'; S.add(U.cyl, 0x5a4a3a, x, H(x, WIRE_Z) + .6, WIRE_Z, 0, 0, srnd(-.15, .15), .05, 1.3, .05); }
   for (let i = 0; i < 16; i++) { const x = farX(), z = srnd(-80, 40); addEmitter(new V3(x, Math.max(H(x, z), WATER_Y) + .5, z), R() < .3 ? 'fire' : 'smoke', rnd(.8, 1.5)); }
+  // nidi di sacchi a terra e buche sulla scogliera per i difensori
+  for (let i = 0; i < 46; i++) {
+    const x = srnd(-200, 200), z = srnd(-82, -68); if (Math.abs(x - BREACH_X) < 8 || inMinefield(x, z)) continue;
+    const y = H(x, z), ry = srnd(-.25, .25); S.setBase(x, y, z, 0, ry, 0); S.mat = 'sack';
+    for (let k = 0; k < 7; k++) { const a = -1.2 + k * .4; for (let l = 0; l < 2; l++) S.add(U.box, pick([0x8a7f5e, 0x7d7353, 0x6f6a50]), Math.sin(a) * 1.4, .18 + l * .34, Math.cos(a) * 1.1 - .3, 0, a, 0, .7, .34, .45); }
+    S.clearBase(); addSolid(x - 1.5, y - .5, z + .4, x + 1.5, y + .6, z + 1, 'sand'); addCover(x, z - .4, 'trench');
+  }
   [[-60, 3, .35, .25], [80, 1, -.5, -.3], [150, 4, .2, .3], [-130, 2, -.25, .2], [20, -2, .6, .4], [-175, 5, -.2, -.25]].forEach(([x, z, ry, rz], i) => { addLCVPWreck(S, x, z, ry, rz); if (i % 2) addEmitter(new V3(x, WATER_Y + 1, z), 'fire', .7); });
   for (let i = 0; i < 90; i++) {
     const x = srnd(-180, 180), z = srnd(-50, -2), y = H(x, z);

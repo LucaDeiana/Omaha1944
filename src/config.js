@@ -74,6 +74,7 @@ const WEAPONS = {
   colt: { name: 'Colt M1911A1', cal: '.45 ACP', mag: 7, res: 42, dmg: 44, rate: .14, auto: false, reload: 1.7, hip: .03, ads: .009, kick: .03, climb: 0, fov: 62, snd: 'colt', range: 130, falloff: 35 },
   bazooka: { name: 'M1A1 Bazooka', cal: 'Razzo M6A1 HEAT', mag: 1, res: 4, dmg: 400, rate: 1, auto: false, reload: 3.6, hip: .02, ads: .004, kick: .05, climb: 0, fov: 50, snd: 'bazooka', rocket: true, speedMul: .85 },
   mp40: { name: 'MP 40', cal: '9 mm Parabellum', mag: 32, res: 96, dmg: 32, rate: .109, auto: true, reload: 2.6, hip: .034, ads: .012, kick: .01, climb: .0048, fov: 58, snd: 'mp40', range: 200, falloff: 45 },
+  kar98zf: { name: 'Kar98k ZF39', cal: '7,92×57 mm (ottica 4×)', mag: 5, res: 40, dmg: 175, rate: 1.2, auto: false, reload: 3.1, hip: .05, ads: 0, kick: .06, climb: 0, fov: 15, snd: 'kar98', scope: true, bolt: true, range: 900 },
   kar98: { name: 'Karabiner 98k', cal: '7,92×57 mm Mauser', mag: 5, res: 40, dmg: 130, rate: 1.1, auto: false, reload: 3.0, hip: .03, ads: .0012, kick: .05, climb: 0, fov: 50, snd: 'kar98', bolt: true, range: 700 },
 };
 
@@ -81,12 +82,12 @@ const WEAPONS = {
 const AIW = {
   rifle: { rate: [1.6, 3.2], acc: .3, range: 200, burst: [1, 1], bi: 0, dmg: [30, 55], tracer: .12 },
   smg: { rate: [1.0, 2.2], acc: .13, range: 80, burst: [4, 9], bi: .1, dmg: [16, 26], tracer: .25 },
-  bar: { rate: [1.3, 2.6], acc: .14, range: 230, burst: [3, 7], bi: .14, dmg: [25, 40], tracer: .5 },
-  mg: { rate: [.7, 1.8], acc: .07, range: 320, burst: [15, 40], bi: .05, dmg: [25, 45], tracer: .35 },
+  bar: { rate: [1.3, 2.6], acc: .14, range: 230, burst: [3, 7], bi: .14, dmg: [25, 40], tracer: .6 },
+  mg: { rate: [.7, 1.8], acc: .07, range: 320, burst: [15, 40], bi: .05, dmg: [25, 45], tracer: .55 },
   sniper: { rate: [4, 7], acc: .55, range: 380, burst: [1, 1], bi: 0, dmg: [55, 90], tracer: 0 },
   medic: { rate: [2, 4], acc: .15, range: 60, burst: [1, 1], bi: 0, dmg: [15, 25], tracer: 0 },
 }
-const AISND = { A: { rifle: 'garand', smg: 'thompson', bar: 'bar', medic: 'colt' }, E: { rifle: 'kar98', smg: 'mp40', mg: 'mg42', sniper: 'kar98' } };
+const AISND = { A: { rifle: 'garand', smg: 'thompson', bar: 'bar', medic: 'colt', sniper: 'springfield' }, E: { rifle: 'kar98', smg: 'mp40', mg: 'mg42', sniper: 'kar98' } };
 
 // ---------- Costruttore di geometrie unite (colori per vertice) ----------
 const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _s = new V3(), _p = new V3();

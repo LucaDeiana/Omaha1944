@@ -81,7 +81,7 @@ function addSights(g, kind, y, rz, fz, mat, hood, x = 0) {
 // costruzione delle armi (usate anche a terra)
 function buildGun(id) {
   const g = new THREE.Group(); let i = {};
-  if (id === 'garand' || id === 'kar98' || id === 'springfield') {
+  if (id === 'garand' || id === 'kar98' || id === 'springfield' || id === 'kar98zf') {
     const W = id === 'kar98' ? VM.wood2 : VM.wood, Mt = id === 'garand' ? VM.metal : VM.blue;
     prof(g, [[.43, .03], [.27, .035], [.12, .018], [.05, 0], [-.02, 0], [-.05, .012], [-.3, .012], [-.6, .008], [-.62, -.005], [-.6, -.025], [-.3, -.03], [-.08, -.034], [.02, -.04], [.07, -.085], [.11, -.08], [.15, -.055], [.43, -.105], [.44, -.04]], .042, W);
     prof(g, [[-.1, .012], [-.1, .03], [-.3, .034], [-.3, .012]], .036, W);
@@ -109,7 +109,7 @@ function buildGun(id) {
       mag = new THREE.Group(); mag.position.set(0, .046, -.04); g.add(mag);
       for (let k = 0; k < 5; k++) CZ(mag, VM.brass, 0, 0, -.02 + k * .01, .005, .03);
       if (id === 'kar98') addSights(g, 'notch', .06, -.17, -.86, Mt, true);
-      if (id === 'springfield') {
+      if (id === 'springfield' || id === 'kar98zf') {
         CZ(g, VM.blue, 0, .085, -.04, .013, .3); CZ(g, VM.blue, 0, .085, .135, .019, .07); CZ(g, VM.blue, 0, .085, -.205, .018, .05);
         part(g, U.box, VM.blue, 0, .062, .04, .012, .03, .016); part(g, U.box, VM.blue, 0, .062, -.12, .012, .03, .016);
         const k1 = CZ(g, VM.blue, 0, .1, -.04, .007, .015); k1.rotation.set(0, 0, 0);
@@ -118,7 +118,7 @@ function buildGun(id) {
       }
     }
     i = { mag, bolt, muzzle: new V3(0, .03, -1.01), port: new V3(.02, .05, -.04), hip: new V3(.16, -.17, -.32), ads: new V3(0, -.068, -.17), grip: new V3(0, -.045, .065), fore: new V3(0, -.014, -.38), magOut: new V3(0, .2, 0) };
-    if (id === 'springfield') i.ads = new V3(0, -.085, -.12);
+    if (id === 'springfield' || id === 'kar98zf') i.ads = new V3(0, -.085, -.12);
     if (id === 'kar98') i.ads = new V3(0, -.06, -.16);
   } else if (id === 'thompson') {
     prof(g, [[.36, .01], [.36, -.09], [.14, -.045], [.1, -.03], [.1, .015], [.16, .02]], .04, VM.wood);
@@ -282,7 +282,7 @@ function playerFire() {
   P.bloom = Math.min(.04, P.bloom + (w.auto ? .0035 : .008));
   _d.x += rnd(-1, 1) * spread; _d.y += rnd(-1, 1) * spread; _d.z += rnd(-1, 1) * spread; _d.normalize();
   const r = hitscan(_o, _d, w.range || 600), p = _r.copy(_o).addScaledVector(_d, r.t);
-  if (r.t > 30 && R() < .25) fxTracer(_o.clone().addScaledVector(_d, 3), p, .7);
+  if (w.auto && (w.snd === 'bar' || w.snd === 'mg42') ? STATS.shots % 3 === 0 : r.t > 30 && R() < .25) fxTracer(_o.clone().addScaledVector(_d, 3), p, w.auto ? 1.1 : .7);
   if (_o.y > WATER_Y && _d.y < 0) {
     const tw = (WATER_Y - _o.y) / _d.y, wz = _o.z + _d.z * tw;
     if (tw < r.t && wz > -9 && Hf(_o.x + _d.x * tw, wz) < WATER_Y) { fxImpact(new V3(_o.x + _d.x * tw, WATER_Y, wz), 'water'); if (r.type !== 'enemy') return; }

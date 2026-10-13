@@ -326,7 +326,7 @@ class Soldier {
       end.sub(from).multiplyScalar(1.5).add(from);
     }
     const dir = T4.subVectors(tp, from).normalize();
-    if (R() < this.w.tracer && d > 8) fxTracer(from, end, this.kind === 'mg' ? 1.3 : 1);
+    if (R() < this.w.tracer && d > 8) fxTracer(from, end, this.kind === 'mg' ? 1.6 : 1);
     sfxShot(this.snd, from);
     if (dist2Cam(from) < 180 * 180) fxMuzzle(from, dir, this.kind === 'mg');
     if (hit) {

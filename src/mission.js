@@ -24,7 +24,7 @@ const N = { sarge: 'Sgt. Morelli', walsh: 'Cpl. Walsh', kow: 'Pvt. Kowalski', ba
 // ---------- spawn ----------
 function addAlly(kind, x, z, o = {}) { return new Soldier('A', kind, x, z, o); }
 function addEnemy(kind, x, z, o = {}) { if (o.yaw === undefined) o.yaw = PI; return new Soldier('E', kind, x, z, o); }
-const randAllyKind = () => { const r = R(); return r < .6 ? 'rifle' : r < .75 ? 'smg' : r < .9 ? 'bar' : 'medic'; };
+const randAllyKind = () => { const r = R(); return r < .56 ? 'rifle' : r < .71 ? 'smg' : r < .85 ? 'bar' : r < .93 ? 'medic' : 'sniper'; };
 const randEnemyKind = () => R() < .72 ? 'rifle' : 'smg';
 const aliveA = () => allies.filter(a => a.alive).length, aliveE = () => enemies.filter(e => e.alive).length;
 const SEATS = [];
@@ -83,7 +83,7 @@ function initMission() {
   spawnBeachDefenders();
   const fp = (id, x, z, res) => { const p = spawnPickup(id, new V3(x, 0, z), undefined, res); p.fixed = true; };
   fp('thompson', -14, -27); fp('bar', -44, -55.1); fp('bazooka', -17, -55.3, 4); fp('thompson', 30, -40);
-  fp('springfield', -58, trenchZ(-58) + .2); fp('bar', 40, trenchZ(40) + .2); fp('bazooka', -20, -160, 3); fp('thompson', -40, -200);
+  fp('springfield', -58, trenchZ(-58) + .2); fp('springfield', 10, -56); fp('kar98zf', -142, -103); fp('kar98zf', 122, -105); fp('bar', 40, trenchZ(40) + .2); fp('bazooka', -20, -160, 3); fp('thompson', -40, -200);
   addCrate(-26, -55.4); addCrate(-38, trenchZ(-38) + .3); addCrate(-24, -163); addCrate(14, -276); addCrate(-32, -110);
   addBangaloreCrate(-36, -55.3);
   setStage(0);
@@ -99,7 +99,7 @@ function spawnBeachDefenders() {
   }
   for (const x of [-140, -65, -30, 30, 55, 135]) addEnemy('mg', x + 2, trenchZ(x + 2) + .3, { state: 'post', stationary: true, inTrench: true, group: 'beach' });
   for (const b of WORLD.bunkers) { b.gunner = addEnemy('mg', b.x, b.z + 2.5, { y: b.base + 1.2, state: 'post', stationary: true, inBunker: true, bunker: b, group: 'beach' }); b.gunner.supB = b; }
-  for (const [x, z] of [[-140, -104], [125, -106], [-20, -110]]) addEnemy('sniper', x, z, { state: 'post', stationary: true, group: 'beach' });
+  for (const [x, z] of [[-140, -104], [125, -106], [-20, -110], [-80, -96], [60, -98], [160, -100], [-180, -98], [0, -100]]) addEnemy('sniper', x, z, { state: 'post', stationary: true, group: 'beach' });
   for (const [x, z] of [[-80, -74], [-5, -77], [60, -73], [140, -75], [-130, -72], [95, -79], [-110, -78], [-50, -75], [120, -71]]) addEnemy('rifle', x, z, { state: 'post', stationary: true, group: 'beach' });
   for (const mp of WORLD.mortarPits) for (let i = 0; i < 2; i++) addEnemy('rifle', mp.x + (i ? 1.2 : -1.2), mp.z, { state: 'post', stationary: true, group: 'beach', role: 'mortar' });
   for (const b of WORLD.extraBunkers || []) { b.gunner = addEnemy('mg', b.x, b.z + 2.5, { y: b.base + 1.2, state: 'post', stationary: true, inBunker: true, bunker: null, group: 'wn' }); b.gunner.supB = b; for (let k = 0; k < 5; k++) addEnemy(randEnemyKind(), b.x + rnd(-25, 25), -84 + rnd(-6, 3), { state: 'post', stationary: true, group: 'wn' }); }

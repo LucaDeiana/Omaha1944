@@ -19,7 +19,7 @@ function initAxis() {
   P.inBoat = false; P.boat = null; P.pos.set(x, Hf(x, trenchZ(x) + .2), trenchZ(x) + .2); P.yaw = PI;
   P.inv = [{ id: 'kar98', mag: 5, res: 60 }, { id: 'mp40', mag: 32, res: 160 }, null]; P.cur = 0; P.prevSlot = 1; P.nades = 5;
   const fp = (id, px, pz, res) => { const p = spawnPickup(id, new V3(px, 0, pz), undefined, res); p.fixed = true; };
-  fp('mp40', x - 6, trenchZ(x - 6) + .2); fp('kar98', -40, -172.5); fp('mp40', 10, -270);
+  fp('mp40', x - 6, trenchZ(x - 6) + .2); fp('kar98zf', x + 2, trenchZ(x + 2) + .2); fp('kar98zf', -20, -110); fp('kar98', -40, -172.5); fp('mp40', 10, -270);
   addCrate(x + 3, trenchZ(x + 3) - .6); addCrate(-30, -176); addCrate(14, -276);
   setStage(0);
 }
