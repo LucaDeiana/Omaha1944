@@ -207,6 +207,11 @@ class Soldier {
   }
 
   anim(dt, sp, boatW) {
+    // i soldati lontani si animano meno spesso, recuperando il tempo trascorso
+    const d2 = dist2Cam(this.pos), every = d2 > 250 * 250 ? 6 : d2 > 110 * 110 ? 3 : 1;
+    this.aAcc = (this.aAcc || 0) + dt;
+    if (every > 1 && (AI_FRAME + (this.aSlot || (this.aSlot = 1 + (R() * 6 | 0)))) % every) return;
+    dt = Math.min(this.aAcc, .2); this.aAcc = 0;
     const b = this.body, run = clamp(sp / 4.5, 0, 1), cr = this.crouch, pr = this.prone, wd = this.wounded ? 1 : 0;
     this.ph += dt * (3 + sp * 2.1);
     const s = Math.sin(this.ph), c = Math.cos(this.ph), still = run < .1;
@@ -430,8 +435,9 @@ function throwNadeAt(s, tgt, team) {
   n.warn = team === 'E';
 }
 
+let AI_FRAME = 0;
 function updateAI(dt) {
-  AI_BUDGET.n = 0; tactUpdate(dt);
+  AI_BUDGET.n = 0; tactUpdate(dt); AI_FRAME++;
   for (const list of [allies, enemies]) {
     for (const s of list) {
       if (s.removed || !s.alive) continue;

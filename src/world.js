@@ -301,7 +301,25 @@ function buildTerrain() {
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(cl, 3));
   g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setAttribute('splat', new THREE.BufferAttribute(sp, 4)); g.setAttribute('aux', new THREE.BufferAttribute(ax, 2));
   g.setIndex(new THREE.BufferAttribute(idx, 1)); g.computeVertexNormals();
-  const m = new THREE.Mesh(g, terrainMaterial()); m.receiveShadow = true; scene.add(m);
+  const mat = terrainMaterial(), TI = 14, TJ = 8;
+  for (let tj = 0; tj < TJ; tj++) for (let ti = 0; ti < TI; ti++) {
+    const i0 = Math.floor(ti * (nx - 1) / TI), i1 = Math.floor((ti + 1) * (nx - 1) / TI), j0 = Math.floor(tj * (nz - 1) / TJ), j1 = Math.floor((tj + 1) * (nz - 1) / TJ);
+    if (i1 <= i0 || j1 <= j0) continue;
+    const ix = new Uint32Array((i1 - i0) * (j1 - j0) * 6); let q = 0;
+    const bb = new THREE.Box3();
+    for (let j = j0; j < j1; j++) for (let i = i0; i < i1; i++) {
+      const a = j * nx + i, b = a + nx, cc = a + 1, d = b + 1;
+      ix[q++] = a; ix[q++] = b; ix[q++] = cc; ix[q++] = cc; ix[q++] = b; ix[q++] = d;
+    }
+    for (const jj of [j0, j1]) for (let i = i0; i <= i1; i++) { const k = (jj * nx + i) * 3; bb.expandByPoint(new V3(pos[k], pos[k + 1], pos[k + 2])); }
+    for (let j = j0; j <= j1; j += 2) for (let i = i0; i <= i1; i += 2) { const k = (j * nx + i) * 3; bb.expandByPoint(new V3(pos[k], pos[k + 1], pos[k + 2])); }
+    const tg = new THREE.BufferGeometry();
+    for (const n of ['position', 'normal', 'color', 'uv', 'splat', 'aux']) tg.setAttribute(n, g.attributes[n]);
+    tg.setIndex(new THREE.BufferAttribute(ix, 1));
+    bb.expandByScalar(4); tg.boundingBox = bb; tg.boundingSphere = bb.getBoundingSphere(new THREE.Sphere());
+    const m = new THREE.Mesh(tg, mat); m.receiveShadow = true; scene.add(m);
+    FOGCULL.push({ obj: m, s: tg.boundingSphere, k: 1.15 });
+  }
 }
 
 // ---------- acqua ----------
@@ -352,6 +370,8 @@ function buildWater() {
   scene.add(m);
 }
 
+// aggiunge un MB alla scena diviso in tasselli
+function addTiled(mb, size = 120, cast = true) { const root = new THREE.Group(); for (const t of mb.buildTiles(size)) { const g = groupMesh(t, cast); root.add(g); } scene.add(root); root.updateMatrixWorld(true); for (const g of root.children) fogCullAdd(g); return root; }
 function groupMesh(groups, cast = true) {
   const g = new THREE.Group();
   for (const k in groups) { const m = new THREE.Mesh(groups[k], MAT[k] || MAT.vc); m.castShadow = cast; m.receiveShadow = true; g.add(m); }
@@ -893,7 +913,7 @@ function buildStatic() {
     if (Math.abs(a - PI / 2) < .5) continue;
     sandbagLine(S, fx + Math.cos(a) * 5, fz + Math.sin(a) * 5, fx + Math.cos(a + TAU / 16) * 5, fz + Math.sin(a + TAU / 16) * 5, 2);
   }
-  const grp = groupMesh(S.buildGroups()); scene.add(grp);
+  addTiled(S, 240);
 }
 
 function buildWire() {

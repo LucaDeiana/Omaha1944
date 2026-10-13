@@ -80,10 +80,14 @@ function cityHouseGeo(mb, h, ruined) {
   for (let i = 0; i < 22; i++) mb.add(U.ico, R() < .5 ? wall : 0x8a8478, cx + rnd(-w / 2 - 1.5, w / 2 + 1.5), base + .2, cz + rnd(-d / 2 - 1.5, d / 2 + 1.5), R() * 3, R() * 3, 0, rnd(.4, 1.5), rnd(.3, .9), rnd(.4, 1.5));
   return sol;
 }
+const CITY_SUP = new Map();
 function cityChunkBuild(c) {
-  if (c.mesh) { scene.remove(c.mesh); c.mesh.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
-  const mb = new MB(); for (const h of c.houses) mb.parts.push(...h.parts); for (const p of c.extra) mb.parts.push(p);
-  c.mesh = groupMesh(mb.buildGroups()); scene.add(c.mesh);
+  const sup = CITY_SUP.get(c.sup); if (!sup) return;
+  if (sup.mesh) { scene.remove(sup.mesh); sup.mesh.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+  const mb = new MB(); for (const ch of sup.chunks) { for (const h of ch.houses) mb.parts.push(...h.parts); for (const p of ch.extra) mb.parts.push(p); }
+  sup.mesh = groupMesh(mb.buildGroups()); scene.add(sup.mesh);
+  const i = FOGCULL.findIndex(f => f.sup === sup); if (i >= 0) FOGCULL.splice(i, 1);
+  fogCullAdd(sup.mesh); FOGCULL[FOGCULL.length - 1].sup = sup;
 }
 function cityHouse(chunk, cx, cz, w, d, ht, face, ruined) {
   const h = { cx, cz, w, d, ht, face, style: R() < .35 ? 1 : R() < .25 ? 2 : 0, base: CITY.y - .2, hp: w * d * ht * 4.5, ruined, solids: [], chunk };
@@ -123,7 +127,8 @@ function buildCity() {
     const cx = bx + blkW / 2, cz = bz - blkD / 2;
     if (Math.abs(cx - sq.x) < 60 && Math.abs(cz - sq.z) < 50) continue; // piazza
     if (Math.abs(cx - roadPathX(cz)) < blkW / 2 + 6) continue; // viale principale
-    const chunk = { houses: [], extra: [], mesh: null }; CITY.chunks.push(chunk);
+    const chunk = { houses: [], extra: [], mesh: null, sup: Math.floor((bx - CITY.x0) / ((blkW + street) * 3)) + ',' + Math.floor((CITY.z1 - bz) / ((blkD + street) * 3)) }; CITY.chunks.push(chunk);
+    let sp = CITY_SUP.get(chunk.sup); if (!sp) CITY_SUP.set(chunk.sup, sp = { chunks: [], mesh: null }); sp.chunks.push(chunk);
     const damage = clamp(.15 + (bz > -480 ? .45 : 0) + (vnoise(cx * .01, cz * .01) - .5) * .4, 0, .85);
     for (const face of [1, -1]) {
       let x = bx + .2;
@@ -140,8 +145,8 @@ function buildCity() {
     for (const sx of [-1, 1]) mb.add(U.box, pick(STONE), cx + sx * (blkW / 2 - .3), CITY.y + .9, cz, 0, 0, 0, .5, 1.8, blkD - 22);
     mb.mat = 'wood'; if (R() < .6) { const ux = cx + rnd(-10, 10), uz = cz + rnd(-5, 5); mb.add(U.box, 0x5a4632, ux, CITY.y + .8, uz, 0, R() * 3, 0, 1.4, .5, 2.4); for (const s of [-1, 1]) mb.add(U.cyl12, 0x3a2a1e, ux + s * .8, CITY.y + .6, uz, 0, 0, PI / 2, .6, .1, .6); }
     chunk.extra = mb.parts;
-    cityChunkBuild(chunk);
   }
+  for (const sp of CITY_SUP.values()) cityChunkBuild(sp.chunks[0]);
   cityStreets();
   cityChurch();
   buildDepot();
@@ -181,7 +186,7 @@ function cityStreets() {
     else { S.mat = 'stone'; for (let j = 0; j < 10; j++) S.add(U.ico, pick(STONE), x + rnd(-3, 3), y + .3, z + rnd(-2, 2), R() * 3, R() * 3, 0, rnd(.5, 1.6), rnd(.3, .9), rnd(.5, 1.6)); addCover(x, z + 2, 'ruin'); }
   }
   for (let z = CITY.z1; z > CITY.z0; z -= 14) for (const s of [-1, 1]) { const x = roadPathX(z) + s * 9; if (R() < .85) addTree(S, x, z, rnd(.8, 1.1)); }
-  scene.add(groupMesh(S.buildGroups()));
+  addTiled(S, 260);
 }
 // chiesa con campanile sulla piazza del mercato, fontana, mercato coperto
 function cityChurch() {

@@ -211,8 +211,17 @@ function updateEngine(dt, center, time) {
   }
 }
 
+let _shF = 0;
+// grandi gruppi nascosti quando la nebbia li rende praticamente invisibili
+const FOGCULL = [];
+function fogCullAdd(obj) { const b = new THREE.Box3().setFromObject(obj); if (b.isEmpty()) return; FOGCULL.push({ obj, s: b.getBoundingSphere(new THREE.Sphere()) }); }
 function renderFrame(time) {
   skyMesh.position.copy(camera.position);
+  // oltre questa distanza la nebbia copre tutto: inutile disegnare
+  const far = clamp(3 / scene.fog.density, 500, 6000); if (Math.abs(camera.far - far) > 5) { camera.far = far; camera.updateProjectionMatrix(); }
+  const lim = 2.05 / scene.fog.density, cp = camera.position;
+  for (const f of FOGCULL) f.obj.visible = f.s.center.distanceTo(cp) - f.s.radius < lim * (f.k || 1);
+  if (renderer.shadowMap.enabled) { renderer.shadowMap.autoUpdate = false; if ((_shF++ & 1) === 0) renderer.shadowMap.needsUpdate = true; }
   if (composer) { gradePass.uniforms.uTime.value = time; composer.render(); }
   else renderer.render(scene, camera);
 }

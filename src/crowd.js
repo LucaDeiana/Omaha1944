@@ -31,7 +31,7 @@ function organic(rings, n) {
   return loftGeo(secs, null, true);
 }
 function buildPartGeo(key, hi) {
-  const [team, part, kind] = key.split('_'), C = SCOL2[team], s = hi ? 20 : 7, mb = new MB(), A = team === 'A';
+  const [team, part, kind] = key.split('_'), C = SCOL2[team], s = hi ? 14 : 7, mb = new MB(), A = team === 'A';
   const add = (g, c, x, y, z, rx, ry, rz, sx, sy, sz) => mb.add(g, c, x, y, z, rx || 0, ry || 0, rz || 0, sx ?? 1, sy ?? 1, sz ?? 1);
   if (part === 'pelvis') {
     add(cylG(.165, .15, .24, s), C.pants, 0, .02, 0, 0, 0, 0, 1, 1, .7);

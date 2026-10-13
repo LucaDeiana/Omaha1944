@@ -34,16 +34,28 @@ function buildTrees() {
   const mb = new MB(); mb.mat = 'vc';
   for (let i = 0; i < 6; i++) mb.add(U.ico1, pick([0x3f5228, 0x4a5e2c, 0x37481f, 0x55662f, 0x44562a]), rnd(-.25, .25), rnd(-.15, .2), rnd(-.25, .25), R(), R(), R(), rnd(.3, .45), rnd(.25, .38), rnd(.3, .45));
   const crownG = mb.build();
-  TREES.trunk = new THREE.InstancedMesh(trunkG, MAT.wood, N); TREES.crown = new THREE.InstancedMesh(crownG, MAT.vc, N);
-  for (const m of [TREES.trunk, TREES.crown]) { m.castShadow = Q.shadows > 0; m.receiveShadow = true; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); }
-  TREES.list.forEach((t, i) => { treeMatrix(t, i); if (i % 3 === 0) addCover(t.x, t.z + .9, 'tree'); OBST.push({ x: t.x, z: t.z, r: .35 * t.s, tree: t }); });
-  TREES.trunk.instanceMatrix.needsUpdate = TREES.crown.instanceMatrix.needsUpdate = true;
+  const cells = new Map(), CS = 160;
+  for (const t of TREES.list) { const k = Math.floor(t.x / CS) + ',' + Math.floor(t.z / CS); let c = cells.get(k); if (!c) cells.set(k, c = []); c.push(t); }
+  TREES.cells = [];
+  for (const list of cells.values()) {
+    const bb = new THREE.Box3(); for (const t of list) bb.expandByPoint(new V3(t.x, t.y, t.z)); bb.max.y += 16; bb.expandByScalar(9);
+    const sph = bb.getBoundingSphere(new THREE.Sphere());
+    const tgc = trunkG.clone(), cgc = crownG.clone(); tgc.boundingSphere = sph; cgc.boundingSphere = sph.clone();
+    const c = { trunk: new THREE.InstancedMesh(tgc, MAT.wood, list.length), crown: new THREE.InstancedMesh(cgc, MAT.vc, list.length), dirty: false };
+    for (const m of [c.trunk, c.crown]) { m.castShadow = Q.shadows > 0; m.receiveShadow = true; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); }
+    list.forEach((t, i) => { t.cell = c; t.i = i; treeMatrix(t); });
+    for (const m of [c.trunk, c.crown]) FOGCULL.push({ obj: m, s: sph });
+    TREES.cells.push(c);
+  }
+  TREES.trunk = true;
+  TREES.list.forEach((t, i) => { if (i % 3 === 0) addCover(t.x, t.z + .9, 'tree'); OBST.push({ x: t.x, z: t.z, r: .35 * t.s, tree: t }); });
 }
-function treeMatrix(t, i) {
+function treeMatrix(t) {
+  const i = t.i, c = t.cell; c.dirty = true;
   _te.set(t.ax * t.fall, t.ry, t.az * t.fall, 'XZY'); _tq.setFromEuler(_te);
-  _tm.compose(_tp.set(t.x, t.y - .2, t.z), _tq, _ts.set(t.s * 1.1, t.h, t.s * 1.1)); TREES.trunk.setMatrixAt(i, _tm);
+  _tm.compose(_tp.set(t.x, t.y - .2, t.z), _tq, _ts.set(t.s * 1.1, t.h, t.s * 1.1)); c.trunk.setMatrixAt(i, _tm);
   const cs = t.h * (t.kind ? .55 : .75);
-  _tm.compose(_tp.set(0, t.h, 0).applyQuaternion(_tq).add(new V3(t.x, t.y - .2, t.z)), _tq, _ts.set(cs * 1.1, cs * (t.fall > .9 ? .8 : 1), cs * 1.1)); TREES.crown.setMatrixAt(i, _tm);
+  _tm.compose(_tp.set(0, t.h, 0).applyQuaternion(_tq).add(new V3(t.x, t.y - .2, t.z)), _tq, _ts.set(cs * 1.1, cs * (t.fall > .9 ? .8 : 1), cs * 1.1)); c.crown.setMatrixAt(i, _tm);
 }
 // un'esplosione abbatte gli alberi vicini
 function treeBlast(p, radius) {
@@ -52,7 +64,7 @@ function treeBlast(p, radius) {
   TREES.list.forEach((t, i) => {
     if (t.felled || Math.abs(t.x - p.x) > r || Math.abs(t.z - p.z) > r) return;
     const dx = t.x - p.x, dz = t.z - p.z, d = Math.hypot(dx, dz); if (d > r) return;
-    t.felled = true; t.i = i; const dd = Math.max(d, .3); t.ax = 1.45 * dz / dd; t.az = -1.45 * dx / dd;
+    t.felled = true; const dd = Math.max(d, .3); t.ax = 1.45 * dz / dd; t.az = -1.45 * dx / dd;
     TREES.falling.push(t);
     if (dist2Cam(new V3(t.x, t.y, t.z)) < 120 * 120) { play('bodyfall', new V3(t.x, t.y + 2, t.z), { ref: 20, vol: .9, rate: .45 }); fxDebris(new V3(t.x, t.y + 1, t.z), 8, 1.5); }
     const o = OBST.find(q => q.tree === t); if (o) o.r = 0;
@@ -62,8 +74,8 @@ function updateTrees(dt) {
   if (!TREES.falling.length) return;
   for (let k = TREES.falling.length - 1; k >= 0; k--) {
     const t = TREES.falling[k]; t.v = (t.v || 0) + dt * 1.6; t.fall = Math.min(1, t.fall + t.v * dt);
-    treeMatrix(t, t.i);
+    treeMatrix(t);
     if (t.fall >= 1) { TREES.falling.splice(k, 1); const p = new V3(0, t.h * .6, 0).applyQuaternion(_tq).add(new V3(t.x, t.y, t.z)); p.y = Hf(p.x, p.z); fxImpact(p, 'dirt'); if (dist2Cam(p) < 80 * 80) play('bodyfall', p, { ref: 15, vol: .7, rate: .6 }); }
   }
-  TREES.trunk.instanceMatrix.needsUpdate = TREES.crown.instanceMatrix.needsUpdate = true;
+  for (const c of TREES.cells) if (c.dirty) { c.dirty = false; c.trunk.instanceMatrix.needsUpdate = c.crown.instanceMatrix.needsUpdate = true; }
 }

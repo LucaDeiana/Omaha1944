@@ -149,6 +149,14 @@ class MB {
     this.parts.push({ g, c: col(tint), m, mat: this.mat, vc: true }); return this;
   }
   build() { return mergeGeos(this.parts); }
+  // divide le parti in tasselli quadrati di lato size: ogni tassello ha i suoi gruppi di materiali
+  buildTiles(size) {
+    const tiles = new Map();
+    for (const p of this.parts) { const e = p.m.elements, k = Math.floor(e[12] / size) + ',' + Math.floor(e[14] / size); let t = tiles.get(k); if (!t) tiles.set(k, t = []); t.push(p); }
+    const out = [];
+    for (const parts of tiles.values()) { const g = {}; for (const p of parts) (g[p.mat] || (g[p.mat] = [])).push(p); const o = {}; for (const k in g) o[k] = mergeGeos(g[k]); out.push(o); }
+    return out;
+  }
   buildGroups() { const g = {}; for (const p of this.parts) (g[p.mat] || (g[p.mat] = [])).push(p); const o = {}; for (const k in g) o[k] = mergeGeos(g[k]); return o; }
 }
 // geometrie unitarie condivise
