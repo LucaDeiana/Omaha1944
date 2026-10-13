@@ -255,13 +255,15 @@ function updateCamera(dt) {
   const eyeT = P.inBoat ? .98 : P.swim ? (waterLevel(P.pos.x, P.pos.z, GAME.time) - P.pos.y) + .22 : [1.62, 1.05, .42][P.stance];
   P.eyeH = lerp(P.eyeH, eyeT, Math.min(1, dt * 9));
   P.kickP = lerp(P.kickP, 0, Math.min(1, dt * 10)); P.kickY = lerp(P.kickY, 0, Math.min(1, dt * 10));
-  const bobY = Math.sin(P.bobPh) * .035 * P.moveK;
+  const bk = P.moveK * (1 - P.adsK * .7) * (P.sprint ? 1.5 : 1), bobY = Math.sin(P.bobPh) * .055 * bk, bobX = Math.sin(P.bobPh * .5) * .045 * bk;
   let y = P.pos.y + P.eyeH + bobY, roll = 0;
+  P.camBobX = bobX;
   if (P.dead) { const k = clamp(P.deathT / .8, 0, 1); y = P.pos.y + lerp(P.eyeH, .25, k); roll = k * .5; }
   if (P.inBoat) roll = P.boat.g.rotation.z;
   camera.position.set(P.pos.x, y, P.pos.z);
   const sh = P.shake * .035, sk = P.shock * .03;
-  camera.rotation.set(P.pitch + P.kickP + rnd(-sh, sh) + Math.sin(GAME.time * 2.1) * sk + (P.inBoat ? P.boat.g.rotation.x : 0), P.yaw + P.kickY + rnd(-sh, sh) + Math.sin(GAME.time * 1.3) * sk, roll + Math.sin(P.bobPh * .5) * .006 * P.moveK + Math.sin(GAME.time * .9) * sk);
+  camera.rotation.set(P.pitch + P.kickP + rnd(-sh, sh) + Math.sin(GAME.time * 2.1) * sk + (P.inBoat ? P.boat.g.rotation.x : 0), P.yaw + P.kickY + rnd(-sh, sh) + Math.sin(GAME.time * 1.3) * sk, roll + Math.sin(P.bobPh * .5) * .014 * bk + Math.sin(GAME.time * .9) * sk + (P.strafeRoll = lerp(P.strafeRoll || 0, -(P.vel.x * Math.cos(P.yaw) - P.vel.z * Math.sin(P.yaw)) * .006, .1)));
+  camera.position.x += Math.cos(P.yaw) * bobX; camera.position.z -= Math.sin(P.yaw) * bobX;
   const s = P.slot(), w = s ? WEAPONS[s.id] : null;
   P.sprintK = lerp(P.sprintK || 0, P.sprint && P.moveK > .5 ? 1 : 0, Math.min(1, dt * 8));
   let fov = SETTINGS.fov + P.sprintK * 6;

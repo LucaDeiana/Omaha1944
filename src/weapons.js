@@ -526,9 +526,10 @@ function updateViewmodel(dt) {
   // oscillazione in stile Battlefield: respiro a otto, inclinazione nelle virate e negli spostamenti laterali
   updateGunLead(dt);
   const am = 1 - k * .92, tt = GAME.time, fat = 1 + (1 - P.stamina) * 1.5;
-  x += Math.sin(tt * .9) * .0042 * am * fat; y += Math.sin(tt * 1.8) * .0026 * am * fat;
-  ry += Math.sin(tt * .9 + .6) * .006 * am * fat; rx += Math.sin(tt * 1.8 + .3) * .004 * am * fat;
-  ry += GL.x * (1 - k); rx += GL.y * (1 - k); rz += GL.x * .55 * am;
+  x += Math.sin(tt * .9) * .0075 * am * fat; y += Math.sin(tt * 1.8) * .0048 * am * fat;
+  ry += Math.sin(tt * .9 + .6) * .011 * am * fat; rx += Math.sin(tt * 1.8 + .3) * .007 * am * fat;
+  x += Math.cos(bob * .5) * .012 * bm; y -= Math.abs(Math.sin(bob * .5)) * .014 * bm; rz += Math.sin(bob * .5) * .03 * bm; ry += Math.cos(bob * .5) * .02 * bm;
+  ry += GL.x * 1.3 * (1 - k); rx += GL.y * 1.3 * (1 - k); rz += GL.x * .75 * am;
   x += GL.x * .05 * am; y += GL.y * .03 * am;
   const vr = P.vel.x * Math.cos(P.yaw) - P.vel.z * Math.sin(P.yaw);
   rz -= vr * .014 * am; x -= vr * .0025 * am;
