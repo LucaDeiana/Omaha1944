@@ -8,6 +8,33 @@ const T1 = new V3(), T2 = new V3(), T3 = new V3(), T4 = new V3(), T5 = new V3();
 const AI_BUDGET = { n: 0 };
 
 let soldierId = 0;
+// ---------- tattica di squadra ----------
+// griglia spaziale dei soldati (celle di 20 m) e fronte alleato per settori di 40 m
+const TACT = { t: 0, grid: { A: new Map(), E: new Map() }, front: new Map() };
+const tKey = (x, z) => (Math.floor(x / 20) + 500) * 10000 + (Math.floor(z / 20) + 500);
+function tactUpdate(dt) {
+  TACT.t -= dt; if (TACT.t > 0) return; TACT.t = .5;
+  for (const tm of ['A', 'E']) {
+    const g = TACT.grid[tm]; g.clear();
+    for (const s of tm === 'A' ? allies : enemies) { if (!s.alive || s.removed || s.state === 'boat' || s.wounded) continue; const k = tKey(s.pos.x, s.pos.z); let a = g.get(k); if (!a) g.set(k, a = []); a.push(s); }
+  }
+  // fronte alleato: il quarto più avanzato di ogni settore segna fin dove ci si può spingere
+  const sec = new Map();
+  for (const s of allies) { if (!s.alive || s.state === 'boat' || s.pos.z > 88) continue; const k = Math.floor(s.pos.x / 40); let a = sec.get(k); if (!a) sec.set(k, a = []); a.push(s.pos.z); }
+  TACT.front.clear();
+  for (const [k, a] of sec) { a.sort((x, y) => x - y); TACT.front.set(k, a[Math.floor(a.length * .25)]); }
+}
+// nemici entro r metri (esclusi i serventi chiusi nei bunker lontani)
+function foesNear(team, x, z, r) {
+  const g = TACT.grid[team === 'A' ? 'E' : 'A'], cx = Math.floor(x / 20), cz = Math.floor(z / 20), n = Math.ceil(r / 20), r2 = r * r;
+  let cnt = 0, best = null, bd = r2;
+  for (let i = -n; i <= n; i++) for (let j = -n; j <= n; j++) {
+    const a = g.get((cx + i + 500) * 10000 + (cz + j + 500)); if (!a) continue;
+    for (const s of a) { const d2 = (s.pos.x - x) ** 2 + (s.pos.z - z) ** 2; if (d2 < r2) { cnt++; if (d2 < bd) { bd = d2; best = s; } } }
+  }
+  return { cnt, best, d: Math.sqrt(bd) };
+}
+const frontAt = x => { const f = TACT.front.get(Math.floor(x / 40)); return f === undefined ? 90 : f; };
 // qualità dei ripari: più alta = più protetto
 const COVER_Q = { bank: 7, tank: 6, sand: 6, bunker: 6, trench: 5, wallN: 5, house: 6, church: 6, ruin: 5, gate: 3, crater: 3.5, hh: 2.5, tree: 4 };
 class Soldier {
@@ -113,7 +140,7 @@ class Soldier {
       routeWaypoint(this.pos, this.dest, this.wp);
       const isDest = Math.abs(this.wp.x - this.dest.x) < .01 && Math.abs(this.wp.z - this.dest.z) < .01;
       const dx = this.wp.x - this.pos.x, dz = this.wp.z - this.pos.z, d = Math.hypot(dx, dz);
-      if (d < .5) { if (isDest) { this.dest = null; this.onArrive(); } }
+      if (d < .5) { if (isDest) { if (this.detour) { this.dest = this.detour; this.detour = null; } else { this.dest = null; this.onArrive(); } } }
       else {
         let v = (this.crouchRun ? 3.3 : 4.6) * this.speedMul;
         if (this.flee) v = 5.2;
@@ -202,9 +229,18 @@ class Soldier {
     if (this.throwT > 0) { const k = 1 - this.throwT / .7; solveArm(SH_R, T5.set(.22, lerp(.75, .5, k), lerp(.25, -.55, k)), POLE_R, b.shR, b.elR); }
   }
 
+  // bloccato contro un ostacolo: passo laterale, poi rinuncia al percorso
+  unstick() {
+    if (!this.dest || this.stationary || this.prone > .5) { this.stuckN = 0; this.lastP = null; return; }
+    if (this.lastP && this.lastP.distanceToSquared(this.pos) < .09) this.stuckN = (this.stuckN || 0) + 1; else this.stuckN = 0;
+    this.lastP = (this.lastP || new V3()).copy(this.pos);
+    if (this.stuckN === 3) { const dx = this.dest.x - this.pos.x, dz = this.dest.z - this.pos.z, d = Math.hypot(dx, dz) || 1, sd = R() < .5 ? -1 : 1; this.detour = this.dest.clone(); this.dest = new V3(this.pos.x - dz / d * 3.5 * sd, 0, this.pos.z + dx / d * 3.5 * sd); }
+    else if (this.stuckN >= 6) { this.stuckN = 0; this.dest = null; this.detour = null; if (this.cover) { this.cover.occ--; this.cover = null; } this.state = this.team === 'A' ? 'cover' : this.state === 'move' ? 'post' : this.state; this.wait = 0; }
+  }
   think() {
     if (!this.alive || this.state === 'boat' || this.removed || this.state === 'wounded') return;
     this.findTarget();
+    this.unstick();
     if (this.team === 'A') this.thinkAlly(); else this.thinkEnemy();
     this.shoutT -= this.thinkDt;
   }
@@ -254,7 +290,9 @@ class Soldier {
     this.wait -= this.thinkDt * (MISSION.suppT > 0 || PT === 'E' ? 3 : 1);
     if (this.wait <= 0 && (Z || Math.abs(this.pos.x) > 215)) {
       // avanzata a sbalzi: metà della squadra copre mentre l'altra si muove, e mai sotto fuoco intenso
-      const pinned = this.supp > (MISSION.suppT > 0 ? .55 : .3) && this.cover;
+      let pinned = this.supp > (MISSION.suppT > 0 ? .7 : .5) && this.cover;
+      this.pinT = pinned ? (this.pinT || 0) + this.thinkDt * 3 : 0;
+      if (this.pinT > 9) { pinned = false; this.pinT = 0; if (dist2Cam(this.pos) < 60 * 60 && R() < .3) shout('en', 'move', this.pos); }
       const myTurn = (Math.floor(GAME.time / 6) + this.bound) % 2 === 0 || MISSION.suppT > 0 || !this.cover;
       if (pinned || !myTurn) { this.wait = rnd(1.2, 2.6); if (pinned && R() < .08 && dist2Cam(this.pos) < 50 * 50) shout('en', 'cover', this.pos); return; }
       this.pickCover(Z);
@@ -264,8 +302,16 @@ class Soldier {
     const p = this.pos;
     if (Math.abs(p.x) > 215 && p.z > -62 && !(Z && Z.defend)) Z = { zMin: -56.8, zMax: 90, xMin: p.x - 45, xMax: p.x + 45, step: 13, wait: (Z && Z.wait) || [2.5, 6] };
     let best = null, bs = -1e9;
+    // area non ancora ripulita: si combatte da qui, al massimo ci si sposta di lato su un riparo vicino e non più esposto
+    let threat = Z.defend ? { cnt: 0 } : foesNear(this.team, p.x, p.z, 26);
+    // con netta superiorità numerica locale si va all'assalto
+    if (threat.cnt && foesNear(this.team === 'A' ? 'E' : 'A', p.x, p.z, 22).cnt >= threat.cnt * 2.5 + 2) threat = { cnt: 0 };
+    const front = this.team === 'A' && !Z.defend ? frontAt(p.x) : -1e9;
+    if (threat.cnt && this.team === 'A') { this.state = 'cover'; this.wait = rnd(1.5, 3); if (threat.best && !this.target) { this.target = threat.best; this.tVis = true; } }
     for (const c of covers) {
       if (c.occ >= 2 || c.z > Z.zMax || c.z < Z.zMin || c.x < Z.xMin || c.x > Z.xMax) continue;
+      if (threat.cnt) { const dd = Math.hypot(c.x - p.x, c.z - p.z); if (dd > 12 || Math.hypot(c.x - threat.best.pos.x, c.z - threat.best.pos.z) < threat.d - 1) continue; }
+      if (c.z < front - 17) continue;
       if (Z.kinds && !Z.kinds.includes(c.kind)) continue;
       const dx = c.x - p.x, dz = c.z - p.z, dist = Math.hypot(dx, dz);
       if (dist > 50 || dist < 1) continue;
@@ -275,12 +321,14 @@ class Soldier {
       else { const prog = p.z - c.z; s = p.z - Z.zMin < 5 ? -dist * .3 + R() * 6 : -Math.abs(prog - Z.step) * .55 - Math.abs(dx) * .25 + R() * 8; }
       s += COVER_Q[c.kind] || 2;
       if (this.supp > .3) s -= dist * .35;
+      if (!Z.defend && (dist > 6 || c.z < p.z - 4)) { const ct = foesNear(this.team, c.x, c.z, 18).cnt; if (ct) s -= 6 + ct * 4; }
       if (this.squad) { const dp = Math.hypot(c.x - P.pos.x, c.z - P.pos.z); s -= Math.max(0, dp - 12) * .9; }
       if (s > bs) { bs = s; best = c; }
     }
     if (this.cover) { this.cover.occ--; this.cover = null; }
     if (best) { best.occ++; this.cover = best; this.dest = new V3(best.x + rnd(-.35, .35), 0, best.z + rnd(-.2, .3)); }
-    else this.dest = new V3(clamp(p.x + rnd(-8, 8), Z.xMin, Z.xMax), 0, clamp(p.z - rnd(3, 12), Z.zMin, Z.zMax));
+    else if (threat.cnt) { this.dest = null; this.state = 'cover'; this.wait = rnd(1.5, 3); return; }
+    else this.dest = new V3(clamp(p.x + rnd(-8, 8), Z.xMin, Z.xMax), 0, clamp(Math.max(p.z - rnd(3, 10), front - 14), Z.zMin, Z.zMax));
     this.state = 'move'; this.crouchRun = this.supp > .2 || R() < .45;
   }
   onArrive() {
@@ -296,6 +344,7 @@ class Soldier {
     if (this.toPost && !this.dest && this.objective) { this.dest = this.objective.clone(); this.state = 'move'; this.crouchRun = R() < .6; }
     if (this.state === 'assault' && !this.dest) {
       this.wait -= this.thinkDt * (this.supp > .45 ? .25 : 1);
+      if (this.wait <= 0) { const th = foesNear('E', this.pos.x, this.pos.z, 24); if (th.cnt) { this.wait = rnd(1.5, 3); if (!this.target) { this.target = th.best; this.tVis = true; } } }
       if (this.wait <= 0) {
         const o = this.objective, dx = o.x - this.pos.x, dz = o.z - this.pos.z, d = Math.hypot(dx, dz);
         if (d < 22) this.state = 'hold';
@@ -329,7 +378,7 @@ class Soldier {
     const from = this.muzzle(T1), d = from.distanceTo(tp);
     let p = this.w.acc * clamp(1.15 - d / this.w.range, .12, 1);
     if (PT === 'E') p *= this.team === 'E' ? .3 : (t === P ? D.acc : 1.1); // Asse: i camerati IA sparano peggio, gli Americani premono
-    else p *= this.team === 'E' ? D.acc : (d > 60 ? .4 : 1.1);
+    else p *= this.team === 'E' ? (t === P ? D.acc : D.acc * .45) : (d > 60 ? .5 : 1.15);
     if (this.supp > .3) p *= .6;
     if (t === P) { p *= P.hitMul(); if (!losClear(from, tp)) p = 0; }
     else if (t.isBoat) p = 0;
@@ -382,7 +431,7 @@ function throwNadeAt(s, tgt, team) {
 }
 
 function updateAI(dt) {
-  AI_BUDGET.n = 0;
+  AI_BUDGET.n = 0; tactUpdate(dt);
   for (const list of [allies, enemies]) {
     for (const s of list) {
       if (s.removed || !s.alive) continue;
