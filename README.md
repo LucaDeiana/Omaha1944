@@ -3,7 +3,7 @@
 FPS nel browser che simula lo sbarco a Omaha Beach (6 giugno 1944): dall'avvicinamento sul mezzo da sbarco Higgins, sotto il fuoco delle corazzate, fino alla liberazione di Colleville-sur-Mer e alla difesa dal contrattacco tedesco.
 
 ## Come giocare
-Apri `index.html` in Chrome o Edge (serve internet per caricare Three.js e i font da CDN). Non serve installare nulla.
+Fai doppio clic su `Avvia Omaha.bat` (oppure apri `index.html` in Chrome o Edge). Serve internet per caricare Three.js e i font da CDN. Nel menu scegli fazione (Alleati o Asse) e, per l'Asse, la modalità (campagna o infinita).
 
 | Tasto | Azione |
 |---|---|
@@ -17,7 +17,11 @@ Apri `index.html` in Chrome o Edge (serve internet per caricare Three.js e i fon
 | R | Ricarica |
 | G | Granata |
 | 1 2 3 / rotella | Cambio arma · Q arma precedente |
-| E | Interagisci / raccogli armi / rifornimento |
+| E | Interagisci / raccogli armi / rifornimento / entra in MG42, mortaio, Flak, Tobruk, Panzer |
+| H | Bendati (3 s, +45 salute) |
+| T | Supporto aereo con vista dall'alto (una chiamata ogni 2 min e mezzo) |
+| X | Ordini alla squadra (con me / tenete la posizione / avanzate) |
+| Panzer | W/S/A/D guida · mouse torretta · click sx cannone · F mitragliatrice · click dx ottica · E esci |
 | V | Colpo con il calcio del fucile |
 | B | Cambia ruolo (fanteria / corazzata / aereo) |
 | Aereo | mouse = cloche · W/S manetta · A/D timone · click sx mitragliatrici · click dx o F bomba |

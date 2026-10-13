@@ -222,7 +222,7 @@ const STAGES = [
         after(1.2, () => say(N.walsh, 'Hanno colpito la barca di Miller! Oh Dio...'));
       });
       once('s6', eta < 8, () => { say(N.cox, 'Dieci secondi! Che Dio vi assista!'); shout('en', 'move', null, { text: 'Ten seconds! God be with you!', priority: true }); });
-      if (b.open && P.mode !== 'foot' && MISSION.stageT > 2) { setStage(1); return; }
+      if ((b.open || b.state === 'return' || b.state === 'reload') && !P.inBoat && MISSION.stageT > 2) { setStage(1); return; }
       once('ramp', b.landed, () => {
         say(N.cox, 'RAMPA GIÙ!'); shout('en', 'move', null, { text: 'Ramp going down!', priority: true });
         after(.9, () => {
@@ -252,6 +252,7 @@ const STAGES = [
       MISSION.markers = [{ pos: new V3(x, H(x, BANK_Z + 1.5) + 1.2, BANK_Z + 1.5), label: 'Terrapieno' }];
       if (P.pos.z < -46) MISSION.checkpoint = { pos: new V3(clamp(P.pos.x, -150, 150), 0, -40), yaw: 0 };
       if (P.pos.z < -53.5 && P.mode === 'foot') setStage(2);
+      else if (MISSION.stageT > 45 && allies.filter(a => a.alive && !a.vip && a.pos.z < -48 && a.pos.z > -60 && Math.abs(a.pos.x) < 220).length >= 8) { feed('I compagni hanno raggiunto il terrapieno'); setStage(2); }
     }
   },
   { // 2
@@ -267,6 +268,11 @@ const STAGES = [
       ];
     },
     update(dt) {
+      if (MISSION.stageT > 60 && !MISSION.flags.placed && MISSION.stage === 2) {
+        // il geniere apre il varco dove si sono ammassati più compagni
+        if (!MISSION.bangX || MISSION.stageT % 10 < MISSION.dt) { let bx = BREACH_X, bn = -1; for (let x = -190; x <= 190; x += 10) { const n = allies.filter(a => a.alive && !a.vip && a.pos.z < -46 && a.pos.z > -62 && Math.abs(a.pos.x - x) < 18).length; if (n > bn) { bn = n; bx = x; } } MISSION.bangX = bx; }
+        const bx = MISSION.bangX; aiEngineer('bang', new V3(bx, 0, WIRE_Z + 4), 6, 25, () => { if (MISSION.stage !== 2) return; if (addWireGap(bx)) onWireGap(bx); });
+      }
       if (!MISSION.flags.placed) {
         MISSION.objText = (P.carry ? 'Infila il tubo Bangalore sotto il filo spinato' : 'Apri un varco nel filo: Bangalore dalla cassa') + ' — oppure granate, bazooka, Texas (B) o aereo';
         MISSION.markers = [P.carry ? { pos: new V3(BREACH_X, H(BREACH_X, WIRE_Z) + 1.5, WIRE_Z), label: 'Filo spinato' } : { pos: BANG_POS.clone().add(new V3(0, 1.4, 0)), label: 'Bangalore' }];
@@ -277,7 +283,7 @@ const STAGES = [
     title: 'La scogliera',
     start() {
       MISSION.checkpoint = { pos: new V3(BREACH_X, 0, WIRE_Z + 2.5), yaw: 0 };
-      MISSION.allyZone = { zMin: -93, zMax: -58, xMin: -75, xMax: 25, step: 12, wait: [2.5, 5.5] }; releaseHolders();
+      MISSION.allyZone = { zMin: -93, zMax: 90, xMin: -200, xMax: 200, step: 12, wait: [2.5, 5.5] }; releaseHolders();
       say(N.sarge, 'Il filo è aperto! Tutti attraverso il varco, su per la scogliera!'); shout('en', 'move', null, { text: 'The wire is open! Everybody through the gap! Up the bluff!', priority: true });
       after(6, () => say(N.walsh, 'Campi minati ai lati! Restate sul sentiero del canalone!'));
       MISSION.waveT = 5;
@@ -289,7 +295,7 @@ const STAGES = [
       MISSION.objText = near ? `Conquista la trincea in cima alla scogliera — difensori: ${near}` : 'Raggiungi la trincea in cima alla scogliera';
       if (P.pos.z < -70) MISSION.checkpoint = { pos: new V3(BREACH_X + 2, 0, -72), yaw: 0 };
       for (const mf of MINEFIELDS) once('mf' + mf[0], P.pos.x > mf[0] - 5 && P.pos.x < mf[1] + 5 && P.pos.z < mf[3] + 4 && P.pos.z > mf[2], () => say(N.walsh, 'Fermo! Campo minato! Guarda i cartelli!'));
-      if (near === 0 && Math.hypot(P.pos.x - tp.x, P.pos.z - tp.z) < 10) setStage(4);
+      if (near === 0 && (Math.hypot(P.pos.x - tp.x, P.pos.z - tp.z) < 10 || alliesNear(tp.x, tp.z, 14) >= 6)) setStage(4);
     }
   },
   { // 4
@@ -300,7 +306,7 @@ const STAGES = [
       feed('Ricevute 3 cariche da demolizione');
       say(N.sarge, 'Trincea presa! Ora quei bunker: prendi queste cariche e falli saltare!');
       say(N.walsh, 'Le porte posteriori danno sulla trincea. O una granata dritta nella feritoia! Oppure chiama la Texas (B).');
-      MISSION.allyZone = { zMin: -96, zMax: -78, xMin: -165, xMax: 165, step: 0, wait: [3, 7], kinds: ['trench', 'bunker'] };
+      MISSION.allyZone = { zMin: -96, zMax: 90, xMin: -200, xMax: 200, step: 10, wait: [3, 7] };
       MISSION.interactables = WORLD.bunkers.map(b => ({
         pos: b.door, r: 2.8, hold: 2, label: 'Tieni premuto E per piazzare la carica da demolizione',
         active: () => !b.neutralized && !b.charged && P.charges > 0,
@@ -315,6 +321,7 @@ const STAGES = [
     },
     update() {
       const left = WORLD.bunkers.filter(b => !b.neutralized);
+      for (const b of left) aiEngineer('bk' + b.x, b.door, 6, 40, () => { if (!b.destroyed) { b.destroy(); onObjectiveEvent('bunker', b, false); } });
       MISSION.objText = `Neutralizza i bunker MG42 (${3 - left.length}/3) — cariche (E), granate, bazooka o la Texas (B)`;
       MISSION.markers = left.map(b => ({ pos: new V3(b.x, b.base + 6, b.z), label: 'MG42' }));
       if (P.mode === 'foot' && Math.abs(P.pos.z - trenchZ(P.pos.x)) < 2.5 && P.pos.x > -150 && P.pos.x < 150) MISSION.checkpoint = { pos: new V3(P.pos.x, 0, trenchZ(P.pos.x)), yaw: 0 };
@@ -330,7 +337,7 @@ const STAGES = [
       say(N.sarge, 'Hai sentito. Avanti, attraverso il bocage! Usa i varchi nelle siepi!');
       MISSION.flakOn = true; spawnBattery();
       reinforce(24, roadX(-100), -100);
-      MISSION.allyZone = { zMin: -205, zMax: -92, xMin: -110, xMax: 100, step: 14, wait: [3, 6] };
+      MISSION.allyZone = { zMin: -205, zMax: 90, xMin: -200, xMax: 200, step: 14, wait: [3, 6] };
       MISSION.interactables = WORLD.flaks.map(f => ({
         pos: new V3(f.x, f.pos.y, f.z - 2), r: 2.8, hold: 2, label: 'Tieni premuto E per piazzare la carica sul cannone',
         active: () => f.alive && !f.charged && P.charges > 0,
@@ -342,6 +349,7 @@ const STAGES = [
     },
     update() {
       const left = WORLD.flaks.filter(f => f.alive);
+      for (const f of left) aiEngineer('fk' + f.x, new V3(f.x, 0, f.z - 2), 6, 40, () => { if (f.alive) { f.destroy(); onObjectiveEvent('flak', f, false); } });
       MISSION.objText = `Distruggi i cannoni da 88 mm (${2 - left.length}/2) — cariche (E), bazooka, aereo o Texas (B)`;
       MISSION.markers = left.map(f => ({ pos: f.pos.clone().add(new V3(0, 4.5, 0)), label: 'Flak 88' }));
       if (P.mode === 'foot' && P.pos.z < -176 && P.pos.z > -215) MISSION.checkpoint = { pos: new V3(roadX(-180), 0, -180), yaw: 0 };
@@ -355,7 +363,7 @@ const STAGES = [
       say(N.sarge, 'Ora il villaggio: Colleville-sur-Mer. Casa per casa, ragazzi.');
       after(5, () => say(N.radio, 'Attenzione: cecchino segnalato sul campanile della chiesa.'));
       spawnVillage(); reinforce(26, roadX(-190), -190); AU.battle = .8;
-      MISSION.allyZone = { zMin: -300, zMax: -160, xMin: -100, xMax: 100, step: 16, wait: [3, 6] };
+      MISSION.allyZone = { zMin: -300, zMax: 90, xMin: -200, xMax: 200, step: 16, wait: [3, 6] };
     },
     update() {
       const left = enemies.filter(e => e.alive && e.group === 'village');
@@ -403,7 +411,7 @@ const STAGES = [
       say(N.radio, 'Easy Six: la città è il nodo dei rinforzi tedeschi. Prendete la piazza del mercato e fate saltare il deposito dei camion.');
       after(6, () => say(N.sarge, 'E qualcuno zittisca quel cecchino sul campanile!'));
       reinforce(34, roadPathX(-330), -330, 15); MISSION.charges = 2; P.charges = Math.max(P.charges, 2); MISSION.minCharges = 2;
-      MISSION.allyZone = { zMin: CITY.z0 + 60, zMax: -320, xMin: -160, xMax: 160, step: 16, wait: [3, 6], kinds: ['house', 'ruin', 'sand', 'tank', 'tree'] };
+      MISSION.allyZone = { zMin: CITY.z0 + 60, zMax: 90, xMin: -200, xMax: 200, step: 16, wait: [3, 6] };
       for (let i = 0; i < Math.round(16 * Q.enemyAlive / 120); i++) addEnemy(randEnemyKind(), CITY.sq.x + rnd(-40, 40), CITY.sq.z + rnd(-30, 30), { state: 'post', stationary: true, group: 'city' });
       const d = WORLD.depot;
       MISSION.interactables = [{ pos: d.pos.clone().add(new V3(0, 0, 6)), r: 3, hold: 2.5, label: 'Tieni premuto E per minare il deposito', active: () => !d.destroyed && !MISSION.flags.depotCharge, done: () => { MISSION.flags.depotCharge = true; sfxMech('pick'); say(N.you, 'Carica sul deposito! Venti secondi!'); after(20, () => depotBlast(d.pos, 10, 5000)); } }];
@@ -411,6 +419,8 @@ const STAGES = [
     update() {
       const sq = enemies.filter(e => e.alive && Math.hypot(e.pos.x - CITY.sq.x, e.pos.z - CITY.sq.z) < 45).length;
       const tower = enemies.some(e => e.alive && e.kind === 'sniper' && WORLD.cityTower && e.pos.distanceTo(WORLD.cityTower) < 3);
+      if (!WORLD.depot.destroyed) aiEngineer('depot', WORLD.depot.pos.clone().add(new V3(0, 0, 7)), 6, 45, () => depotBlast(WORLD.depot.pos, 10, 5000));
+      if (tower && sq === 0) once('towerShell', MISSION.stageT > 60, () => { say(N.radio, 'Carri: fuoco sul campanile!'); after(4, () => { for (const e of enemies) if (e.alive && e.kind === 'sniper' && e.pos.distanceTo(WORLD.cityTower) < 3) e.die(WORLD.cityTower, false, 'blast', { blast: WORLD.cityTower.clone(), power: 6 }); fxExplosion(WORLD.cityTower.clone(), 2.5, false); sfxBoom(WORLD.cityTower, 2.5); }); });
       const dep = WORLD.depot.destroyed, done = [sq === 0, !tower, dep].filter(Boolean).length;
       MISSION.objText = 'Piazza del mercato: ' + (sq ? sq + ' nemici' : 'presa') + ' · Deposito: ' + (dep ? 'distrutto' : 'intatto (cariche, bombe, Texas)') + ' · Campanile: ' + (tower ? 'cecchino attivo' : 'libero') + ' — ' + done + '/3';
       MISSION.markers = [];
@@ -423,6 +433,14 @@ const STAGES = [
   },
 ];
 
+// ---------- la campagna avanza anche grazie ai compagni ----------
+const alliesNear = (x, z, r) => allies.filter(a => a.alive && a.state !== 'boat' && !a.vip && Math.hypot(a.pos.x - x, a.pos.z - z) < r).length;
+// un geniere dell'IA piazza una carica su un obiettivo se ci sono abbastanza compagni vicini
+function aiEngineer(key, pos, need, delay, fn) {
+  const f = MISSION.flags; if (f[key] === 'done') return;
+  if (alliesNear(pos.x, pos.z, 26) >= need) f[key] = (f[key] || 0) + MISSION.dt; else f[key] = Math.max(0, (f[key] || 0) - MISSION.dt * .5);
+  if (f[key] > delay) { f[key] = 'done'; const c = new V3(pos.x, Hf(pos.x, pos.z) + .4, pos.z); if (P.mode === 'foot' && P.pos.distanceTo(c) < 120) say(N.sarge, pick(['Il genio ha piazzato la carica! Giù la testa!', 'Carica piazzata! Fuoco nel buco!'])); after(5, () => { explode(c, 4.5, 260, { charge: true }); fn(); }); }
+}
 function setStage(i) {
   MISSION.stage = i; MISSION.stageT = 0; MISSION.markers = []; MISSION.interactables = [];
   const st = (PT === 'E' ? AXIS_STAGES : STAGES)[i]; MISSION.title = st.title; st.start();
@@ -470,7 +488,7 @@ function onObjectiveEvent(type, obj, byPlayer) {
   if (type === 'bunker') { feed('Bunker MG42 neutralizzato'); const left = WORLD.bunkers.filter(b => !b.neutralized).length; if (left) say(N.sarge, `Bunker neutralizzato! Ne restano ${left}!`); }
   if (type === 'flak') feed('Cannone da 88 distrutto');
 }
-function onPlayerDisembark() { if (MISSION.stage === 0) setStage(1); }
+function onPlayerDisembark() { MISSION.godT = Math.max(MISSION.godT, 4); P.supp = 0; if (MISSION.stage === 0) setStage(1); }
 
 // ---------- mezzi ----------
 let HT_G, SHERMAN_G;
@@ -573,6 +591,7 @@ function suppressBunker(b) {
   if (!was && !b.neutralized) { feed('MG42 soppressa — gli alleati avanzano!'); if (R() < .5) shout('en', 'move', P.pos.clone().add(new V3(rnd(-8, 8), 0, rnd(-5, 5))), { text: pick(['Suppress that bunker! Go, go!', "He's pinned! Move up!", 'Keep his head down! Move!']) }); }
 }
 function updateMission(dt) {
+  MISSION.dt = dt;
   if (NET.client) { updateSubs(dt); for (const v of MISSION.vehicles) v.update(dt); return; }
   MISSION.suppT = Math.max(0, (MISSION.suppT || 0) - dt);
   for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || [])]) b.supT = Math.max(0, (b.supT || 0) - dt);

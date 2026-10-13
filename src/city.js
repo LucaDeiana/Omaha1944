@@ -19,7 +19,7 @@ const ROOFC = [0x5f646b, 0x6a6f76, 0x7a5a48, 0x6e4c3c, 0x585c62];
 // geometria di una casa (facciata verso face = ±1 lungo z); restituisce i solidi da creare
 function cityHouseGeo(mb, h, ruined) {
   const { cx, cz, w, d, ht, face, style, base } = h, top = base + ht, fz = cz + face * d / 2;
-  const wall = style === 2 ? pick(BRICK) : style === 1 ? pick(PLASTER) : pick(STONE), storeys = Math.max(1, Math.round((ht - 1) / 3.1));
+  const wall = h.wallC || (h.wallC = style === 2 ? pick(BRICK) : style === 1 ? pick(PLASTER) : pick(STONE)), storeys = Math.max(1, Math.round((ht - 1) / 3.1));
   if (!ruined) {
     mb.mat = style === 2 ? 'brick' : style === 1 ? 'plaster' : 'stone';
     mb.add(U.box, wall, cx, base + ht / 2, cz, 0, 0, 0, w, ht, d);
@@ -28,7 +28,7 @@ function cityHouseGeo(mb, h, ruined) {
     // graticcio normanno
     if (style === 1) { mb.mat = 'wood'; for (let s = 0; s < storeys; s++) { const y0 = base + .8 + s * 3.1; mb.add(U.box, 0x3a2a1e, cx, y0 + 2.6, fz + face * .05, 0, 0, 0, w, .16, .06); for (let x = -w / 2 + .3; x <= w / 2; x += 1.3) mb.add(U.box, 0x3a2a1e, cx + x, y0 + 1.3, fz + face * .05, 0, 0, 0, .14, 2.6, .06); mb.add(U.box, 0x3a2a1e, cx - w / 4, y0 + 1.3, fz + face * .05, 0, 0, .65, .12, 3, .05); mb.add(U.box, 0x3a2a1e, cx + w / 4, y0 + 1.3, fz + face * .05, 0, 0, -.65, .12, 3, .05); } }
     // tetto, comignoli, abbaini, grondaie
-    mb.mat = 'roof'; const rc = pick(ROOFC);
+    mb.mat = 'roof'; const rc = h.roofC || (h.roofC = pick(ROOFC));
     mb.add(U.prism, rc, cx, top, cz, 0, PI / 2, 0, d + .8, d * .55, w + .5);
     mb.add(U.box, 0x3a3d40, cx, top + .02, fz + face * .4, 0, 0, 0, w + .5, .12, .18);
     mb.mat = 'stone';
@@ -81,13 +81,32 @@ function cityHouseGeo(mb, h, ruined) {
   return sol;
 }
 const CITY_SUP = new Map();
+function cityHouseLow(mb, h) {
+  const { cx, cz, w, d, ht, face, base } = h;
+  if (h.ruined) { mb.mat = 'stone'; mb.add(U.box, 0xb0a68e, cx, base + ht * .3, cz, 0, 0, 0, w, ht * .6, d); return; }
+  mb.mat = h.style === 2 ? 'brick' : h.style === 1 ? 'plaster' : 'stone';
+  mb.add(U.box, h.wallC || 0xc4b79a, cx, base + ht / 2, cz, 0, 0, 0, w, ht, d);
+  mb.mat = 'roof'; mb.add(U.prism, h.roofC || 0x5f646b, cx, base + ht, cz, 0, PI / 2, 0, d + .8, d * .55, w + .5);
+  mb.mat = 'vc'; const fz = cz + face * (d / 2 + .02), n = Math.max(1, Math.round((ht - 1) / 3.1));
+  for (let s = 0; s < n; s++) mb.add(U.box, 0x24262a, cx, base + 1.9 + s * 3.1, fz, 0, 0, 0, w - 1.2, .9, .04);
+}
+const CITY_LOD = 230;
+function cityLodUpdate() {
+  const cp = camera.position, lim = 2.05 / scene.fog.density;
+  for (const sp of CITY_SUP.values()) {
+    if (!sp.mesh) continue; const d = sp.s.center.distanceTo(cp) - sp.s.radius;
+    sp.mesh.visible = d < CITY_LOD; if (sp.low) sp.low.visible = d >= CITY_LOD && d < lim;
+  }
+}
 function cityChunkBuild(c) {
   const sup = CITY_SUP.get(c.sup); if (!sup) return;
   if (sup.mesh) { scene.remove(sup.mesh); sup.mesh.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
   const mb = new MB(); for (const ch of sup.chunks) { for (const h of ch.houses) mb.parts.push(...h.parts); for (const p of ch.extra) mb.parts.push(p); }
   sup.mesh = groupMesh(mb.buildGroups()); scene.add(sup.mesh);
-  const i = FOGCULL.findIndex(f => f.sup === sup); if (i >= 0) FOGCULL.splice(i, 1);
-  fogCullAdd(sup.mesh); FOGCULL[FOGCULL.length - 1].sup = sup;
+  if (sup.low) { scene.remove(sup.low); sup.low.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+  const lm = new MB(); for (const ch of sup.chunks) for (const h of ch.houses) cityHouseLow(lm, h);
+  sup.low = groupMesh(lm.buildGroups(), false); sup.low.visible = false; scene.add(sup.low);
+  sup.s = new THREE.Box3().setFromObject(sup.mesh).getBoundingSphere(new THREE.Sphere());
 }
 function cityHouse(chunk, cx, cz, w, d, ht, face, ruined) {
   const h = { cx, cz, w, d, ht, face, style: R() < .35 ? 1 : R() < .25 ? 2 : 0, base: CITY.y - .2, hp: w * d * ht * 4.5, ruined, solids: [], chunk };

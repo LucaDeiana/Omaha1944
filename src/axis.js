@@ -68,8 +68,8 @@ const AXIS_STAGES = [
   { // 2
     title: 'La scogliera',
     start() {
-      MISSION.allyZone = { zMin: -93, zMax: -58, xMin: -75, xMax: 25, step: 12, wait: [2.5, 5.5] };
-      after(60, () => { if (MISSION.stage === 2) MISSION.allyZone = { zMin: -96, zMax: -78, xMin: -165, xMax: 165, step: 0, wait: [3, 7], kinds: ['trench', 'bunker'] }; });
+      MISSION.allyZone = { zMin: -93, zMax: 90, xMin: -200, xMax: 200, step: 12, wait: [2.5, 5.5] };
+      after(60, () => { if (MISSION.stage === 2) MISSION.allyZone = { zMin: -96, zMax: 90, xMin: -200, xMax: 200, step: 10, wait: [3, 7] }; });
       reinforce(30, BREACH_X, -50, 15); releaseHolders();
       say(NA.feld, 'Salgono dal canalone! Granate, Handgranaten!');
     },
@@ -89,7 +89,7 @@ const AXIS_STAGES = [
       for (const e of enemies) if (e.alive && e.pos.z > -100 && !e.inBunker && R() < .5) { e.stationary = false; e.state = 'move'; e.toPost = true; e.objective = new V3(rnd(-100, 90), 0, -172.8); }
       spawnBattery(); MISSION.flakOn = true;
       reinforce(34, rnd(-60, 20), -95, 20);
-      MISSION.allyZone = { zMin: -205, zMax: -92, xMin: -110, xMax: 100, step: 14, wait: [3, 6] };
+      MISSION.allyZone = { zMin: -205, zMax: 90, xMin: -200, xMax: 200, step: 14, wait: [3, 6] };
     },
     update() {
       const T = 240, past = countFoes(a => a.pos.z < -178);
@@ -105,7 +105,7 @@ const AXIS_STAGES = [
       MISSION.checkpoint = { pos: new V3(12, 0, -280), yaw: PI }; MISSION.flakOn = false;
       say(NA.feld, 'Al villaggio! Ogni casa è una fortezza. Kein Schritt zurück!');
       spawnVillage(); reinforce(36, -10, -170, 25);
-      MISSION.allyZone = { zMin: -300, zMax: -160, xMin: -100, xMax: 100, step: 16, wait: [3, 6] };
+      MISSION.allyZone = { zMin: -300, zMax: 90, xMin: -200, xMax: 200, step: 16, wait: [3, 6] };
     },
     update() {
       const T = 240, sq = countFoes(a => Math.hypot(a.pos.x - SQUARE.x, a.pos.z - SQUARE.z) < 40);
@@ -120,7 +120,7 @@ const AXIS_STAGES = [
     start() {
       MISSION.checkpoint = { pos: CITY.sq.clone().add(new V3(0, 0, 20)), yaw: PI };
       say(NA.feld, 'Colleville è perduta. Tutti in città: la piazza del mercato e il deposito vanno tenuti a ogni costo!');
-      MISSION.allyZone = { zMin: CITY.z0 + 60, zMax: -300, xMin: -160, xMax: 160, step: 16, wait: [3, 6], kinds: ['house', 'ruin', 'sand', 'tank', 'tree'] };
+      MISSION.allyZone = { zMin: CITY.z0 + 60, zMax: 90, xMin: -200, xMax: 200, step: 16, wait: [3, 6] };
       reinforce(40, roadPathX(-300), -300, 20);
     },
     update() {

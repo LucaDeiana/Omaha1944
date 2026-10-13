@@ -220,6 +220,7 @@ function renderFrame(time) {
   // oltre questa distanza la nebbia copre tutto: inutile disegnare
   const far = clamp(3 / scene.fog.density, 500, 6000); if (Math.abs(camera.far - far) > 5) { camera.far = far; camera.updateProjectionMatrix(); }
   const lim = 2.05 / scene.fog.density, cp = camera.position;
+  if (typeof cityLodUpdate === 'function') cityLodUpdate();
   for (const f of FOGCULL) f.obj.visible = f.s.center.distanceTo(cp) - f.s.radius < lim * (f.k || 1);
   if (renderer.shadowMap.enabled) { renderer.shadowMap.autoUpdate = false; if ((_shF++ & 1) === 0) renderer.shadowMap.needsUpdate = true; }
   if (composer) { gradePass.uniforms.uTime.value = time; composer.render(); }

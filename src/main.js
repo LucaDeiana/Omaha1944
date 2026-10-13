@@ -18,6 +18,13 @@ const GAME = {
       <tr><td>Nemici eliminati</td><td>${STATS.kills}</td></tr><tr><td>Colpi alla testa</td><td>${STATS.heads}</td></tr>
       <tr><td>Precisione</td><td>${acc}%</td></tr><tr><td>Volte caduto</td><td>${STATS.deaths}</td></tr>
       <tr><td>Compagni caduti</td><td>${MISSION.alliesLost}</td></tr></table>`;
+    if (MISSION.endless) {
+      let board = []; try { board = JSON.parse(localStorage.getItem('omahaEndless') || '[]'); } catch (e) { }
+      const me = { t, wave: MISSION.level || 1, kills: STATS.kills, d: new Date().toLocaleDateString('it-IT') };
+      board.push(me); board.sort((a, b) => b.t - a.t || b.kills - a.kills); board = board.slice(0, 8);
+      try { localStorage.setItem('omahaEndless', JSON.stringify(board)); } catch (e) { }
+      $('endText').innerHTML += '<div id="endBoard"><b>Classifica — difesa a oltranza</b><table>' + board.map((r, i) => '<tr class="' + (r === me ? 'me' : '') + '"><td>' + (i + 1) + '.</td><td>' + Math.floor(r.t / 60) + ':' + String(r.t % 60).padStart(2, '0') + '</td><td>ondata ' + r.wave + '</td><td>' + r.kills + ' uccisioni</td><td>' + r.d + '</td></tr>').join('') + '</table></div>';
+    }
     $('end').classList.remove('hidden');
   }
 };

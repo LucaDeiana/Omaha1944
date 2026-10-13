@@ -16,7 +16,7 @@ function tactUpdate(dt) {
   TACT.t -= dt; if (TACT.t > 0) return; TACT.t = .5;
   for (const tm of ['A', 'E']) {
     const g = TACT.grid[tm]; g.clear();
-    for (const s of tm === 'A' ? allies : enemies) { if (!s.alive || s.removed || s.state === 'boat' || s.wounded) continue; const k = tKey(s.pos.x, s.pos.z); let a = g.get(k); if (!a) g.set(k, a = []); a.push(s); }
+    for (const s of tm === 'A' ? allies : enemies) { if (!s.alive || s.removed || s.state === 'boat' || s.wounded || s.inBunker) continue; const k = tKey(s.pos.x, s.pos.z); let a = g.get(k); if (!a) g.set(k, a = []); a.push(s); }
   }
   // fronte alleato: il quarto più avanzato di ogni settore segna fin dove ci si può spingere
   const sec = new Map();
@@ -35,6 +35,15 @@ function foesNear(team, x, z, r) {
   return { cnt, best, d: Math.sqrt(bd) };
 }
 const frontAt = x => { const f = TACT.front.get(Math.floor(x / 40)); return f === undefined ? 90 : f; };
+// ordini del giocatore alla sua squadra
+const ORDERS = { mode: 'follow', pt: new V3() };
+const ORDER_TXT = { follow: ['Squadra, con me!', 'On me! Stay close!'], hold: ['Tenete la posizione!', 'Hold this position!'], advance: ['Avanzate! Prendete quella posizione!', 'Move up! Take that position!'] };
+function cycleOrder() {
+  ORDERS.mode = ORDERS.mode === 'follow' ? 'hold' : ORDERS.mode === 'hold' ? 'advance' : 'follow';
+  ORDERS.pt.set(P.pos.x - Math.sin(P.yaw) * 28, 0, P.pos.z - Math.cos(P.yaw) * 28);
+  showMsg('Ordine: ' + ORDER_TXT[ORDERS.mode][0], 2); shout('en', 'move', P.pos.clone(), { text: ORDER_TXT[ORDERS.mode][1], priority: true });
+  for (const a of allies) if (a.squad && a.alive && a.state !== 'boat') { a.wait = ORDERS.mode === 'hold' ? 0 : rnd(0, 1); if (ORDERS.mode === 'hold') { a.dest = null; a.state = 'cover'; } }
+}
 // qualità dei ripari: più alta = più protetto
 const COVER_Q = { bank: 7, tank: 6, sand: 6, bunker: 6, trench: 5, wallN: 5, house: 6, church: 6, ruin: 5, gate: 3, crater: 3.5, hh: 2.5, tree: 4 };
 class Soldier {
@@ -285,7 +294,8 @@ class Soldier {
       if (best) { best.healer = this; this.healTarget = best; this.healT = 0; this.dest = best.pos.clone(); this.state = 'move'; this.crouchRun = true; return; }
     }
     if (this.healTarget) { if (this.healTarget.alive && this.pos.distanceTo(this.healTarget.pos) > 1.4) { this.dest = this.healTarget.pos.clone(); this.state = 'move'; } return; }
-    if (this.squad && !P.inBoat && P.mode === 'foot' && P.pos.distanceTo(this.pos) > 28 && this.state !== 'move') this.wait = 0;
+    if (this.squad && ORDERS.mode === 'hold' && PT === 'A') { if (this.state !== 'move') this.wait = Math.max(this.wait, 2); }
+    else if (this.squad && !P.inBoat && P.mode === 'foot' && P.pos.distanceTo(this.pos) > 28 && this.state !== 'move') this.wait = 0;
     this.nadeT -= this.thinkDt;
     if (this.target && this.target !== P && this.tVis && this.target.inTrench && this.nadeT <= 0 && MISSION.allyNadeCD <= 0) {
       const d = this.target.pos.distanceTo(this.pos);
@@ -306,7 +316,7 @@ class Soldier {
   pickCover(Z) {
     const p = this.pos;
     if (Math.abs(p.x) > 215 && p.z > -62 && !(Z && Z.defend)) Z = { zMin: -56.8, zMax: 90, xMin: p.x - 45, xMax: p.x + 45, step: 13, wait: (Z && Z.wait) || [2.5, 6] };
-    let best = null, bs = -1e9;
+    let best = null, bs = -1e9, mates;
     // area non ancora ripulita: si combatte da qui, al massimo ci si sposta di lato su un riparo vicino e non più esposto
     let threat = Z.defend ? { cnt: 0 } : foesNear(this.team, p.x, p.z, 26);
     // con netta superiorità numerica locale si va all'assalto
@@ -326,8 +336,8 @@ class Soldier {
       else { const prog = p.z - c.z; s = p.z - Z.zMin < 5 ? -dist * .3 + R() * 6 : -Math.abs(prog - Z.step) * .55 - Math.abs(dx) * .25 + R() * 8; }
       s += COVER_Q[c.kind] || 2;
       if (this.supp > .3) s -= dist * .35;
-      if (!Z.defend && (dist > 6 || c.z < p.z - 4)) { const ct = foesNear(this.team, c.x, c.z, 18).cnt; if (ct) s -= 6 + ct * 4; }
-      if (this.squad) { const dp = Math.hypot(c.x - P.pos.x, c.z - P.pos.z); s -= Math.max(0, dp - 12) * .9; }
+      if (!Z.defend && (dist > 6 || c.z < p.z - 4)) { const ct = foesNear(this.team, c.x, c.z, 18).cnt; if (ct && (mates === undefined ? (mates = foesNear(this.team === 'A' ? 'E' : 'A', p.x, p.z, 30).cnt) : mates) < ct * 2.5 + 3) s -= 6 + ct * 4; }
+      if (this.squad) { const ap = ORDERS.mode === 'advance' ? ORDERS.pt : P.pos, dp = Math.hypot(c.x - ap.x, c.z - ap.z); s -= Math.max(0, dp - (ORDERS.mode === 'advance' ? 8 : 12)) * .9; }
       if (s > bs) { bs = s; best = c; }
     }
     if (this.cover) { this.cover.occ--; this.cover = null; }

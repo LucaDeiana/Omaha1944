@@ -9,7 +9,7 @@ const P = {
   pos: new V3(), prev: new V3(), vel: new V3(), yaw: 0, pitch: 0, vy: 0, grounded: true, mode: 'foot',
   hp: 100, dead: false, deathT: 0, inBoat: true, boat: null,
   stance: 0, eyeH: 1.0, sprint: false, stamina: 1, moveK: 0, bobPh: 0, stepT: 0, swim: false, depth: 0,
-  inv: [{ id: 'garand', mag: 8, res: 72 }, null, { id: 'colt', mag: 7, res: 28 }], cur: 0, prevSlot: 2, nades: 4, charges: 0, carry: null,
+  inv: [{ id: 'garand', mag: 8, res: 72 }, null, { id: 'colt', mag: 7, res: 28 }], cur: 0, prevSlot: 2, nades: 4, charges: 0, carry: null, bandages: 2, bandT: 0,
   fireCD: 0, reloadT: 0, reloadDur: 1, switchT: 0, throwT: 0, boltT: 0, flashT: 0, trigger: false, adsHeld: false, adsK: 0, meleeT: 0,
   recoil: 0, kickP: 0, kickY: 0, bloom: 0, shake: 0, hurt: 0, supp: 0, regenT: 0, shock: 0, shockT: 0,
   interacting: false, intT: 0, intTarget: null, ePressed: false, spawnMenu: false,
@@ -25,7 +25,7 @@ const P = {
     return m;
   },
   damage(a, from, blast) {
-    if (this.dead || MISSION.godT > 0 || this.mode !== 'foot') return;
+    if (this.dead || MISSION.godT > 0 || !(this.mode === 'foot' || this.mode === 'mg' || this.mode === 'mortar' || this.mode === 'flak')) return;
     this.hp -= a; this.regenT = 5.5;
     this.hurt = Math.min(1, this.hurt + a / 45); this.shake = Math.min(1.5, this.shake + a / 50);
     this.kickP += rnd(.02, .05); this.kickY += rnd(-.04, .04);
@@ -61,6 +61,8 @@ function initInput() {
     if (P.mode === 'tank') { if (c === 'KeyE') leaveTank(); return; }
     if (P.mode === 'airmark') { if (c === 'KeyT' || c === 'KeyE') closeAirMark(); return; }
     if (c === 'KeyT' && P.mode === 'foot') { openAirMark(); return; }
+    if (c === 'KeyX' && P.mode === 'foot' && PT === 'A') { cycleOrder(); return; }
+    if (c === 'KeyH' && P.mode === 'foot' && !P.dead) { if (P.bandages <= 0) showMsg('Nessuna benda rimasta', 1.5); else if (P.hp >= 95) showMsg('Non sei ferito', 1.5); else if (P.bandT <= 0) { P.bandT = 3; P.bandages--; sfxMech('pick'); showMsg('Ti stai bendando…', 3); } return; }
     if (c === 'KeyB') { openSpawnMenu(); return; }
     if (P.mode === 'plane') { if (c === 'KeyF') planeDropBomb(); return; }
     if (P.mode === 'naval') return;
@@ -129,6 +131,7 @@ function chooseSpawn(kind) {
 const _pp = new V3();
 function updatePlayer(dt) {
   MISSION.godT = Math.max(0, MISSION.godT - dt);
+  if (P.bandT > 0) { P.bandT -= dt; P.trigger = false; mouseL = false; if (P.bandT <= 0) { P.hp = Math.min(100, P.hp + 45); P.hurt = 0; showMsg('Ferita medicata', 1.5); } }
   P.hurt = Math.max(0, P.hurt - dt * .55); P.supp = Math.max(0, P.supp - dt * .3); P.shake = Math.max(0, P.shake - dt * 1.8);
   P.shockT = Math.max(0, P.shockT - dt); if (P.shockT <= 0) P.shock = Math.max(0, P.shock - dt * .8);
   if (P.mode === 'naval') { updateNaval(dt); updateViewmodel(dt); return; }
@@ -252,7 +255,7 @@ function updateInteract(dt) {
 }
 function resupply() {
   for (const s of P.inv) if (s) { const w = WEAPONS[s.id]; s.res = Math.max(s.res, w.res); }
-  P.nades = Math.max(P.nades, 5);
+  P.nades = Math.max(P.nades, 5); P.bandages = Math.max(P.bandages, 3);
   sfxMech('pick'); feed('Munizioni e granate rifornite');
 }
 
@@ -279,7 +282,7 @@ function updateCamera(dt) {
 function resetPlayerState() {
   P.hp = 100; P.dead = false; P.deathT = 0; P.vel.set(0, 0, 0); P.vy = 0; P.stance = 0; P.hurt = 0; P.supp = 0; P.shake = 0; P.shock = 0; P.pitch = 0;
   for (const s of P.inv) if (s) { const w = WEAPONS[s.id]; s.res = Math.max(s.res, w.mag * 3); if (s.mag === 0) s.mag = Math.min(w.mag, s.res); }
-  P.nades = Math.max(P.nades, 3); P.charges = Math.max(P.charges, MISSION.minCharges || 0);
+  P.nades = Math.max(P.nades, 3); P.charges = Math.max(P.charges, MISSION.minCharges || 0); P.bandages = Math.max(P.bandages, 2); P.bandT = 0;
   P.carry = null; P.reloadT = 0; P.switchT = .5;
   for (let i = projectiles.length - 1; i >= 0; i--) if (projectiles[i].team !== PT && projectiles[i].type === 'nade') { scene.remove(projectiles[i].m); projectiles.splice(i, 1); }
   MISSION.godT = 3.5; $('fade').style.opacity = 0;

@@ -49,7 +49,33 @@ function drawCompass() {
   g.fillStyle = '#e9e4d4'; g.fillRect(W / 2 - 1, 28, 2, 6);
 }
 
+const MINI = { t: 0, R: 160 };
+function drawMini() {
+  const cv = $('mini'); if (!cv) return; const g = cv.getContext('2d'), W = cv.width, c = W / 2, k = c / MINI.R;
+  g.clearRect(0, 0, W, W); g.save(); g.beginPath(); g.arc(c, c, c - 2, 0, TAU); g.clip();
+  const yaw = P.mode === 'tank' && TANKS.me ? TANKS.me.yaw + TANKS.me.tyaw : P.yaw, cs = Math.cos(yaw), sn = Math.sin(yaw);
+  const px = P.pos.x, pz = P.pos.z;
+  const to = (x, z) => { const dx = x - px, dz = z - pz; return [c + (dx * cs - dz * sn) * k, c + (dx * sn + dz * cs) * k]; };
+  // costa, filo, trincea, siepi come linee di riferimento
+  g.lineWidth = 2;
+  const line = (z, col) => { const a = to(px - 400, z), b = to(px + 400, z); g.strokeStyle = col; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); };
+  line(0, 'rgba(120,170,200,.45)'); line(BANK_Z, 'rgba(200,190,150,.35)'); line(WIRE_Z, 'rgba(160,140,120,.35)');
+  g.strokeStyle = 'rgba(150,120,90,.45)'; g.beginPath(); for (let x = -160; x <= 160; x += 8) { const p = to(x, trenchZ(x)); x === -160 ? g.moveTo(p[0], p[1]) : g.lineTo(p[0], p[1]); } g.stroke();
+  for (const h of HEDGES) line(h.z, 'rgba(90,120,70,.4)');
+  // bunker e Tobruk
+  for (const b of WORLD.bunkers.concat(WORLD.extraBunkers || [], WORLD.tobruks || [])) { const [x, y] = to(b.x, b.z); g.fillStyle = b.destroyed || b.neutralized ? '#777' : '#c33'; g.fillRect(x - 3, y - 3, 6, 6); }
+  for (const t of TANKS.list) if (t.alive) { const [x, y] = to(t.pos.x, t.pos.z); g.fillStyle = PT === 'E' ? '#7cf' : '#f66'; g.fillRect(x - 4, y - 2.5, 8, 5); }
+  // soldati: compagni sempre, nemici solo se vicini o se stanno sparando
+  const fr = FRIENDS(), fo = FOES();
+  g.fillStyle = '#7cf'; for (const s of fr) { if (!s.alive || s.state === 'boat') continue; const [x, y] = to(s.pos.x, s.pos.z); if ((x - c) ** 2 + (y - c) ** 2 < c * c) g.fillRect(x - 1.5, y - 1.5, 3, 3); }
+  g.fillStyle = '#f55'; for (const s of fo) { if (!s.alive || s.state === 'boat') continue; const d2 = (s.pos.x - px) ** 2 + (s.pos.z - pz) ** 2; if (d2 > 45 * 45 && !(s.burst > 0 || s.fireT < .3)) continue; const [x, y] = to(s.pos.x, s.pos.z); g.fillRect(x - 1.5, y - 1.5, 3, 3); }
+  // obiettivi
+  for (const m of (P.mode !== 'foot' && SIDE.cur ? SIDE.markers : MISSION.markers.concat(NPC.markers || []))) { let [x, y] = to(m.pos.x, m.pos.z); const dx = x - c, dy = y - c, d = Math.hypot(dx, dy); if (d > c - 8) { x = c + dx / d * (c - 8); y = c + dy / d * (c - 8); } g.fillStyle = '#ffd060'; g.beginPath(); g.moveTo(x, y - 5); g.lineTo(x + 4, y + 3); g.lineTo(x - 4, y + 3); g.fill(); }
+  g.restore();
+  g.fillStyle = '#fff'; g.beginPath(); g.moveTo(c, c - 7); g.lineTo(c + 5, c + 5); g.lineTo(c, c + 2); g.lineTo(c - 5, c + 5); g.fill();
+}
 function updateHUD(dt) {
+  MINI.t -= dt; if (MINI.t <= 0) { MINI.t = .1; $('mini').style.display = P.mode === 'foot' || P.mode === 'tank' ? 'block' : 'none'; if (P.mode === 'foot' || P.mode === 'tank') drawMini(); }
   msgT -= dt; if (msgT <= 0) $('msg').style.opacity = 0;
   // marcatori 3D
   for (let i = 0; i < markerEls.length; i++) {
@@ -101,7 +127,7 @@ function updateHUD(dt) {
     $('wammo').innerHTML = P.reloadT > 0 ? '<small>Ricarica…</small>' : `${s.mag}<small> / ${s.res}</small>`;
   }
   const slots = P.inv.map((x, i) => x ? `<span class="${i === P.cur ? 'on' : ''}">${i + 1} ${WEAPONS[x.id].name}</span>` : '').join('');
-  $('wextra').innerHTML = `${w ? w.cal + '<br>' : ''}Granate: ${P.nades} · Cariche: ${P.charges}<div class="slots">${slots}</div>`;
+  $('wextra').innerHTML = `${w ? w.cal + '<br>' : ''}Granate: ${P.nades} · Cariche: ${P.charges} · Bende: ${P.bandages}<div class="slots">${slots}</div>`;
   $('info').textContent = `Supporto aereo (T): ${AIR.cd > 0 ? Math.floor(AIR.cd / 60) + ':' + String(Math.floor(AIR.cd % 60)).padStart(2, '0') : 'PRONTO'} · ${PT === 'A' ? 'Alleati' : 'Camerati'}: ${FRIENDS().filter(a => a.alive).length} · Nemici in vista: ${FOES().filter(e => e.alive && dist2Cam(e.pos) < 200 * 200).length} · Uccisioni: ${STATS.kills}`;
   drawCompass();
 }
