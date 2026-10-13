@@ -500,6 +500,14 @@ function takePickup(pk) {
 // ---------- animazione dell'arma in prima persona ----------
 let swayX = 0, swayY = 0;
 const _lh = new V3(), _ea = new V3();
+// inerzia dell'arma: la volata anticipa la rotazione della visuale e poi si assesta con una molla
+const GL = { x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0 };
+function updateGunLead(dt) {
+  const d = Math.min(dt, .033);
+  GL.tx = lerp(GL.tx, 0, Math.min(1, d * 9)); GL.ty = lerp(GL.ty, 0, Math.min(1, d * 9));
+  GL.vx += ((GL.tx - GL.x) * 210 - GL.vx * 17) * d; GL.vy += ((GL.ty - GL.y) * 210 - GL.vy * 17) * d;
+  GL.x += GL.vx * d; GL.y += GL.vy * d;
+}
 function updateViewmodel(dt) {
   const s = P.slot();
   setViewmodel(P.carry || P.dead || !s || P.mode !== 'foot' ? null : s.id);
@@ -509,6 +517,16 @@ function updateViewmodel(dt) {
   const bob = P.bobPh, bm = P.moveK * (1 - k * .85), br = Math.sin(GAME.time * 1.4) * .0025 * (1 - k * .6);
   let x = base.x + Math.cos(bob * .5) * .013 * bm + swayX, y = base.y - Math.abs(Math.sin(bob * .5)) * .016 * bm + swayY + br, z = base.z;
   let rx = 0, ry = 0, rz = Math.cos(bob * .5) * .02 * bm;
+  // oscillazione in stile Battlefield: respiro a otto, inclinazione nelle virate e negli spostamenti laterali
+  updateGunLead(dt);
+  const am = 1 - k * .92, tt = GAME.time, fat = 1 + (1 - P.stamina) * 1.5;
+  x += Math.sin(tt * .9) * .0042 * am * fat; y += Math.sin(tt * 1.8) * .0026 * am * fat;
+  ry += Math.sin(tt * .9 + .6) * .006 * am * fat; rx += Math.sin(tt * 1.8 + .3) * .004 * am * fat;
+  ry += GL.x * (1 - k); rx += GL.y * (1 - k); rz += GL.x * .55 * am;
+  x += GL.x * .05 * am; y += GL.y * .03 * am;
+  const vr = P.vel.x * Math.cos(P.yaw) - P.vel.z * Math.sin(P.yaw);
+  rz -= vr * .014 * am; x -= vr * .0025 * am;
+  y += clamp(P.vy, -6, 6) * -.004 * am;
   swayX = lerp(swayX, 0, dt * 8); swayY = lerp(swayY, 0, dt * 8);
   z += P.recoil * (k > .5 ? .035 : .06); rx += P.recoil * (k > .5 ? .03 : .09);
   P.recoil = Math.max(0, P.recoil - dt * 9);

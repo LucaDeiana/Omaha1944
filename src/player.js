@@ -77,6 +77,7 @@ function initInput() {
     if (P.mode === 'naval') { const s = .0021 * SETTINGS.sens * (camera.fov / 60); NAV.yaw -= e.movementX * s; NAV.pitch = clamp(NAV.pitch - e.movementY * s, -.4, .2); return; }
     const s = .0021 * SETTINGS.sens * (camera.fov / SETTINGS.fov) * (P.shock > .3 ? .5 : 1);
     P.yaw -= e.movementX * s; P.pitch = clamp(P.pitch - e.movementY * s, -1.5, 1.5);
+    GL.tx = clamp(GL.tx - e.movementX * .0011, -.11, .11); GL.ty = clamp(GL.ty - e.movementY * .0011, -.08, .08);
     swayX = clamp(swayX - e.movementX * .00011, -.025, .025); swayY = clamp(swayY + e.movementY * .00011, -.025, .025);
   });
   addEventListener('mousedown', e => {
