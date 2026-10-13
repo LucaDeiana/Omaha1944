@@ -101,6 +101,6 @@ function updateHUD(dt) {
   }
   const slots = P.inv.map((x, i) => x ? `<span class="${i === P.cur ? 'on' : ''}">${i + 1} ${WEAPONS[x.id].name}</span>` : '').join('');
   $('wextra').innerHTML = `${w ? w.cal + '<br>' : ''}Granate: ${P.nades} · Cariche: ${P.charges}<div class="slots">${slots}</div>`;
-  $('info').textContent = `${PT === 'A' ? 'Alleati' : 'Camerati'}: ${FRIENDS().filter(a => a.alive).length} · Nemici in vista: ${FOES().filter(e => e.alive && dist2Cam(e.pos) < 200 * 200).length} · Uccisioni: ${STATS.kills}`;
+  $('info').textContent = `Supporto aereo (T): ${AIR.cd > 0 ? Math.floor(AIR.cd / 60) + ':' + String(Math.floor(AIR.cd % 60)).padStart(2, '0') : 'PRONTO'} · ${PT === 'A' ? 'Alleati' : 'Camerati'}: ${FRIENDS().filter(a => a.alive).length} · Nemici in vista: ${FOES().filter(e => e.alive && dist2Cam(e.pos) < 200 * 200).length} · Uccisioni: ${STATS.kills}`;
   drawCompass();
 }

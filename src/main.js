@@ -28,7 +28,8 @@ function fillSelect(id, obj, cur) {
 }
 function bindSettings() {
   fillSelect('optQuality', QUALITY, SETTINGS.quality);
-  fillSelect('optDiff', DIFF, SETTINGS.diff); try { $('optName').value = localStorage.getItem('omahaName') || ''; } catch (e) { }
+  fillSelect('optDiff', DIFF, SETTINGS.diff);
+  const modeVis = () => { $('modeL').style.display = $('optSide').value === 'E' ? '' : 'none'; }; $('optSide').addEventListener('change', modeVis); setTimeout(modeVis, 0); try { $('optName').value = localStorage.getItem('omahaName') || ''; } catch (e) { }
   $('optNet').addEventListener('change', () => $('netNote').classList.toggle('hidden', !$('optNet').checked || netAvailable())); $('optSide').value = SETTINGS.side || 'A';
   const sync = () => {
     for (const [a, b] of [['optSens', 'pSens'], ['optFov', 'pFov'], ['optVol', 'pVol']]) { $(a).value = $(b).value = SETTINGS[{ optSens: 'sens', optFov: 'fov', optVol: 'volume' }[a]]; }
@@ -43,7 +44,7 @@ function bindSettings() {
 }
 
 async function startGame() {
-  SETTINGS.side = $('optSide').value; PT = SETTINGS.side; try { localStorage.setItem('omahaName', $('optName').value); } catch (e) { }
+  SETTINGS.side = $('optSide').value; PT = SETTINGS.side; MISSION.endless = PT === 'E' && $('optMode').value === 'e'; try { localStorage.setItem('omahaName', $('optName').value); } catch (e) { }
   SETTINGS.quality = $('optQuality').value; SETTINGS.diff = $('optDiff').value; saveSettings();
   Q = QUALITY[SETTINGS.quality]; D = DIFF[SETTINGS.diff];
   const audioP = initAudio();
@@ -96,7 +97,7 @@ function frame(now) {
     updateMission(dt);
     updateWorld(dt, GAME.time);
     updateAircraft(dt);
-    updateSide(dt); updateDeploy(dt); updateNPC(dt); updateNet(dt); updateTanks(dt);
+    updateSide(dt); updateDeploy(dt); updateNPC(dt); updateNet(dt); updateTanks(dt); updateAirStrike(dt);
     updatePlayer(dt); updateCutscene(dt);
     updateAI(dt);
     updateProjectiles(dt);

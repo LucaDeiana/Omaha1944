@@ -115,7 +115,7 @@ function mgFire() {
   const o = _so.clone().addScaledVector(_sd, 1.2);
   const r = hitscan(o, _sd, 900), p = _sr.copy(o).addScaledVector(_sd, r.t);
   if (STN.belt % 2 === 0) netShot(o, p, 'mg42');
-  if (STN.belt % 3 === 0) fxTracer(o.clone().addScaledVector(_sd, 2), p, 1.1);
+  if (STN.belt % 2 === 0) fxTracer(STN.gun.localToWorld(new V3(0, .02, -1.05)), p, 1.4, true);
   if (o.y > WATER_Y && _sd.y < 0) { const tw = (WATER_Y - o.y) / _sd.y, wz = o.z + _sd.z * tw; if (tw < r.t && wz > -9 && Hf(o.x + _sd.x * tw, wz) < WATER_Y) { fxImpact(new V3(o.x + _sd.x * tw, WATER_Y, wz), 'water'); if (r.type !== 'enemy') return; } }
   if (r.type === 'enemy') {
     const dm = 95 * (r.zone === 'head' ? 3 : r.zone === 'legs' ? .7 : 1);
@@ -134,7 +134,7 @@ function flakFire(s) {
   let hit = null, ht = 1500;
   for (const pl of PLANES) if (pl.team === foe && pl.alive && !pl.crash) { const t = raySphere(_so, _sd, pl.pos, 7); if (t > 0 && t < ht) { ht = t; hit = pl; } }
   const fuse = hit ? ht : rnd(500, 900), e = _so.clone().addScaledVector(_sd, fuse);
-  fxTracer(_so.clone().addScaledVector(_sd, 3), e, 2.2);
+  fxTracer(_so.clone().addScaledVector(_sd, 3).add(new V3(0, -.4, 0)), e, 2.4, true);
   after(fuse / 900, () => { PS_SMOKE.emit(e.x, e.y, e.z, 0, 0, 0, 4, 2, 6, .8, .06, .06, .06, .2, 0); PS_FIRE.emit(e.x, e.y, e.z, 0, 0, 0, .15, 2, 3, 1, 4, 2.5, 1); });
   if (hit) { hit.damage(rnd(90, 140), true); hitMarker(!hit.alive || hit.crash, false); }
   else if (_sd.y < .05) { const r = hitscan(_so.clone().addScaledVector(_sd, 2), _sd, 700); const p = _so.clone().addScaledVector(_sd, r.t + 2); if (r.type === 'enemy') r.obj.damage(140, _so, true, 'body', { dir: _sd.clone(), power: 4, joint: 15 }); fxImpact(p, 'dirt'); }

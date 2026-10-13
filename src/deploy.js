@@ -8,9 +8,11 @@ function deployPoints() {
   const st = MISSION.stage, pts = [];
   if (PT === 'E') {
     pts.push({ label: 'Ultimo punto', sub: 'con i camerati', kind: 'checkpoint', pos: MISSION.checkpoint.pos });
-    if (st <= 2) pts.push({ label: 'Trincea WN 62', sub: 'sopra la spiaggia', kind: 'point', pos: new V3(-10, 0, trenchZ(-10) + .2), yaw: PI });
+    if (st <= 2 || MISSION.endless) pts.push({ label: 'Trincea WN 62', sub: 'sopra la spiaggia', kind: 'point', pos: new V3(-10, 0, trenchZ(-10) + .2), yaw: PI });
     if (st >= 3) pts.push({ label: 'Linea delle siepi', sub: 'bocage', kind: 'point', pos: new V3(-30, 0, -174), yaw: PI });
-    if (st >= 4) pts.push({ label: 'Colleville-sur-Mer', sub: 'piazza della chiesa', kind: 'point', pos: new V3(12, 0, -280), yaw: PI });
+    if (st >= 4 && !MISSION.endless) pts.push({ label: 'Colleville-sur-Mer', sub: 'piazza della chiesa', kind: 'point', pos: new V3(12, 0, -280), yaw: PI });
+    if (st >= 5 && !MISSION.endless) pts.push({ label: 'La città', sub: 'piazza del mercato', kind: 'point', pos: CITY.sq.clone().add(new V3(0, 0, 25)), yaw: PI });
+    TANKS.list.filter(t => t.alive).slice(0, 3).forEach((t, i) => pts.push({ label: 'Panzer IV ' + (i + 1), sub: t.player ? 'accanto al carro' : 'ai comandi del carro', kind: 'tank', tank: t, pos: t.pos }));
     return pts;
   }
   pts.push({ label: 'Ultimo checkpoint', sub: 'a piedi con la squadra', kind: 'checkpoint', pos: MISSION.checkpoint.pos });
@@ -38,6 +40,7 @@ function deployKey(c) {
 }
 function deploy(p) {
   if (p.kind === 'point') { closeSpawnMenu(); leaveMode(); resetPlayerState(); P.inBoat = false; const x = p.pos.x + rnd(-3, 3), z = p.pos.z + rnd(-2, 2); P.pos.set(x, Hf(x, z), z); P.yaw = p.yaw || 0; showMsg('Schierato: ' + p.label, 2.5); return; }
+  if (p.kind === 'tank') { closeSpawnMenu(); leaveMode(); resetPlayerState(); P.inBoat = false; const t = p.tank; if (!t.alive) { respawn(); return; } P.pos.set(t.pos.x + 3, Hf(t.pos.x + 3, t.pos.z), t.pos.z); if (!t.player) enterTank(t); return; }
   chooseSpawn(p.kind);
 }
 function updateDeploy(dt) {

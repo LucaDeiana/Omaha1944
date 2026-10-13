@@ -21,7 +21,8 @@ function initAxis() {
   const fp = (id, px, pz, res) => { const p = spawnPickup(id, new V3(px, 0, pz), undefined, res); p.fixed = true; };
   fp('mp40', x - 6, trenchZ(x - 6) + .2); fp('kar98zf', x + 2, trenchZ(x + 2) + .2); fp('kar98zf', -20, -110); fp('kar98', -40, -172.5); fp('mp40', 10, -270);
   addCrate(x + 3, trenchZ(x + 3) - .6); addCrate(-30, -176); addCrate(14, -276);
-  setStage(0); initConvoy(); initTanks();
+  if (MISSION.endless) { setStage(6); after(1, () => { for (const b of WORLD.boats) b.speed *= 1; }); } else setStage(0);
+  initConvoy(); initTanks();
 }
 function axisBreach() {
   if (WORLD.wireBreached) return;
@@ -111,7 +112,36 @@ const AXIS_STAGES = [
       MISSION.objText = `Difendi Colleville finché arriva la 352ª — Americani in piazza: ${sq}/15 · ${holdText(MISSION.stageT, T)}`;
       MISSION.markers = [{ pos: new V3(SQUARE.x, H(SQUARE.x, SQUARE.z) + 3, SQUARE.z), label: 'Piazza' }];
       if (MISSION.stageT > T) { once('w4', true, () => axisEnd(true, 'Colleville è rimasta tedesca fino all\'arrivo dei rinforzi.')); return; }
-      if (sq >= 15) once('l4', true, () => axisEnd(false, 'Gli Americani hanno preso Colleville.'));
+      if (sq >= 15) setStage(5);
+    }
+  },
+  { // 5
+    title: 'La città',
+    start() {
+      MISSION.checkpoint = { pos: CITY.sq.clone().add(new V3(0, 0, 20)), yaw: PI };
+      say(NA.feld, 'Colleville è perduta. Tutti in città: la piazza del mercato e il deposito vanno tenuti a ogni costo!');
+      MISSION.allyZone = { zMin: CITY.z0 + 60, zMax: -300, xMin: -160, xMax: 160, step: 16, wait: [3, 6], kinds: ['house', 'ruin', 'sand', 'tank', 'tree'] };
+      reinforce(40, roadPathX(-300), -300, 20);
+    },
+    update() {
+      const T = 300, sq = countFoes(a => Math.hypot(a.pos.x - CITY.sq.x, a.pos.z - CITY.sq.z) < 40);
+      MISSION.objText = 'Difendi la piazza del mercato e il deposito — Americani in piazza: ' + sq + '/15 · deposito ' + (WORLD.depot.destroyed ? 'DISTRUTTO' : 'intatto') + ' · ' + holdText(MISSION.stageT, T);
+      MISSION.markers = [{ pos: CITY.sq.clone().add(new V3(0, 4, 0)), label: 'Piazza' }, { pos: WORLD.depot.pos.clone().add(new V3(0, 4, 0)), label: 'Deposito' }];
+      if (MISSION.stageT > T) { once('w5', true, () => axisEnd(true, 'La città ha resistito: la 21ª Panzer arriva a dare il cambio.')); return; }
+      if (sq >= 15) once('l5', true, () => axisEnd(false, 'Gli Americani hanno preso la città.'));
+    }
+  },
+  { // 6 — modalità infinita
+    title: 'Difesa a oltranza',
+    start() { MISSION.allyZone = { zMin: -56.8, zMax: 90, xMin: -200, xMax: 200, step: 13, wait: [2.5, 6] }; MISSION.mortar = true; AU.battle = 1.6; MISSION.waveT = 5; say(NA.feld, 'Non arriveranno rinforzi. Teniamo finché c\'è un uomo vivo!'); },
+    update(dt) {
+      const t = MISSION.stageT, lvl = 1 + Math.floor(t / 90), inT = countFoes(a => a.pos.z < -82 && a.pos.z > -100 && Math.abs(a.pos.x) < 165);
+      MISSION.level = lvl;
+      if (lvl >= 3 && !WORLD.wireBreached) axisBreach();
+      if (lvl >= 3 && MISSION.allyZone.zMin > -90) MISSION.allyZone = { zMin: -96, zMax: 90, xMin: -200, xMax: 200, step: 13, wait: [2, 5], kinds: ['bank', 'tank', 'sand', 'crater', 'hh', 'gate', 'trench', 'bunker'] };
+      MISSION.objText = 'Modalità infinita — ondata ' + lvl + ' · resistito ' + Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0') + ' · uccisioni ' + STATS.kills + ' · Americani in trincea: ' + inT + '/25';
+      once('e' + lvl, lvl > 1, () => { feed('Ondata ' + lvl + ': più mezzi da sbarco in arrivo'); say(NA.obg, pick(['Ne arrivano ancora di più!', 'Altre barche! Sempre di più!', 'Il mare è nero di barche!'])); });
+      if (inT >= 25) once('eend', true, () => axisEnd(false, 'Difesa a oltranza: resistito ' + Math.floor(t / 60) + ' minuti e ' + Math.floor(t % 60) + ' secondi fino all\'ondata ' + lvl + ', con ' + STATS.kills + ' Americani eliminati.'));
     }
   },
 ];

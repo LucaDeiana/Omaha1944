@@ -431,7 +431,7 @@ class Boat {
       if (this.emptyT > 7) { this.state = 'return'; if (this.sol) for (const s of this.sol) s.on = false; this.sol = null; }
     } else if (this.state === 'return') {
       if (this.ramp > 0) { this.ramp = Math.max(0, this.ramp - dt * .7); this.pivot.rotation.x = -1.45 * smooth(this.ramp); }
-      else { this.g.rotation.y = lerp(this.g.rotation.y, PI, Math.min(1, dt * .5)); this.z += this.speed * 1.1 * dt * Math.min(1, this.g.rotation.y / 2); if (this.z > 520) { this.state = 'reload'; this.g.visible = false; this.reloadT = rnd(10, 20); } }
+      else { this.g.rotation.y = lerp(this.g.rotation.y, PI, Math.min(1, dt * .5)); this.z += this.speed * 1.1 * dt * Math.min(1, this.g.rotation.y / 2); if (this.z > 520) { this.state = 'reload'; this.g.visible = false; this.reloadT = rnd(10, 20) / (MISSION.endless ? 1 + ((MISSION.level || 1) - 1) * .25 : 1); } }
     } else if (this.state === 'reload') {
       this.reloadT -= dt;
       if (this.reloadT <= 0) { if (boatReload(this)) { this.state = 'move'; this.g.visible = true; this.g.rotation.y = 0; this.ramp = 0; this.pivot.rotation.x = 0; this.emptyT = 0; } else this.reloadT = 4; }

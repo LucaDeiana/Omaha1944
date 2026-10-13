@@ -46,6 +46,8 @@ function netOnMessage(m) {
     const o = new V3(m.o[0], m.o[1], m.o[2]), e = new V3(m.e[0], m.e[1], m.e[2]);
     if (R() < .5) fxTracer(o, e, .9); sfxShot(m.snd || 'garand', o);
     if (P.targetable() && P.mode === 'foot' && p.side !== PT) P.nearMiss(o, e);
+  } else if (m.t === 'air') {
+    if (NET.host) { const t = new V3(m.p[0], m.p[1], m.p[2]); if (m.side === 'A') raidP47(t); else strikeFw(t); }
   } else if (m.t === 'boom') {
     const bp = new V3(m.p[0], m.p[1], m.p[2]); fxExplosion(bp, m.r / 4.5, false); sfxBoom(bp, m.r / 5, false);
   } else if (m.t === 'hit') {

@@ -178,9 +178,9 @@ function fxDebris(p, n, size) {
     d.s = rnd(.06, .22) * Math.min(size, 2); d.sp.set(rnd(-10, 10), rnd(-10, 10), rnd(-10, 10));
   }
 }
-function fxTracer(a, b, w = 1) {
+function fxTracer(a, b, w = 1, mine) {
   const t = FXP.trList[FXP.trI]; FXP.trI = (FXP.trI + 1) % FXP.trList.length;
-  t.on = true; t.a.copy(a); t.d.subVectors(b, a); t.len = t.d.length(); t.d.normalize(); t.s = rnd(0, 5); t.w = w;
+  t.on = true; t.a.copy(a); t.d.subVectors(b, a); t.len = t.d.length(); t.d.normalize(); t.s = mine ? 0 : rnd(0, 5); t.w = w; t.v = mine ? 330 : 600; t.L = mine ? 14 : 9; t.mine = !!mine;
 }
 function fxCasing(p, v) {
   const c = FXP.casList[FXP.casI]; FXP.casI = (FXP.casI + 1) % FXP.casList.length;
@@ -230,13 +230,13 @@ function updateFX(dt) {
   for (let i = 0; i < FXP.trList.length; i++) {
     const t = FXP.trList[i];
     if (!t.on) continue;
-    t.s += 600 * dt;
-    if (t.s > t.len + 8) { t.on = false; FXP.tr.setMatrixAt(i, _fz); continue; }
-    const s1 = Math.min(t.s, t.len), s0 = Math.max(0, t.s - 9);
+    t.s += t.v * dt;
+    if (t.s > t.len + t.L) { t.on = false; FXP.tr.setMatrixAt(i, _fz); continue; }
+    const s1 = Math.min(t.s, t.len), s0 = Math.max(0, t.s - t.L);
     _fp.copy(t.a).addScaledVector(t.d, s0);
     const dc = Math.max(1, _fp.distanceTo(cp));
     _fq.setFromUnitVectors(_fu, t.d);
-    const rad = Math.min(.25, .012 + dc * .0011) * t.w;
+    const rad = Math.min(.25, (t.mine ? .03 : .012) + dc * .0011) * t.w;
     _fm.compose(_fp, _fq, _fs.set(rad, Math.max(.01, s1 - s0), rad)); FXP.tr.setMatrixAt(i, _fm);
   }
   FXP.tr.instanceMatrix.needsUpdate = true;

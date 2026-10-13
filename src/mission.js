@@ -130,8 +130,9 @@ function spawnBeachHolders() {
 }
 function releaseHolders() { for (const a of allies) if (a.alive && a.group === 'hold') { a.stationary = false; a.forceProne = false; a.state = 'idle'; a.wait = rnd(0, 4); } }
 // ricarica un mezzo tornato alle navi: riparte pieno se c'è posto per altri soldati
+const allyCap = () => MISSION.endless ? Math.min(Math.floor(Q.allySlots * .6), Math.round(Q.allyAlive * (1 + ((MISSION.level || 1) - 1) * .18))) : Q.allyAlive;
 function boatReload(b) {
-  const room = Q.allyAlive - aliveA(); if (room < 5) return false;
+  const room = allyCap() - aliveA(); if (room < 5) return false;
   const front = P.mode === 'foot' ? clamp(P.pos.x, -MAPX + 200, MAPX - 200) : rnd(-200, 200);
   b.x = R() < .5 ? front + rnd(-220, 220) : rnd(-MAPX + 120, MAPX - 120); b.z = rnd(470, 520); b.stopZ = 82; b.speed = rnd(8.4, 9.6);
   b.g.position.set(b.x, 0, b.z); b.doom = R() < .08 ? rnd(30, 150) : undefined;
@@ -140,7 +141,7 @@ function boatReload(b) {
 }
 // flotta di mezzi in rotazione continua tra le navi e la spiaggia
 function ensureFleet() {
-  const want = Q.waveBoats * 3 + 6, have = WORLD.boats.filter(b => b.state !== 'sunk').length;
+  const want = Math.min(40, Q.waveBoats * 3 + 6 + (MISSION.endless ? ((MISSION.level || 1) - 1) * 3 : 0)), have = WORLD.boats.filter(b => b.state !== 'sunk').length;
   for (let i = have; i < want; i++) { const b = new Boat(0, 520, 9, 82); b.state = 'reload'; b.g.visible = false; b.reloadT = rnd(2, 40); }
 }
 function spawnWave(withPlayer) {
@@ -395,6 +396,31 @@ const STAGES = [
       once('win', rem <= 0, victory);
     }
   },
+  { // 8
+    title: 'La città',
+    start() {
+      MISSION.checkpoint = { pos: new V3(roadPathX(-340), 0, -340), yaw: 0 };
+      say(N.radio, 'Easy Six: la città è il nodo dei rinforzi tedeschi. Prendete la piazza del mercato e fate saltare il deposito dei camion.');
+      after(6, () => say(N.sarge, 'E qualcuno zittisca quel cecchino sul campanile!'));
+      reinforce(34, roadPathX(-330), -330, 15); MISSION.charges = 2; P.charges = Math.max(P.charges, 2); MISSION.minCharges = 2;
+      MISSION.allyZone = { zMin: CITY.z0 + 60, zMax: -320, xMin: -160, xMax: 160, step: 16, wait: [3, 6], kinds: ['house', 'ruin', 'sand', 'tank', 'tree'] };
+      for (let i = 0; i < Math.round(16 * Q.enemyAlive / 120); i++) addEnemy(randEnemyKind(), CITY.sq.x + rnd(-40, 40), CITY.sq.z + rnd(-30, 30), { state: 'post', stationary: true, group: 'city' });
+      const d = WORLD.depot;
+      MISSION.interactables = [{ pos: d.pos.clone().add(new V3(0, 0, 6)), r: 3, hold: 2.5, label: 'Tieni premuto E per minare il deposito', active: () => !d.destroyed && !MISSION.flags.depotCharge, done: () => { MISSION.flags.depotCharge = true; sfxMech('pick'); say(N.you, 'Carica sul deposito! Venti secondi!'); after(20, () => depotBlast(d.pos, 10, 5000)); } }];
+    },
+    update() {
+      const sq = enemies.filter(e => e.alive && Math.hypot(e.pos.x - CITY.sq.x, e.pos.z - CITY.sq.z) < 45).length;
+      const tower = enemies.some(e => e.alive && e.kind === 'sniper' && WORLD.cityTower && e.pos.distanceTo(WORLD.cityTower) < 3);
+      const dep = WORLD.depot.destroyed, done = [sq === 0, !tower, dep].filter(Boolean).length;
+      MISSION.objText = 'Piazza del mercato: ' + (sq ? sq + ' nemici' : 'presa') + ' · Deposito: ' + (dep ? 'distrutto' : 'intatto (cariche, bombe, Texas)') + ' · Campanile: ' + (tower ? 'cecchino attivo' : 'libero') + ' — ' + done + '/3';
+      MISSION.markers = [];
+      if (sq) MISSION.markers.push({ pos: CITY.sq.clone().add(new V3(0, 4, 0)), label: 'Piazza' });
+      if (!dep) MISSION.markers.push({ pos: WORLD.depot.pos.clone().add(new V3(0, 4, 0)), label: 'Deposito' });
+      if (tower) MISSION.markers.push({ pos: WORLD.cityTower.clone().add(new V3(0, 3, 0)), label: 'Cecchino' });
+      if (P.mode === 'foot' && P.pos.z < -380) MISSION.checkpoint = { pos: new V3(P.pos.x, 0, P.pos.z + 4), yaw: 0 };
+      once('cwin', done === 3, victory);
+    }
+  },
 ];
 
 function setStage(i) {
@@ -419,10 +445,10 @@ function placeBangalore() {
   });
 }
 function victory() {
-  say(N.radio, 'Qui i carri della 741ª: stiamo entrando a Colleville!');
+  if (MISSION.stage === 7) { say(N.radio, 'Qui i carri della 741ª: Colleville è nostra. Ora la città!'); for (let i = 0; i < 2; i++) MISSION.tanks.push(new Sherman(roadX(-200) + i * 5, -200 - i * 14, 6 + i * 14)); after(6, () => setStage(8)); return; }
+  say(N.radio, 'Easy Six a tutte le unità: la città è in mano americana. Ottimo lavoro!');
   for (const e of enemies) if (e.alive) e.flee = true;
-  for (let i = 0; i < 2; i++) MISSION.tanks.push(new Sherman(roadX(-200) + i * 5, -200 - i * 14, 6 + i * 14));
-  after(12, () => GAME.end(true));
+  after(10, () => GAME.end(true));
 }
 
 function onSoldierDeath(s, byPlayer, zone) {

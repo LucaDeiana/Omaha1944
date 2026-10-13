@@ -52,6 +52,7 @@
     <div class="grid">
       <div class="opts">
         <label>Fazione <select id="optSide"><option value="A">Alleati — 29ª Divisione USA</option><option value="E">Asse — 352ª Divisione, WN 62</option></select></label>
+        <label id="modeL">Modalità (Asse) <select id="optMode"><option value="c">Campagna</option><option value="e">Infinita — ondate sempre più grandi</option></select></label>
         <label>Qualità grafica <select id="optQuality"></select></label>
         <label>Difficoltà <select id="optDiff"></select></label>
         <label>Sensibilità mouse <span id="sensV"></span><input id="optSens" type="range" min=".3" max="2.5" step=".05"></label>
@@ -76,6 +77,7 @@
         <div><kbd>1 2 3</kbd> / rotella armi · <kbd>Q</kbd> arma precedente</div>
         <div><kbd>E</kbd> interagisci / raccogli</div>
         <div><kbd>B</kbd> cambia ruolo: fanteria, corazzata, aereo</div>
+        <div><kbd>T</kbd> supporto aereo dall'alto (una chiamata ogni 2 min e mezzo)</div>
         <div class="sub">Aereo: mouse = cloche · <kbd>W/S</kbd> manetta · <kbd>A/D</kbd> timone · <kbd>F</kbd> bomba</div>
         <div><kbd>Esc</kbd> pausa</div>
       </div>
@@ -138,6 +140,7 @@
 <script src="src/sidemissions.js"></script>
 <script src="src/reinforce.js"></script>
 <script src="src/tank.js"></script>
+<script src="src/airstrike.js"></script>
 <script src="src/city.js"></script>
 <script src="src/trees.js"></script>
 <script src="src/npc.js"></script>

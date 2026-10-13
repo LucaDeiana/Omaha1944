@@ -172,6 +172,20 @@ function dismember(s, center) {
     const e = addEmitter(jp, 'bleed', 1); e.life = 4; const node = b.parts.find(x => x.name === name).node; e.follow = q => node.getWorldPosition(q);
   }
 }
+const JOINT_PART = { 10: 'thighL', 11: 'shinL', 13: 'thighR', 14: 'shinR', 4: 'uarmL', 5: 'farmL', 7: 'uarmR', 8: 'farmR', 2: 'head' };
+// stacca l'arto colpito (colpi potenti di fucile, mitragliatrice, cecchino)
+function dismemberPart(s, joint, dir) {
+  if (!SETTINGS.gore) return false;
+  const name = JOINT_PART[joint]; if (!name) return false;
+  const b = s.body; b.root.updateMatrixWorld(true);
+  const main = b.parts.find(x => x.name === name); if (!main || main.hidden) return false;
+  const from = main.node.getWorldPosition(new V3()).addScaledVector(dir, -1);
+  for (const pn of CHILD[name]) { const pt = b.parts.find(x => x.name === pn); if (!pt || pt.hidden) continue; pt.hidden = true; const g = spawnGib(pt, from, true); g.v.addScaledVector(dir, rnd(3, 6)); }
+  const node = name === 'head' ? b.neck : main.node, jp = node.getWorldPosition(new V3());
+  bloodBurst(jp, name === 'head' ? 1.1 : .8);
+  const e = addEmitter(jp, 'bleed', name === 'head' ? 1.6 : 1); e.life = 5; e.follow = q => node.getWorldPosition(q);
+  return true;
+}
 function spawnGib(pt, center, bleed) {
   if (GIBS.length >= Q.gibs) { const old = GIBS.shift(); scene.remove(old.m); }
   const geo = (pt.mesh.hi || pt.mesh.lo).geometry, m = new THREE.Mesh(geo, MAT.soldier);

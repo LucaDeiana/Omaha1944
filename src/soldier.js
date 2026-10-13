@@ -73,8 +73,13 @@ class Soldier {
       const d = this.chest(T4).distanceTo(impulse.blast);
       if (d < impulse.power * .55) dismember(this, impulse.blast);
     }
+    let cut = false;
+    if (SETTINGS.gore && impulse && impulse.dir && !impulse.blast && impulse.power >= 2.5 && impulse.joint !== undefined) {
+      const ch = zone === 'head' ? (impulse.power >= 3.3 ? .45 : .2) : zone === 'arms' ? .45 : zone === 'legs' ? .35 : 0;
+      if (R() < ch) cut = dismemberPart(this, impulse.joint, impulse.dir);
+    }
     startRagdoll(this, impulse);
-    if (zone === 'head' && dir) { if (R() < .55) helmetOff(this, dir); if (SETTINGS.gore) bloodBurst(this.head(T4), .5); }
+    if (zone === 'head' && dir && !cut) { if (R() < .55) helmetOff(this, dir); if (SETTINGS.gore) bloodBurst(this.head(T4), .5); }
     else if (R() < .35) sfxVoice(this.pos, pick(['scream', 'groan', 'yell']));
     onSoldierDeath(this, byPlayer, zone);
   }

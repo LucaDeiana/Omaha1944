@@ -283,7 +283,7 @@ function playerFire() {
   _d.x += rnd(-1, 1) * spread; _d.y += rnd(-1, 1) * spread; _d.z += rnd(-1, 1) * spread; _d.normalize();
   const r = hitscan(_o, _d, w.range || 600), p = _r.copy(_o).addScaledVector(_d, r.t);
   netShot(_o, p, w.snd);
-  if (w.auto && (w.snd === 'bar' || w.snd === 'mg42') ? STATS.shots % 3 === 0 : r.t > 30 && R() < .25) fxTracer(_o.clone().addScaledVector(_d, 3), p, w.auto ? 1.1 : .7);
+  if (w.auto && (w.snd === 'bar' || w.snd === 'mg42' || w.snd === 'thompson' || w.snd === 'mp40') ? STATS.shots % (w.snd === 'bar' ? 2 : 3) === 0 : r.t > 30 && R() < .25) fxTracer(vmCur ? vmCur.group.localToWorld(vmCur.muzzle.clone()) : _o.clone().addScaledVector(_d, 3), p, w.auto ? 1.2 : .7, true);
   if (_o.y > WATER_Y && _d.y < 0) {
     const tw = (WATER_Y - _o.y) / _d.y, wz = _o.z + _d.z * tw;
     if (tw < r.t && wz > -9 && Hf(_o.x + _d.x * tw, wz) < WATER_Y) { fxImpact(new V3(_o.x + _d.x * tw, WATER_Y, wz), 'water'); if (r.type !== 'enemy') return; }
@@ -432,7 +432,7 @@ const _ex = new V3();
 function explode(p, radius, dmg, o = {}) {
   const wet = p.z > -9 && Hf(p.x, p.z) < WATER_Y && p.y < WATER_Y + .8;
   fxExplosion(p, radius / 4.5, wet); sfxBoom(p, radius / 5, wet);
-  if (!NET.client) cityBlast(p, radius, dmg);
+  if (!NET.client) { cityBlast(p, radius, dmg); depotBlast(p, radius, dmg); }
   treeBlast(p, radius);
   if (radius >= 4 && Math.abs(p.z - WIRE_Z) < 2.6 && !NET.client && addWireGap(p.x)) onWireGap(p.x);
   if (NET.host) netHostEvent([1, r1(p.x), r1(p.y), r1(p.z), radius, wet ? 1 : 0]); else if (NET.on && o.byPlayer) netSend({ t: 'boom', p: [p.x, p.y, p.z], r: radius });

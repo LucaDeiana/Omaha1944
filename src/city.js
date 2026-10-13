@@ -144,6 +144,26 @@ function buildCity() {
   }
   cityStreets();
   cityChurch();
+  buildDepot();
+}
+// deposito di carburante e munizioni dei camion: distrutto, i rinforzi si fermano
+function buildDepot() {
+  const x = roadPathX(-560) + 16, z = -560, y = CITY.y, mb = new MB();
+  mb.mat = 'paint'; for (let i = 0; i < 26; i++) mb.add(U.cyl12, pick([0x4a5038, 0x5a4a30, 0x3a3e30]), x + rnd(-5, 5), y + .45 + (i > 18 ? .9 : 0), z + rnd(-4, 4), 0, 0, 0, .3, .9, .3);
+  mb.mat = 'wood'; for (let i = 0; i < 12; i++) mb.add(U.box, 0x5a4a32, x + rnd(-6, 6), y + .35 + (i % 3) * .6, z + rnd(-5, 5), 0, R() * 3, 0, 1.2, .6, .8);
+  mb.mat = 'sack'; mb.add(U.prism, 0x5a5a44, x - 8, y, z, 0, 0, 0, 6, 3.2, 8);
+  const g = groupMesh(mb.buildGroups()); scene.add(g);
+  WORLD.depot = { pos: new V3(x, y, z), g, destroyed: false, hp: 900 };
+  addSolid(x - 6, y, z - 5, x + 6, y + 1.6, z + 5, 'sand'); addCover(x, z + 6, 'sand');
+}
+function depotBlast(p, radius, dmg) {
+  const d = WORLD.depot; if (!d || d.destroyed) return;
+  const dist = Math.hypot(p.x - d.pos.x, p.z - d.pos.z); if (dist > radius + 6) return;
+  d.hp -= dmg * (1 - dist / (radius + 6)) * 1.5; if (d.hp > 0) return;
+  d.destroyed = true; burnMeshes(d.g); CONVOY.stop = true;
+  for (let i = 0; i < 6; i++) after(i * .4, () => { const q = d.pos.clone().add(new V3(rnd(-5, 5), 1, rnd(-4, 4))); fxExplosion(q, 3, false); sfxBoom(q, 3); });
+  addEmitter(d.pos.clone().add(new V3(0, 1, 0)), 'fire', 2).life = 300; addEmitter(d.pos.clone().add(new V3(0, 4, 0)), 'smoke', 2.2).life = 400;
+  feed('Deposito dei rinforzi tedeschi distrutto!'); if (P.mode === 'foot') say(PT === 'A' ? N.radio : NA.funk, PT === 'A' ? 'Il deposito è saltato: niente più camion di rinforzi!' : 'Il deposito è perduto! Niente più rinforzi dalla città!');
 }
 // strade: lampioni, pali del telegrafo, barricate, crateri, relitti, alberi dei viali
 function cityStreets() {

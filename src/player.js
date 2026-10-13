@@ -59,6 +59,8 @@ function initInput() {
     if (P.mode === 'naval' && c === 'KeyE') { leaveTurretToDeck(); return; }
     if ((P.mode === 'mg' || P.mode === 'mortar' || P.mode === 'flak') && stationKey(c)) return;
     if (P.mode === 'tank') { if (c === 'KeyE') leaveTank(); return; }
+    if (P.mode === 'airmark') { if (c === 'KeyT' || c === 'KeyE') closeAirMark(); return; }
+    if (c === 'KeyT' && P.mode === 'foot') { openAirMark(); return; }
     if (c === 'KeyB') { openSpawnMenu(); return; }
     if (P.mode === 'plane') { if (c === 'KeyF') planeDropBomb(); return; }
     if (P.mode === 'naval') return;
@@ -78,6 +80,7 @@ function initInput() {
     if (!GAME.running) return;
     if (P.mode === 'mg' || P.mode === 'mortar' || P.mode === 'flak') { stationMouse(e.movementX, e.movementY); return; }
     if (P.mode === 'tank') { tankMouse(e.movementX, e.movementY); return; }
+    if (P.mode === 'airmark') { airMouse(e.movementX, e.movementY); return; }
     if (P.mode === 'plane') { PL.stickX = clamp(PL.stickX + e.movementX * .0035 * SETTINGS.sens, -1, 1); PL.stickY = clamp(PL.stickY + e.movementY * .0035 * SETTINGS.sens, -1, 1); return; }
     if (P.mode === 'naval') { const s = .0021 * SETTINGS.sens * (camera.fov / 60); NAV.yaw -= e.movementX * s; NAV.pitch = clamp(NAV.pitch - e.movementY * s, -.4, .2); return; }
     const s = .0021 * SETTINGS.sens * (camera.fov / SETTINGS.fov) * (P.shock > .3 ? .5 : 1);
@@ -108,6 +111,7 @@ function closeSpawnMenu() { P.spawnMenu = false; $('spawn').classList.add('hidde
 function leaveMode() {
   if (P.mode === 'mg' || P.mode === 'mortar' || P.mode === 'flak') leaveStation();
   if (P.mode === 'tank') leaveTank();
+  if (P.mode === 'airmark') closeAirMark();
   if (P.mode === 'plane') exitPlane();
   if (P.mode === 'naval') exitNaval();
   P.mode = 'foot';
@@ -130,6 +134,7 @@ function updatePlayer(dt) {
   if (P.mode === 'naval') { updateNaval(dt); updateViewmodel(dt); return; }
   if (P.mode === 'plane') { updatePlane(dt); updateViewmodel(dt); return; }
   if (P.mode === 'tank') { updateTankMode(dt); updateViewmodel(dt); return; }
+  if (P.mode === 'airmark') { updateViewmodel(dt); return; }
   if (P.mode === 'mg' || P.mode === 'mortar' || P.mode === 'flak') { updateStation(dt); updateViewmodel(dt); if (P.mode !== 'foot') return; }
   if (P.dead) {
     P.deathT += dt;

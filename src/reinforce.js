@@ -3,7 +3,8 @@
 //  Rinforzi tedeschi: camion che fanno la spola tra la città e
 //  la linea del fronte. Un camion distrutto rinasce al deposito.
 // ============================================================
-const CONVOY = { trucks: [], depotZ: -560 };
+const CONVOY = { trucks: [], depotZ: -560, stop: false };
+const enemyCap = () => Q.enemyAlive + (MISSION.endless ? Math.min(60, Math.floor(MISSION.stageT / 60) * 6) : 0);
 const roadPathX = z => z > -292 ? roadX(clamp(z, -292, -64)) : roadX(-292) + Math.sin(z * .01) * 6;
 
 class SupplyTruck {
@@ -22,7 +23,7 @@ class SupplyTruck {
   }
   update(dt) {
     if (!this.alive) return;
-    if (this.state === 'wait') { this.t -= dt; if (this.t <= 0 && Q.enemyAlive - aliveE() >= 6) { this.state = 'go'; } }
+    if (this.state === 'wait') { this.t -= dt; if (this.t <= 0 && !CONVOY.stop && enemyCap() - aliveE() >= 6) { this.state = 'go'; } }
     else if (this.state === 'go') {
       const tz = this.dropZ(); this.z = Math.min(tz, this.z + 15 * dt);
       if (this.z >= tz) { this.state = 'unload'; this.t = 3; this.unload(); }
@@ -35,7 +36,7 @@ class SupplyTruck {
     this.box.min.set(this.pos.x - 1.3, this.pos.y, this.pos.z - 3.6); this.box.max.set(this.pos.x + 1.3, this.pos.y + 2.5, this.pos.z + 3.6);
   }
   unload() {
-    const room = Q.enemyAlive - aliveE(), n = Math.min(room, aliveE() < Q.enemyAlive * .5 ? 12 : 9); if (n <= 0) return;
+    const room = enemyCap() - aliveE(), n = Math.min(room, aliveE() < enemyCap() * .5 ? 12 : 9); if (n <= 0) return;
     const empty = TRENCH_POSTS.filter(p => !enemies.some(e => e.alive && Math.abs(e.pos.x - p.x) < 2.5 && Math.abs(e.pos.z - p.z) < 3));
     const front = this.dropZ() > -130;
     for (let i = 0; i < n; i++) {
