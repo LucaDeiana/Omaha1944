@@ -9,16 +9,18 @@ const C_BLOOD = [.24, .008, .008];
 function bloodHit(p, dir, k = 1) {
   if (dist2Cam(p) > 150 * 150) return;
   const g = SETTINGS.gore ? 1 : .3;
+  k *= 1.8;
   for (let i = 0; i < 3 * k * g; i++) PS_SMOKE.emit(p.x, p.y, p.z, dir.x * rnd(.5, 2) + rnd(-.4, .4), dir.y * rnd(.5, 2) + rnd(-.2, .6), dir.z * rnd(.5, 2) + rnd(-.4, .4), rnd(.25, .6), .08, rnd(.35, .7) * k, .75, ...C_BLOOD, 3, 1.5);
   for (let i = 0; i < 16 * k * g; i++) PS_GRAIN.emit(p.x, p.y, p.z, dir.x * rnd(1, 5) + rnd(-1, 1), dir.y * rnd(1, 4) + rnd(-.5, 2), dir.z * rnd(1, 5) + rnd(-1, 1), rnd(.5, 1), rnd(.02, .05), .03, 1, .2, .005, .005, .2, 9.8, 1);
-  if (SETTINGS.gore && R() < .6) { const q = p.clone().addScaledVector(dir, rnd(.5, 2.5)); addDecal('blood', q, rnd(.4, 1.1)); }
+  if (SETTINGS.gore) for (let i = 0; i < 2; i++) { const q = p.clone().addScaledVector(dir, rnd(.5, 3)); q.x += rnd(-.4, .4); q.z += rnd(-.4, .4); addDecal('blood', q, rnd(.5, 1.3)); }
   sfxImpact(p, 'flesh');
 }
 function bloodBurst(p, k = 1) {
   if (!SETTINGS.gore) return;
+  k *= 1.6;
   for (let i = 0; i < 8 * k; i++) PS_SMOKE.emit(p.x, p.y, p.z, rnd(-2, 2), rnd(0, 3), rnd(-2, 2), rnd(.4, .9), .15, rnd(.6, 1.4) * k, .8, ...C_BLOOD, 2.5, 2);
   for (let i = 0; i < 40 * k; i++) PS_GRAIN.emit(p.x, p.y, p.z, rnd(-6, 6), rnd(0, 7), rnd(-6, 6), rnd(.6, 1.2), rnd(.02, .06), .03, 1, .2, .005, .005, .15, 9.8, 1);
-  for (let i = 0; i < 3; i++) addDecal('blood', p.clone().add(new V3(rnd(-2, 2), 0, rnd(-2, 2))), rnd(.6, 1.6));
+  for (let i = 0; i < 6; i++) addDecal('blood', p.clone().add(new V3(rnd(-2.5, 2.5), 0, rnd(-2.5, 2.5))), rnd(.7, 2));
   play('flesh_squelch', p, { ref: 10 });
 }
 

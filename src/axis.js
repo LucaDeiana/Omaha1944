@@ -12,7 +12,7 @@ function initAxis() {
   const per = clamp(Math.floor((Q.allyAlive * .55) / 7), 4, 10);
   for (const x of xs) fillBoat(new Boat(x, rnd(330, 380), rnd(8.2, 8.9), 82), per, false);
   for (let i = 0; i < 6; i++) addCorpse('E', rnd(-150, 150), rnd(-96, -84));
-  spawnBeachDefenders();
+  spawnBeachDefenders(); battleSmoke(); spawnBeachHolders();
   const b = WORLD.bunkers[1] || WORLD.bunkers[0], x = b.x + 5;
   MISSION.checkpoint = { pos: new V3(x, 0, trenchZ(x) + .2), yaw: PI };
   P.inBoat = false; P.boat = null; P.pos.set(x, Hf(x, trenchZ(x) + .2), trenchZ(x) + .2); P.yaw = PI;
@@ -68,7 +68,7 @@ const AXIS_STAGES = [
     start() {
       MISSION.allyZone = { zMin: -93, zMax: -58, xMin: -75, xMax: 25, step: 12, wait: [2.5, 5.5] };
       after(60, () => { if (MISSION.stage === 2) MISSION.allyZone = { zMin: -96, zMax: -78, xMin: -165, xMax: 165, step: 0, wait: [3, 7], kinds: ['trench', 'bunker'] }; });
-      reinforce(30, BREACH_X, -50, 15);
+      reinforce(30, BREACH_X, -50, 15); releaseHolders();
       say(NA.feld, 'Salgono dal canalone! Granate, Handgranaten!');
     },
     update() {

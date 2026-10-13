@@ -57,6 +57,7 @@ class Soldier {
     this.alive = false; if (this.state !== 'boat') this.state = 'dead';
     if (this.cover) { this.cover.occ--; this.cover = null; }
     corpses.push(this);
+    if (SETTINGS.gore && dist2Cam(this.pos) < 120 * 120) { const bp = this.pos.clone(); for (let i = 0; i < 3; i++) after(.4 + i * 1.2, () => addDecal('blood', bp.clone().add(new V3(rnd(-.5, .5), 0, rnd(-.5, .5))), .9 + i * .45)); }
     const cap = Q.allySlots + Q.enemySlots - Q.allyAlive - Q.enemyAlive - 20;
     while (corpses.length > cap) { const c = corpses.shift(); c.removed = true; c.body.removed = true; if (c.body.rag) { const i = RAGS.indexOf(c.body.rag); if (i >= 0) RAGS.splice(i, 1); } }
     let impulse = imp, dir = null;

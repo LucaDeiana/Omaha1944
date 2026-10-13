@@ -49,10 +49,10 @@ function col(h) {
 // ---------- Impostazioni ----------
 const DPR = devicePixelRatio || 1;
 const QUALITY = {
-  basso: { label: 'Basso', pr: Math.min(DPR, .9), prMin: .55, shadows: 0, shadowDist: 0, post: false, bloom: false, fxaa: false, terrainStep: 1.6, tex: 256, allyAlive: 45, enemyAlive: 55, allySlots: 140, enemySlots: 120, grass: 0, lights: 1, particles: .55, lod: 0, waveBoats: 3, gibs: 6, ragdolls: 8 },
-  medio: { label: 'Medio', pr: Math.min(DPR, 1), prMin: .65, shadows: 1024, shadowDist: 45, post: true, bloom: true, fxaa: true, terrainStep: 1.15, tex: 512, allyAlive: 75, enemyAlive: 85, allySlots: 230, enemySlots: 190, grass: 6000, lights: 2, particles: .8, lod: 26, waveBoats: 4, gibs: 12, ragdolls: 16 },
-  alto: { label: 'Alto', pr: Math.min(DPR, 1.5), prMin: .7, shadows: 2048, shadowDist: 60, post: true, bloom: true, fxaa: true, terrainStep: .85, tex: 1024, allyAlive: 110, enemyAlive: 120, allySlots: 330, enemySlots: 270, grass: 14000, lights: 4, particles: 1, lod: 45, waveBoats: 6, gibs: 20, ragdolls: 26 },
-  ultra: { label: 'Ultra', pr: Math.min(DPR, 2), prMin: .75, shadows: 4096, shadowDist: 80, post: true, bloom: true, fxaa: true, terrainStep: .7, tex: 1024, allyAlive: 150, enemyAlive: 150, allySlots: 430, enemySlots: 330, grass: 24000, lights: 4, particles: 1.25, lod: 70, waveBoats: 7, gibs: 30, ragdolls: 40 },
+  basso: { label: 'Basso', pr: Math.min(DPR, .9), prMin: .55, shadows: 0, shadowDist: 0, post: false, bloom: false, fxaa: false, terrainStep: 1.6, tex: 256, allyAlive: 61, enemyAlive: 74, allySlots: 182, enemySlots: 156, grass: 0, lights: 1, particles: .55, lod: 0, waveBoats: 3, gibs: 6, ragdolls: 8 },
+  medio: { label: 'Medio', pr: Math.min(DPR, 1), prMin: .65, shadows: 1024, shadowDist: 45, post: true, bloom: true, fxaa: true, terrainStep: 1.15, tex: 512, allyAlive: 101, enemyAlive: 115, allySlots: 299, enemySlots: 247, grass: 6000, lights: 2, particles: .8, lod: 26, waveBoats: 4, gibs: 12, ragdolls: 16 },
+  alto: { label: 'Alto', pr: Math.min(DPR, 1.5), prMin: .7, shadows: 2048, shadowDist: 60, post: true, bloom: true, fxaa: true, terrainStep: .85, tex: 1024, allyAlive: 149, enemyAlive: 162, allySlots: 429, enemySlots: 351, grass: 14000, lights: 4, particles: 1, lod: 45, waveBoats: 6, gibs: 20, ragdolls: 26 },
+  ultra: { label: 'Ultra', pr: Math.min(DPR, 2), prMin: .75, shadows: 4096, shadowDist: 80, post: true, bloom: true, fxaa: true, terrainStep: .7, tex: 1024, allyAlive: 203, enemyAlive: 203, allySlots: 559, enemySlots: 429, grass: 24000, lights: 4, particles: 1.25, lod: 70, waveBoats: 7, gibs: 30, ragdolls: 40 },
 };
 const DIFF = {
   recluta: { label: 'Recluta', dmg: .45, acc: .7 },

@@ -77,7 +77,8 @@ function initMission() {
     if (me) { P.boat = b; fillBoat(b, 10, true, true); } else fillBoat(b, per, false);
   }
   P.inBoat = true; P.yaw = 0; P.seat = new V3(0, .47, 2.2);
-  for (let i = 0; i < 18; i++) addCorpse('A', rnd(-160, 160), rnd(-48, -2));
+  for (let i = 0; i < 30; i++) addCorpse('A', rnd(-170, 170), rnd(-50, 60));
+  battleSmoke(); spawnBeachHolders();
   spawnBeachDefenders();
   const fp = (id, x, z, res) => { const p = spawnPickup(id, new V3(x, 0, z), undefined, res); p.fixed = true; };
   fp('thompson', -14, -27); fp('bar', -44, -55.1); fp('bazooka', -17, -55.3, 4); fp('thompson', 30, -40);
@@ -89,7 +90,7 @@ function initMission() {
 
 const TRENCH_POSTS = [];
 function spawnBeachDefenders() {
-  const m = Q.enemyAlive / 120, step = 4.6 / m;
+  const m = Q.enemyAlive / 120, step = 3.4 / m;
   for (let x = -158; x < 158; x += step * rnd(.8, 1.2)) {
     if (WORLD.bunkers.some(b => Math.abs(b.x - x) < 6)) continue;
     TRENCH_POSTS.push(new V3(x, 0, trenchZ(x) + .2));
@@ -104,6 +105,19 @@ function spawnBeachDefenders() {
   for (const a of WORLD.aaSites) for (let i = 0; i < 2; i++) addEnemy('rifle', a.x + (i ? 1 : -1), a.z + .5, { state: 'post', stationary: true, group: 'beach', role: 'aa' });
 }
 // ondata di mezzi da sbarco; se withPlayer, uno dei mezzi trasporta il giocatore
+function battleSmoke() {
+  for (let i = 0; i < 26; i++) { const x = rnd(-230, 230), z = rnd(-95, 70); addEmitter(new V3(x, Math.max(H(x, z), WATER_Y) + .5, z), R() < .25 ? 'fire' : 'smoke', rnd(.8, 1.6)); }
+  for (let i = 0; i < 10; i++) { const x = rnd(-200, 200), z = rnd(-60, -40); addEmitter(new V3(x, H(x, z) + .3, z), 'bank', 1); }
+}
+function spawnBeachHolders() {
+  const n = Math.round(Q.allyAlive * .3), spots = covers.filter(c => c.z > -58 && c.z < 70 && Math.abs(c.x) < 200);
+  for (let i = 0; i < n && spots.length; i++) {
+    const c = spots.splice(Math.floor(R() * spots.length), 1)[0]; c.occ = 2;
+    const a = addAlly(R() < .2 ? 'bar' : randAllyKind(), c.x + rnd(-.3, .3), c.z + rnd(-.2, .3), { state: 'post', stationary: true, group: 'hold' });
+    a.yaw = rnd(-.3, .3); if (R() < .4) a.forceProne = true;
+  }
+}
+function releaseHolders() { for (const a of allies) if (a.alive && a.group === 'hold') { a.stationary = false; a.forceProne = false; a.state = 'idle'; a.wait = rnd(0, 4); } }
 function spawnWave(withPlayer) {
   const room = Math.max(0, Q.allyAlive - aliveA());
   const nb = withPlayer ? Math.max(1, Math.min(Q.waveBoats, Math.ceil(room / 8))) : Math.min(Q.waveBoats, Math.floor(room / 6));
@@ -237,7 +251,7 @@ const STAGES = [
     title: 'La scogliera',
     start() {
       MISSION.checkpoint = { pos: new V3(BREACH_X, 0, WIRE_Z + 2.5), yaw: 0 };
-      MISSION.allyZone = { zMin: -93, zMax: -58, xMin: -75, xMax: 25, step: 12, wait: [2.5, 5.5] };
+      MISSION.allyZone = { zMin: -93, zMax: -58, xMin: -75, xMax: 25, step: 12, wait: [2.5, 5.5] }; releaseHolders();
       say(N.sarge, 'Il filo è aperto! Tutti attraverso il varco, su per la scogliera!'); shout('en', 'move', null, { text: 'The wire is open! Everybody through the gap! Up the bluff!', priority: true });
       after(6, () => say(N.walsh, 'Campi minati ai lati! Restate sul sentiero del canalone!'));
       MISSION.waveT = 5;

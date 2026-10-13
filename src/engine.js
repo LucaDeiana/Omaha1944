@@ -6,7 +6,7 @@ let renderer, scene, camera, composer = null, gradePass = null, bloomPass = null
 const SUN_DIR = new V3(-.62, .34, .3).normalize();
 const lightPool = [];
 const MAT = {};
-const FOG_BASE = .0016;
+const FOG_BASE = .0029;
 const DYN = { scale: 1, acc: 0, n: 0, t: 0 };
 
 const GradeShader = {
