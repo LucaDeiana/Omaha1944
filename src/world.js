@@ -7,7 +7,11 @@ const DRAW_X = -30, BREACH_X = -30, WIRE_Z = -62.5, BANK_Z = -57.5, WATER_Y = .3
 const SQUARE = new V3(12, 0, -283);
 const solids = [], covers = [], mines = [], OBST = [];
 const MINEFIELDS = [[18, 112, -84, -66], [-165, -88, -82, -66]];
+const MAPX = 1500;
+const DRAWS = [-1250, -700, -30, 450, 950];
 const HEDGES = [{ z: -170, gaps: [[-40, -20], [55, 68]] }, { z: -218, gaps: [[-40, -20], [-125, -112], [88, 100]] }];
+for (const h of HEDGES) for (let x = -MAPX; x < MAPX; x += 180) if (Math.abs(x) > 230) h.gaps.push([x, x + 14]);
+for (const d of DRAWS) if (d !== -30) for (const h of HEDGES) h.gaps.push([d - 10, d + 10]);
 const WORLD = {
   wireBreached: false, bunkers: [], flaks: [], boats: [], shipGuns: [], crates: [], pickups: [], shells: [], bombard: 'bluff', villageY: 0,
   mortarPits: [[-125, -103], [-58, -106], [32, -104], [112, -102]].map(([x, z]) => ({ x, z })), aaSites: [[-75, -110], [5, -112], [75, -108]].map(([x, z]) => ({ x, z })),
@@ -26,6 +30,7 @@ function addCrater(x, z, r, d) {
     }
 }
 function genCraters() {
+  for (let i = 0; i < 160; i++) { const x = srnd(-MAPX + 50, MAPX - 50); if (Math.abs(x) < 200) continue; addCrater(x, srnd(-52, -9), srnd(1.8, 3.4), srnd(.35, .7)); if (R() < .5) addCrater(x + srnd(-20, 20), srnd(-110, -66), srnd(2, 4), srnd(.6, 1.1)); }
   for (let i = 0; i < 80; i++) addCrater(srnd(-190, 190), srnd(-52, -9), srnd(1.8, 3.4), srnd(.35, .7));
   for (let i = 0; i < 55; i++) { const x = srnd(-170, 170), z = srnd(-112, -66); if (Math.abs(z - trenchZ(x)) < 4 || Math.abs(x - BREACH_X) < 6) continue; addCrater(x, z, srnd(2, 4), srnd(.6, 1.1)); }
   for (let i = 0; i < 35; i++) { const x = srnd(-160, 160), z = srnd(-212, -118); if (Math.abs(z + 170) < 5) continue; addCrater(x, z, srnd(2, 4.5), srnd(.6, 1.2)); }
@@ -56,7 +61,7 @@ function H0(x, z) {
   let y = Math.min(-z, 64) * .04;
   y += Math.sin(x * .21 + z * .13) * .03 + (vnoise(x * .07, z * .07) - .5) * .3 * smooth(-z / 25);
   y += 1.15 * Math.exp(-(((z - BANK_Z) / 1.7) ** 2));
-  const draw = Math.exp(-(((x - DRAW_X) / 26) ** 2));
+  let draw = 0; for (const dx of DRAWS) draw = Math.max(draw, Math.exp(-(((x - dx) / 26) ** 2)));
   const span = 24 + 44 * draw;
   const t = smooth((-61 - z) / span);
   if (t > 0) {
@@ -93,9 +98,12 @@ function buildHF() {
   HF.d = new Float32Array(HF.nx * HF.nz);
   for (let j = 0; j < HF.nz; j++) for (let i = 0; i < HF.nx; i++) HF.d[j * HF.nx + i] = H(HF.x0 + i * HF.step, HF.z0 + j * HF.step);
 }
+const HC = { x0: -1620, z0: -1520, step: 3, nx: 0, nz: 0, d: null };
+function buildHC() { HC.nx = Math.ceil(3240 / HC.step) + 1; HC.nz = Math.ceil(1960 / HC.step) + 1; HC.d = new Float32Array(HC.nx * HC.nz); for (let j = 0; j < HC.nz; j++) for (let i = 0; i < HC.nx; i++) HC.d[j * HC.nx + i] = H(HC.x0 + i * HC.step, HC.z0 + j * HC.step); }
+function Hc(x, z) { const fx = (x - HC.x0) / HC.step, fz = (z - HC.z0) / HC.step; if (!HC.d || fx < 0 || fz < 0 || fx >= HC.nx - 1 || fz >= HC.nz - 1) return H(x, z); const i = fx | 0, j = fz | 0, u = fx - i, v = fz - j, k = j * HC.nx + i, d = HC.d, n = HC.nx; return (d[k] * (1 - u) + d[k + 1] * u) * (1 - v) + (d[k + n] * (1 - u) + d[k + n + 1] * u) * v; }
 function Hf(x, z) {
   const fx = (x - HF.x0) / HF.step, fz = (z - HF.z0) / HF.step;
-  if (!HF.d || fx < 0 || fz < 0 || fx >= HF.nx - 1 || fz >= HF.nz - 1) return H(x, z);
+  if (!HF.d || fx < 0 || fz < 0 || fx >= HF.nx - 1 || fz >= HF.nz - 1) return Hc(x, z);
   const i = fx | 0, j = fz | 0, u = fx - i, v = fz - j, k = j * HF.nx + i, d = HF.d, n = HF.nx;
   return (d[k] * (1 - u) + d[k + 1] * u) * (1 - v) + (d[k + n] * (1 - u) + d[k + n + 1] * u) * v;
 }
@@ -219,12 +227,12 @@ function terrainMaterial() {
 }
 function buildTerrain() {
   const s = Q.terrainStep;
-  const xs = axisSteps(-460, 460, x => (Math.abs(x) < 185 ? 1.6 : 5) * s);
-  const zs = axisSteps(-470, 330, z => (z > -106 && z < -48 ? .85 : z >= -48 && z < 30 ? 1.5 : z <= -106 && z > -340 ? 2.2 : 5) * s);
+  const xs = axisSteps(-MAPX - 120, MAPX + 120, x => (Math.abs(x) < 185 ? 1.6 : Math.abs(x) < 700 ? 3.2 : 6) * s);
+  const zs = axisSteps(-MAPX, 420, z => (z > -106 && z < -48 ? (Math.abs(0) < 1 ? .85 : 2) : z >= -48 && z < 30 ? 1.5 : z <= -106 && z > -340 ? 2.2 : 7) * s);
   const nx = xs.length, nz = zs.length, N = nx * nz;
   const pos = new Float32Array(N * 3), cl = new Float32Array(N * 3), uv = new Float32Array(N * 2), sp = new Float32Array(N * 4), ax = new Float32Array(N * 2);
   for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
-    const k = j * nx + i, x = xs[i], z = zs[j], y = H(x, z);
+    const k = j * nx + i, x = xs[i], z = zs[j], y = Math.abs(x) < 240 && z > -470 ? H(x, z) : Hc(x, z);
     pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z; uv[k * 2] = x / 3; uv[k * 2 + 1] = z / 3;
     const n2 = fbm(x * .03, z * .03, 3);
     let sa = 0, pe = 0, gr = 0, di = 0, wet = 0, sc = 0, tr = 1, tg = 1, tb = 1;
@@ -233,7 +241,7 @@ function buildTerrain() {
       wet = z > 1 ? 1 : smooth((z + 14) / 12);
       const t = .92 + .16 * n2; tr = t; tg = t; tb = t;
     } else {
-      const sl = (Math.abs(H(x, z - 1) - H(x, z + 1)) + Math.abs(H(x - 1, z) - H(x + 1, z))) * .5;
+      const sl = (Math.abs(Hf(x, z - 1) - Hf(x, z + 1)) + Math.abs(Hf(x - 1, z) - Hf(x + 1, z))) * .5;
       di = smooth((sl - .45) / .6) * .9; gr = 1 - di;
       const tra = 1 - smooth((-59.5 - z) / 4); sa += tra; pe += tra * .5;
       if (z < -110) { const f = fbm(x * .009 + 11, z * .009, 3); if (f > .56) { const q = smooth((f - .56) / .05); tr = 1 + .25 * q; tg = 1 + .08 * q; tb = 1 - .2 * q; } else if (f < .42) { tr = .85; tb = .85; } }
@@ -303,7 +311,7 @@ function buildWater() {
     }`,
     transparent: true,
   });
-  const g = new THREE.PlaneGeometry(3200, 2300, 320, 230); g.rotateX(-PI / 2);
+  const g = new THREE.PlaneGeometry(4400, 2300, 400, 230); g.rotateX(-PI / 2);
   const m = new THREE.Mesh(g, waterMat); m.position.set(0, WATER_Y, 1135); m.renderOrder = 1; m.frustumCulled = false;
   scene.add(m);
 }
@@ -420,7 +428,7 @@ function buildBunkerGeo() {
 }
 const MAT_BURNT = {};
 function burnMeshes(g) { g.traverse(o => { if (o.isMesh) { const k = o.material === MAT.concrete ? 'concrete' : 'paint'; o.material = MAT_BURNT[k] || (MAT_BURNT[k] = (() => { const m = k === 'concrete' ? triMaterial(TEX.concrete, .32) : triMaterial(TEX.metal, .35, { metal: .3 }); m.color.setRGB(.28, .25, .22); return m; })()); } }); }
-function makeBunker(x) {
+function makeBunker(x, extra) {
   const z = -84.5, g = H(x, z + 3), base = g - 1.35;
   const mesh = groupMesh(BUNKER_G); mesh.position.set(x, base, z); scene.add(mesh);
   const b = {
@@ -440,7 +448,7 @@ function makeBunker(x) {
     }
   };
   for (let i = -3; i <= 3; i++) addCover(x + i * 1.4, z + 5.2, 'bunker');
-  WORLD.bunkers.push(b); return b;
+  (extra ? (WORLD.extraBunkers || (WORLD.extraBunkers = [])) : WORLD.bunkers).push(b); return b;
 }
 function makeFlak(x, z) {
   const base = H(x, z), mesh = groupMesh(FLAK_G);
@@ -563,8 +571,8 @@ function buildStatic() {
   const S = new MB();
   // --- ostacoli della spiaggia ---
   S.mat = 'paint';
-  for (let i = 0; i < 130; i++) {
-    const x = srnd(-195, 195), z = srnd(-49, -7), y = H(x, z), ry = srnd(0, PI);
+  for (let i = 0; i < 330; i++) {
+    const x = i < 130 ? srnd(-195, 195) : srnd(-MAPX + 40, MAPX - 40), z = srnd(-49, -7), y = H(x, z), ry = srnd(0, PI);
     S.add(U.box, 0x6a5a4c, x, y + .7, z, PI / 4, ry, 0, .17, .17, 2.4);
     S.add(U.box, 0x6a5a4c, x, y + .7, z, -PI / 4, ry, 0, .17, .17, 2.4);
     S.add(U.box, 0x705e50, x, y + .7, z, 0, ry + PI / 2, PI / 4, .17, 2.4, .17);
@@ -636,8 +644,8 @@ function buildStatic() {
   }
   // vegetazione della scogliera
   S.mat = 'vc';
-  for (let i = 0; i < 420; i++) {
-    const x = srnd(-200, 200), z = srnd(-100, -60); if (Math.abs(z - trenchZ(x)) < 3 || roadDist(x, z) < 4) continue;
+  for (let i = 0; i < 1100; i++) {
+    const x = i < 420 ? srnd(-200, 200) : srnd(-MAPX, MAPX), z = srnd(-100, -60); if (Math.abs(z - trenchZ(x)) < 3 || roadDist(x, z) < 4) continue;
     const y = H(x, z);
     if (R() < .7) { S.mat = 'vc'; S.add(U.ico1, pick([0x4a5a2a, 0x5d6a33, 0x3f4f25, 0x6b6c3d]), x, y + .3, z, R(), R(), R(), rnd(.6, 1.5), rnd(.5, 1.1), rnd(.6, 1.5)); }
     else { S.mat = 'concrete'; S.add(U.ico, pick([0x9e9a90, 0xaba69a]), x, y + .1, z, R(), R(), R(), rnd(.4, 1.2), rnd(.3, .8), rnd(.4, 1.2)); }
@@ -646,13 +654,13 @@ function buildStatic() {
   for (const hd of HEDGES) {
     const inGap = x => hd.gaps.some(g => x > g[0] && x < g[1]);
     S.mat = 'vc';
-    for (let x = -220; x < 220; x += 1.4) {
+    for (let x = -MAPX; x < MAPX; x += Math.abs(x) < 230 ? 1.4 : 2.6) {
       if (inGap(x)) continue;
       const y = H(x, hd.z);
       S.add(U.ico1, pick([0x3a4d23, 0x45582a, 0x33441f, 0x4f6030]), x + rnd(-.4, .4), y + rnd(1.4, 2.2), hd.z + rnd(-.7, .7), R(), R(), R(), rnd(1.3, 2.0), rnd(1.4, 2.1), rnd(1.2, 1.8));
       if (R() < .12) addTree(S, x, hd.z + rnd(-.5, .5), rnd(.8, 1.2));
     }
-    const ends = [...hd.gaps.map(g => g[0]), 220].sort((a, b) => a - b), starts = [-220, ...hd.gaps.map(g => g[1])].sort((a, b) => a - b);
+    const ends = [...hd.gaps.map(g => g[0]), MAPX].sort((a, b) => a - b), starts = [-MAPX, ...hd.gaps.map(g => g[1])].sort((a, b) => a - b);
     for (let k = 0; k < ends.length; k++) for (let x = starts[k]; x < ends[k]; x += 8) {
       const x1 = Math.min(ends[k], x + 8); let lo = 1e9, hi = -1e9;
       for (let s = x; s <= x1; s += 2) { const y = H(s, hd.z); lo = Math.min(lo, y); hi = Math.max(hi, y); }
@@ -660,8 +668,8 @@ function buildStatic() {
     }
     for (let x = -200; x < 200; x += 3) if (!inGap(x)) { addCover(x, hd.z + 2.3, 'hedgeN'); addCover(x, hd.z - 2.3, 'hedgeS'); }
   }
-  for (let i = 0; i < 120; i++) {
-    const x = srnd(-230, 230), z = srnd(-420, -110);
+  for (let i = 0; i < 420; i++) {
+    const x = i < 120 ? srnd(-230, 230) : srnd(-MAPX, MAPX), z = i < 120 ? srnd(-420, -110) : srnd(-MAPX + 50, -110);
     if (roadDist(x, z) < 6 || (z < -240 && z > -330 && x > -95 && x < 90) || Math.abs(z + 170) < 6 || Math.abs(z + 218) < 6 || (z < -180 && z > -205 && x > -20 && x < 70)) continue;
     addTree(S, x, z, rnd(.8, 1.3));
   }
@@ -669,6 +677,7 @@ function buildStatic() {
   S.mat = 'wood';
   for (let z = -80; z > -280; z -= 28) { const x = roadX(z) + 5, y = H(x, z); S.add(U.cyl, 0x5a4d3e, x, y + 3.5, z, 0, 0, 0, .1, 7, .1); S.add(U.box, 0x5a4d3e, x, y + 6.6, z, 0, 0, 0, 1.4, .1, .1); }
   // villaggio
+  for (const [vx, vz] of [[-700, -330], [-1250, -300], [600, -420]]) for (let k = 0; k < 14; k++) addHouse(S, vx + (k % 7) * 16 - 48 + srnd(-2, 2), vz + (k < 7 ? 0 : -26), srnd(9, 12), 8, R() < .5 ? 6 : 4.5, R() < .3);
   const north = [[-79, 11, 0], [-63, 12, 1], [-48, 9, 0], [-17, 10, 0], [-2, 11, 1], [36, 12, 0], [52, 11, 0], [70, 11, 1]];
   const south = [[-79, 11, 0], [-62, 12, 0], [-45, 10, 1], [-16, 11, 0], [35, 10, 1], [51, 12, 0], [68, 11, 0]];
   for (const [x, w, r] of north) addHouse(S, x, -268, w, 8, R() < .5 ? 6 : 4.5, !!r);
@@ -783,6 +792,7 @@ function buildFleet() {
   placeShip('bb', 190, 840);
   placeShip('cl', 470, 720); placeShip('cl', -470, 700);
   placeShip('dd', -110, 430); placeShip('dd', 70, 390); placeShip('dd', 280, 460);
+  placeShip('bb', -1100, 820); placeShip('cl', 1050, 760); placeShip('dd', -800, 440); placeShip('dd', 750, 420); placeShip('dd', 1300, 480);
   for (let i = 0; i < 8; i++) placeShip('lst', srnd(-900, 900), srnd(1250, 1700));
   const mb = new MB(); mb.mat = 'paint';
   for (let i = 0; i < 22; i++) { const x = srnd(-700, 700), z = srnd(520, 1100); mb.add(U.box, 0x55625a, x, .5, z, 0, srnd(-.2, .2), 0, 4, 2, 11); }
@@ -805,7 +815,7 @@ function buildFleet() {
 function buildWorld(step) {
   genCraters();
   WORLD.villageY = H0(10, -283);
-  buildHF();
+  buildHF(); buildHC();
   buildTerrain();
   buildWater();
   buildBoatGeos(); buildBunkerGeo();
@@ -814,6 +824,7 @@ function buildWorld(step) {
   buildGrass();
   buildFleet();
   for (const x of [-100, 15, 100]) makeBunker(x);
+  for (const x of [-1200, -650, 470, 980]) makeBunker(x, true);
   makeFlak(-5, -194); makeFlak(48, -196);
 }
 
@@ -844,7 +855,7 @@ function updateWorld(dt, t) {
 function bombardTarget() {
   if (WORLD.bombard === 'bluff') {
     const al = enemies.filter(e => e.alive && !e.inBunker && e.group === 'beach');
-    let p = al.length && R() < .3 ? pick(al).pos.clone().add(new V3(rnd(-10, 10), 0, rnd(-6, 6))) : new V3(rnd(-180, 180), 0, rnd(-140, -92));
+    let p = al.length && R() < .3 ? pick(al).pos.clone().add(new V3(rnd(-10, 10), 0, rnd(-6, 6))) : new V3(rnd(-MAPX + 100, MAPX - 100), 0, rnd(-140, -92));
     p.y = Hf(p.x, p.z); return p;
   }
   if (WORLD.bombard === 'inland') { const p = new V3(rnd(-250, 250), 0, rnd(-470, -350)); p.y = Hf(p.x, p.z); return p; }

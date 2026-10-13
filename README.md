@@ -72,3 +72,6 @@ src/mission.js          fasi della campagna, dialoghi, ondate, mezzi
 src/hud.js              HUD, bussola, marcatori
 src/main.js             menu, pausa, ciclo di gioco
 ```
+
+## Crediti audio
+Spari reali da [The Free Firearm Sound Library](https://opengameart.org/content/the-free-firearm-sound-library) (CC0).

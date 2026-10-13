@@ -91,8 +91,8 @@ async function buildBank() {
   add('whiz', .5, (oc, dst, i) => { oN(oc, dst, 0, .34, { type: 'bandpass', f: 3400 - i * 300, f2: 550, q: 4, v: 1.2, a: .03 }); oT(oc, dst, 0, .3, { f: 1600 + i * 200, f2: 300, v: .07, a: .03 }); }, 4);
   add('ricochet', .8, (oc, dst, i) => { oT(oc, dst, 0, .6, { f: 3800 + i * 500, f2: 1200, v: .35, a: .004 }); oN(oc, dst, 0, .05, { type: 'highpass', f: 3000, v: .8 }); oN(oc, dst, 0, .5, { type: 'bandpass', f: 3000, f2: 1300, q: 6, v: .25, a: .01 }); }, 4);
   add('imp_sand', .3, (oc, dst) => { oN(oc, dst, 0, .1, { f: 900, v: 1 }); oN(oc, dst, 0, .05, { type: 'bandpass', f: 2600, v: .4 }); for (let k = 0; k < 8; k++) oN(oc, dst, .02 + R() * .2, .012, { type: 'bandpass', f: 2000 + R() * 3000, q: 2, v: .12 }); });
-  add('imp_water', .4, (oc, dst) => { oN(oc, dst, 0, .2, { type: 'bandpass', f: 1300, q: .8, v: .9 }); oT(oc, dst, .01, .09, { f: 420, f2: 1150, v: .3 }); });
-  add('imp_metal', .6, (oc, dst, i) => { const j = 1 + i * .07; oT(oc, dst, 0, .38, { f: 1900 * j, v: .35 }); oT(oc, dst, 0, .28, { f: 2850 * j, v: .2 }); oT(oc, dst, 0, .18, { f: 4250 * j, v: .12 }); oN(oc, dst, 0, .012, { type: 'highpass', f: 2500, v: .7 }); });
+  add('imp_water', .5, (oc, dst) => { oN(oc, dst, 0, .03, { type: 'highpass', f: 1500, v: .9 }); oN(oc, dst, 0, .35, { f: 2500, f2: 600, v: .8, a: .004 }); oN(oc, dst, .02, .3, { type: 'bandpass', f: 900, q: .5, v: .5, a: .01 }); for (let k = 0; k < 10; k++) oN(oc, dst, .08 + R() * .3, .02, { type: 'highpass', f: 3000, v: .1 }); }, 3);
+  add('imp_metal', .6, (oc, dst, i) => { const j = 1 + i * .09, sh = shaperN(oc, 2.5); sh.connect(dst); oN(oc, sh, 0, .015, { type: 'highpass', f: 1200, v: 1.6 }); oN(oc, sh, 0, .18, { type: 'bandpass', f: 1100 * j, q: 3, v: .9 }); oT(oc, sh, 0, .12, { f: 320 * j, f2: 180, v: .7 }); oN(oc, dst, 0, .35, { type: 'bandpass', f: 2600 * j, q: 6, v: .25 }); });
   add('imp_flesh', .3, (oc, dst) => { oN(oc, dst, 0, .07, { f: 450, v: 1.3 }); oT(oc, dst, 0, .1, { f: 110, f2: 55, v: .9 }); oN(oc, dst, .005, .06, { type: 'bandpass', f: 900, q: 2, v: .4 }); });
   add('imp_wood', .2, (oc, dst) => { oN(oc, dst, 0, .07, { type: 'bandpass', f: 900, q: 2.5, v: 1.1 }); oN(oc, dst, 0, .03, { type: 'highpass', f: 2000, v: .4 }); });
   add('imp_stone', .3, (oc, dst) => { oN(oc, dst, 0, .05, { type: 'bandpass', f: 2400, v: 1 }); oN(oc, dst, 0, .14, { f: 600, v: .4 }); });
@@ -179,6 +179,7 @@ async function buildBank() {
   }
   // normalizzazione dei campioni (nessun campione oltre 0 dB)
   for (const n in AU.buf) for (const b of AU.buf[n]) { const d = b.getChannelData(0); let mx = 0; for (let i = 0; i < d.length; i += 4) mx = Math.max(mx, Math.abs(d[i])); if (mx > .98) { const k = .98 / mx; for (let i = 0; i < d.length; i++) d[i] *= k; } }
+  if (window.SFX_DATA) for (const k in SFX_DATA) { const arr = []; for (const b64 of SFX_DATA[k]) { try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); arr.push(await c.decodeAudioData(u.buffer)); } catch (e) { } } if (arr.length) AU.buf[k] = arr; }
   AU.ready = true;
   startAmbience();
 }
@@ -268,9 +269,9 @@ function loopSound(name, vol = 0) {
 // ---------- API usate dal gioco ----------
 const FARMAP = { garand: 'rifle_far', kar98: 'rifle_far', springfield: 'rifle_far', bar: 'rifle_far', thompson: 'smg_far', mp40: 'smg_far', colt: 'smg_far', mg42: 'mg_far', m2: 'mg_far', flak: 'flak_far' };
 function sfxShot(kind, pos, isPlayer, extraDelay = 0) {
-  if (isPlayer) { play(kind, null, { vol: 1, delay: extraDelay, revMul: 1.5 }); return; }
+  if (isPlayer) { play(kind, null, { vol: 1, delay: extraDelay, revMul: 1.5, rate: kind === 'mp40' ? 1.12 : 1 }); return; }
   const d = pos.distanceTo(camera.position);
-  if (d < 70) play(kind, pos, { ref: 22, delay: extraDelay, echo: true });
+  if (d < 220) play(kind, pos, { ref: 25, delay: extraDelay, echo: true, rate: kind === 'mp40' ? 1.12 : 1 });
   else play(FARMAP[kind] || 'rifle_far', pos, { ref: 70, delay: extraDelay, echo: true, vol: 1.2 });
 }
 function sfxBoom(pos, size = 1, water = false) {

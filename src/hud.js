@@ -53,7 +53,7 @@ function updateHUD(dt) {
   msgT -= dt; if (msgT <= 0) $('msg').style.opacity = 0;
   // marcatori 3D
   for (let i = 0; i < markerEls.length; i++) {
-    const el = markerEls[i], mk = MISSION.markers[i];
+    const el = markerEls[i], mk = (P.mode !== 'foot' && SIDE.cur ? SIDE.markers : MISSION.markers)[i];
     if (!mk || P.inBoat) { el.style.display = 'none'; continue; }
     _hv.copy(mk.pos).project(camera);
     const behind = _hv.z > 1;
@@ -90,7 +90,7 @@ function updateHUD(dt) {
   if (P.mode === 'naval') { $('navInfo').innerHTML = (NAV.target ? 'Distanza: <b>' + Math.round(NAV.range) + ' m</b>' : 'Nessun bersaglio') + '<br>' + (NAV.reload > 0 ? 'Ricarica: ' + NAV.reload.toFixed(1) + ' s' : NAV.ready ? '<b class="ok">PRONTO AL FUOCO</b>' : 'Brandeggio torretta…') + '<br><small>Click sx: fuoco · Click dx: binocolo · B: cambia ruolo</small>'; $('navZoom').style.display = NAV.zoom ? 'block' : 'none'; }
   if (P.mode === 'plane' && PL.me) $('planeInfo').innerHTML = 'Velocità ' + Math.round(PL.me.vel.length() * 3.6) + ' km/h · Quota ' + Math.round(PL.me.pos.y) + ' m · Manetta ' + Math.round(PL.throttle * 100) + '% · ' + PL.G.toFixed(1) + ' G<br>Bombe: ' + PL.bombs + (PL.bombs < 2 ? ' (riarmo ' + Math.max(0, Math.ceil(PL.rearm)) + ' s)' : '') + ' · Scafo ' + Math.max(0, Math.round(PL.me.hp / 4.5)) + '%<br><small>Mouse: cloche · W/S: manetta · A/D: timone · Click sx/Spazio: mitragliatrici · Click dx/F: bomba · B: cambia ruolo</small>';
   if (SETTINGS.fps) $('fps').textContent = Math.round(FPS.v) + ' fps · ' + Math.round(DYN.scale * 100) + '% ris.';
-  $('objT').textContent = MISSION.title; $('objS').textContent = MISSION.objText;
+  if (P.mode !== 'foot' && SIDE.cur) { $('objT').textContent = (P.mode === 'naval' ? 'USS Texas — ' : 'P-47 — ') + SIDE.title; $('objS').textContent = SIDE.text; } else { $('objT').textContent = MISSION.title; $('objS').textContent = MISSION.objText; }
   $('hpbar').firstChild.style.width = P.hp + '%';
   $('hpbar').firstChild.style.background = P.hp < 35 ? '#b33' : '#c8c0a0';
   $('stance').textContent = ['IN PIEDI', 'ACCOVACCIATO', 'A TERRA'][P.stance] + (P.swim ? ' · A NUOTO' : '') + (P.stamina < .3 ? ' · SENZA FIATO' : '');

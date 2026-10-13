@@ -99,6 +99,7 @@ function spawnBeachDefenders() {
   for (const [x, z] of [[-140, -104], [125, -106], [-20, -110]]) addEnemy('sniper', x, z, { state: 'post', stationary: true, group: 'beach' });
   for (const [x, z] of [[-80, -74], [-5, -77], [60, -73], [140, -75], [-130, -72], [95, -79], [-110, -78], [-50, -75], [120, -71]]) addEnemy('rifle', x, z, { state: 'post', stationary: true, group: 'beach' });
   for (const mp of WORLD.mortarPits) for (let i = 0; i < 2; i++) addEnemy('rifle', mp.x + (i ? 1.2 : -1.2), mp.z, { state: 'post', stationary: true, group: 'beach', role: 'mortar' });
+  for (const b of WORLD.extraBunkers || []) { b.gunner = addEnemy('mg', b.x, b.z + 2.5, { y: b.base + 1.2, state: 'post', stationary: true, inBunker: true, bunker: null, group: 'wn' }); for (let k = 0; k < 5; k++) addEnemy(randEnemyKind(), b.x + rnd(-25, 25), -84 + rnd(-6, 3), { state: 'post', stationary: true, group: 'wn' }); }
   for (const a of WORLD.aaSites) for (let i = 0; i < 2; i++) addEnemy('rifle', a.x + (i ? 1 : -1), a.z + .5, { state: 'post', stationary: true, group: 'beach', role: 'aa' });
 }
 // ondata di mezzi da sbarco; se withPlayer, uno dei mezzi trasporta il giocatore
@@ -109,7 +110,8 @@ function spawnWave(withPlayer) {
   const per = clamp(Math.floor(room / nb), 4, 11);
   let pb = null;
   for (let i = 0; i < nb; i++) {
-    const x = withPlayer && i === 0 ? clamp(P.pos.x || -22, -120, 120) : rnd(-150, 150);
+    const cx = P.mode === 'foot' ? clamp(P.pos.x, -MAPX + 200, MAPX - 200) : rnd(-600, 600);
+    const x = withPlayer && i === 0 ? clamp(P.pos.x || -22, -MAPX + 100, MAPX - 100) : cx + rnd(-220, 220);
     const b = new Boat(x, withPlayer && i === 0 ? 150 : rnd(200, 260), rnd(8.6, 9.6), 11);
     fillBoat(b, per, false, withPlayer && i === 0);
     if (withPlayer && i === 0) pb = b;
@@ -179,6 +181,7 @@ const STAGES = [
         after(1.2, () => say(N.walsh, 'Hanno colpito la barca di Miller! Oh Dio...'));
       });
       once('s6', eta < 8, () => { say(N.cox, 'Dieci secondi! Che Dio vi assista!'); shout('en', 'move', null, { text: 'Ten seconds! God be with you!', priority: true }); });
+      if (b.open && P.mode !== 'foot' && MISSION.stageT > 2) { setStage(1); return; }
       once('ramp', b.landed, () => {
         say(N.cox, 'RAMPA GIÙ!'); shout('en', 'move', null, { text: 'Ramp going down!', priority: true });
         after(.9, () => {
@@ -496,9 +499,11 @@ function updateMission(dt) {
   STAGES[MISSION.stage].update(dt);
   updateSubs(dt);
   // ondate di sbarco continue
-  if (MISSION.stage >= 1 && MISSION.stage <= 4) {
+  if (MISSION.stage >= 1) {
     MISSION.waveT -= dt;
-    if (MISSION.waveT <= 0) { MISSION.waveT = rnd(30, 45); spawnWave(false); }
+    if (MISSION.waveT <= 0) { MISSION.waveT = MISSION.stage <= 4 ? rnd(30, 45) : rnd(55, 80); spawnWave(false); }
+  }
+  if (MISSION.stage >= 1 && MISSION.stage <= 4) {
     MISSION.reinfT -= dt;
     if (MISSION.reinfT <= 0) { MISSION.reinfT = rnd(12, 20); reinforceTrench(); }
   }

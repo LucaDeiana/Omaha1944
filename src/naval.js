@@ -58,6 +58,7 @@ function navalImpact(p, q) {
   explode(p, 15, 900, { byPlayer: true, bomb: true });
   for (let i = 0; i < 2; i++) fxExplosion(p.clone().add(new V3(rnd(-4, 4), 0, rnd(-4, 4))), 3.2, p.z > -9 && Hf(p.x, p.z) < WATER_Y);
   for (const b of WORLD.bunkers) if (!b.destroyed && Math.hypot(b.x - p.x, b.z - p.z) < 9) { b.destroy(); onObjectiveEvent('bunker', b, true); }
+  for (const b of WORLD.extraBunkers || []) if (!b.destroyed && Math.hypot(b.x - p.x, b.z - p.z) < 9) { b.destroy(); feed('Caposaldo distrutto'); }
   for (const f of WORLD.flaks) if (f.alive && Math.hypot(f.x - p.x, f.z - p.z) < 10) { f.destroy(); onObjectiveEvent('flak', f, true); }
   const hitAllies = allies.filter(a => a.alive && a.pos.distanceTo(p) < 25).length;
   if (!q.reported) {

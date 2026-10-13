@@ -48,6 +48,7 @@ class Plane {
       this.pos.addScaledVector(this.vel, dt); this.orient(this.roll);
       const gy = Math.max(Hf(this.pos.x, this.pos.z), this.pos.z > -9 ? WATER_Y : -99);
       if (this.pos.y < gy + 1) { explode(this.pos.clone().setY(gy + .5), 12, 500, {}); this.remove(); }
+    } else if (this.hunter) { huntPlayer(this, dt);
     } else if (this.pi < this.path.length) {
       const wp = this.path[this.pi];
       _a1.subVectors(wp.p, this.pos); const d = _a1.length();
@@ -108,6 +109,7 @@ function BOMB_G() {
 function bombImpact(p, q) {
   explode(p, 11, 650, { byPlayer: !!q.byPlayer, bomb: true, only: q.team === 'E' ? 'A' : (q.byPlayer ? undefined : 'E') });
   if (!q.byPlayer) return;
+  for (const b of WORLD.extraBunkers || []) if (!b.destroyed && Math.hypot(b.x - p.x, b.z - p.z) < 8) { b.destroy(); feed('Caposaldo distrutto'); }
   for (const b of WORLD.bunkers) if (!b.destroyed && Math.hypot(b.x - p.x, b.z - p.z) < 8) { b.destroy(); onObjectiveEvent('bunker', b, true); }
   for (const f of WORLD.flaks) if (f.alive && Math.hypot(f.x - p.x, f.z - p.z) < 8) { f.destroy(); onObjectiveEvent('flak', f, true); }
 }
