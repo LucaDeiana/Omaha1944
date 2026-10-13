@@ -70,7 +70,17 @@ async function startGame() {
   lockPointer();
   startCutscene();
 }
-function lockPointer() { const c = renderer.domElement; (c.requestPointerLock || (() => { })).call(c); }
+// se il browser rifiuta la cattura del mouse (es. caricamento lungo dopo il clic) mostra un pulsante per entrare in partita
+function lockFailed() {
+  if (!GAME.started || GAME.over || GAME.running) return;
+  $('pause').classList.remove('hidden'); $('pause').querySelector('h2').textContent = 'PRONTO'; $('resumeBtn').textContent = 'CLICCA PER ENTRARE IN BATTAGLIA';
+}
+function lockPointer() {
+  const c = renderer.domElement; if (!c.requestPointerLock) return;
+  try { const p = c.requestPointerLock(); if (p && p.catch) p.catch(lockFailed); } catch (e) { lockFailed(); }
+  setTimeout(() => { if (document.pointerLockElement !== c) lockFailed(); }, 700);
+}
+document.addEventListener('pointerlockerror', lockFailed);
 
 document.addEventListener('pointerlockchange', () => {
   const locked = renderer && document.pointerLockElement === renderer.domElement;
@@ -80,7 +90,7 @@ document.addEventListener('pointerlockchange', () => {
     if (window.speechSynthesis) speechSynthesis.cancel();
     if (AU.ctx) AU.ctx.suspend();
   }
-  if (locked) { $('pause').classList.add('hidden'); if (AU.ctx) AU.ctx.resume(); }
+  if (locked) { $('pause').querySelector('h2').textContent = 'PAUSA'; $('resumeBtn').textContent = 'RIPRENDI'; $('pause').classList.add('hidden'); if (AU.ctx) AU.ctx.resume(); }
 });
 
 let last = performance.now();
