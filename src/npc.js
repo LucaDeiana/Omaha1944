@@ -52,7 +52,7 @@ function initNPC() {
     update(q) { if (q.state === 1 && q.it && !MISSION.interactables.includes(q.it)) MISSION.interactables.push(q.it); },
     marker(q) { return q.state === 1 ? { pos: q.doc.clone().add(new V3(0, 2, 0)), label: 'Carte' } : q.state === 2 ? { pos: pl.pos.clone().add(new V3(0, 2.3, 0)), label: 'Lefèvre' } : null; },
   });
-  initShipDeck();
+  initShipDeck(); initInland();
   for (let i = 0; i < NPC.list.length; i++) { const d = document.createElement('div'); d.className = 'ntag'; $('markers').appendChild(d); NPC.tags.push(d); }
 }
 function npcFinish(q) { q.state = 9; showMsg('Missione personale compiuta: ' + q.title, 3); }
