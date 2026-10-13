@@ -113,6 +113,9 @@ function frame(now) {
   renderFrame(GAME.time);
 }
 
+// audio sospeso quando la scheda non è visibile
+document.addEventListener('visibilitychange', () => { if (!AU.ctx) return; if (document.hidden) AU.ctx.suspend(); else if (GAME.running) AU.ctx.resume(); });
+window.addEventListener('pagehide', () => { if (AU.ctx) AU.ctx.close(); });
 window.addEventListener('DOMContentLoaded', () => {
   if (!window.THREE || !THREE.EffectComposer) { $('startBtn').disabled = true; $('netErr').classList.remove('hidden'); return; }
   bindSettings();
