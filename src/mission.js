@@ -264,7 +264,7 @@ const STAGES = [
       const wp = new V3(BREACH_X, H(BREACH_X, WIRE_Z + .8), WIRE_Z + .8);
       MISSION.interactables = [
         { pos: BANG_POS, r: 2.4, label: 'Premi E per prendere il tubo Bangalore', active: () => !P.carry && !MISSION.flags.placed, done: () => { P.carry = 'bangalore'; sfxMech('pick'); feed('Hai preso il tubo Bangalore'); } },
-        { pos: wp, r: 2.4, hold: 2.5, label: 'Tieni premuto E per infilare il Bangalore sotto il filo', active: () => P.carry === 'bangalore', done: placeBangalore },
+        { pos: wp, r: 2.4, hold: 2.5, label: 'Tieni premuto E per infilare il Bangalore sotto il filo', active: () => P.carry === 'bangalore', done: () => placeBangalore(BREACH_X) },
       ];
     },
     update(dt) {
@@ -291,6 +291,7 @@ const STAGES = [
     update() {
       const tp = new V3(BREACH_X, 0, trenchZ(BREACH_X)); tp.y = H(tp.x, tp.z) + 1.5;
       MISSION.markers = [{ pos: tp, label: 'Trincea' }];
+      const ng = nearestGap(); if (ng !== null && P.pos.z > WIRE_Z) MISSION.markers.unshift({ pos: new V3(ng, H(ng, WIRE_Z) + 1.5, WIRE_Z), label: 'Varco nel filo' });
       const near = enemies.filter(e => e.alive && !e.inBunker && !e.role && Math.hypot(e.pos.x - tp.x, e.pos.z - tp.z) < 30).length;
       MISSION.objText = near ? `Conquista la trincea in cima alla scogliera — difensori: ${near}` : 'Raggiungi la trincea in cima alla scogliera';
       if (P.pos.z < -70) MISSION.checkpoint = { pos: new V3(BREACH_X + 2, 0, -72), yaw: 0 };
@@ -506,15 +507,25 @@ function onWireGap(x) {
   if (PT === 'A' && MISSION.stage === 2 && !MISSION.flags.placed) { if (P.carry === 'bangalore') P.carry = null; say(N.sarge, 'Il filo è saltato! Tutti attraverso il varco!'); setStage(3); }
   else if (PT === 'E') say(NA.obg, 'Il reticolato è squarciato! Passano da lì!');
 }
-function placeBangalore() {
-  P.carry = null; MISSION.flags.placed = true; MISSION.bangT = 5;
+// varchi e tubo Bangalore sempre disponibili per gli Alleati
+function wireInteractables() {
+  if (PT !== 'A' || P.mode !== 'foot' || MISSION.stage < 1 || MISSION.stage > 5) return [];
+  const out = [];
+  if (!P.carry && BANG_POS) out.push({ pos: BANG_POS, r: 2.4, label: 'Premi E per prendere un tubo Bangalore', active: () => true, done: () => { P.carry = 'bangalore'; sfxMech('pick'); feed('Hai preso il tubo Bangalore: infilalo sotto il filo spinato'); } });
+  if (P.carry === 'bangalore' && Math.abs(P.pos.z - WIRE_Z) < 3 && wireBlocks(P.pos.x)) { const bx = P.pos.x; out.push({ pos: new V3(bx, P.pos.y, P.pos.z), r: 3, hold: 2.5, label: 'Tieni premuto E per infilare il Bangalore sotto il filo', active: () => true, done: () => placeBangalore(bx) }); }
+  return out;
+}
+function nearestGap() { let best = null, bd = 1e9; for (const g of wireGapsNow()) { const gx = (g[0] + g[1]) / 2, d = Math.abs(gx - P.pos.x); if (d < bd) { bd = d; best = gx; } } return best; }
+function placeBangalore(bx = BREACH_X) {
+  P.carry = null; if (MISSION.stage === 2) { MISSION.flags.placed = true; MISSION.bangT = 5; }
   const tube = new THREE.Mesh(U.cyl, MAT.paint); tube.scale.set(.05, 3.2, .05); tube.rotation.x = PI / 2 - .12;
-  tube.position.set(BREACH_X, H(BREACH_X, WIRE_Z) + .2, WIRE_Z); scene.add(tube);
+  tube.position.set(bx, H(bx, WIRE_Z) + .2, WIRE_Z); scene.add(tube);
   say(N.you, 'FUOCO NEL BUCO!'); say(N.sarge, 'Giù la testa!'); shout('en', 'fire', null, { priority: true });
   after(5, () => {
     scene.remove(tube);
-    explode(new V3(BREACH_X, H(BREACH_X, WIRE_Z) + .3, WIRE_Z), 5, 220, {});
-    WORLD.wireBreached = true; buildWire(); setStage(3);
+    explode(new V3(bx, H(bx, WIRE_Z) + .3, WIRE_Z), 5, 220, {});
+    if (Math.abs(bx - BREACH_X) < 4) { WORLD.wireBreached = true; buildWire(); } else addWireGap(bx);
+    if (MISSION.stage === 2) setStage(3);
   });
 }
 function victory() {

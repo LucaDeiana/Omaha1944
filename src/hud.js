@@ -60,6 +60,7 @@ function drawMini() {
   g.lineWidth = 2;
   const line = (z, col) => { const a = to(px - 400, z), b = to(px + 400, z); g.strokeStyle = col; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); };
   line(0, 'rgba(120,170,200,.45)'); line(BANK_Z, 'rgba(200,190,150,.35)'); line(WIRE_Z, 'rgba(160,140,120,.35)');
+  g.strokeStyle = '#6f6'; g.lineWidth = 4; for (const gp of wireGapsNow()) { const a = to(gp[0], WIRE_Z), b = to(gp[1], WIRE_Z); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); } g.lineWidth = 2;
   g.strokeStyle = 'rgba(150,120,90,.45)'; g.beginPath(); for (let x = -160; x <= 160; x += 8) { const p = to(x, trenchZ(x)); x === -160 ? g.moveTo(p[0], p[1]) : g.lineTo(p[0], p[1]); } g.stroke();
   for (const h of HEDGES) line(h.z, 'rgba(90,120,70,.4)');
   // bunker e Tobruk
