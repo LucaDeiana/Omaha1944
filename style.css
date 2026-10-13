@@ -137,3 +137,10 @@ kbd { background: #2a2e2a; border: 1px solid #4a5040; padding: 1px 7px; border-r
 
 .checks.mp{display:flex;gap:12px;align-items:center;margin-top:8px}
 #optName{background:rgba(0,0,0,.35);border:1px solid #666;color:#e9e4d4;padding:4px 8px;font:14px Oswald,sans-serif;width:150px}
+
+#tankAim{display:none;position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;border:2px solid rgba(255,90,60,.9);border-radius:50%;pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.6)}
+#tankAim i{position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;background:#ff5a3c;border-radius:50%}
+#tankAim.ready{border-color:rgba(120,255,120,.95)}#tankAim.ready i{background:#7f7}
+#tankSight{display:none;position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 50%,transparent 0,transparent 38vh,rgba(0,0,0,.92) 38.5vh)}
+#tankSight svg{position:absolute;left:50%;top:50%;width:76vh;height:76vh;transform:translate(-50%,-50%)}
+#tankRange{position:absolute;left:50%;top:calc(50% + 30vh);transform:translateX(-50%);color:#e9e4d4;font:14px Oswald,sans-serif;text-shadow:0 0 3px #000}

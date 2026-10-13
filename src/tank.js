@@ -21,6 +21,7 @@ function buildPanzerGeo() {
   }
   h.add(U.cyl12, k, -.7, 1.35, 3.0, PI / 2, 0, 0, .1, .4, .1); h.add(U.cyl12, k, .7, 1.35, 3.0, PI / 2, 0, 0, .1, .4, .1);
   for (let i = 0; i < 4; i++) h.add(U.box, 0x6a6448, -.6 + i * .4, 1.7, 2.2, 0, 0, 0, .3, .12, .9);
+  h.add(U.sph, d, .6, 1.35, -3.12, 0, 0, 0, .14, .14, .1); h.add(U.cyl12, k, .6, 1.35, -3.45, PI / 2, 0, 0, .025, .6, .025); h.add(U.cyl12, k, .6, 1.35, -3.3, PI / 2, 0, 0, .045, .25, .045);
   TANKS.hull = h.buildGroups();
   const t = new MB(); t.mat = 'paint';
   t.add(U.box, c, 0, .5, .2, 0, 0, 0, 1.9, .85, 2.4); t.add(U.box, c, 0, .52, -1.05, -.2, 0, 0, 1.6, .7, .4);
@@ -28,6 +29,8 @@ function buildPanzerGeo() {
   t.add(U.box, c, 0, .55, 1.6, 0, 0, 0, 2.5, 1.0, .05);
   t.add(U.cyl12, c, -.35, 1.05, .9, 0, 0, 0, .38, .3, .38); t.add(U.cyl12, k, -.35, 1.22, .9, 0, 0, 0, .4, .05, .4);
   t.add(U.cyl12, d, 0, .45, -1.4, PI / 2, 0, 0, .14, .5, .14);
+  t.add(U.cyl12, k, .28, .42, -1.55, PI / 2, 0, 0, .025, .5, .025);
+  t.add(U.cyl, k, -.35, 1.32, .9, 0, 0, 0, .025, .3, .025); t.add(U.box, k, -.35, 1.5, .78, 0, 0, 0, .07, .1, .5); t.add(U.cyl12, k, -.35, 1.52, .25, PI / 2, 0, 0, .022, .6, .022); t.add(U.box, 0x3a3020, -.28, 1.42, .82, 0, 0, 0, .1, .1, .16);
   TANKS.tur = t.buildGroups();
   const g = new MB(); g.mat = 'paint';
   g.add(U.cyl12, d, 0, 0, -2.4, PI / 2, 0, 0, .075, 4.6, .075); g.add(U.cyl12, k, 0, 0, -4.75, PI / 2, 0, 0, .13, .32, .13);
@@ -63,7 +66,8 @@ class Panzer {
   }
   fireMG(byPlayer) {
     if (this.mgT > 0) return; this.mgT = .07;
-    const o = this.muzzle(new V3()).addScaledVector(this.aimDir(new V3()), -3.2), d = this.aimDir(new V3());
+    this.g.updateMatrixWorld(true); const o = new V3(.28, .42, -1.8).applyMatrix4(this.tg.matrixWorld), d = this.aimDir(new V3());
+    PS_FIRE.emit(o.x, o.y, o.z, d.x * 3, d.y * 3, d.z * 3, .04, .25, .4, 1, 4, 2.6, 1.2);
     d.x += rnd(-.01, .01); d.y += rnd(-.008, .008); d.normalize();
     if (!byPlayer) { const t = this.target; if (!t) return; const tp = t === P ? P.chest(new V3()) : t.chest(new V3()); if (R() < .4) fxTracer(o, tp.clone().add(new V3(rnd(-2, 2), rnd(-1, 1), rnd(-2, 2))), 1.2); sfxShot('mg42', o); if (R() < .12) { if (t === P) P.damage(rnd(20, 35) * D.dmg, o); else t.damage(rnd(30, 60), o, false, 'body'); } else if (t === P) P.nearMiss(o, tp); return; }
     const r = hitscan(o, d, 600), p = o.clone().addScaledVector(d, r.t);
@@ -148,7 +152,7 @@ function enterTank(t) {
 }
 function leaveTank() {
   const t = TANKS.me; if (!t) return;
-  t.player = false; TANKS.me = null; t.goal = null; P.mode = 'foot'; $('stHud').style.display = 'none';
+  t.player = false; TANKS.me = null; t.goal = null; P.mode = 'foot'; $('stHud').style.display = 'none'; $('tankAim').style.display = 'none'; $('tankSight').style.display = 'none';
   P.pos.set(t.pos.x + Math.cos(t.yaw) * 3, 0, t.pos.z - Math.sin(t.yaw) * 3); P.pos.y = Hf(P.pos.x, P.pos.z);
   camera.fov = SETTINGS.fov; camera.updateProjectionMatrix();
 }
@@ -161,6 +165,13 @@ function updateTankMode(dt) {
   else { camera.position.set(t.pos.x + Math.sin(ay) * 10, t.pos.y + 5.2, t.pos.z + Math.cos(ay) * 10); camera.rotation.set(t.gpitch - .2, ay, 0, 'YXZ'); }
   camera.position.x += rnd(-1, 1) * P.shake * .05; camera.position.y += rnd(-1, 1) * P.shake * .05; P.shake = Math.max(0, P.shake - dt * 2);
   const fov = zoom ? 18 : 70; if (Math.abs(camera.fov - fov) > .1) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 8)); camera.updateProjectionMatrix(); }
+  // punto d'impatto del cannone proiettato sullo schermo
+  const mo = t.muzzle(new V3()), md = t.aimDir(new V3()), rr = hitscan(mo.clone().addScaledVector(md, 1), md, 1200), ip = mo.addScaledVector(md, rr.t + 1);
+  _hv.copy(ip).project(camera);
+  const ta = $('tankAim'); ta.style.display = zoom ? 'none' : 'block'; ta.style.left = ((_hv.x * .5 + .5) * innerWidth) + 'px'; ta.style.top = ((-_hv.y * .5 + .5) * innerHeight) + 'px';
+  ta.classList.toggle('ready', t.reload <= 0);
+  $('tankSight').style.display = zoom ? 'block' : 'none';
+  $('tankRange').textContent = Math.round(rr.t) + ' m';
   $('stHud').innerHTML = `<b>Panzer IV</b> — scafo ${Math.max(0, Math.round(t.hp / 15))}% · ${Math.round(Math.abs(t.speed) * 3.6)} km/h · ${t.reload > 0 ? 'cannone in ricarica ' + t.reload.toFixed(1) + ' s' : '<b class="ok">CANNONE PRONTO</b>'}<br><small>W/S/A/D guida · mouse torretta · click sx cannone · click dx mirino · F mitragliatrice · E esci</small>`;
 }
 // ---------- schieramento ----------
