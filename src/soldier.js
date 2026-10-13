@@ -241,10 +241,11 @@ class Soldier {
     }
     if (this.state === 'move') return;
     this.wait -= this.thinkDt * (MISSION.suppT > 0 || PT === 'E' ? 3 : 1);
-    if (this.wait <= 0 && Z) this.pickCover(Z);
+    if (this.wait <= 0 && (Z || Math.abs(this.pos.x) > 215)) this.pickCover(Z);
   }
   pickCover(Z) {
     const p = this.pos;
+    if (Math.abs(p.x) > 215 && p.z > -62 && !(Z && Z.defend)) Z = { zMin: -56.8, zMax: 90, xMin: p.x - 45, xMax: p.x + 45, step: 13, wait: (Z && Z.wait) || [2.5, 6] };
     let best = null, bs = -1e9;
     for (const c of covers) {
       if (c.occ >= 2 || c.z > Z.zMax || c.z < Z.zMin || c.x < Z.xMin || c.x > Z.xMax) continue;

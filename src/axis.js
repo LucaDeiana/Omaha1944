@@ -10,6 +10,7 @@ function holdText(t, total) { const r = Math.max(0, total - t); return Math.floo
 function initAxis() {
   const xs = [-97, -72, -47, -22, 3, 28, 53];
   const per = clamp(Math.floor((Q.allyAlive * .55) / 7), 4, 10);
+  for (let k = 0; k < 10; k++) { const fx = rnd(260, MAPX - 120) * (k % 2 ? 1 : -1); fillBoat(new Boat(fx, rnd(330, 420), rnd(8.2, 9), 82), clamp(Math.floor(per * .7), 4, 8), false); }
   for (const x of xs) fillBoat(new Boat(x, rnd(330, 380), rnd(8.2, 8.9), 82), per, false);
   for (let i = 0; i < 6; i++) addCorpse('E', rnd(-150, 150), rnd(-96, -84));
   spawnBeachDefenders(); battleSmoke(); spawnBeachHolders();

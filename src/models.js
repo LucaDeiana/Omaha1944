@@ -246,8 +246,36 @@ function buildWarship(type, o = {}) {
     for (let k = 0; k < 5; k++) mb.add(cylG2(.28, .28, 6.5, 10), 0x5e666d, -1 + k * .5, yD + 1.2, -L * .02, 0, PI / 2, PI / 2);
     for (const sx of [-1, 1]) mb.add(U.box, 0x3a3e42, sx * 3, yD + .7, -L * .45, 0, 0, 0, 1, 1.2, 4);
   }
+  // dettagli: oblò, Oerlikon da 20 mm, proiettori, telemetro, manicotti di ventilazione, catene dell'ancora, sartiame
+  if (type !== 'lst') {
+    const secs = hullSections(L, B, F, P_.Dr, 100);
+    mb.mat = 'vc';
+    for (let i = 0; i < 70; i++) {
+      const t = .12 + i / 70 * .74, sec = secs[Math.round(t * 100)], zz = -L / 2 + t * L, hx = sec[6].x;
+      for (const sx of [-1, 1]) for (const ry of [.35, .6]) mb.add(cylG2(1, 1, 1, 8), 0x101214, sx * (hx * .985 + .02), F * ry + .4, zz, 0, 0, PI / 2, .16, .06, .16);
+    }
+    mb.mat = 'paint';
+    const oN = type === 'bb' ? 18 : type === 'cl' ? 12 : 6;
+    for (let k = 0; k < oN; k++) {
+      const t = .15 + (k >> 1) / (oN / 2) * .7, sec = secs[Math.round(t * 100)], zz = -L / 2 + t * L, sx = k % 2 ? 1 : -1, x = sx * (sec[7].x - 1.4);
+      mb.add(cylG2(.25, .3, .9, 10), 0x4d555c, x, yD + .45, zz); mb.add(U.box, 0x5a636a, x - sx * .35, yD + 1.3, zz, 0, 0, 0, .06, .8, 1.1);
+      mb.add(cylG2(.06, .06, 1.6, 6), 0x1c1e20, x + sx * .1, yD + 1.35, zz, 0, 0, sx * -1.2); mb.add(cylG2(.13, .13, .35, 8), 0x2a2d30, x, yD + 1.2, zz, 0, 0, PI / 2);
+    }
+    for (const sx of [-1, 1]) for (const lz of [bz - 1, -L * .12]) {
+      mb.add(cylG2(.9, .9, .25, 14), 0x4a5258, sx * B * .17, yD + (lz === bz - 1 ? 10.2 : 7.4), lz); mb.add(cylG2(.55, .55, .9, 14), 0x3c4248, sx * B * .17, yD + (lz === bz - 1 ? 10.8 : 8), lz, PI / 2, 0, 0);
+      mb.mat = 'vc'; mb.add(cylG2(.48, .48, .05, 14), 0xd8e0e6, sx * B * .17, yD + (lz === bz - 1 ? 10.8 : 8), lz - .46, PI / 2, 0, 0); mb.mat = 'paint';
+    }
+    if (type !== 'dd') { mb.add(cylG2(.32, .32, B * .42, 12), 0x3a4046, 0, yD + 10.2, bz + 2.4, 0, 0, PI / 2); for (const sx of [-1, 1]) mb.add(cylG2(.5, .5, .5, 12), 0x2a2e32, sx * B * .21, yD + 10.2, bz + 2.4, 0, 0, PI / 2); mb.add(U.box, 0x4a5258, 0, yD + 10.2, bz + 2.4, 0, 0, 0, 1.6, 1, 1.6); }
+    for (let k = 0; k < 10; k++) { const x = rnd(-B * .25, B * .25), zz = rnd(-L * .3, L * .3); if (Math.abs(zz) < L * .16 && Math.abs(x) < B * .26) continue; mb.add(cylG2(.25, .25, 1.4, 10), 0x6a737a, x, yD + .7, zz); mb.add(cylG2(.45, .3, .5, 10), 0x6a737a, x, yD + 1.5, zz + .15, -.9, 0, 0); mb.mat = 'vc'; mb.add(cylG2(.3, .3, .05, 10), 0x0e0f10, x, yD + 1.6, zz + .42, -.9 + PI / 2, 0, 0); mb.mat = 'paint'; }
+    for (const sx of [-1, 1]) for (let k = 0; k < 14; k++) mb.add(new THREE.TorusGeometry(.16, .05, 4, 8), 0x1d1e1f, sx * B * .12 + sx * k * .02, yD + .08, L * .43 - k * .32, PI / 2, 0, k % 2 ? PI / 2 : 0);
+    for (const sx of [-1, 1]) mb.add(cylG2(.6, .7, .7, 12), 0x2a2c2e, sx * B * .12, yD + .35, L * .37);
+    mb.mat = 'vc';
+    const top = new V3(0, yD + 2.8 + mastH, bz - L * .03);
+    for (const p of [new V3(0, yD + 1, L * .47), new V3(0, yD + 1, -L * .47), new V3(B * .45, yD + 1, bz), new V3(-B * .45, yD + 1, bz), new V3(0, yD + 2.8 + mastH * .72, -L * .14)]) mb.between(top, p, .025, 0x202224);
+    mb.mat = 'paint';
+  }
   // corrimano
-  if (o.rails) {
+  if (o.rails || type === 'bb' || type === 'cl') {
     mb.mat = 'paint';
     for (let i = 0; i < 60; i++) {
       const t = .08 + i / 60 * .84, sec = hullSections(L, B, F, P_.Dr, 100)[Math.round(t * 100)], dz = sec[7], dzz = -L / 2 + t * L;

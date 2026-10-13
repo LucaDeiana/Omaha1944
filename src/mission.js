@@ -71,6 +71,7 @@ function initMission() {
   if (PT === 'E') { initAxis(); return; }
   const xs = [-97, -72, -47, -22, 3, 28, 53];
   const per = clamp(Math.floor((Q.allyAlive * .55 - 9) / 6), 4, 10);
+  for (let k = 0; k < 10; k++) { const fx = rnd(260, MAPX - 120) * (k % 2 ? 1 : -1); fillBoat(new Boat(fx, rnd(330, 420), rnd(8.2, 9), 82), clamp(Math.floor(per * .7), 4, 8), false); }
   for (const x of xs) {
     const me = x === -22;
     const b = new Boat(x, me ? 380 : rnd(368, 396), me ? 8.5 : rnd(8.2, 8.9), 82);
@@ -126,7 +127,7 @@ function spawnWave(withPlayer) {
   let pb = null;
   for (let i = 0; i < nb; i++) {
     const cx = P.mode === 'foot' ? clamp(P.pos.x, -MAPX + 200, MAPX - 200) : rnd(-600, 600);
-    const x = withPlayer && i === 0 ? clamp(P.pos.x || -22, -MAPX + 100, MAPX - 100) : cx + rnd(-220, 220);
+    const x = withPlayer && i === 0 ? clamp(P.pos.x || -22, -MAPX + 100, MAPX - 100) : R() < .45 ? rnd(-MAPX + 120, MAPX - 120) : cx + rnd(-220, 220);
     const b = new Boat(x, withPlayer && i === 0 ? 150 : rnd(200, 260), rnd(8.6, 9.6), 82);
     fillBoat(b, per, false, withPlayer && i === 0);
     if (withPlayer && i === 0) pb = b;
