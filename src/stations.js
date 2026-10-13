@@ -16,6 +16,13 @@ function initStations() {
       label: 'Premi E per prendere la MG42 del bunker',
     });
   }
+  for (const a of WORLD.aaSites) {
+    if (!a.mesh) continue;
+    const p = new V3(a.x, Hf(a.x, a.z), a.z);
+    STATIONS.push({ type: 'flak', aa: a, occupant: null, entry: p, cam: p.clone().add(new V3(0, 1.7, .9)), yaw0: PI,
+      usable() { return !a.dead && (PT === 'E' || !enemies.some(e => e.alive && e.role === 'aa' && Math.hypot(e.pos.x - a.x, e.pos.z - a.z) < 5)); },
+      label: 'Premi E per usare la Flak 38 da 20 mm' });
+  }
   for (const mp of WORLD.mortarPits) {
     const p = new V3(mp.x, Hf(mp.x, mp.z), mp.z);
     STATIONS.push({
@@ -56,6 +63,9 @@ function enterStation(s) {
     P.pos.set(s.cam.x, s.cam.y - 1.55, s.cam.z - .2);
     if (s.b.gunner && s.b.gunner.alive) { s.b.manned = true; s.b.gunner.pos.x = s.b.x + 2.6; s.b.gunner.pos.z = s.b.z + 1; }
     showMsg('MG42 — click sx: fuoco · R: nastro · E: esci', 3);
+  } else if (s.type === 'flak') {
+    P.yaw = PI; P.pitch = .5; P.pos.copy(s.entry); STN.flakT = 0;
+    showMsg('Flak 38 — mouse: mira · click sx: fuoco · click dx: zoom · E: esci', 3.5);
   } else {
     STN.tgt.set(s.mp.x, 0, s.mp.z + 120); P.pos.copy(s.entry);
     showMsg('Mortaio da 81 mm — mouse: bersaglio · click sx: fuoco · E: esci', 3.5);
@@ -67,11 +77,12 @@ function leaveStation() {
   s.occupant = null; if (s.b) { s.b.manned = false; if (s.b.gunner && s.b.gunner.alive) { s.b.gunner.pos.x = s.b.x; s.b.gunner.pos.z = s.b.z + 2.5; } } STN.cur = null; netSend({ t: 'occ', i: STATIONS.indexOf(s), on: false });
   if (STN.gun) STN.gun.visible = false;
   $('stHud').style.display = 'none'; $('mortRet').style.display = 'none';
-  if (P.mode === 'mg' || P.mode === 'mortar') P.mode = 'foot';
+  if (P.mode === 'mg' || P.mode === 'mortar' || P.mode === 'flak') P.mode = 'foot';
   if (s.type === 'mg') P.pos.copy(s.entry).add(new V3(0, 0, -1.2)); else { P.pos.copy(s.entry).add(new V3(0, 0, -2)); } P.pos.y = Math.max(Hf(P.pos.x, P.pos.z), bunkerStep(P.pos.x, P.pos.z));
   camera.fov = SETTINGS.fov; camera.updateProjectionMatrix();
 }
 function stationMouse(mx, my) {
+  if (P.mode === 'flak') { const s = .0021 * SETTINGS.sens * (camera.fov / 70); P.yaw -= mx * s; P.pitch = clamp(P.pitch - my * s, -.08, 1.4); return; }
   if (P.mode === 'mg') {
     const s = .0021 * SETTINGS.sens;
     P.yaw = clamp(P.yaw - mx * s, STN.cur.yaw0 - .85, STN.cur.yaw0 + .85); P.pitch = clamp(P.pitch - my * s, -.42, .16);
@@ -110,8 +121,34 @@ function mgFire() {
   for (const e of FOES()) if (e.alive && e.pos.distanceToSquared(p) < 12) e.supp = Math.min(1, e.supp + .5);
   STATS.shots++;
 }
+function flakFire(s) {
+  STN.flakT = .11; camera.getWorldPosition(_so); camera.getWorldDirection(_sd);
+  _sd.x += rnd(-.004, .004); _sd.y += rnd(-.004, .004); _sd.z += rnd(-.004, .004); _sd.normalize();
+  sfxShot('flak', _so, true); P.shake = Math.min(.5, P.shake + .08); flashLight(_so, 0xffb060, 18, .05);
+  const foe = PT === 'A' ? 'E' : 'A';
+  let hit = null, ht = 1500;
+  for (const pl of PLANES) if (pl.team === foe && pl.alive && !pl.crash) { const t = raySphere(_so, _sd, pl.pos, 7); if (t > 0 && t < ht) { ht = t; hit = pl; } }
+  const fuse = hit ? ht : rnd(500, 900), e = _so.clone().addScaledVector(_sd, fuse);
+  fxTracer(_so.clone().addScaledVector(_sd, 3), e, 2.2);
+  after(fuse / 900, () => { PS_SMOKE.emit(e.x, e.y, e.z, 0, 0, 0, 4, 2, 6, .8, .06, .06, .06, .2, 0); PS_FIRE.emit(e.x, e.y, e.z, 0, 0, 0, .15, 2, 3, 1, 4, 2.5, 1); });
+  if (hit) { hit.damage(rnd(90, 140), true); hitMarker(!hit.alive || hit.crash, false); }
+  else if (_sd.y < .05) { const r = hitscan(_so.clone().addScaledVector(_sd, 2), _sd, 700); const p = _so.clone().addScaledVector(_sd, r.t + 2); if (r.type === 'enemy') r.obj.damage(140, _so, true, 'body', { dir: _sd.clone(), power: 4, joint: 15 }); fxImpact(p, 'dirt'); }
+  netShot(_so, e, 'flak');
+}
 function updateStation(dt) {
   const s = STN.cur; if (!s) { P.mode = 'foot'; return; }
+  if (s.type === 'flak') {
+    if (P.dead || s.aa.dead) { leaveStation(); return; }
+    STN.flakT -= dt; if (mouseL && STN.flakT <= 0) flakFire(s);
+    P.shake = Math.max(0, P.shake - dt * 2);
+    camera.position.copy(s.cam).add(_so.set(rnd(-1, 1) * P.shake * .03, rnd(-1, 1) * P.shake * .03, 0));
+    camera.rotation.set(P.pitch, P.yaw, 0, 'YXZ');
+    if (s.aa.mesh) s.aa.mesh.rotation.y = P.yaw - PI;
+    const fov = P.adsHeld ? 30 : 70; if (Math.abs(camera.fov - fov) > .1) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 10)); camera.updateProjectionMatrix(); }
+    const foes = PLANES.filter(p => p.team === (PT === 'A' ? 'E' : 'A') && p.alive && !p.crash).length;
+    $('stHud').innerHTML = `<b>Flak 38 da 20 mm</b> — aerei nemici in volo: ${foes}<br><small>Mouse: mira (anticipa il bersaglio) · Click sx: fuoco · Click dx: zoom · E: esci</small>`;
+    return;
+  }
   if (P.dead || (s.type === 'mg' && s.b.destroyed)) { leaveStation(); return; }
   P.shake = Math.max(0, P.shake - dt * 2);
   if (s.type === 'mg') {

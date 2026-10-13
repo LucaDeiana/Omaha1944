@@ -14,7 +14,7 @@ for (const h of HEDGES) for (let x = -MAPX; x < MAPX; x += 180) if (Math.abs(x) 
 for (const d of DRAWS) if (d !== -30) for (const h of HEDGES) h.gaps.push([d - 10, d + 10]);
 const WORLD = {
   wireBreached: false, wireGaps: [], bunkers: [], flaks: [], boats: [], shipGuns: [], crates: [], pickups: [], shells: [], bombard: 'bluff', villageY: 0,
-  mortarPits: [[-125, -103], [-58, -106], [32, -104], [112, -102]].map(([x, z]) => ({ x, z })), aaSites: [[-75, -110], [5, -112], [75, -108]].map(([x, z]) => ({ x, z })),
+  mortarPits: [[-125, -103], [-58, -106], [32, -104], [112, -102]].map(([x, z]) => ({ x, z })), aaSites: [[-75, -110], [5, -112], [75, -108], [-160, -108], [-32, -116], [135, -110], [-200, -432], [150, -432], [-60, -548], [260, -548], [-310, -664], [40, -664], [330, -432]].map(([x, z]) => ({ x, z })),
   texas: null,
 };
 let waterMat, wireLines = null;
