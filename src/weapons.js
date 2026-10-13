@@ -508,6 +508,7 @@ function updateGunLead(dt) {
   GL.vx += ((GL.tx - GL.x) * 210 - GL.vx * 17) * d; GL.vy += ((GL.ty - GL.y) * 210 - GL.vy * 17) * d;
   GL.x += GL.vx * d; GL.y += GL.vy * d;
 }
+const T6 = new V3(), T7 = new V3(), T8 = new V3(), _crInv = new THREE.Matrix4();
 function updateViewmodel(dt) {
   const s = P.slot();
   setViewmodel(P.carry || P.dead || !s || P.mode !== 'foot' ? null : s.id);
@@ -559,9 +560,23 @@ function updateViewmodel(dt) {
   } else if (vmCur.bolt && P.reloadT <= 0) { vmCur.bolt.position.z = .03; vmCur.bolt.rotation.z = 0; }
   if (vmCur.slide) vmCur.slide.position.z = P.recoil * .03 + (s.mag === 0 ? .03 : 0);
   if (P.switchT > 0) { y -= P.switchT * .5; rx -= P.switchT * 1.2; }
+  // strisciata: arma ruotata sul fianco, la mano sinistra si allunga, si pianta a terra e tira
+  const ck = P.crawlK || 0, elb = T6.copy(vmCur.elbowL);
+  if (ck > .01) {
+    x += .1 * ck; y -= .09 * ck; z += .06 * ck; ry += .7 * ck; rz += .75 * ck; rx -= .12 * ck;
+    const ph = P.crawlPh || 0, hc = T7;
+    if (ph < .35) { const t = smooth(ph / .35); hc.set(lerp(-.17, -.24, t), lerp(-.33, -.26, t) + Math.sin(t * PI) * .09, lerp(-.36, -.82, t)); }
+    else { const t = smooth((ph - .35) / .65); hc.set(lerp(-.24, -.17, t), lerp(-.26, -.33, t), lerp(-.82, -.36, t)); }
+    g.position.set(x, y, z); g.rotation.set(rx, ry, rz); g.updateMatrix(); _crInv.copy(g.matrix).invert();
+    const hl = T8.copy(hc).applyMatrix4(_crInv);
+    _lh.lerp(hl, ck);
+    const eCam = T8.copy(hc).add(T3.set(-.14, -.06, .32)); eCam.z = Math.max(eCam.z, -.25);
+    elb.lerp(eCam.applyMatrix4(_crInv), ck);
+  }
   vmCur.lhand.position.copy(_lh);
+  if (ck > .01) vmCur.lhand.rotation.set(-1.2 * ck, 0, .4 * ck); else vmCur.lhand.rotation.set(0, 0, 0);
   _ea.copy(_lh).add(T3.set(-.02, -.04, .03));
-  const la = vmCur.larm, dv = T5.subVectors(vmCur.elbowL, _ea);
+  const la = vmCur.larm, dv = T5.subVectors(elb, _ea);
   la.position.copy(_ea).addScaledVector(dv, .5); la.quaternion.setFromUnitVectors(T4.set(0, 1, 0), dv.clone().normalize()); la.scale.set(1, dv.length(), 1);
   g.position.set(x, y, z); g.rotation.set(rx, ry, rz);
   if (P.flashT > 0) { P.flashT -= dt; vmFlash.visible = P.flashT > 0; } else vmFlash.visible = false;

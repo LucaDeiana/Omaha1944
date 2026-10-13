@@ -151,6 +151,10 @@ function updatePlayer(dt) {
   P.sprint = !!KEYS.ShiftLeft && f > 0 && P.stance !== 2 && !P.winded && !P.swim && P.adsK < .3 && P.shock < .5;
   if (P.sprint && P.stance === 1) P.stance = 0;
   let sp = [4.3, 2.2, 1.0][P.stance];
+  // strisciata: la spinta arriva quando il braccio sinistro tira il corpo in avanti
+  const crawling = P.stance === 2 && (f || st) && !P.swim;
+  if (crawling) { P.crawlPh = ((P.crawlPh || 0) + dt * .85) % 1; sp *= P.crawlPh > .35 ? .45 + 1.3 * Math.sin((P.crawlPh - .35) / .65 * PI) : .3; if (P.crawlPh > .35 && P.crawlPh - dt * .85 <= .35) play('bodyfall', null, { vol: .12, rate: 1.6 }); }
+  P.crawlK = lerp(P.crawlK || 0, crawling && P.adsK < .3 ? 1 : 0, Math.min(1, dt * 6));
   if (P.sprint) sp = 6.9;
   sp *= (w && w.speedMul) || 1;
   if (P.adsK > .5) sp *= .6;
