@@ -327,23 +327,57 @@ function groupMesh(groups, cast = true) {
 // ---------- mezzo da sbarco LCVP ----------
 let LCVP_G, RAMP_G;
 function buildBoatGeos() {
-  const mb = new MB(), c = 0x56635a, d = 0x46524a;
-  mb.mat = 'paint';
-  mb.add(U.box, d, 0, .12, 0, 0, 0, 0, 3.3, .5, 10.2);
-  for (const sx of [-1, 1]) { mb.add(U.box, c, sx * 1.62, 1.08, .1, 0, 0, 0, .14, 1.95, 10); mb.add(U.box, d, sx * 1.66, 2.07, 0, 0, 0, 0, .24, .09, 10.2); mb.add(U.box, d, sx * 1.6, 1.08, -5.05, 0, 0, 0, .3, 1.95, .3); }
-  mb.add(U.box, c, 0, 1.08, 5.05, 0, 0, 0, 3.3, 1.95, .14);
-  mb.add(U.box, c, 0, 2.25, 4.4, 0, 0, 0, 1.4, .8, 1.1); mb.add(U.box, 0x222222, 0, 2.5, 4.0, 0, 0, 0, .8, .25, .05);
-  for (let i = -4; i <= 4; i += 1.3) for (const sx of [-1, 1]) mb.add(U.box, d, sx * 1.53, 1, i, 0, 0, 0, .06, 1.8, .1);
-  for (const sx of [-1, 1]) { mb.add(U.cyl, 0x1e1e1e, sx * 1.35, 2.55, 4.1, PI / 2 - .25, 0, 0, .03, 1.1, .03); mb.add(U.box, 0x222222, sx * 1.35, 2.42, 4.6, 0, 0, 0, .1, .15, .25); mb.add(U.cyl, 0x333333, sx * 1.35, 2.2, 4.6, 0, 0, 0, .04, .4, .04); }
+  const mb = new MB(), c = 0x4b574f, d = 0x3d4740;
+  // scafo sagomato: fondo a V che si alza verso la prua, fianchi leggermente svasati
+  const secs = [];
+  for (let i = 0; i <= 12; i++) {
+    const z = 5.1 - i * (10.2 / 12), t = i / 12, k = lerp(-.28, .12, t * t), sw = 1.66 + Math.sin(t * PI) * .06;
+    const ring = [[-sw - .04, 2.1], [-sw - .02, 1.3], [-sw + .04, .55], [-sw + .3, .12], [-.75, k + .06], [0, k], [.75, k + .06], [sw - .3, .12], [sw - .04, .55], [sw + .02, 1.3], [sw + .04, 2.1], [0, 2.1]];
+    secs.push(ring.map(([x, y]) => new V3(x, y, z)));
+  }
+  const hull = loftGeo(secs, (p) => col(p.y < .35 ? 0x3c4640 : p.y > 1.95 ? 0x4a564e : 0x56635a), false, 1, (x, y) => y > 2.05 && Math.abs(x) < 1.6);
+  mb.mat = 'paint'; mb.addG(hull);
+  for (const sx of [-1, 1]) {
+    mb.add(U.box, d, sx * 1.53, 1.15, .1, 0, 0, 0, .1, 1.8, 10);          // fasciame interno
+    mb.add(U.box, 0x3a443e, sx * 1.74, 2.12, 0, 0, 0, 0, .3, .1, 10.3);   // capodibanda
+    mb.add(U.box, 0x3a443e, sx * 1.76, 1.3, 0, 0, 0, 0, .08, .12, 10.2);  // bottazzo
+    mb.add(U.box, d, sx * 1.6, 1.08, -5.05, 0, 0, 0, .34, 2.1, .3);       // montanti di prua
+    for (let i = -4.2; i <= 4.2; i += 1.05) mb.add(U.box, 0x3c4740, sx * 1.43, 1.15, i, 0, 0, 0, .12, 1.6, .1); // ordinate
+    for (const z of [-3.5, 0, 3.4]) { mb.add(U.cyl, 0x2a2a2a, sx * 1.7, 2.2, z, 0, 0, 0, .05, .1, .05); mb.add(U.box, 0x2a2a2a, sx * 1.7, 2.26, z, 0, 0, 0, .06, .04, .3); } // bitte
+  }
+  mb.add(U.box, c, 0, 1.15, 5.05, 0, 0, 0, 3.4, 2.1, .14);
+  // postazione del timoniere con scudi corazzati
+  mb.add(U.box, d, 0, 1.3, 4.5, 0, 0, 0, 3.1, .12, 1.0);
+  mb.add(U.box, c, .9, 2.35, 4.15, 0, 0, 0, .9, .55, .08); mb.add(U.box, c, -.9, 2.35, 4.15, 0, 0, 0, .9, .55, .08);
+  mb.add(U.box, 0x2c2c2c, .9, 2.45, 4.2, 0, 0, 0, .3, .12, .1);
+  mb.add(U.cyl12, 0x1d1d1d, .9, 1.85, 4.55, PI / 2, 0, 0, .2, .04, .2); mb.add(U.cyl, 0x333333, .9, 1.6, 4.6, 0, 0, 0, .04, .5, .04);
+  // vano motore e scarico
+  mb.add(U.box, 0x4a564e, 0, .9, 3.6, 0, 0, 0, 1.3, .8, 1.4); mb.add(U.box, 0x3d4842, 0, 1.32, 3.6, 0, 0, 0, 1.36, .06, 1.46);
+  mb.add(U.cyl, 0x2b2622, -1.2, 2.1, 4.9, 0, 0, 0, .09, .7, .09);
+  // mitragliatrici Browning .30 sulle ralle di poppa
+  for (const sx of [-1, 1]) {
+    mb.add(U.cyl12, 0x2e2e2e, sx * 1.35, 2.2, 4.75, 0, 0, 0, .12, .05, .12); mb.add(U.cyl, 0x333333, sx * 1.35, 2.35, 4.75, 0, 0, 0, .03, .3, .03);
+    mb.add(U.box, 0x1e1e1e, sx * 1.35, 2.52, 4.6, 0, 0, 0, .1, .16, .4); mb.add(U.cyl, 0x1a1a1a, sx * 1.35, 2.56, 4.0, PI / 2 - .2, 0, 0, .03, 1.0, .03);
+    mb.add(U.cyl, 0x1a1a1a, sx * 1.35, 2.55, 4.25, PI / 2 - .2, 0, 0, .05, .45, .05); mb.add(U.box, 0x3d3a2a, sx * 1.42, 2.45, 4.6, 0, 0, 0, .1, .12, .18);
+  }
+  // pagliolato bagnato con acqua sul fondo
   mb.mat = 'wood';
-  mb.add(U.box, 0x7a6248, 0, .44, 0, 0, 0, 0, 3.05, .05, 9.7);
-  for (let i = -4; i <= 4; i += 2) mb.add(U.box, 0x6a5440, 0, .47, i, 0, 0, 0, 3, .02, .08);
+  for (let x = -1.35; x <= 1.36; x += .3) mb.add(U.box, 0x6a5440, x, .44, -.4, 0, 0, 0, .27, .05, 8.6);
+  for (let i = -4 ; i <= 3; i += 1.4) mb.add(U.box, 0x5a4636, 0, .47, i, 0, 0, 0, 3, .03, .1);
+  mb.mat = 'vc';
+  for (let i = 0; i < 7; i++) mb.add(U.cyl12, 0x1c2622, rnd(-1, 1), .472, rnd(-4.3, 2), 0, 0, 0, rnd(.3, .7), .005, rnd(.4, 1.1)); // pozze d'acqua
+  for (let i = 0; i < 6; i++) mb.add(U.box, R() < .5 ? 0x3a3a2a : 0x4a4230, rnd(-1.2, 1.2), .56, rnd(-4, 2.5), 0, R() * 3, 0, rnd(.3, .55), .2, rnd(.25, .45)); // casse e zaini
   LCVP_G = mb.buildGroups();
+  // rampa: lamiera rinforzata, cerniere e cavi
   const rb = new MB(); rb.mat = 'paint';
-  rb.add(U.box, 0x55625a, 0, 1, 0, 0, 0, 0, 3.2, 2, .12);
-  for (const y of [.35, .8, 1.25, 1.7]) rb.add(U.box, 0x66726a, 0, y, -.09, 0, 0, 0, 3.1, .07, .08);
-  for (const x of [-1.2, 0, 1.2]) rb.add(U.box, 0x66726a, x, 1, -.09, 0, 0, 0, .08, 1.9, .08);
-  rb.add(U.box, 0x555f58, 0, 1.98, -.02, 0, 0, 0, 3.2, .06, .2);
+  rb.add(U.box, 0x55625a, 0, 1.02, 0, 0, 0, 0, 3.2, 2.05, .12);
+  for (const y of [.3, .7, 1.1, 1.5, 1.85]) rb.add(U.box, 0x66726a, 0, y, -.1, 0, 0, 0, 3.1, .07, .09);
+  for (const x of [-1.25, -.6, 0, .6, 1.25]) rb.add(U.box, 0x66726a, x, 1, -.1, 0, 0, 0, .07, 1.95, .09);
+  for (const y of [.3, .7, 1.1, 1.5]) rb.add(U.box, 0x4f5a52, 0, y, .08, 0, 0, 0, 2.9, .04, .05); // listelli antiscivolo
+  rb.add(U.box, 0x555f58, 0, 2.05, -.02, 0, 0, 0, 3.25, .08, .22);
+  for (const x of [-1.2, -.4, .4, 1.2]) rb.add(U.cyl12, 0x30302c, x, .05, 0, 0, 0, PI / 2, .07, .3, .07); // cerniere
+  rb.mat = 'vcMetal';
+  for (const sx of [-1, 1]) for (let k = 0; k < 6; k++) rb.add(U.box, 0x22201e, sx * 1.45, 1.98 + k * .02, .12 + k * .1, 1.2, 0, 0, .025, .07, .04); // cavi del verricello
   RAMP_G = rb.buildGroups();
 }
 class Boat {
@@ -378,7 +412,7 @@ class Boat {
       this.ramp = Math.min(1, this.ramp + dt * .85); this.pivot.rotation.x = -1.45 * smooth(this.ramp);
       if (this.ramp >= 1) { const p = new V3(this.x, WATER_Y, this.z - 7); fxImpact(p, 'water'); play('imp_water', p, { ref: 20, vol: 1.5, rate: .6 }); }
     }
-    let y = waveH(this.x, this.z, t) * (this.state === 'move' ? 1 : .35);
+    let y = .32 + waveH(this.x, this.z, t) * (this.state === 'move' ? 1 : .35);
     const pitch = this.state === 'move' ? (waveH(this.x, this.z - 4, t) - waveH(this.x, this.z + 4, t)) * .1 : 0;
     if (this.state === 'sunk') { this.sinkT += dt; y -= Math.min(1.7, this.sinkT * .25); this.g.rotation.z = Math.min(.35, this.sinkT * .05); }
     this.y = y;
