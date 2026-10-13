@@ -7,8 +7,8 @@ const CROWD = { meshes: {}, frustum: new THREE.Frustum(), pm: new THREE.Matrix4(
 const BODIES = [];
 const DOWN = new V3(0, -1, 0);
 const SCOL2 = {
-  A: { jacket: 0x6f6b4a, jacket2: 0x5f5b3e, pants: 0x5d5940, web: 0x9a9068, pack: 0x77714f, helm: 0x4b5034, net: 0x3c4029, skin: 0xc69a7a, legging: 0xa29775, boot: 0x4a3524, belt2: 0x6b6e5a, metal: 0x2a2a2a, wood: 0x6b4423 },
-  E: { jacket: 0x5f675f, jacket2: 0x535a54, pants: 0x545b56, web: 0x23201c, pack: 0x6b6551, helm: 0x4f5650, net: 0x474d48, skin: 0xc9a083, legging: 0x1d1b19, boot: 0x1d1b19, belt2: 0x58625a, metal: 0x252525, wood: 0x5a3a20 },
+  A: { jacket: 0x5f5c40, jacket2: 0x504d34, pants: 0x535038, web: 0x9a9068, pack: 0x77714f, helm: 0x4b5034, net: 0x3c4029, skin: 0xb88a6a, legging: 0xa29775, boot: 0x4a3524, belt2: 0x6b6e5a, metal: 0x2a2a2a, wood: 0x6b4423 },
+  E: { jacket: 0x545b54, jacket2: 0x474d48, pants: 0x4b514c, web: 0x23201c, pack: 0x6b6551, helm: 0x4f5650, net: 0x474d48, skin: 0xc9a083, legging: 0x1d1b19, boot: 0x1d1b19, belt2: 0x58625a, metal: 0x252525, wood: 0x5a3a20 },
 };
 const ARM_A = .29, ARM_B = .27;
 const SH_L = new V3(-.2, .44, 0), SH_R = new V3(.2, .44, 0);
@@ -25,6 +25,11 @@ const WPOSES = {
 // ---------- geometrie ----------
 const lath = (pts, seg) => new THREE.LatheGeometry(pts.slice().reverse().map(p => new THREE.Vector2(p[0], p[1])), seg);
 const cylG = (rt, rb, h, seg) => new THREE.CylinderGeometry(rt, rb, h, seg);
+// sezioni ellittiche morbide: [y, semilarghezza, semiprofondità, spostamento z]
+function organic(rings, n) {
+  const secs = rings.map(([y, rx, rz, zo = 0]) => { const ring = []; for (let j = 0; j < n; j++) { const a = j / n * TAU, c = Math.cos(a), sn = Math.sin(a); ring.push(new V3(Math.sign(c) * Math.pow(Math.abs(c), .8) * rx, y, zo + Math.sign(sn) * Math.pow(Math.abs(sn), .8) * rz)); } return ring; });
+  return loftGeo(secs, null, true);
+}
 function buildPartGeo(key, hi) {
   const [team, part, kind] = key.split('_'), C = SCOL2[team], s = hi ? 14 : 6, mb = new MB(), A = team === 'A';
   const add = (g, c, x, y, z, rx, ry, rz, sx, sy, sz) => mb.add(g, c, x, y, z, rx || 0, ry || 0, rz || 0, sx ?? 1, sy ?? 1, sz ?? 1);
@@ -37,7 +42,13 @@ function buildPartGeo(key, hi) {
       else { for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) add(U.box, C.web, sx * (.04 + i * .045), .1, -.125, 0, 0, 0, .04, .07, .04); add(U.box, 0x777777, 0, .12, -.122, 0, 0, 0, .045, .04, .01); add(U.box, C.pack, .14, .0, .07, 0, -.4, 0, .16, .15, .06); add(cylG(.05, .05, .15, 10), C.belt2, .16, -.02, .12); add(U.box, C.wood, -.15, .04, .06, .2, 0, 0, .025, .22, .03); }
     }
   } else if (part === 'chest') {
-    add(cylG(.2, .165, .5, s), C.jacket, 0, .25, 0, 0, 0, 0, 1, 1, .62);
+    add(organic([[-.02, .155, .1, 0], [.08, .16, .105, 0], [.2, .17, .115, -.008], [.32, .19, .125, -.012], [.42, .2, .115, 0], [.48, .17, .095, .01], [.52, .08, .07, .01]], hi ? 18 : 8), C.jacket);
+    if (hi) {
+      add(new THREE.TorusGeometry(.068, .016, 5, 14), C.jacket2, 0, .515, .005, PI / 2, 0, 0, 1, 1, 1);         // colletto
+      for (let k = 0; k < 4; k++) add(U.sph, 0x2a2a22, 0, .44 - k * .1, -.122 + k * .004, 0, 0, 0, .009, .009, .005); // bottoni
+      for (const sx of [-1, 1]) add(U.box, C.jacket2, sx * .095, .43, -.118, -.12, 0, 0, .09, .022, .02); // patte dei taschini
+      for (let k = 0; k < 3; k++) add(new THREE.TorusGeometry(.17, .006, 3, 16), C.jacket2, 0, .14 + k * .07, -.004, PI / 2, 0, 0, 1, .66, 1); // pieghe
+    }
     for (const sx of [-1, 1]) add(U.sph, C.jacket, sx * .19, .44, 0, 0, 0, 0, .075, .07, .075);
     add(cylG(.07, .075, .06, s), C.jacket2, 0, .51, 0);
     add(cylG(.055, .06, .1, s), C.skin, 0, .54, 0);
@@ -62,9 +73,9 @@ function buildPartGeo(key, hi) {
       }
     }
   } else if (part === 'head') {
-    add(U.sph, C.skin, 0, .12, 0, 0, 0, 0, .095, .112, .102);
-    add(U.box, C.skin, 0, .05, -.025, 0, 0, 0, .11, .07, .1);
-    add(U.box, C.skin, 0, .115, -.1, -.2, 0, 0, .024, .045, .03);
+    add(organic([[-.02, .045, .05, .0], [.02, .06, .07, -.01], [.045, .072, .085, -.012], [.09, .088, .1, -.004], [.14, .095, .106, .004], [.19, .088, .1, .008], [.225, .06, .07, .008], [.24, .02, .025, .008]], hi ? 16 : 7), C.skin);
+    add(U.box, C.skin, 0, .112, -.103, -.25, 0, 0, .022, .05, .03);
+    if (hi) { add(U.box, C.skin, 0, .086, -.104, 0, 0, 0, .03, .01, .02); add(U.sph, 0x8a6a56, 0, .03, -.06, 0, 0, 0, .055, .03, .04); for (const sx of [-1, 1]) add(U.sph, C.skin, sx * .052, .1, -.075, 0, 0, 0, .025, .018, .02); }
     if (hi) { for (const sx of [-1, 1]) { add(U.sph, C.skin, sx * .097, .12, .005, 0, 0, 0, .014, .03, .022); add(U.sph, 0x2a2018, sx * .034, .14, -.09, 0, 0, 0, .012, .009, .008); add(U.box, 0x4a3828, sx * .035, .162, -.093, 0, 0, sx * .1, .03, .007, .01); } add(U.box, 0x7a4a40, 0, .074, -.098, 0, 0, 0, .035, .007, .01); }
   } else if (part === 'helmet') {
     const ls = hi ? 18 : 8;
@@ -77,15 +88,18 @@ function buildPartGeo(key, hi) {
       if (hi) add(U.cyl, 0x333333, .14, .03, 0, 0, 0, PI / 2, .008, .01, .008);
     }
   } else if (part === 'uarm') {
-    add(cylG(.06, .05, .29, s), C.jacket, 0, -.145, 0);
+    add(organic([[0, .062, .06], [-.08, .064, .058], [-.2, .052, .05], [-.29, .047, .046]], hi ? 10 : 6), C.jacket);
+    if (hi) for (let k = 0; k < 2; k++) add(new THREE.TorusGeometry(.055, .005, 3, 10), C.jacket2, 0, -.18 - k * .05, 0, PI / 2 + .3, 0, 0);
     add(U.sph, C.jacket, 0, -.29, 0, 0, 0, 0, .05, .05, .05);
   } else if (part === 'farm') {
-    add(cylG(.05, .043, .24, s), C.jacket, 0, -.12, 0);
+    add(organic([[0, .05, .048], [-.08, .05, .046], [-.18, .042, .038], [-.24, .04, .034]], hi ? 10 : 6), C.jacket);
     add(cylG(.046, .046, .03, s), C.jacket2, 0, -.235, 0);
-    add(U.box, C.skin, 0, -.29, -.005, 0, 0, 0, .07, .09, .035);
-    if (hi) { add(U.box, C.skin, .035, -.27, -.02, 0, 0, .5, .02, .05, .02); add(U.box, C.skin, 0, -.34, -.012, .5, 0, 0, .065, .03, .025); }
+    add(organic([[-.255, .03, .016], [-.29, .038, .02], [-.32, .036, .017]], hi ? 8 : 5), C.skin);
+    if (hi) { for (let k = 0; k < 4; k++) add(cylG(.0085, .0075, .07, 5), C.skin, -.024 + k * .016, -.35, -.008, .35, 0, 0); add(cylG(.009, .008, .06, 5), C.skin, .036, -.29, -.022, .3, 0, .7); }
+    else add(U.box, C.skin, 0, -.34, -.01, .4, 0, 0, .06, .05, .025);
   } else if (part === 'thigh') {
-    add(cylG(.085, .066, .45, s), C.pants, 0, -.225, 0);
+    add(organic([[.02, .09, .09, .005], [-.1, .088, .085, -.008], [-.25, .074, .072, -.006], [-.4, .062, .064, 0], [-.45, .06, .062, 0]], hi ? 12 : 6), C.pants);
+    if (hi) { add(U.box, C.jacket2, .085, -.2, 0, 0, 0, 0, .02, .13, .1); for (let k = 0; k < 2; k++) add(new THREE.TorusGeometry(.068, .005, 3, 10), C.jacket2, 0, -.36 - k * .04, 0, PI / 2 - .25, 0, 0); }
     if (hi && A) add(U.box, C.jacket2, 0, -.2, -.07, 0, 0, 0, .1, .12, .02);
     add(U.sph, C.pants, 0, -.45, 0, 0, 0, 0, .065, .06, .065);
   } else if (part === 'shin') {
