@@ -493,8 +493,8 @@ function stallResolve() {
   else if (st === 3) { say(N.radio, 'Il 116° ha preso la trincea sulla scogliera!'); for (const e of enemies) if (e.alive && e.group === 'beach' && !e.inBunker && Math.abs(e.pos.z - trenchZ(e.pos.x)) < 4) e.die(null, false, 'blast', { blast: e.pos.clone(), power: 4 }); setStage(4); }
   else if (st === 4) { say(N.radio, 'Qui Texas: bunker sulla scogliera centrati!'); for (const b of WORLD.bunkers) if (!b.neutralized) { boom(b.x, b.z + 2); b.destroy(); onObjectiveEvent('bunker', b, false); } }
   else if (st === 5) { say(N.radio, 'Thunderbolt in picchiata: i cannoni da 88 sono distrutti!'); for (const f of WORLD.flaks) if (f.alive) { boom(f.x, f.z); f.destroy(); onObjectiveEvent('flak', f, false); } }
-  else if (st === 6) { say(N.radio, 'I Ranger sono entrati a Colleville da est!'); for (const e of enemies) if (e.alive && e.group === 'village') e.flee = true; }
-  else if (st === 8) { say(N.radio, 'Bombardieri sulla città: il deposito è in fiamme!'); depotBlast(WORLD.depot.pos, 10, 5000); for (const e of enemies) if (e.alive && e.group === 'city') e.flee = true; }
+  else if (st === 6) { say(N.radio, 'I Ranger sono entrati a Colleville da est!'); for (const e of enemies) if (e.alive && e.group === 'village') { e.alive = false; e.removed = true; e.body.removed = true; } }
+  else if (st === 8) { say(N.radio, 'Bombardieri sulla città: il deposito è in fiamme!'); depotBlast(WORLD.depot.pos, 10, 5000); for (const e of enemies) if (e.alive && (e.group === 'city' || Math.hypot(e.pos.x - CITY.sq.x, e.pos.z - CITY.sq.z) < 50)) { e.alive = false; e.removed = true; e.body.removed = true; } }
 }
 function setStage(i) {
   MISSION.stage = i; MISSION.stageT = 0; MISSION.markers = []; MISSION.interactables = [];
