@@ -530,7 +530,7 @@ function updateViewmodel(dt) {
   swayX = lerp(swayX, 0, dt * 8); swayY = lerp(swayY, 0, dt * 8);
   z += P.recoil * (k > .5 ? .035 : .06); rx += P.recoil * (k > .5 ? .03 : .09);
   P.recoil = Math.max(0, P.recoil - dt * 9);
-  if (P.sprint && P.moveK > .5) { x += .05; y -= .05; ry += .55; rz += .25; rx -= .1; }
+  const sk = P.sprintK || 0; x += .05 * sk; y -= .05 * sk; ry += .55 * sk; rz += .25 * sk; rx -= .1 * sk;
   if (P.swim || P.throwT > 0) { y -= .35; rx -= .6; }
   if (!P.grounded) { y += .02; rx += .05; }
   if (P.meleeT > 0) { const m = Math.sin((1 - P.meleeT / .75) * PI); z -= m * .25; rx += m * .4; ry -= m * .3; x -= m * .08; }

@@ -146,7 +146,9 @@ function updatePlayer(dt) {
   }
 
   const f = (KEYS.KeyW ? 1 : 0) - (KEYS.KeyS ? 1 : 0), st = (KEYS.KeyD ? 1 : 0) - (KEYS.KeyA ? 1 : 0);
-  P.sprint = !!KEYS.ShiftLeft && f > 0 && P.stance !== 2 && P.stamina > .05 && !P.swim && P.adsK < .3 && P.shock < .5;
+  // senza fiato: si torna a correre solo dopo aver recuperato un po' (evita lo scatto on/off a ogni fotogramma)
+  if (P.stamina <= .02) P.winded = true; else if (P.stamina > .3) P.winded = false;
+  P.sprint = !!KEYS.ShiftLeft && f > 0 && P.stance !== 2 && !P.winded && !P.swim && P.adsK < .3 && P.shock < .5;
   if (P.sprint && P.stance === 1) P.stance = 0;
   let sp = [4.3, 2.2, 1.0][P.stance];
   if (P.sprint) sp = 6.9;
@@ -247,7 +249,8 @@ function updateCamera(dt) {
   const sh = P.shake * .035, sk = P.shock * .03;
   camera.rotation.set(P.pitch + P.kickP + rnd(-sh, sh) + Math.sin(GAME.time * 2.1) * sk + (P.inBoat ? P.boat.g.rotation.x : 0), P.yaw + P.kickY + rnd(-sh, sh) + Math.sin(GAME.time * 1.3) * sk, roll + Math.sin(P.bobPh * .5) * .006 * P.moveK + Math.sin(GAME.time * .9) * sk);
   const s = P.slot(), w = s ? WEAPONS[s.id] : null;
-  let fov = SETTINGS.fov + (P.sprint && P.moveK > .5 ? 6 : 0);
+  P.sprintK = lerp(P.sprintK || 0, P.sprint && P.moveK > .5 ? 1 : 0, Math.min(1, dt * 8));
+  let fov = SETTINGS.fov + P.sprintK * 6;
   if (w && P.adsK > 0) fov = lerp(fov, w.fov, P.adsK * P.adsK);
   if (Math.abs(camera.fov - fov) > .01) { camera.fov = fov; camera.updateProjectionMatrix(); }
 }
