@@ -127,3 +127,10 @@ kbd { background: #2a2e2a; border: 1px solid #4a5040; padding: 1px 7px; border-r
 #cineCap{position:absolute;left:0;right:0;top:15vh;text-align:center;font:400 30px 'Special Elite',monospace;color:#e9e4d4;text-shadow:0 2px 6px #000;transition:opacity 1s}
 #cine .cskip{position:absolute;right:24px;bottom:3vh;color:#aaa;font:13px Oswald,sans-serif}
 #hud.cineHud>*:not(#cine):not(#fade):not(#subs){visibility:hidden}
+
+#stHud{display:none;position:absolute;left:50%;bottom:28px;transform:translateX(-50%);background:rgba(0,0,0,.5);padding:8px 16px;border-radius:4px;font:15px Oswald,sans-serif;color:#e9e4d4;text-align:center;min-width:300px}
+#stHud .heat{height:5px;background:rgba(255,255,255,.15);margin:6px 0}#stHud .heat i{display:block;height:100%}
+#stHud .ok{color:#9f9}
+#mortRet{display:none;position:absolute;width:46px;height:46px;margin:-23px 0 0 -23px;border:2px solid #ffd060;border-radius:50%;box-shadow:0 0 0 1px #000,inset 0 0 0 1px #000;pointer-events:none}
+#mortRet:before,#mortRet:after{content:'';position:absolute;background:#ffd060;left:50%;top:-10px;width:2px;height:66px;margin-left:-1px}
+#mortRet:after{transform:rotate(90deg)}

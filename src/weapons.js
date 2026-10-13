@@ -224,7 +224,7 @@ function hitscan(o, d, maxT) {
   let bt = maxT, type = null, obj = null, zone = null, joint = 15;
   const sr = raySolids(o, d, bt); if (sr) { bt = sr.t; type = 'solid'; obj = sr.s; }
   const tt = rayTerrain(o, d, bt); if (tt >= 0 && tt < bt) { bt = tt; type = 'terrain'; obj = null; }
-  for (const e of enemies) {
+  for (const e of FOES()) {
     if (!e.alive || e.removed) continue;
     const cx = e.pos.x - o.x, cy = e.pos.y + .9 - o.y, cz = e.pos.z - o.z, pr = cx * d.x + cy * d.y + cz * d.z;
     if (pr < 0 || pr > bt + 1.5 || cx * cx + cy * cy + cz * cz - pr * pr > 4) continue;
@@ -298,8 +298,8 @@ function playerFire() {
   else if (r.type === 'plane') { r.obj.damage(w.dmg * .3, true); fxImpact(p.clone(), 'metal'); hitMarker(false, false); }
   else if (r.type === 'terrain') { fxImpact(p.clone(), p.z > -58.5 ? 'sand' : 'dirt'); if (r.t < 25) sfxImpact(p, 'sand'); }
   // fuoco di soppressione: colpi vicino alla feritoia o ai nemici
-  for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || [])]) if (Math.abs(p.x - b.x) < 5.5 && Math.abs(p.z - (b.z + 3.5)) < 3.5 && Math.abs(p.y - b.slitY) < 1.8) suppressBunker(b);
-  for (const e of enemies) if (e.alive && !e.inBunker && e.pos.distanceToSquared(p) < 9) e.supp = Math.min(1, e.supp + .45);
+  if (PT === 'A') for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || [])]) if (Math.abs(p.x - b.x) < 5.5 && Math.abs(p.z - (b.z + 3.5)) < 3.5 && Math.abs(p.y - b.slitY) < 1.8) suppressBunker(b);
+  for (const e of FOES()) if (e.alive && !e.inBunker && e.pos.distanceToSquared(p) < 9) e.supp = Math.min(1, e.supp + .45);
   if (r.type === 'solid') {
     const t = r.obj.tag, k = t === 'boat' || t === 'tank' || t === 'flak' ? 'metal' : t === 'hedge' ? 'dirt' : (t === 'house' || t === 'ruin' || t === 'wall' || t === 'church' || t === 'tower' || t === 'bunker') ? 'stone' : 'wood';
     fxImpact(p.clone(), k); if (r.t < 40) { sfxImpact(p, k); if ((k === 'metal' || k === 'stone') && R() < .3) sfxRicochet(p); }
@@ -325,7 +325,7 @@ function playerMelee() {
   P.meleeT = .75;
   setTimeout(() => {
     camera.getWorldPosition(_o); camera.getWorldDirection(_d);
-    for (const e of enemies) {
+    for (const e of FOES()) {
       if (!e.alive) continue;
       _w.subVectors(e.chest(T1), _o); const d = _w.length(); _w.normalize();
       if (d < 2.4 && _w.dot(_d) > .6) {
@@ -389,7 +389,7 @@ function updateProjectiles(dt) {
       let hit = q.life <= 0 || q.p.y < Hf(q.p.x, q.p.z) || (q.p.z > -9 && q.p.y < WATER_Y && Hf(q.p.x, q.p.z) < WATER_Y);
       const sol = pointInSolid(q.p); if (sol) hit = true;
       if (q.type === 'rocket') {
-        for (const e of enemies) if (e.alive && e.chest(T1).distanceToSquared(q.p) < 1.1) hit = true;
+        for (const e of FOES()) if (e.alive && e.chest(T1).distanceToSquared(q.p) < 1.1) hit = true;
         for (const v of MISSION.vehicles) if (v.alive && q.p.x > v.box.min.x && q.p.x < v.box.max.x && q.p.z > v.box.min.z && q.p.z < v.box.max.z && q.p.y < v.box.max.y) { hit = true; v.damage(700, true); }
       }
       if (hit) {

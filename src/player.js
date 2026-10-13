@@ -14,10 +14,11 @@ const P = {
   recoil: 0, kickP: 0, kickY: 0, bloom: 0, shake: 0, hurt: 0, supp: 0, regenT: 0, shock: 0, shockT: 0,
   interacting: false, intT: 0, intTarget: null, ePressed: false, spawnMenu: false,
   slot() { return this.inv[this.cur]; },
-  targetable() { return !this.dead && !this.inBoat && this.mode === 'foot'; },
+  targetable() { return !this.dead && !this.inBoat && (this.mode === 'foot' || this.mode === 'mg' || this.mode === 'mortar'); },
   chest(o) { return o.set(this.pos.x, this.pos.y + [1.25, .86, .32][this.stance], this.pos.z); },
   hitMul() {
     let m = .6;
+    if (this.mode === 'mg') return .3;
     if (this.stance === 1) m *= .6; else if (this.stance === 2) m *= .35;
     if (this.sprint && this.moveK > .5) m *= .7;
     if (this.swim) m *= .6;
@@ -56,6 +57,7 @@ function initInput() {
     if (CUT.active) { if (c === 'Space' || c === 'Enter') endCutscene(); return; }
     if (P.spawnMenu) { deployKey(c); return; }
     if (P.mode === 'naval' && c === 'KeyE') { leaveTurretToDeck(); return; }
+    if ((P.mode === 'mg' || P.mode === 'mortar') && stationKey(c)) return;
     if (c === 'KeyB') { openSpawnMenu(); return; }
     if (P.mode === 'plane') { if (c === 'KeyF') planeDropBomb(); return; }
     if (P.mode === 'naval') return;
@@ -73,6 +75,7 @@ function initInput() {
   addEventListener('keyup', e => { KEYS[e.code] = false; });
   addEventListener('mousemove', e => {
     if (!GAME.running) return;
+    if (P.mode === 'mg' || P.mode === 'mortar') { stationMouse(e.movementX, e.movementY); return; }
     if (P.mode === 'plane') { PL.stickX = clamp(PL.stickX + e.movementX * .0035 * SETTINGS.sens, -1, 1); PL.stickY = clamp(PL.stickY + e.movementY * .0035 * SETTINGS.sens, -1, 1); return; }
     if (P.mode === 'naval') { const s = .0021 * SETTINGS.sens * (camera.fov / 60); NAV.yaw -= e.movementX * s; NAV.pitch = clamp(NAV.pitch - e.movementY * s, -.4, .2); return; }
     const s = .0021 * SETTINGS.sens * (camera.fov / SETTINGS.fov) * (P.shock > .3 ? .5 : 1);
@@ -101,6 +104,7 @@ function selectSlot(i) {
 // ---------- scelta del rientro ----------
 function closeSpawnMenu() { P.spawnMenu = false; $('spawn').classList.add('hidden'); }
 function leaveMode() {
+  if (P.mode === 'mg' || P.mode === 'mortar') leaveStation();
   if (P.mode === 'plane') exitPlane();
   if (P.mode === 'naval') exitNaval();
   P.mode = 'foot';
@@ -122,6 +126,7 @@ function updatePlayer(dt) {
   P.shockT = Math.max(0, P.shockT - dt); if (P.shockT <= 0) P.shock = Math.max(0, P.shock - dt * .8);
   if (P.mode === 'naval') { updateNaval(dt); updateViewmodel(dt); return; }
   if (P.mode === 'plane') { updatePlane(dt); updateViewmodel(dt); return; }
+  if (P.mode === 'mg' || P.mode === 'mortar') { updateStation(dt); updateViewmodel(dt); if (P.mode !== 'foot') return; }
   if (P.dead) {
     P.deathT += dt;
     $('fade').style.opacity = clamp((P.deathT - 1) / 1.4, 0, .85);

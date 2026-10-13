@@ -51,7 +51,7 @@ async function startGame() {
   try {
     await step('Preparazione del motore grafico e delle texture…'); initEngine(); initFX(); initWeapons(); buildPlaneGeos();
     await step('Generazione della costa normanna…'); buildWorld();
-    await step('Imbarco delle truppe…'); initMission(); initHUD(); initNPC(); initInput();
+    await step('Imbarco delle truppe…'); initMission(); initHUD(); initNPC(); initStations(); initInput();
     await step('Registrazione dei suoni…'); await audioP;
     await step('Compilazione degli shader…'); renderer.compile(scene, camera);
   } catch (e) {

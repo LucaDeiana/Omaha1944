@@ -305,6 +305,7 @@ class Soldier {
   }
 
   fire() {
+    if (this.supB && this.supB.manned) return;
     const t = this.target, tp = targetChest(t, T2); if (!tp) return;
     const from = this.muzzle(T1), d = from.distanceTo(tp);
     let p = this.w.acc * clamp(1.15 - d / this.w.range, .12, 1);
