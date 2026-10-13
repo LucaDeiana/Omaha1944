@@ -28,7 +28,8 @@ function fillSelect(id, obj, cur) {
 }
 function bindSettings() {
   fillSelect('optQuality', QUALITY, SETTINGS.quality);
-  fillSelect('optDiff', DIFF, SETTINGS.diff); $('optSide').value = SETTINGS.side || 'A';
+  fillSelect('optDiff', DIFF, SETTINGS.diff); try { $('optName').value = localStorage.getItem('omahaName') || ''; } catch (e) { }
+  $('optNet').addEventListener('change', () => $('netNote').classList.toggle('hidden', !$('optNet').checked || netAvailable())); $('optSide').value = SETTINGS.side || 'A';
   const sync = () => {
     for (const [a, b] of [['optSens', 'pSens'], ['optFov', 'pFov'], ['optVol', 'pVol']]) { $(a).value = $(b).value = SETTINGS[{ optSens: 'sens', optFov: 'fov', optVol: 'volume' }[a]]; }
     for (const [a, b, k] of [['optGore', 'pGore', 'gore'], ['optVoices', 'pVoices', 'voices'], ['optDyn', 'pDyn', 'dynres'], ['optFps', 'pFps', 'fps']]) $(a).checked = $(b).checked = SETTINGS[k];
@@ -42,7 +43,7 @@ function bindSettings() {
 }
 
 async function startGame() {
-  SETTINGS.side = $('optSide').value; PT = SETTINGS.side;
+  SETTINGS.side = $('optSide').value; PT = SETTINGS.side; try { localStorage.setItem('omahaName', $('optName').value); } catch (e) { }
   SETTINGS.quality = $('optQuality').value; SETTINGS.diff = $('optDiff').value; saveSettings();
   Q = QUALITY[SETTINGS.quality]; D = DIFF[SETTINGS.diff];
   const audioP = initAudio();
@@ -53,6 +54,11 @@ async function startGame() {
     await step('Generazione della costa normanna…'); buildWorld();
     await step('Imbarco delle truppe…'); initMission(); initHUD(); initNPC(); initStations(); initInput();
     await step('Registrazione dei suoni…'); await audioP;
+    if ($('optNet').checked) {
+      await step('Connessione al server multiplayer…');
+      const ok = netAvailable() && await connectNet(($('optName').value || 'Soldato').trim(), PT);
+      if (!ok) { $('netNote').classList.remove('hidden'); feed('Server multiplayer non raggiungibile: partita in solitario'); }
+    }
     await step('Compilazione degli shader…'); renderer.compile(scene, camera);
   } catch (e) {
     $('loadT').innerHTML = 'Errore durante il caricamento:<br><small>' + e.message + '</small>'; console.error(e); return;
@@ -89,7 +95,7 @@ function frame(now) {
     updateMission(dt);
     updateWorld(dt, GAME.time);
     updateAircraft(dt);
-    updateSide(dt); updateDeploy(dt); updateNPC(dt);
+    updateSide(dt); updateDeploy(dt); updateNPC(dt); updateNet(dt);
     updatePlayer(dt); updateCutscene(dt);
     updateAI(dt);
     updateProjectiles(dt);

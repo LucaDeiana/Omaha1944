@@ -63,6 +63,8 @@
           <label><input id="optDyn" type="checkbox"> Risoluzione dinamica (fluidità)</label>
           <label><input id="optFps" type="checkbox"> Mostra FPS</label>
         </div>
+        <div class="checks mp"><label><input id="optNet" type="checkbox"> Multiplayer in rete locale</label> <input id="optName" type="text" maxlength="20" placeholder="Il tuo nome"></div>
+        <div id="netNote" class="hidden err">Per il multiplayer avvia il server (node server/server.js) e apri il gioco dall'indirizzo che mostra.</div>
         <button id="startBtn">INIZIA LO SBARCO</button>
         <div id="netErr" class="hidden err">Impossibile caricare la libreria grafica: serve una connessione a internet.</div>
       </div>
@@ -138,6 +140,7 @@
 <script src="src/inland.js"></script>
 <script src="src/axis.js"></script>
 <script src="src/stations.js"></script>
+<script src="src/net.js"></script>
 <script src="src/cutscene.js"></script>
 <script src="src/player.js"></script>
 <script src="src/deploy.js"></script>

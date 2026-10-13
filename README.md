@@ -52,6 +52,19 @@ Checkpoint automatici: se cadi riparti dall'ultimo.
 - Voci dei soldati in inglese (americani) e tedesco (tedeschi) con le voci di sintesi del browser e sottotitoli in italiano.
 - Qualità: Basso, Medio, Alto, Ultra. La **risoluzione dinamica** abbassa da sola la risoluzione interna quando gli FPS calano.
 
+## Multiplayer in rete locale
+
+Serve Node.js (nessun pacchetto da installare).
+
+1. Sul PC che fa da server, nella cartella del gioco: `node server/server.js`
+   Il server stampa gli indirizzi da usare, per esempio `http://192.168.1.146:8080`.
+2. Su quel PC apri `http://localhost:8080`; sull'altro PC, collegato alla stessa rete, apri `http://IP-DEL-SERVER:8080`.
+3. Nel menu spunta **Multiplayer in rete locale**, scrivi il tuo nome, scegli la fazione e premi INIZIA.
+4. Alla prima esecuzione Windows chiede di consentire Node.js nel firewall: consenti l'accesso alle **reti private**.
+
+Condiviso: posizione, animazioni e nomi degli altri giocatori, colpi sparati, danni tra fazioni opposte (armi, granate, MG42, mortaio), uccisioni, occupazione delle postazioni.
+Non ancora condiviso: i soldati dell'IA, le ondate e le fasi della missione girano su ogni PC in modo indipendente.
+
 ## Struttura
 ```
 index.html, style.css   pagina e interfaccia

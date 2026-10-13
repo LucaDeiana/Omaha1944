@@ -282,6 +282,7 @@ function playerFire() {
   P.bloom = Math.min(.04, P.bloom + (w.auto ? .0035 : .008));
   _d.x += rnd(-1, 1) * spread; _d.y += rnd(-1, 1) * spread; _d.z += rnd(-1, 1) * spread; _d.normalize();
   const r = hitscan(_o, _d, w.range || 600), p = _r.copy(_o).addScaledVector(_d, r.t);
+  netShot(_o, p, w.snd);
   if (w.auto && (w.snd === 'bar' || w.snd === 'mg42') ? STATS.shots % 3 === 0 : r.t > 30 && R() < .25) fxTracer(_o.clone().addScaledVector(_d, 3), p, w.auto ? 1.1 : .7);
   if (_o.y > WATER_Y && _d.y < 0) {
     const tw = (WATER_Y - _o.y) / _d.y, wz = _o.z + _d.z * tw;

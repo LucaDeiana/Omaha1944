@@ -35,6 +35,7 @@ class Soldier {
 
   damage(a, from, byPlayer, zone, imp) {
     if (!this.alive) return false;
+    if (this.remote) { if (byPlayer) netHit(this, a, zone === 'blast'); this.flinch = 1; return false; }
     if (this.vip) { this.supp = 1; this.flinch = 1; return false; }
     this.hp -= a; this.supp = Math.min(1, this.supp + .6); this.flinch = 1;
     if (this.hp <= 0) {
@@ -366,6 +367,7 @@ function updateAI(dt) {
   for (const list of [allies, enemies]) {
     for (const s of list) {
       if (s.removed || !s.alive) continue;
+      if (s.remote) { netPuppet(s, dt); continue; }
       s.update(dt);
       if (s.alive && s.state !== 'boat') {
         s.thinkT -= dt;

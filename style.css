@@ -134,3 +134,6 @@ kbd { background: #2a2e2a; border: 1px solid #4a5040; padding: 1px 7px; border-r
 #mortRet{display:none;position:absolute;width:46px;height:46px;margin:-23px 0 0 -23px;border:2px solid #ffd060;border-radius:50%;box-shadow:0 0 0 1px #000,inset 0 0 0 1px #000;pointer-events:none}
 #mortRet:before,#mortRet:after{content:'';position:absolute;background:#ffd060;left:50%;top:-10px;width:2px;height:66px;margin-left:-1px}
 #mortRet:after{transform:rotate(90deg)}
+
+.checks.mp{display:flex;gap:12px;align-items:center;margin-top:8px}
+#optName{background:rgba(0,0,0,.35);border:1px solid #666;color:#e9e4d4;padding:4px 8px;font:14px Oswald,sans-serif;width:150px}

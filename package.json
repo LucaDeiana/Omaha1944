@@ -1,0 +1,9 @@
+{
+  "name": "omaha1944",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Omaha 1944 — FPS dello sbarco in Normandia",
+  "scripts": {
+    "server": "node server/server.js"
+  }
+}

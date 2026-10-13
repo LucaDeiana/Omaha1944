@@ -49,7 +49,7 @@ function buildMGView() {
 }
 function enterStation(s) {
   if (s.occupant) return;
-  s.occupant = 'P'; STN.cur = s; P.mode = s.type; P.stance = 0; P.vel.set(0, 0, 0);
+  s.occupant = 'P'; STN.cur = s; netSend({ t: 'occ', i: STATIONS.indexOf(s), on: true }); P.mode = s.type; P.stance = 0; P.vel.set(0, 0, 0);
   if (s.type === 'mg') {
     if (!STN.gun) STN.gun = buildMGView();
     STN.gun.visible = true; P.yaw = s.yaw0; P.pitch = -.08;
@@ -64,7 +64,7 @@ function enterStation(s) {
 }
 function leaveStation() {
   const s = STN.cur; if (!s) return;
-  s.occupant = null; if (s.b) s.b.manned = false; STN.cur = null;
+  s.occupant = null; if (s.b) s.b.manned = false; STN.cur = null; netSend({ t: 'occ', i: STATIONS.indexOf(s), on: false });
   if (STN.gun) STN.gun.visible = false;
   $('stHud').style.display = 'none'; $('mortRet').style.display = 'none';
   if (P.mode === 'mg' || P.mode === 'mortar') P.mode = 'foot';
@@ -98,6 +98,7 @@ function mgFire() {
   flashLight(_so.clone().addScaledVector(_sd, 2), 0xffb060, 12, .05);
   const o = _so.clone().addScaledVector(_sd, 1.2);
   const r = hitscan(o, _sd, 900), p = _sr.copy(o).addScaledVector(_sd, r.t);
+  if (STN.belt % 2 === 0) netShot(o, p, 'mg42');
   if (STN.belt % 3 === 0) fxTracer(o.clone().addScaledVector(_sd, 2), p, 1.1);
   if (o.y > WATER_Y && _sd.y < 0) { const tw = (WATER_Y - o.y) / _sd.y, wz = o.z + _sd.z * tw; if (tw < r.t && wz > -9 && Hf(o.x + _sd.x * tw, wz) < WATER_Y) { fxImpact(new V3(o.x + _sd.x * tw, WATER_Y, wz), 'water'); if (r.type !== 'enemy') return; } }
   if (r.type === 'enemy') {
@@ -136,7 +137,7 @@ function updateStation(dt) {
       const fl = 3 + d / 160; tg.x += rnd(-1, 1) * d * .012; tg.z += rnd(-1, 1) * d * .012;
       STN.shells.push({ p: tg, t: fl });
       after(fl - 1.1, () => sfxWhistle(tg, false));
-      after(fl, () => { tg.y = Math.max(Hf(tg.x, tg.z), WATER_Y - .2); explode(tg, 4.6, 230, { byPlayer: true }); });
+      after(fl, () => { tg.y = Math.max(Hf(tg.x, tg.z), WATER_Y - .2); explode(tg, 4.6, 230, { byPlayer: true }); netSend({ t: 'boom', p: [tg.x, tg.y, tg.z], r: 4.6, d: 230 }); });
     }
     for (let i = STN.shells.length - 1; i >= 0; i--) { STN.shells[i].t -= dt; if (STN.shells[i].t <= 0) STN.shells.splice(i, 1); }
     _hv.copy(STN.tgt).project(camera);
