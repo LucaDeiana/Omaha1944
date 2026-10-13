@@ -95,7 +95,7 @@ function frame(now) {
     updateMission(dt);
     updateWorld(dt, GAME.time);
     updateAircraft(dt);
-    updateSide(dt); updateDeploy(dt); updateNPC(dt); updateNet(dt);
+    updateSide(dt); updateDeploy(dt); updateNPC(dt); updateNet(dt); updateTanks(dt);
     updatePlayer(dt); updateCutscene(dt);
     updateAI(dt);
     updateProjectiles(dt);

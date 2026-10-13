@@ -72,7 +72,7 @@ function updateHayes(dt) {
 }
 
 function npcInteractables() {
-  const out = SHIP.its.filter(it => it.active()).concat(stationInteractables());
+  const out = SHIP.its.filter(it => it.active()).concat(stationInteractables(), tankInteractables());
   for (const q of NPC.list) {
     if (q.state >= 9 || !q.s.alive || (q.active && !q.active())) continue;
     out.push({ pos: q.s.pos, r: 2.6, label: 'Premi E per parlare con ' + q.s.name, active: () => true, done: () => q.talk(q) });

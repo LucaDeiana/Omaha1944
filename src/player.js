@@ -58,6 +58,7 @@ function initInput() {
     if (P.spawnMenu) { deployKey(c); return; }
     if (P.mode === 'naval' && c === 'KeyE') { leaveTurretToDeck(); return; }
     if ((P.mode === 'mg' || P.mode === 'mortar') && stationKey(c)) return;
+    if (P.mode === 'tank') { if (c === 'KeyE') leaveTank(); return; }
     if (c === 'KeyB') { openSpawnMenu(); return; }
     if (P.mode === 'plane') { if (c === 'KeyF') planeDropBomb(); return; }
     if (P.mode === 'naval') return;
@@ -76,6 +77,7 @@ function initInput() {
   addEventListener('mousemove', e => {
     if (!GAME.running) return;
     if (P.mode === 'mg' || P.mode === 'mortar') { stationMouse(e.movementX, e.movementY); return; }
+    if (P.mode === 'tank') { tankMouse(e.movementX, e.movementY); return; }
     if (P.mode === 'plane') { PL.stickX = clamp(PL.stickX + e.movementX * .0035 * SETTINGS.sens, -1, 1); PL.stickY = clamp(PL.stickY + e.movementY * .0035 * SETTINGS.sens, -1, 1); return; }
     if (P.mode === 'naval') { const s = .0021 * SETTINGS.sens * (camera.fov / 60); NAV.yaw -= e.movementX * s; NAV.pitch = clamp(NAV.pitch - e.movementY * s, -.4, .2); return; }
     const s = .0021 * SETTINGS.sens * (camera.fov / SETTINGS.fov) * (P.shock > .3 ? .5 : 1);
@@ -105,6 +107,7 @@ function selectSlot(i) {
 function closeSpawnMenu() { P.spawnMenu = false; $('spawn').classList.add('hidden'); }
 function leaveMode() {
   if (P.mode === 'mg' || P.mode === 'mortar') leaveStation();
+  if (P.mode === 'tank') leaveTank();
   if (P.mode === 'plane') exitPlane();
   if (P.mode === 'naval') exitNaval();
   P.mode = 'foot';
@@ -126,6 +129,7 @@ function updatePlayer(dt) {
   P.shockT = Math.max(0, P.shockT - dt); if (P.shockT <= 0) P.shock = Math.max(0, P.shock - dt * .8);
   if (P.mode === 'naval') { updateNaval(dt); updateViewmodel(dt); return; }
   if (P.mode === 'plane') { updatePlane(dt); updateViewmodel(dt); return; }
+  if (P.mode === 'tank') { updateTankMode(dt); updateViewmodel(dt); return; }
   if (P.mode === 'mg' || P.mode === 'mortar') { updateStation(dt); updateViewmodel(dt); if (P.mode !== 'foot') return; }
   if (P.dead) {
     P.deathT += dt;

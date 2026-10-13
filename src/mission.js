@@ -86,7 +86,7 @@ function initMission() {
   fp('springfield', -58, trenchZ(-58) + .2); fp('springfield', 10, -56); fp('kar98zf', -142, -103); fp('kar98zf', 122, -105); fp('bar', 40, trenchZ(40) + .2); fp('bazooka', -20, -160, 3); fp('thompson', -40, -200);
   addCrate(-26, -55.4); addCrate(-38, trenchZ(-38) + .3); addCrate(-24, -163); addCrate(14, -276); addCrate(-32, -110);
   addBangaloreCrate(-36, -55.3);
-  setStage(0); initConvoy();
+  setStage(0); initConvoy(); initTanks();
 }
 
 const TRENCH_POSTS = [];
