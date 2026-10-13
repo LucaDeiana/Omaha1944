@@ -88,11 +88,11 @@ async function buildBank() {
   };
   add('rifle_far', 1.8, far(900, .5)); add('mg_far', 1.2, far(1100, .3)); add('smg_far', 1.2, far(800, .3)); add('flak_far', 2.5, far(500, .9));
   add('crack', .1, (oc, dst, i) => { oN(oc, dst, 0, .003, { type: 'highpass', f: 2500 + i * 400, v: 2.4, a: .0002 }); oN(oc, dst, 0, .014, { type: 'bandpass', f: 4500, q: 1.4, v: .9, a: .0003 }); oT(oc, dst, 0, .012, { f: 2600, v: .3 }); }, 4);
-  add('whiz', .5, (oc, dst, i) => { oN(oc, dst, 0, .34, { type: 'bandpass', f: 3400 - i * 300, f2: 550, q: 4, v: 1.2, a: .03 }); oT(oc, dst, 0, .3, { f: 1600 + i * 200, f2: 300, v: .07, a: .03 }); }, 4);
-  add('ricochet', .8, (oc, dst, i) => { oT(oc, dst, 0, .6, { f: 3800 + i * 500, f2: 1200, v: .35, a: .004 }); oN(oc, dst, 0, .05, { type: 'highpass', f: 3000, v: .8 }); oN(oc, dst, 0, .5, { type: 'bandpass', f: 3000, f2: 1300, q: 6, v: .25, a: .01 }); }, 4);
+  add('whiz', .5, (oc, dst, i) => { oN(oc, dst, 0, .3, { type: 'bandpass', f: 2600 - i * 250, f2: 450, q: 1.6, v: 1.1, a: .04 }); oN(oc, dst, .02, .22, { type: 'lowpass', f: 900, f2: 250, v: .5, a: .03 }); }, 4);
+  add('ricochet', .5, (oc, dst, i) => { const sh = shaperN(oc, 2.5); sh.connect(dst); oN(oc, sh, 0, .02, { type: 'highpass', f: 1800, v: 1.6, a: .0003 }); oN(oc, dst, .005, .35, { type: 'bandpass', f: 2200 + i * 300, f2: 700, q: 1.8, v: .55, a: .01 }); oN(oc, dst, 0, .12, { type: 'lowpass', f: 700, v: .5, a: .002 }); }, 4);
   add('imp_sand', .3, (oc, dst) => { oN(oc, dst, 0, .1, { f: 900, v: 1 }); oN(oc, dst, 0, .05, { type: 'bandpass', f: 2600, v: .4 }); for (let k = 0; k < 8; k++) oN(oc, dst, .02 + R() * .2, .012, { type: 'bandpass', f: 2000 + R() * 3000, q: 2, v: .12 }); });
   add('imp_water', .5, (oc, dst) => { oN(oc, dst, 0, .03, { type: 'highpass', f: 1500, v: .9 }); oN(oc, dst, 0, .35, { f: 2500, f2: 600, v: .8, a: .004 }); oN(oc, dst, .02, .3, { type: 'bandpass', f: 900, q: .5, v: .5, a: .01 }); for (let k = 0; k < 10; k++) oN(oc, dst, .08 + R() * .3, .02, { type: 'highpass', f: 3000, v: .1 }); }, 3);
-  add('imp_metal', .5, (oc, dst, i) => { const j = 1 + i * .11, sh = shaperN(oc, 3); sh.connect(dst); oN(oc, sh, 0, .006, { type: 'highpass', f: 2200, v: 2.2, a: .0002 }); oN(oc, sh, 0, .07, { type: 'bandpass', f: 650 * j, q: 1.2, v: 1.4, a: .0005 }); oT(oc, sh, 0, .05, { f: 180 * j, f2: 90, v: 1 }); oT(oc, dst, .002, .14, { f: 3300 * j, v: .12 }); oT(oc, dst, .002, .09, { f: 5100 * j, v: .07 }); oN(oc, dst, .01, .25, { f: 1800, f2: 300, v: .25 }); }, 5);
+  add('imp_metal', .45, (oc, dst, i) => { const j = 1 + i * .11, sh = shaperN(oc, 3); sh.connect(dst); oN(oc, sh, 0, .006, { type: 'highpass', f: 2000, v: 2, a: .0002 }); oN(oc, sh, 0, .08, { type: 'bandpass', f: 600 * j, q: 1, v: 1.5, a: .0005 }); oT(oc, sh, 0, .05, { f: 160 * j, f2: 80, v: 1 }); oN(oc, dst, .005, .2, { type: 'bandpass', f: 1400 * j, f2: 500, q: 1.2, v: .35, a: .002 }); }, 5);
   add('imp_flesh', .3, (oc, dst) => { oN(oc, dst, 0, .07, { f: 450, v: 1.3 }); oT(oc, dst, 0, .1, { f: 110, f2: 55, v: .9 }); oN(oc, dst, .005, .06, { type: 'bandpass', f: 900, q: 2, v: .4 }); });
   add('imp_wood', .2, (oc, dst) => { oN(oc, dst, 0, .07, { type: 'bandpass', f: 900, q: 2.5, v: 1.1 }); oN(oc, dst, 0, .03, { type: 'highpass', f: 2000, v: .4 }); });
   add('imp_stone', .3, (oc, dst) => { oN(oc, dst, 0, .05, { type: 'bandpass', f: 2400, v: 1 }); oN(oc, dst, 0, .14, { f: 600, v: .4 }); });
@@ -125,7 +125,7 @@ async function buildBank() {
   add('clip_in', .4, (oc, dst) => { oN(oc, dst, 0, .15, { type: 'bandpass', f: 3200, f2: 2000, q: 3, v: .5 }); oN(oc, dst, .16, .05, { type: 'bandpass', f: 1500, q: 2, v: .9 }); oT(oc, dst, .16, .1, { f: 2200, v: .1 }); }, 1);
   add('dry', .1, click(4000, 1.5, .025, .6), 2);
   add('pin', .3, (oc, dst) => { oT(oc, dst, 0, .15, { f: 3200, v: .15 }); oN(oc, dst, 0, .05, { type: 'highpass', f: 3000, v: .4 }); oN(oc, dst, .12, .05, { type: 'bandpass', f: 1800, v: .3 }); }, 1);
-  add('tink', .3, (oc, dst, i) => { const j = 1 + R() * .3; oT(oc, dst, 0, .16, { f: 4200 * j, v: .18 }); oT(oc, dst, 0, .12, { f: 6300 * j, v: .1 }); oN(oc, dst, 0, .008, { type: 'highpass', f: 4000, v: .3 }); }, 4);
+  add('tink', .2, (oc, dst, i) => { oN(oc, dst, 0, .05, { type: 'bandpass', f: 1500 + i * 200, q: 1.5, v: .5, a: .001 }); oN(oc, dst, 0, .08, { type: 'lowpass', f: 500, v: .5, a: .002 }); }, 3);
   add('nade_bounce', .2, (oc, dst) => { oN(oc, dst, 0, .06, { f: 700, v: .8 }); oT(oc, dst, 0, .05, { f: 900, v: .15 }); }, 2);
   add('step_sand', .2, (oc, dst) => { for (let k = 0; k < 12; k++) oN(oc, dst, R() * .1, .02 + R() * .03, { type: k % 2 ? 'lowpass' : 'bandpass', f: 600 + R() * 2400, q: 1, v: .25 + R() * .25 }); }, 4);
   add('step_water', .45, (oc, dst) => { oN(oc, dst, 0, .3, { type: 'bandpass', f: 700, f2: 1600, q: .8, v: .9, a: .02 }); for (let k = 0; k < 4; k++) oT(oc, dst, .05 + R() * .2, .05, { f: 500 + R() * 900, f2: 900 + R() * 900, v: .08 }); }, 3);
@@ -294,7 +294,7 @@ const MECH = { out: 'mag_out', in: 'mag_in', bolt: 'bolt_open', boltc: 'bolt_clo
 function sfxMech(kind, delay = 0) { play(MECH[kind] || kind, null, { vol: .55, delay }); }
 function sfxWhiz(from) { const sp = spatial(from, 1e9); sp.vol = 1; sp.delay = 0; sp.rev = .04; sp.lp = 20000; play('whiz', null, { sp, vol: .55 }); if (R() < .7) play('crack', null, { sp, vol: .9 }); }
 function sfxCrack() { play('crack', null, { vol: .8 }); }
-function sfxRicochet(pos) { play('ricochet', pos, { ref: 15, vol: .7 }); }
+function sfxRicochet(pos) { if (R() < .5) play('ricochet', pos, { ref: 12, vol: .5 }); }
 function sfxImpact(pos, kind) { const n = 'imp_' + kind; if (AU.buf[n]) play(n, pos, { ref: 7, vol: .8 }); }
 function sfxStep(kind, run) { play('step_' + kind, null, { vol: run ? .5 : .32 }); }
 function sfxRocket(pos) { play('rocket', pos, { ref: 25 }); }
@@ -306,7 +306,7 @@ function sfxWhistle(pos, long) { play(long ? 'bomb' : 'whistle', pos, { ref: 70,
 function sfxMortar(pos) { play('mortar', pos, { ref: 40 }); }
 function sfxPlane(pos) { }
 function sfxVoice(pos, kind) { play(kind, pos, { ref: 18, vol: .55, revMul: 1.4 }); }
-function sfxTink(pos) { play('tink', pos, { ref: 4, vol: .5 }); }
+function sfxTink(pos) { play('tink', pos, { ref: 3, vol: .25 }); }
 function muffle(sec) {
   if (!AU.ctx) return;
   const f = AU.muffle.frequency, t = AU.ctx.currentTime;

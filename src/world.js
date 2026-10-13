@@ -34,6 +34,7 @@ function genCraters() {
   for (const lz of [64, 42, 20, -2, -22, -40]) for (let k = 0; k < 26; k++) { const x = srnd(-220, 220), z = lz + srnd(-4, 4); addCrater(x, z, srnd(2, 3.6), srnd(.5, .9)); addCover(x, z + 1.2, 'crater'); }
   for (let i = 0; i < 160; i++) { const x = srnd(-MAPX + 50, MAPX - 50); if (Math.abs(x) < 200) continue; addCrater(x, srnd(-52, -9), srnd(1.8, 3.4), srnd(.35, .7)); if (R() < .5) addCrater(x + srnd(-20, 20), srnd(-110, -66), srnd(2, 4), srnd(.6, 1.1)); }
   for (let i = 0; i < 80; i++) addCrater(srnd(-190, 190), srnd(-52, -9), srnd(1.8, 3.4), srnd(.35, .7));
+  for (let i = 0; i < 300; i++) { const x = srnd(200, MAPX - 40) * (R() < .5 ? -1 : 1), z = srnd(-52, 70); addCrater(x, z, srnd(1.8, 3.4), srnd(.35, .8)); if (i % 2) addCover(x, z + 1.2, 'crater'); }
   for (let i = 0; i < 55; i++) { const x = srnd(-170, 170), z = srnd(-112, -66); if (Math.abs(z - trenchZ(x)) < 4 || Math.abs(x - BREACH_X) < 6) continue; addCrater(x, z, srnd(2, 4), srnd(.6, 1.1)); }
   for (let i = 0; i < 35; i++) { const x = srnd(-160, 160), z = srnd(-212, -118); if (Math.abs(z + 170) < 5) continue; addCrater(x, z, srnd(2, 4.5), srnd(.6, 1.2)); }
 }
@@ -656,6 +657,42 @@ function buildStatic() {
     S.clearBase(); addSolid(x - 2, y - .5, z - .35, x + 2, y + .8, z + .35, 'sand');
     addCover(x - .8, z + 1, 'sand'); addCover(x + .8, z + 1, 'sand');
   }
+  // dettagli della spiaggia lungo tutta la costa
+  const farX = () => srnd(205, MAPX - 40) * (R() < .5 ? -1 : 1);
+  for (let i = 0; i < 120; i++) {
+    const x = farX(), z = srnd(-10, 82), y = H(x, z), ry = srnd(-.25, .25);
+    S.mat = 'paint'; S.setBase(x, y, z, 0, ry, 0);
+    for (const fx of [-1.4, 0, 1.4]) S.add(U.box, 0x6b5d50, fx, 1.3, 0, 0, 0, 0, .14, 2.6, .14);
+    for (const fy of [.3, 1.3, 2.5]) S.add(U.box, 0x6b5d50, 0, fy, 0, 0, 0, 0, 3.0, .12, .12);
+    S.clearBase(); addCover(x, z + 2.4, 'gate'); OBST.push({ x: x - 1, z, r: .8 }, { x: x + 1, z, r: .8 });
+  }
+  for (let i = 0; i < 260; i++) {
+    const x = farX(), z = srnd(-24, 65), y = H(x, z);
+    S.mat = 'wood'; S.add(U.cyl, 0x7b6a56, x, y + 1.65, z + 1.13, .6, 0, 0, .13, 4, .13);
+    S.mat = 'paint'; S.add(U.cyl12, 0x6c6f5c, x, y + 3.35, z + 2.26, .6, 0, 0, .18, .09, .18);
+    OBST.push({ x, z: z + .3, r: .35 });
+  }
+  for (let i = 0; i < 36; i++) {
+    const x = farX(), z = srnd(-48, 40);
+    addSherman(S, x, H(x, z) - .3, z, srnd(0, TAU), true); addSolid(x - 2, H(x, z) - 1, z - 2, x + 2, H(x, z) + 2.6, z + 2, 'tank');
+    addCover(x, z + 3.6, 'tank'); if (i % 3 === 0) addEmitter(new V3(x, H(x, z) + 2.4, z), i % 2 ? 'fire' : 'smoke', .8);
+  }
+  for (let i = 0; i < 18; i++) addLCVPWreck(S, farX(), srnd(-4, 30), srnd(-.6, .6), srnd(-.35, .35));
+  for (let i = 0; i < 100; i++) {
+    const x = farX(), z = srnd(-50, 60), y = H(x, z), ry = srnd(-.3, .3);
+    S.setBase(x, y, z, 0, ry, 0); S.mat = 'sack';
+    for (let k = 0; k < 5; k++) for (let l = 0; l < 2; l++) S.add(U.box, pick([0x8a7f5e, 0x7d7353, 0x93886a]), -1.6 + k * .8 + l * .4, .2 + l * .36, 0, 0, srnd(-.1, .1), 0, .78, .36, .5);
+    S.clearBase(); addSolid(x - 2, y - .5, z - .35, x + 2, y + .8, z + .35, 'sand'); addCover(x, z + 1, 'sand');
+  }
+  for (let i = 0; i < 400; i++) {
+    const x = farX(), z = srnd(-50, 10), y = H(x, z);
+    if (R() < .5) { S.mat = 'wood'; S.add(U.box, pick([0x8d7a5c, 0x7a6a50, 0x6a5a40]), x, y + .2, z, 0, R() * 3, 0, rnd(.4, .9), rnd(.3, .5), rnd(.4, 1.2)); }
+    else { S.mat = 'paint'; S.add(U.cyl12, 0x6f755a, x, y + .15, z, PI / 2, R() * 3, 0, .17, .5, .17); }
+  }
+  S.mat = 'wood';
+  for (let x = -MAPX + 40; x < MAPX - 40; x += srnd(3, 10)) if (Math.abs(x) > 200) S.add(U.box, 0x6a5a47, x, H(x, BANK_Z + .8) + .55, BANK_Z + .8, srnd(-.2, .1), srnd(-.3, .3), srnd(-.15, .15), .15, 1.3, .15);
+  for (let x = -MAPX + 40; x < MAPX - 40; x += 4) if (Math.abs(x) > 200) { S.mat = 'paint'; S.add(U.cyl, 0x5a4a3a, x, H(x, WIRE_Z) + .6, WIRE_Z, 0, 0, srnd(-.15, .15), .05, 1.3, .05); }
+  for (let i = 0; i < 16; i++) { const x = farX(), z = srnd(-80, 40); addEmitter(new V3(x, Math.max(H(x, z), WATER_Y) + .5, z), R() < .3 ? 'fire' : 'smoke', rnd(.8, 1.5)); }
   [[-60, 3, .35, .25], [80, 1, -.5, -.3], [150, 4, .2, .3], [-130, 2, -.25, .2], [20, -2, .6, .4], [-175, 5, -.2, -.25]].forEach(([x, z, ry, rz], i) => { addLCVPWreck(S, x, z, ry, rz); if (i % 2) addEmitter(new V3(x, WATER_Y + 1, z), 'fire', .7); });
   for (let i = 0; i < 90; i++) {
     const x = srnd(-180, 180), z = srnd(-50, -2), y = H(x, z);
@@ -787,6 +824,8 @@ function buildWire() {
       if (R() < .25) { const b = p.clone().add(new V3(rnd(-.05, .05), rnd(-.05, .05), rnd(-.05, .05))); pts.push(p, b); }
     }
   };
+  for (let x = -MAPX + 40; x < -200; x += 8) coil(x, x + 8, WIRE_Z, 0);
+  for (let x = 200; x < MAPX - 40; x += 8) coil(x, x + 8, WIRE_Z, 0);
   for (let x = -200; x < 200; x += 8) {
     const x1 = x + 8;
     coil(x, x1, WIRE_Z, 0, true);

@@ -260,7 +260,7 @@ function updateFX(dt) {
     if (!c.rest) {
       c.v.y -= 9.8 * dt; c.p.addScaledVector(c.v, dt); c.r.x += c.sp.x * dt; c.r.y += c.sp.y * dt; c.r.z += c.sp.z * dt;
       const g = Hf(c.p.x, c.p.z) + .006;
-      if (c.p.y < g) { c.p.y = g; c.v.multiplyScalar(.35); c.v.y = -c.v.y * .5; c.sp.multiplyScalar(.5); if (c.tink++ < 2) sfxTink(c.p); if (c.v.length() < .4) { c.rest = true; c.r.x = PI / 2 * 0; c.r.z = 0; } }
+      if (c.p.y < g) { c.p.y = g; c.v.multiplyScalar(.35); c.v.y = -c.v.y * .5; c.sp.multiplyScalar(.5); if (c.tink++ < 1) sfxTink(c.p); if (c.v.length() < .4) { c.rest = true; c.r.x = PI / 2 * 0; c.r.z = 0; } }
     }
     _fq.setFromEuler(c.r); _fm.compose(c.p, _fq, _fs.set(1, 1, 1)); FXP.cas.setMatrixAt(i, _fm);
   }
