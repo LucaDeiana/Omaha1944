@@ -33,13 +33,9 @@
   <div id="fps"></div>
   <div id="fade"></div>
   <div id="spawn" class="hidden">
-    <div class="spPanel">
-      <h3>SCEGLI DOVE RIENTRARE</h3>
-      <div class="sp"><kbd>1</kbd> Ultimo checkpoint <small>a piedi, con la tua squadra</small></div>
-      <div class="sp" id="spWave"><kbd>2</kbd> Prossima ondata di sbarco <small>a bordo di un mezzo Higgins</small></div>
-      <div class="sp"><kbd>3</kbd> USS Texas <small>cannoni navali da 14 pollici sulla costa</small></div>
-      <div class="sp"><kbd>4</kbd> P-47 Thunderbolt <small>pilota: mitragliatrici e bombe</small></div>
-      <div class="spHint">Premi <kbd>B</kbd> durante il gioco per cambiare ruolo</div>
+    <div class="spPanel dep">
+      <h3>SCHIERAMENTO</h3>
+      <div class="depWrap"><canvas id="depMap" width="420" height="380"></canvas><div id="depList"></div></div>
     </div>
   </div>
 </div>
@@ -135,6 +131,7 @@
 <script src="src/naval.js"></script>
 <script src="src/sidemissions.js"></script>
 <script src="src/player.js"></script>
+<script src="src/deploy.js"></script>
 <script src="src/mission.js"></script>
 <script src="src/hud.js"></script>
 <script src="src/main.js"></script>

@@ -111,3 +111,9 @@ kbd { background: #2a2e2a; border: 1px solid #4a5040; padding: 1px 7px; border-r
 #cross i:nth-child(4) { width: 10px; height: 3px; top: -1.5px; left: var(--g); }
 #cross:after { content: ""; position: absolute; left: -2px; top: -2px; width: 4px; height: 4px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, .8); }
 #hitm { width: 34px; height: 34px; margin: -17px; }
+
+.spPanel.dep{max-width:900px}
+.depWrap{display:flex;gap:18px;flex-wrap:wrap}
+#depMap{width:420px;max-width:100%;border:1px solid #666;border-radius:4px}
+#depList{flex:1;min-width:240px}
+#depList .sp.on{background:rgba(255,208,96,.18);border-color:#ffd060}

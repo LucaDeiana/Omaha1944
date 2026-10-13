@@ -87,7 +87,7 @@ function frame(now) {
     updateMission(dt);
     updateWorld(dt, GAME.time);
     updateAircraft(dt);
-    updateSide(dt);
+    updateSide(dt); updateDeploy(dt);
     updatePlayer(dt);
     updateAI(dt);
     updateProjectiles(dt);

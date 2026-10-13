@@ -53,7 +53,7 @@ function initInput() {
     const first = !KEYS[e.code]; KEYS[e.code] = true;
     if (!GAME.running || !first) return;
     const c = e.code;
-    if (P.spawnMenu) { if (c === 'Digit1') chooseSpawn('checkpoint'); else if (c === 'Digit2') chooseSpawn('wave'); else if (c === 'Digit3') chooseSpawn('naval'); else if (c === 'Digit4') chooseSpawn('plane'); else if (c === 'KeyB' && !P.dead) closeSpawnMenu(); return; }
+    if (P.spawnMenu) { deployKey(c); return; }
     if (c === 'KeyB') { openSpawnMenu(); return; }
     if (P.mode === 'plane') { if (c === 'KeyF') planeDropBomb(); return; }
     if (P.mode === 'naval') return;
@@ -96,10 +96,6 @@ function selectSlot(i) {
 }
 
 // ---------- scelta del rientro ----------
-function openSpawnMenu() {
-  P.spawnMenu = true; $('spawn').classList.remove('hidden');
-  $('spWave').classList.toggle('off', MISSION.stage < 1 || MISSION.stage > 4);
-}
 function closeSpawnMenu() { P.spawnMenu = false; $('spawn').classList.add('hidden'); }
 function leaveMode() {
   if (P.mode === 'plane') exitPlane();
