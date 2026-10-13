@@ -1036,7 +1036,7 @@ function buildTobruks() {
     tm.add(U.cyl12, 0x2a2a26, 0, .45, -.85, PI / 2, 0, 0, .06, .9, .06); tm.add(U.box, 0x4a4a3a, 0, .45, -.55, 0, 0, 0, .3, .25, .2);
     const tur = groupMesh(tm.buildGroups()); tur.position.set(x, y + .55, z); tur.rotation.y = PI; scene.add(tur);
     addSolid(x - 1.8, y - 1, z - 1.8, x + 1.8, y + .6, z + 1.8, 'sand'); addCover(x, z - 2.2, 'trench');
-    WORLD.tobruks.push({ x, z, base: y - 1.9, slitY: y + .95, door: new V3(x, y, z - 2.6), destroyed: false, tur, turret: true, get neutralized() { return this.destroyed || !this.gunner || !this.gunner.alive; }, destroy() { if (this.destroyed) return; this.destroyed = true; burnMeshes(tur); burnMeshes(base); tur.rotation.z = .5; } });
+    WORLD.tobruks.push({ x, z, base: y - 1.9, slitY: y + .95, door: new V3(x, y, z - 2.6), destroyed: false, tur, turret: true, get neutralized() { return this.destroyed || !this.gunner || !this.gunner.alive; }, destroy() { if (this.destroyed) return; this.destroyed = true; burnMeshes(tur); burnMeshes(base); tur.rotation.z = .5; if (this.gunner && this.gunner.alive) this.gunner.die(null, false, 'blast', { blast: new V3(x, this.slitY, z), power: 6 }); } });
   }
 }
 

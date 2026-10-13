@@ -133,8 +133,8 @@ function releaseHolders() { for (const a of allies) if (a.alive && a.group === '
 const allyCap = () => MISSION.endless ? Math.min(Math.floor(Q.allySlots * .6), Math.round(Q.allyAlive * (1 + ((MISSION.level || 1) - 1) * .18))) : Q.allyAlive;
 function boatReload(b) {
   const room = allyCap() - aliveA(); if (room < 5) return false;
-  const front = P.mode === 'foot' ? clamp(P.pos.x, -MAPX + 200, MAPX - 200) : rnd(-200, 200);
-  b.x = R() < .5 ? front + rnd(-220, 220) : rnd(-MAPX + 120, MAPX - 120); b.z = rnd(470, 520); b.stopZ = 82; b.speed = rnd(8.4, 9.6);
+  const front = P.mode === 'foot' && Math.abs(P.pos.x) < 200 ? P.pos.x : rnd(-120, 120);
+  b.x = R() < .7 ? clamp(front + rnd(-120, 120), -200, 200) : rnd(-MAPX + 120, MAPX - 120); b.z = rnd(470, 520); b.stopZ = 82; b.speed = rnd(8.4, 9.6);
   b.g.position.set(b.x, 0, b.z); b.doom = R() < .08 ? rnd(30, 150) : undefined;
   fillBoat(b, Math.min(room, Math.round(rnd(8, 12))), false);
   return true;
@@ -296,6 +296,7 @@ const STAGES = [
       if (P.pos.z < -70) MISSION.checkpoint = { pos: new V3(BREACH_X + 2, 0, -72), yaw: 0 };
       for (const mf of MINEFIELDS) once('mf' + mf[0], P.pos.x > mf[0] - 5 && P.pos.x < mf[1] + 5 && P.pos.z < mf[3] + 4 && P.pos.z > mf[2], () => say(N.walsh, 'Fermo! Campo minato! Guarda i cartelli!'));
       if (near === 0 && (Math.hypot(P.pos.x - tp.x, P.pos.z - tp.z) < 10 || alliesNear(tp.x, tp.z, 14) >= 6)) setStage(4);
+      else if (allies.filter(a => a.alive && !a.vip && Math.abs(a.pos.z - trenchZ(a.pos.x)) < 3 && Math.abs(a.pos.x) < 165).length >= 6) { feed('I compagni hanno conquistato un tratto di trincea'); setStage(4); }
     }
   },
   { // 4
@@ -440,6 +441,60 @@ function aiEngineer(key, pos, need, delay, fn) {
   const f = MISSION.flags; if (f[key] === 'done') return;
   if (alliesNear(pos.x, pos.z, 26) >= need) f[key] = (f[key] || 0) + MISSION.dt; else f[key] = Math.max(0, (f[key] || 0) - MISSION.dt * .5);
   if (f[key] > delay) { f[key] = 'done'; const c = new V3(pos.x, Hf(pos.x, pos.z) + .4, pos.z); if (P.mode === 'foot' && P.pos.distanceTo(c) < 120) say(N.sarge, pick(['Il genio ha piazzato la carica! Giù la testa!', 'Carica piazzata! Fuoco nel buco!'])); after(5, () => { explode(c, 4.5, 260, { charge: true }); fn(); }); }
+}
+// stallo al terrapieno: un cacciatorpediniere martella la trincea e un gruppo parte all'assalto
+function bankAssault(dt, targetZ) {
+  const bank = allies.filter(a => a.alive && !a.vip && a.state !== 'boat' && a.pos.z < -46 && a.pos.z > -64 && Math.abs(a.pos.x) < 220);
+  if (bank.length < 6) return;
+  MISSION.assaultT = (MISSION.assaultT === undefined ? 40 : MISSION.assaultT) - dt; if (MISSION.assaultT > 0) return;
+  MISSION.assaultT = 70;
+  const gaps = wireGapsNow(); if (!gaps.length) return;
+  let best = null, bn = -1;
+  for (const g of gaps) { const gx = (g[0] + g[1]) / 2, n = bank.filter(a => Math.abs(a.pos.x - gx) < 40).length; if (n > bn) { bn = n; best = gx; } }
+  if (bn < 3) return;
+  const gx = best;
+  if (P.mode === 'foot' || P.mode === 'naval') say(N.radio, pick(['Qui McCook: fuoco diretto sulla trincea, tenetevi giù!', 'Cacciatorpediniere sotto costa: apriamo il fuoco sulle postazioni!']));
+  for (let i = 0; i < 9; i++) after(1 + i * .55, () => { const x = gx + rnd(-16, 16), p = new V3(x, 0, trenchZ(x) + rnd(-1.5, 1.5)); p.y = H(p.x, p.z); sfxWhistle(p, false); after(.8, () => explode(p, 6.5, 300, {})); });
+  after(5.5, () => {
+    const grp = bank.filter(a => a.alive).sort((a, b) => Math.abs(a.pos.x - gx) - Math.abs(b.pos.x - gx)).slice(0, 12);
+    for (const a of grp) { const x = gx + rnd(-10, 10); a.chargeTo = new V3(x, 0, targetZ(x)); a.chargeT = 25; a.dest = new V3(clamp(a.pos.x, gx - 2, gx + 2), 0, WIRE_Z - 2); a.state = 'move'; a.crouchRun = false; if (a.cover) { a.cover.occ--; a.cover = null; } }
+    if (grp[0] && dist2Cam(grp[0].pos) < 120 * 120) shout('en', 'move', grp[0].pos, { text: pick(["Let's go! Up the bluff!", 'Move! Move! Into the trench!', 'Follow me! Go!']), priority: true });
+  });
+}
+// fronte bloccato ovunque: il gruppo più avanzato chiede fuoco di preparazione sul nemico davanti e assalta
+function frontAssault(dt) {
+  MISSION.frontT = (MISSION.frontT === undefined ? 50 : MISSION.frontT) - dt; if (MISSION.frontT > 0) return;
+  MISSION.frontT = 60;
+  const adv = allies.filter(a => a.alive && !a.vip && a.state !== 'boat' && !a.wounded && a.pos.z < 60 && Math.abs(a.pos.x) < 260);
+  let leader = null;
+  for (const a of adv.sort((p, q) => p.pos.z - q.pos.z)) { if (adv.filter(b => b.pos.distanceToSquared(a.pos) < 25 * 25).length >= 5) { leader = a; break; } }
+  if (!leader) return;
+  const ahead = enemies.filter(e => e.alive && !e.removed && e.pos.z < leader.pos.z + 4 && e.pos.distanceTo(leader.pos) < 100).sort((p, q) => p.pos.distanceTo(leader.pos) - q.pos.distanceTo(leader.pos)).slice(0, 8);
+  if (ahead.length < 2) return;
+  const c = new V3(); for (const e of ahead) c.add(e.pos); c.multiplyScalar(1 / ahead.length);
+  // la mitragliatrice in postazione più vicina al gruppo viene presa di mira e distrutta
+  const nests = WORLD.bunkers.concat(WORLD.extraBunkers || [], WORLD.tobruks || []).filter(b => !b.destroyed && Math.hypot(b.x - leader.pos.x, b.z - leader.pos.z) < 90);
+  const nest = nests.sort((p, q) => Math.hypot(p.x - leader.pos.x, p.z - leader.pos.z) - Math.hypot(q.x - leader.pos.x, q.z - leader.pos.z))[0];
+  if (nest) after(4, () => { const p = new V3(nest.x, nest.slitY || H(nest.x, nest.z), nest.z + 1.5); sfxWhistle(p, false); after(.8, () => { explode(p, 7, 320, {}); if (!nest.destroyed && R() < .75) { nest.destroy(); if (WORLD.bunkers.includes(nest)) onObjectiveEvent('bunker', nest, false); feed('Postazione nemica centrata dal fuoco navale'); } }); });
+  if (P.mode === 'foot' || P.mode === 'naval') say(N.radio, pick(['Qui McCook: fuoco diretto sulle posizioni nemiche, tenetevi giù!', 'Cacciatorpediniere sotto costa: fuoco sulle coordinate!', 'Artiglieria in arrivo sulla posizione segnalata!']));
+  for (let i = 0; i < 12; i++) after(1 + i * .5, () => { const p = new V3(c.x + rnd(-15, 15), 0, c.z + rnd(-10, 10)); p.y = Hf(p.x, p.z); if (p.distanceTo(leader.pos) < 18) return; sfxWhistle(p, false); after(.8, () => explode(p, 6.5, 300, {})); });
+  after(5.5, () => {
+    const grp = adv.filter(a => a.alive).sort((p, q) => p.pos.distanceTo(leader.pos) - q.pos.distanceTo(leader.pos)).slice(0, 16);
+    for (const a of grp) { a.chargeTo = new V3(c.x + rnd(-10, 10), 0, c.z + rnd(-6, 6)); a.chargeT = 28; a.dest = a.chargeTo.clone(); a.state = 'move'; a.crouchRun = false; if (a.cover) { a.cover.occ--; a.cover = null; } }
+    if (grp[0] && dist2Cam(grp[0].pos) < 120 * 120) shout('en', 'move', grp[0].pos, { text: pick(["Let's go! Up the bluff!", 'Move! Move! Take that position!', 'Follow me! Go!']), priority: true });
+  });
+}
+// fase bloccata troppo a lungo: l'appoggio navale o aereo risolve l'obiettivo
+function stallResolve() {
+  if (PT !== 'A' || MISSION.stageT < 420 || MISSION.flags['stall' + MISSION.stage]) return;
+  MISSION.flags['stall' + MISSION.stage] = true; const st = MISSION.stage;
+  const boom = (x, z) => { const p = new V3(x, 0, z); p.y = Hf(x, z); explode(p, 8, 400, {}); };
+  if (st === 2) { say(N.radio, 'Il genio ha aperto un varco nel filo a ovest!'); if (addWireGap(BREACH_X)) onWireGap(BREACH_X); else setStage(3); }
+  else if (st === 3) { say(N.radio, 'Il 116° ha preso la trincea sulla scogliera!'); for (const e of enemies) if (e.alive && e.group === 'beach' && !e.inBunker && Math.abs(e.pos.z - trenchZ(e.pos.x)) < 4) e.die(null, false, 'blast', { blast: e.pos.clone(), power: 4 }); setStage(4); }
+  else if (st === 4) { say(N.radio, 'Qui Texas: bunker sulla scogliera centrati!'); for (const b of WORLD.bunkers) if (!b.neutralized) { boom(b.x, b.z + 2); b.destroy(); onObjectiveEvent('bunker', b, false); } }
+  else if (st === 5) { say(N.radio, 'Thunderbolt in picchiata: i cannoni da 88 sono distrutti!'); for (const f of WORLD.flaks) if (f.alive) { boom(f.x, f.z); f.destroy(); onObjectiveEvent('flak', f, false); } }
+  else if (st === 6) { say(N.radio, 'I Ranger sono entrati a Colleville da est!'); for (const e of enemies) if (e.alive && e.group === 'village') e.flee = true; }
+  else if (st === 8) { say(N.radio, 'Bombardieri sulla città: il deposito è in fiamme!'); depotBlast(WORLD.depot.pos, 10, 5000); for (const e of enemies) if (e.alive && e.group === 'city') e.flee = true; }
 }
 function setStage(i) {
   MISSION.stage = i; MISSION.stageT = 0; MISSION.markers = []; MISSION.interactables = [];
@@ -597,6 +652,8 @@ function updateMission(dt) {
   for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || [])]) b.supT = Math.max(0, (b.supT || 0) - dt);
   MISSION.stageT += dt; MISSION.nadeCD -= dt; MISSION.eNadeCD -= dt; MISSION.allyNadeCD -= dt;
   (PT === 'E' ? AXIS_STAGES : STAGES)[MISSION.stage].update(dt);
+  stallResolve();
+  if (MISSION.stage >= 1 && !(PT === 'A' && MISSION.stage === 7) && !(MISSION.allyZone && MISSION.allyZone.defend)) frontAssault(dt);
   updateSubs(dt);
   // ondate di sbarco continue
   if (MISSION.stage >= 1) {

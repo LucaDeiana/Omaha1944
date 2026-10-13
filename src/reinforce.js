@@ -37,7 +37,7 @@ class SupplyTruck {
   }
   unload() {
     const room = enemyCap() - aliveE(), n = Math.min(room, aliveE() < enemyCap() * .5 ? 12 : 9); if (n <= 0) return;
-    const empty = TRENCH_POSTS.filter(p => !enemies.some(e => e.alive && Math.abs(e.pos.x - p.x) < 2.5 && Math.abs(e.pos.z - p.z) < 3));
+    const empty = TRENCH_POSTS.filter(p => !enemies.some(e => e.alive && Math.abs(e.pos.x - p.x) < 2.5 && Math.abs(e.pos.z - p.z) < 3) && !allies.some(a => a.alive && a.state !== 'boat' && Math.abs(a.pos.x - p.x) < 35 && Math.abs(a.pos.z - p.z) < 35));
     const front = this.dropZ() > -130;
     for (let i = 0; i < n; i++) {
       const sx = this.pos.x + rnd(-2, 2), sz = this.pos.z + rnd(-3, 3);

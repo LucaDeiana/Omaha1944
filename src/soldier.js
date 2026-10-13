@@ -288,6 +288,12 @@ class Soldier {
   }
   thinkAlly() {
     const Z = MISSION.allyZone;
+    if (this.chargeT > 0) {
+      this.chargeT -= this.thinkDt;
+      if (!this.dest && this.chargeTo && this.pos.distanceTo(this.chargeTo) > 3) { this.dest = this.chargeTo.clone(); this.state = 'move'; this.crouchRun = false; }
+      if (this.chargeT <= 0) this.chargeTo = null;
+      return;
+    }
     if (this.kind === 'medic' && !this.healTarget) {
       let best = null, bd = 30 * 30;
       for (const a of allies) if (a.wounded && a.alive && !a.healer) { const d = a.pos.distanceToSquared(this.pos); if (d < bd) { bd = d; best = a; } }
