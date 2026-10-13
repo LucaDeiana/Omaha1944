@@ -80,17 +80,17 @@ const bunkerBase = x => H0(x, BUNKER_Z + 3) - 1.35;
 function bunkerCarve(x, z, y) {
   if (z > -78 || z < -100) return y;
   for (const bx of BUNKER_XS.concat(BUNKER_XX)) {
-    const dx = x - bx; if (Math.abs(dx) > 5.5) continue;
+    const dx = x - bx; if (Math.abs(dx) > 9.5) continue;
     const fl = bunkerBase(bx) + .3, Z = BUNKER_Z;
     const zd = bunkerDoorZ(bx), adx = Math.abs(dx);
-    if (zd !== null && adx >= 4.5 && adx < 5.5 && Math.abs(z - (Z + zd)) < .9) return lerp(fl, y, smooth((adx - 4.5) / 1));
+    if (zd !== null && adx >= 4.5 && adx < 9.5 && Math.abs(z - (Z + zd)) < 1.1 + (adx - 4.5) * .1) return lerp(fl, y, smooth((adx - 4.5) / 5));
     if (adx < 4.7 && z > Z - 3.7 && z < Z + 3.6) return fl;
-    if (adx < .95 && z <= Z - 3.7 && z > Z - 9.6) return lerp(fl, y, smooth((Z - 3.7 - z) / 5.9));
+    if (adx < 1.1 && z <= Z - 3.7 && z > Z - 12) return lerp(fl, y, smooth((Z - 3.7 - z) / 8.3));
   }
   return y;
 }
 // zona occupata da un bunker e dai suoi accessi: niente vegetazione né oggetti sparsi
-function inBunkerZone(x, z, m = 1.5) { if (z > -78 || z < -96) return false; for (const bx of BUNKER_XS.concat(BUNKER_XX)) if (Math.abs(x - bx) < 6 + m && z > BUNKER_Z - 10 - m && z < BUNKER_Z + 4 + m) return true; return false; }
+function inBunkerZone(x, z, m = 1.5) { if (z > -78 || z < -99) return false; for (const bx of BUNKER_XS.concat(BUNKER_XX)) if (Math.abs(x - bx) < 10 + m && z > BUNKER_Z - 12.5 - m && z < BUNKER_Z + 4 + m) return true; return false; }
 // gradino di tiro sotto la feritoia
 function bunkerStep(x, z) {
   for (const b of WORLD.bunkers.concat(WORLD.extraBunkers || [])) if (Math.abs(x - b.x) < 2.2 && z > b.z + 1.7 && z < b.z + 2.7) return b.base + 1;
@@ -132,7 +132,7 @@ function buildHC() { HC.nx = Math.ceil(3240 / HC.step) + 1; HC.nz = Math.ceil(19
 function Hc(x, z) { const fx = (x - HC.x0) / HC.step, fz = (z - HC.z0) / HC.step; if (!HC.d || fx < 0 || fz < 0 || fx >= HC.nx - 1 || fz >= HC.nz - 1) return H(x, z); const i = fx | 0, j = fz | 0, u = fx - i, v = fz - j, k = j * HC.nx + i, d = HC.d, n = HC.nx; return (d[k] * (1 - u) + d[k + 1] * u) * (1 - v) + (d[k + n] * (1 - u) + d[k + n + 1] * u) * v; }
 function Hf(x, z) {
   const fx = (x - HF.x0) / HF.step, fz = (z - HF.z0) / HF.step;
-  if (!HF.d || fx < 0 || fz < 0 || fx >= HF.nx - 1 || fz >= HF.nz - 1) return Hc(x, z);
+  if (!HF.d || fx < 0 || fz < 0 || fx >= HF.nx - 1 || fz >= HF.nz - 1) return z < -78 && z > -99 && inBunkerZone(x, z, 0) ? H(x, z) : Hc(x, z);
   const i = fx | 0, j = fz | 0, u = fx - i, v = fz - j, k = j * HF.nx + i, d = HF.d, n = HF.nx;
   return (d[k] * (1 - u) + d[k + 1] * u) * (1 - v) + (d[k + n] * (1 - u) + d[k + n + 1] * u) * v;
 }
@@ -263,12 +263,12 @@ function terrainMaterial() {
 }
 function buildTerrain() {
   const s = Q.terrainStep;
-  const xs = axisSteps(-MAPX - 120, MAPX + 120, x => (Math.abs(x) < 185 ? 1.6 : Math.abs(x) < 700 ? 3.2 : 6) * s);
+  const xs = axisSteps(-MAPX - 120, MAPX + 120, x => (BUNKER_XX.some(b => Math.abs(x - b) < 12) ? .8 : Math.abs(x) < 185 ? 1.6 : Math.abs(x) < 700 ? 3.2 : 6) * s);
   const zs = axisSteps(-MAPX, 420, z => (z > -106 && z < -48 ? (Math.abs(0) < 1 ? .85 : 2) : z >= -48 && z < 100 ? 1.5 : z <= -106 && z > -340 ? 2.2 : 7) * s);
   const nx = xs.length, nz = zs.length, N = nx * nz;
   const pos = new Float32Array(N * 3), cl = new Float32Array(N * 3), uv = new Float32Array(N * 2), sp = new Float32Array(N * 4), ax = new Float32Array(N * 2);
   for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
-    const k = j * nx + i, x = xs[i], z = zs[j], y = Math.abs(x) < 240 && z > -470 ? H(x, z) : Hc(x, z);
+    const k = j * nx + i, x = xs[i], z = zs[j], y = (Math.abs(x) < 240 && z > -470) || (z < -78 && z > -99 && inBunkerZone(x, z, 1)) ? H(x, z) : Hc(x, z);
     pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z; uv[k * 2] = x / 3; uv[k * 2 + 1] = z / 3;
     const n2 = fbm(x * .03, z * .03, 3);
     let sa = 0, pe = 0, gr = 0, di = 0, wet = 0, sc = 0, tr = 1, tg = 1, tb = 1;
@@ -441,6 +441,17 @@ class Boat {
   update(dt, t) {
     this.cycle(dt);
     if (this.state === 'reload') return;
+    // scia: schiuma a poppa e onde a V ai lati della prua
+    if ((this.state === 'move' || (this.state === 'return' && this.ramp <= 0)) && dist2Cam(this.g.position) < 320 * 320) {
+      this.wakeT = (this.wakeT || 0) - dt;
+      if (this.wakeT <= 0) {
+        this.wakeT = .07; const ry = this.g.rotation.y, c = Math.cos(ry), sn = Math.sin(ry), wy = WATER_Y + waveH(this.x, this.z, GAME.time) + .12;
+        const wx = (lx, lz) => this.x + lx * c + lz * sn, wz = (lx, lz) => this.z - lx * sn + lz * c;
+        PS_WAKE.emit(wx(rnd(-.8, .8), 5.6), wy, wz(0, 5.6), rnd(-.3, .3), .05, rnd(-.3, .3), rnd(5, 8), .8, rnd(3.5, 5.5), .6, .9, .93, .95, .4, 0);
+        for (const sd of [-1, 1]) PS_WAKE.emit(wx(sd * 1.9, -4.2), wy, wz(sd * 1.9, -4.2), (sd * c) * rnd(1.2, 2), .04, (-sd * sn) * rnd(1.2, 2), rnd(3.5, 5), .5, rnd(2, 3.2), .5, .88, .92, .94, .3, 0);
+        if (R() < .4) PS_GRAIN.emit(wx(rnd(-1, 1), 5.4), wy + .2, wz(0, 5.4), rnd(-.8, .8), rnd(.8, 1.8), rnd(-.5, .5), rnd(.5, .9), .05, .04, .7, ...C_WATER, .3, 9.8);
+      }
+    }
     if (this.state === 'move') {
       this.z -= this.speed * dt;
       // spruzzi della prua
@@ -478,12 +489,12 @@ let BUNKER_G, FLAK_G, AA_G;
 // zd: posizione (locale) delle porte laterali dove passa la trincea, null se non c'è trincea
 function bunkerWalls(zd) {
   const w = [
-    [-4.5, -.7, 0, 3.06, -3.5, -2.7], [.7, 4.5, 0, 3.06, -3.5, -2.7], [-.7, .7, 2.1, 3.06, -3.5, -2.7],
-    [-4.5, 4.5, 0, 2.5, 2.7, 3.5], [-4.5, -2, 2.5, 3.06, 2.7, 3.5], [2, 4.5, 2.5, 3.06, 2.7, 3.5],
+    [-4.5, -.8, 0, 3.06, -3.5, -2.7], [.8, 4.5, 0, 3.06, -3.5, -2.7],
+    [-4.5, 4.5, 0, 2.25, 2.7, 3.5], [-4.5, -2.3, 2.25, 3.06, 2.7, 3.5], [2.3, 4.5, 2.25, 3.06, 2.7, 3.5],
   ];
   for (const [a, b] of [[-4.5, -3.7], [3.7, 4.5]]) {
     if (zd === null) w.push([a, b, 0, 3.06, -2.7, 2.7]);
-    else w.push([a, b, 0, 3.06, -2.7, zd - .75], [a, b, 0, 3.06, zd + .75, 2.7], [a, b, 2.1, 3.06, zd - .75, zd + .75]);
+    else w.push([a, b, 0, 3.06, -2.7, zd - .85], [a, b, 0, 3.06, zd + .85, 2.7]);
   }
   return w;
 }
@@ -494,15 +505,14 @@ function buildBunkerGeo() {
   // pareti cave: si entra dalla porta posteriore
   mb.add(U.box, 0x8e8a80, 0, .25, 0, 0, 0, 0, 7.4, .1, 5.4);
   mb.add(U.box, 0x96928a, 0, .65, 2.2, 0, 0, 0, 4.4, .7, 1);
-  mb.add(U.box, 0x8a867c, 0, 2.48, 2.95, 0, 0, 0, 4, .06, .7);
+  mb.add(U.box, 0x8a867c, 0, 2.23, 2.95, 0, 0, 0, 4.6, .06, .7);
   mb.add(U.box, c, 0, 3.6, 0, 0, 0, 0, 9, 1.1, 7);
   mb.add(U.box, c2, 0, 4.4, .2, 0, 0, 0, 10, .7, 8);
   for (const sx of [-1, 1]) { mb.add(U.box, c2, sx * 5.2, 1.6, 3.4, 0, sx * -.5, 0, .8, 3, 2.5); mb.add(U.box, c2, sx * 5, 4.4, .2, 0, 0, sx * .5, .6, .6, 8); }
-  mb.add(U.box, c2, 0, 2.48, 3.35, .5, 0, 0, 4.2, .12, .5); mb.add(U.box, c2, 0, 3.08, 3.35, -.5, 0, 0, 4.2, .12, .5);
+  mb.add(U.box, c2, 0, 2.2, 3.4, .5, 0, 0, 4.8, .12, .5); mb.add(U.box, c2, 0, 3.1, 3.4, -.5, 0, 0, 4.8, .12, .5);
   for (let i = 0; i < 6; i++) mb.add(U.box, c2, rnd(-4, 4), 4.78, rnd(-3, 3), rnd(-.1, .1), R() * 3, rnd(-.1, .1), rnd(.4, 1), .12, rnd(.4, 1));
   mb.mat = 'vc';
-  for (const sx of [-1, 1]) mb.add(U.box, 0x3a3a36, sx * .75, 1.2, -3.56, 0, 0, 0, .12, 2.1, .08);
-  mb.add(U.box, 0x3a3a36, 0, 2.15, -3.56, 0, 0, 0, 1.62, .12, .08);
+  for (const sx of [-1, 1]) mb.add(U.box, 0x3a3a36, sx * .85, 1.5, -3.56, 0, 0, 0, .12, 3, .08);
   // arredo interno: casse di munizioni, panca, tavolo con mappe, lampada, bossoli
   mb.mat = 'wood';
   for (let k = 0; k < 5; k++) mb.add(U.box, 0x4a4230, -3.2, .5 + (k % 2) * .42, -1.8 + k * .7, 0, 0, 0, .6, .4, .55);
@@ -543,11 +553,11 @@ function makeBunker(x, extra) {
   for (const [x0, x1, y0, y1, z0, z1] of bunkerWalls(bunkerDoorZ(x))) wm.add(U.box, 0xb0aca2, (x0 + x1) / 2, (y0 + y1) / 2 - (y0 === 0 ? .6 : 0), (z0 + z1) / 2, 0, 0, 0, x1 - x0, y1 - y0 + (y0 === 0 ? 1.2 : 0), z1 - z0);
   mesh.add(groupMesh(wm.buildGroups()));
   const b = {
-    x, z, base, mesh, gunner: null, destroyed: false, slitY: base + 2.78,
+    x, z, base, mesh, gunner: null, destroyed: false, slitY: base + 2.66,
     door: new V3(x, base + .3, z - 4.3),
     walls: bunkerWalls(bunkerDoorZ(x)).map(([x0, x1, y0, y1, z0, z1]) => addSolid(x + x0, base + y0 - (y0 === 0 ? 2 : 0), z + z0, x + x1, base + y1, z + z1, 'bunker')),
     upper: addSolid(x - 4.5, base + 3.06, z - 3.5, x + 4.5, base + 4.8, z + 3.5, 'bunker'),
-    get lower() { return this.walls[3]; }, get side() { return this.walls[6]; },
+    get lower() { return this.walls[2]; }, get side() { return this.walls[5]; },
     get neutralized() { return this.destroyed || !this.gunner || !this.gunner.alive; },
     destroy() {
       if (this.destroyed) return; this.destroyed = true;

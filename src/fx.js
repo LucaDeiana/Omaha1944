@@ -3,7 +3,7 @@
 //  Effetti: particelle, traccianti, detriti, bossoli, decalcomanie,
 //  onde d'urto, emettitori persistenti, sporco sull'obiettivo
 // ============================================================
-let PS_SMOKE, PS_FIRE, PS_GRAIN;
+let PS_SMOKE, PS_FIRE, PS_GRAIN, PS_WAKE;
 const emitters = [];
 const FXP = { tr: null, trList: [], trI: 0, deb: null, debList: [], debI: 0, cas: null, casList: [], casI: 0, dec: {}, rings: [], ringI: 0 };
 const _fm = new THREE.Matrix4(), _fq = new THREE.Quaternion(), _fs = new V3(), _fp = new V3(), _fu = new V3(0, 1, 0), _fz = new THREE.Matrix4().makeScale(0, 0, 0);
@@ -83,6 +83,7 @@ class Particles {
 
 function initFX() {
   PS_SMOKE = new Particles(Math.round(4500 * Q.particles), false, TEX.smoke.map);
+  PS_WAKE = new Particles(Math.round(2200 * Q.particles), false, TEX.smoke.map);
   PS_FIRE = new Particles(Math.round(1600 * Q.particles), true, TEX.fire.map);
   PS_GRAIN = new Particles(Math.round(5000 * Q.particles), false, TEX.grain.map);
   // traccianti: cilindri luminosi
@@ -197,7 +198,7 @@ function addDecal(type, p, s, grow = 0) {
 function addEmitter(p, type, scale = 1) { const e = { p: p.clone(), type, scale, acc: 0, on: true, life: Infinity }; emitters.push(e); return e; }
 
 function updateFX(dt) {
-  PS_SMOKE.update(dt); PS_FIRE.update(dt); PS_GRAIN.update(dt);
+  PS_SMOKE.update(dt); PS_FIRE.update(dt); PS_GRAIN.update(dt); PS_WAKE.update(dt);
   for (let ei = emitters.length - 1; ei >= 0; ei--) {
     const e = emitters[ei];
     e.life -= dt; if (e.life <= 0) { emitters.splice(ei, 1); continue; }

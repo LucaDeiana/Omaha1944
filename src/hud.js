@@ -84,6 +84,7 @@ function updateHUD(dt) {
   $('naval').style.display = P.mode === 'naval' ? 'block' : 'none';
   $('planehud').style.display = P.mode === 'plane' ? 'block' : 'none';
   $('cross').style.display = P.mode === 'foot' ? 'block' : 'none';
+  if (P.mode !== 'foot') $('interact').style.display = 'none';
   $('wbox').style.display = $('hpbox').style.display = P.mode === 'foot' ? 'block' : 'none';
   if (gradePass) { gradePass.uniforms.uShock.value = P.shock; gradePass.uniforms.uFlash.value = Math.max(0, gradePass.uniforms.uFlash.value - dt * 2); }
   hudT -= dt; if (hudT > 0) return; hudT = .1;

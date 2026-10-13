@@ -11,7 +11,7 @@ function initStations() {
   for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || [])]) {
     STATIONS.push({
       type: 'mg', b, occupant: null, yaw0: PI,
-      entry: new V3(b.x, b.base + 1, b.z + 2.1), cam: new V3(b.x, b.slitY - .02, b.z + 2.7),
+      entry: new V3(b.x, b.base + 1, b.z + 2.1), cam: new V3(b.x, b.slitY - .05, b.z + 3.15),
       usable() { return !b.destroyed && (PT === 'E' || b.neutralized); },
       label: 'Premi E per prendere la MG42 del bunker',
     });
@@ -55,7 +55,7 @@ function buildMGView() {
   const m = new THREE.Mesh(mb.build(), MAT.vcMetal); g.add(m);
   const fl = new THREE.Mesh(new THREE.PlaneGeometry(.3, .3), new THREE.MeshBasicMaterial({ color: 0xffc070, transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false }));
   fl.position.set(0, .02, -1.05); fl.visible = false; g.add(fl); g.userData.flash = fl;
-  g.position.set(.0, -.2, -.25); g.visible = false; camera.add(g);
+  g.position.set(.06, -.26, -.2); g.visible = false; camera.add(g);
   return g;
 }
 function enterStation(s) {
@@ -89,7 +89,7 @@ function stationMouse(mx, my) {
   if (P.mode === 'flak') { const s = .0021 * SETTINGS.sens * (camera.fov / 70); P.yaw -= mx * s; P.pitch = clamp(P.pitch - my * s, -.08, 1.4); return; }
   if (P.mode === 'mg') {
     const s = .0021 * SETTINGS.sens;
-    const arc = STN.cur.arc || .85; P.yaw = clamp(P.yaw - mx * s, STN.cur.yaw0 - arc, STN.cur.yaw0 + arc);
+    const arc = STN.cur.arc || .85; P.yaw = clamp(P.yaw - mx * s, STN.cur.yaw0 - arc, STN.cur.yaw0 + arc); P.pitch = clamp(P.pitch, -.5, .2);
     if (STN.cur.b && STN.cur.b.tur) STN.cur.b.tur.rotation.y = P.yaw; P.pitch = clamp(P.pitch - my * s, -.42, .16);
   } else if (P.mode === 'mortar') {
     const k = .45 * SETTINGS.sens;
@@ -163,8 +163,8 @@ function updateStation(dt) {
     else if (mouseL && STN.fireT <= 0 && !STN.over) { if (STN.belt > 0) mgFire(); else { sfxMech('dry'); STN.fireT = .4; } }
     camera.position.copy(s.cam).add(_so.set(rnd(-1, 1) * P.shake * .02, rnd(-1, 1) * P.shake * .02, 0));
     camera.rotation.set(P.pitch, P.yaw, 0, 'YXZ');
-    STN.gun.position.set(Math.sin(GAME.time * 40) * .002 * (mouseL ? 1 : 0), -.2 + (mouseL && STN.fireT > 0 ? .004 : 0), -.25 + (STN.fireT > .025 ? .015 : 0));
-    const fov = P.adsHeld ? 38 : SETTINGS.fov; if (Math.abs(camera.fov - fov) > .1) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 10)); camera.updateProjectionMatrix(); }
+    STN.gun.position.set(.06 + Math.sin(GAME.time * 40) * .002 * (mouseL ? 1 : 0), -.26 + (mouseL && STN.fireT > 0 ? .004 : 0), -.2 + (STN.fireT > .025 ? .015 : 0));
+    const fov = P.adsHeld ? 38 : SETTINGS.fov + 10; if (Math.abs(camera.fov - fov) > .1) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 10)); camera.updateProjectionMatrix(); }
     $('stHud').innerHTML = `<b>MG42</b> — nastro ${STN.belt}/250${STN.reloadT > 0 ? ' · <i>cambio nastro…</i>' : ''}<div class="heat"><i style="width:${Math.round(STN.heat * 100)}%;background:${STN.over ? '#d33' : '#e0a040'}"></i></div><small>Click sx fuoco · Click dx mira · R nastro · E esci</small>`;
   } else {
     STN.mortT -= dt;
