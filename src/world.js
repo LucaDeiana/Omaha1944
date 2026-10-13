@@ -114,7 +114,7 @@ function H(x, z) {
       y += k < .72 ? -c.d * (1 - (k / .72) ** 2) : c.d * .35 * Math.sin((k - .72) / .28 * PI);
     }
   }
-  return bunkerCarve(x, z, y);
+  return bunkerCarve(x, z, cityFlat(x, z, y));
 }
 // griglia di altezze precalcolata (interrogazioni veloci per IA, fisica, particelle)
 const HF = { x0: -245, z0: -470, step: .75, nx: 0, nz: 0, d: null };
@@ -834,7 +834,7 @@ function buildStatic() {
   }
   for (let i = 0; i < 420; i++) {
     const x = i < 120 ? srnd(-230, 230) : srnd(-MAPX, MAPX), z = i < 120 ? srnd(-420, -110) : srnd(-MAPX + 50, -110);
-    if (roadDist(x, z) < 6 || (z < -240 && z > -330 && x > -95 && x < 90) || Math.abs(z + 170) < 6 || Math.abs(z + 218) < 6 || (z < -180 && z > -205 && x > -20 && x < 70)) continue;
+    if (roadDist(x, z) < 6 || cityIn(x, z) || (z < -240 && z > -330 && x > -95 && x < 90) || Math.abs(z + 170) < 6 || Math.abs(z + 218) < 6 || (z < -180 && z > -205 && x > -20 && x < 70)) continue;
     addTree(S, x, z, rnd(.8, 1.3));
   }
   for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) addTree(S, 70 + c * 7 + srnd(-1, 1), -240 - r * 7, .6);
@@ -976,7 +976,7 @@ function buildFleet() {
 // ---------- costruzione ----------
 function buildWorld(step) {
   genCraters();
-  WORLD.villageY = H0(10, -283);
+  WORLD.villageY = H0(10, -283); CITY.y = H0(0, -575);
   buildHF(); buildHC();
   buildTerrain();
   buildWater();
@@ -988,6 +988,7 @@ function buildWorld(step) {
   for (const x of BUNKER_XS) makeBunker(x);
   for (const x of BUNKER_XX) makeBunker(x, true);
   makeFlak(-5, -194); makeFlak(48, -196);
+  buildCity();
 }
 
 function updateWorld(dt, t) {
