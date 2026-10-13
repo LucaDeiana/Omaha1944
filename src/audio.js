@@ -92,7 +92,7 @@ async function buildBank() {
   add('ricochet', .8, (oc, dst, i) => { oT(oc, dst, 0, .6, { f: 3800 + i * 500, f2: 1200, v: .35, a: .004 }); oN(oc, dst, 0, .05, { type: 'highpass', f: 3000, v: .8 }); oN(oc, dst, 0, .5, { type: 'bandpass', f: 3000, f2: 1300, q: 6, v: .25, a: .01 }); }, 4);
   add('imp_sand', .3, (oc, dst) => { oN(oc, dst, 0, .1, { f: 900, v: 1 }); oN(oc, dst, 0, .05, { type: 'bandpass', f: 2600, v: .4 }); for (let k = 0; k < 8; k++) oN(oc, dst, .02 + R() * .2, .012, { type: 'bandpass', f: 2000 + R() * 3000, q: 2, v: .12 }); });
   add('imp_water', .5, (oc, dst) => { oN(oc, dst, 0, .03, { type: 'highpass', f: 1500, v: .9 }); oN(oc, dst, 0, .35, { f: 2500, f2: 600, v: .8, a: .004 }); oN(oc, dst, .02, .3, { type: 'bandpass', f: 900, q: .5, v: .5, a: .01 }); for (let k = 0; k < 10; k++) oN(oc, dst, .08 + R() * .3, .02, { type: 'highpass', f: 3000, v: .1 }); }, 3);
-  add('imp_metal', .6, (oc, dst, i) => { const j = 1 + i * .09, sh = shaperN(oc, 2.5); sh.connect(dst); oN(oc, sh, 0, .015, { type: 'highpass', f: 1200, v: 1.6 }); oN(oc, sh, 0, .18, { type: 'bandpass', f: 1100 * j, q: 3, v: .9 }); oT(oc, sh, 0, .12, { f: 320 * j, f2: 180, v: .7 }); oN(oc, dst, 0, .35, { type: 'bandpass', f: 2600 * j, q: 6, v: .25 }); });
+  add('imp_metal', .5, (oc, dst, i) => { const j = 1 + i * .11, sh = shaperN(oc, 3); sh.connect(dst); oN(oc, sh, 0, .006, { type: 'highpass', f: 2200, v: 2.2, a: .0002 }); oN(oc, sh, 0, .07, { type: 'bandpass', f: 650 * j, q: 1.2, v: 1.4, a: .0005 }); oT(oc, sh, 0, .05, { f: 180 * j, f2: 90, v: 1 }); oT(oc, dst, .002, .14, { f: 3300 * j, v: .12 }); oT(oc, dst, .002, .09, { f: 5100 * j, v: .07 }); oN(oc, dst, .01, .25, { f: 1800, f2: 300, v: .25 }); }, 5);
   add('imp_flesh', .3, (oc, dst) => { oN(oc, dst, 0, .07, { f: 450, v: 1.3 }); oT(oc, dst, 0, .1, { f: 110, f2: 55, v: .9 }); oN(oc, dst, .005, .06, { type: 'bandpass', f: 900, q: 2, v: .4 }); });
   add('imp_wood', .2, (oc, dst) => { oN(oc, dst, 0, .07, { type: 'bandpass', f: 900, q: 2.5, v: 1.1 }); oN(oc, dst, 0, .03, { type: 'highpass', f: 2000, v: .4 }); });
   add('imp_stone', .3, (oc, dst) => { oN(oc, dst, 0, .05, { type: 'bandpass', f: 2400, v: 1 }); oN(oc, dst, 0, .14, { f: 600, v: .4 }); });
@@ -151,11 +151,19 @@ async function buildBank() {
   add('scream', 1.6, voice('a', 290, .72, 1.3, .2), 3); add('groan', 1.2, voice('o', 135, .8, 1, .45), 3);
   add('yell', .8, voice('e', 230, .9, .6, .25), 3); add('wail', 2, voice('u', 330, .7, 1.8, .2), 2);
   // anelli continui (motori, mare, vento, battaglia lontana)
-  const engine = (b, cyl) => (oc, dst) => {
+  const engine0 = (b, cyl) => (oc, dst) => {
     const sh = shaperN(oc, 2), lp = oc.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1500; lp.connect(sh); sh.connect(dst);
     const vca = oc.createGain(); vca.gain.value = .5; vca.connect(lp);
     for (const [f, ty, v] of [[b, 'sawtooth', .5], [b / 2, 'square', .35], [b * 2, 'sawtooth', .15]]) { const o = oc.createOscillator(); o.type = ty; o.frequency.value = f; const g = oc.createGain(); g.gain.value = v; o.connect(g); g.connect(vca); o.start(0); }
     const am = oc.createOscillator(); am.frequency.value = cyl; const amg = oc.createGain(); amg.gain.value = .45; am.connect(amg); amg.connect(vca.gain); am.start(0);
+  };
+  const engine = (b, cyl) => (oc, dst) => {
+    const lp = oc.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400; const sh = shaperN(oc, 1.6); lp.connect(sh); sh.connect(dst);
+    const vca = oc.createGain(); vca.gain.value = .55; vca.connect(lp);
+    const n = oc.createBufferSource(); n.buffer = AU.brownB; n.loop = true; const bp = oc.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 420; bp.Q.value = .5; const ng = oc.createGain(); ng.gain.value = 1.6; n.connect(bp); bp.connect(ng); ng.connect(vca); n.start(0);
+    const w = oc.createBufferSource(); w.buffer = AU.whiteB; w.loop = true; const hp = oc.createBiquadFilter(); hp.type = 'bandpass'; hp.frequency.value = 2200; hp.Q.value = .4; const wg = oc.createGain(); wg.gain.value = .12; w.connect(hp); hp.connect(wg); wg.connect(lp); w.start(0);
+    for (const [f, ty, v] of [[b, 'sawtooth', .25], [b / 2, 'triangle', .35], [b * 1.5, 'sawtooth', .08]]) { const o = oc.createOscillator(); o.type = ty; o.frequency.value = f; const g = oc.createGain(); g.gain.value = v; o.connect(g); g.connect(vca); o.start(0); }
+    const am = oc.createOscillator(); am.frequency.value = cyl; const amg = oc.createGain(); amg.gain.value = .4; am.connect(amg); amg.connect(vca.gain); am.start(0);
   };
   add('eng_p47', 1, engine(72, 18), 1); add('eng_fw', 1, engine(66, 22), 1); add('eng_boat', 1, engine(40, 10), 1); add('eng_bomber', 1, engine(56, 14), 1);
   add('surf', 12, (oc, dst) => {

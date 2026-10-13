@@ -135,9 +135,10 @@ class Soldier {
       if (this.duckT <= 0) {
         this.duck = !this.duck;
         this.duckT = this.duck ? rnd(1.2, 3.5) * (1 + this.supp * 2) : rnd(2.2, 5);
-        if (this.kind === 'mg' || this.inBunker || this.role) this.duck = this.role === 'mortar';
+        if (this.kind === 'mg' || this.inBunker || this.role) this.duck = this.role === 'mortar' || (this.supB ? this.supB.supT > 0 : this.supp > .6);
       }
     } else this.duck = false;
+    if (this.supB && this.supB.supT > 0) this.duck = true;
     const wantProne = this.team === 'A' && posted && this.supp > .55 && this.pos.z > -58 && (!this.cover || this.cover.kind !== 'bank');
     this.prone = lerp(this.prone, wantProne ? 1 : 0, dt * 3);
     let wc = 0;
@@ -237,7 +238,7 @@ class Soldier {
       if (d > 10 && d < 28) { throwNadeAt(this, this.target.pos, 'A'); this.nadeT = rnd(20, 40); MISSION.allyNadeCD = rnd(3, 6); if (dist2Cam(this.pos) < 50 * 50) shout('en', 'grenade', this.pos); }
     }
     if (this.state === 'move') return;
-    this.wait -= this.thinkDt;
+    this.wait -= this.thinkDt * (MISSION.suppT > 0 ? 3 : 1);
     if (this.wait <= 0 && Z) this.pickCover(Z);
   }
   pickCover(Z) {

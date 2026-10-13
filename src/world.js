@@ -30,6 +30,8 @@ function addCrater(x, z, r, d) {
     }
 }
 function genCraters() {
+  // linee di copertura: crateri di mortaio a fasce sul bassofondale e sulla sabbia
+  for (const lz of [64, 42, 20, -2, -22, -40]) for (let k = 0; k < 26; k++) { const x = srnd(-220, 220), z = lz + srnd(-4, 4); addCrater(x, z, srnd(2, 3.6), srnd(.5, .9)); addCover(x, z + 1.2, 'crater'); }
   for (let i = 0; i < 160; i++) { const x = srnd(-MAPX + 50, MAPX - 50); if (Math.abs(x) < 200) continue; addCrater(x, srnd(-52, -9), srnd(1.8, 3.4), srnd(.35, .7)); if (R() < .5) addCrater(x + srnd(-20, 20), srnd(-110, -66), srnd(2, 4), srnd(.6, 1.1)); }
   for (let i = 0; i < 80; i++) addCrater(srnd(-190, 190), srnd(-52, -9), srnd(1.8, 3.4), srnd(.35, .7));
   for (let i = 0; i < 55; i++) { const x = srnd(-170, 170), z = srnd(-112, -66); if (Math.abs(z - trenchZ(x)) < 4 || Math.abs(x - BREACH_X) < 6) continue; addCrater(x, z, srnd(2, 4), srnd(.6, 1.1)); }
@@ -57,7 +59,7 @@ function hedgeH(x, z) {
   return y;
 }
 function H0(x, z) {
-  if (z > 0) return Math.max(-9, -z * .035) + (vnoise(x * .04, z * .04) - .5) * .4;
+  if (z > 0) return z < 90 ? -z * .004 + (vnoise(x * .05, z * .05) - .5) * .18 : Math.max(-9, -.36 - (z - 90) * .035) + (vnoise(x * .04, z * .04) - .5) * .4;
   let y = Math.min(-z, 64) * .04;
   y += Math.sin(x * .21 + z * .13) * .03 + (vnoise(x * .07, z * .07) - .5) * .3 * smooth(-z / 25);
   y += 1.15 * Math.exp(-(((z - BANK_Z) / 1.7) ** 2));
@@ -73,7 +75,7 @@ function H0(x, z) {
 }
 function H(x, z) {
   let y = H0(x, z);
-  if (z > 0) return y;
+  if (z > 100) return y;
   if (z < -84 && z > -97 && x > -165 && x < 165) { const d = Math.abs(z - trenchZ(x)); if (d < 1.7) y -= 1.8 * smooth((1.7 - d) / .6); }
   for (const mp of WORLD.mortarPits) { const d = Math.hypot(x - mp.x, z - mp.z); if (d < 2.6) y -= .8 * smooth((2.6 - d) / 1); }
   if (z < -160 && z > -225) y += hedgeH(x, z);
@@ -228,7 +230,7 @@ function terrainMaterial() {
 function buildTerrain() {
   const s = Q.terrainStep;
   const xs = axisSteps(-MAPX - 120, MAPX + 120, x => (Math.abs(x) < 185 ? 1.6 : Math.abs(x) < 700 ? 3.2 : 6) * s);
-  const zs = axisSteps(-MAPX, 420, z => (z > -106 && z < -48 ? (Math.abs(0) < 1 ? .85 : 2) : z >= -48 && z < 30 ? 1.5 : z <= -106 && z > -340 ? 2.2 : 7) * s);
+  const zs = axisSteps(-MAPX, 420, z => (z > -106 && z < -48 ? (Math.abs(0) < 1 ? .85 : 2) : z >= -48 && z < 100 ? 1.5 : z <= -106 && z > -340 ? 2.2 : 7) * s);
   const nx = xs.length, nz = zs.length, N = nx * nz;
   const pos = new Float32Array(N * 3), cl = new Float32Array(N * 3), uv = new Float32Array(N * 2), sp = new Float32Array(N * 4), ax = new Float32Array(N * 2);
   for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
@@ -284,7 +286,7 @@ function buildWater() {
       vD=a*(.32*.07*cos(p1)*d1+.14*.13*cos(p2)*d2);
       vC=sin(p1)*.5+.5;vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`,
     fragmentShader: `uniform float uTime,uFogD;uniform vec3 uSunDir,uDeep,uShallow,uFog;uniform sampler2D tN;uniform samplerCube uSky;varying vec3 vW;varying vec2 vD;varying float vC;
-    float bed(vec2 p){return p.y>0.?max(-9.,-p.y*.035):min(-p.y,64.)*.04;}
+    float bed(vec2 p){return p.y>90.?max(-9.,-.36-(p.y-90.)*.035):p.y>0.?-p.y*.004:min(-p.y,64.)*.04;}
     void main(){
       vec2 p=vW.xz;float t=uTime;
       vec3 n1=texture2D(tN,p*.045+vec2(t*.012,t*.021)).xyz*2.-1.;
@@ -572,14 +574,14 @@ function buildStatic() {
   // --- ostacoli della spiaggia ---
   S.mat = 'paint';
   for (let i = 0; i < 330; i++) {
-    const x = i < 130 ? srnd(-195, 195) : srnd(-MAPX + 40, MAPX - 40), z = srnd(-49, -7), y = H(x, z), ry = srnd(0, PI);
+    const x = i < 130 ? srnd(-195, 195) : srnd(-MAPX + 40, MAPX - 40), z = srnd(-49, 78), y = H(x, z), ry = srnd(0, PI);
     S.add(U.box, 0x6a5a4c, x, y + .7, z, PI / 4, ry, 0, .17, .17, 2.4);
     S.add(U.box, 0x6a5a4c, x, y + .7, z, -PI / 4, ry, 0, .17, .17, 2.4);
     S.add(U.box, 0x705e50, x, y + .7, z, 0, ry + PI / 2, PI / 4, .17, 2.4, .17);
     addCover(x + rnd(-.3, .3), z + 1.35, 'hh'); OBST.push({ x, z, r: .9 });
   }
   for (let i = 0; i < 18; i++) {
-    const x = srnd(-185, 185), z = srnd(-16, -3), y = H(x, z), ry = srnd(-.25, .25);
+    const x = srnd(-185, 185), z = srnd(-10, 82), y = H(x, z), ry = srnd(-.25, .25);
     S.setBase(x, y, z, 0, ry, 0);
     for (const fx of [-1.4, 0, 1.4]) S.add(U.box, 0x6b5d50, fx, 1.3, 0, 0, 0, 0, .14, 2.6, .14);
     for (const fy of [.3, 1.3, 2.5]) S.add(U.box, 0x6b5d50, 0, fy, 0, 0, 0, 0, 3.0, .12, .12);
@@ -587,7 +589,7 @@ function buildStatic() {
     S.clearBase(); addCover(x, z + 2.4, 'gate'); OBST.push({ x: x - 1, z, r: .8 }, { x: x + 1, z, r: .8 });
   }
   for (let i = 0; i < 55; i++) {
-    const x = srnd(-190, 190), z = srnd(-24, -3), y = H(x, z);
+    const x = srnd(-190, 190), z = srnd(-24, 65), y = H(x, z);
     S.mat = 'wood'; S.add(new THREE.CylinderGeometry(.12, .15, 1, 8), 0x7b6a56, x, y + 1.65, z + 1.13, .6, 0, 0, 1, 4, 1);
     S.mat = 'paint'; S.add(U.cyl12, 0x6c6f5c, x, y + 3.35, z + 2.26, .6, 0, 0, .18, .09, .18); S.add(U.cyl12, 0x55574a, x, y + 3.4, z + 2.29, .6, 0, 0, .04, .08, .04);
     OBST.push({ x, z: z + .3, r: .35 });

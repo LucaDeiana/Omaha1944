@@ -297,7 +297,10 @@ function playerFire() {
   else if (r.type === 'vgunner') { r.obj.killGunner(true); STATS.hits++; hitMarker(true, true); bloodHit(p.clone(), _d, 1.2); }
   else if (r.type === 'plane') { r.obj.damage(w.dmg * .3, true); fxImpact(p.clone(), 'metal'); hitMarker(false, false); }
   else if (r.type === 'terrain') { fxImpact(p.clone(), p.z > -58.5 ? 'sand' : 'dirt'); if (r.t < 25) sfxImpact(p, 'sand'); }
-  else if (r.type === 'solid') {
+  // fuoco di soppressione: colpi vicino alla feritoia o ai nemici
+  for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || [])]) if (Math.abs(p.x - b.x) < 5.5 && Math.abs(p.z - (b.z + 3.5)) < 3.5 && Math.abs(p.y - b.slitY) < 1.8) suppressBunker(b);
+  for (const e of enemies) if (e.alive && !e.inBunker && e.pos.distanceToSquared(p) < 9) e.supp = Math.min(1, e.supp + .45);
+  if (r.type === 'solid') {
     const t = r.obj.tag, k = t === 'boat' || t === 'tank' || t === 'flak' ? 'metal' : t === 'hedge' ? 'dirt' : (t === 'house' || t === 'ruin' || t === 'wall' || t === 'church' || t === 'tower' || t === 'bunker') ? 'stone' : 'wood';
     fxImpact(p.clone(), k); if (r.t < 40) { sfxImpact(p, k); if ((k === 'metal' || k === 'stone') && R() < .3) sfxRicochet(p); }
   }

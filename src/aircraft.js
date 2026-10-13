@@ -42,6 +42,7 @@ class Plane {
   }
   update(dt) {
     this.age += dt;
+    if (this.doomT !== undefined && !this.crash) { this.doomT -= dt; if (this.doomT <= 0) { this.doomT = undefined; fxExplosion(this.pos.clone(), 1.2, false); sfxBoom(this.pos, 1); this.damage(9999, false); if (dist2Cam(this.pos) < 900 * 900) say(N.walsh, this.team === 'A' ? 'Hanno preso un Thunderbolt!' : 'Un crucco abbattuto!'); } }
     for (const p of this.props) { p.rotation.z += dt * 47; p.userData.disc.material.opacity = .14; }
     if (this.crash) {
       this.vel.y -= 9.8 * dt * 1.4; this.vel.multiplyScalar(1 - .1 * dt); this.roll += dt * 2;
@@ -118,7 +119,7 @@ function bombImpact(p, q) {
 function raidP47(target) {
   const T = target.clone(), side = rnd(-1, 1) * 200, n = R() < .5 ? 2 : 3;
   for (let i = 0; i < n; i++) {
-    const off = new V3(i * 25 - 12, i * 10, i * 40);
+    const off = new V3(rnd(-90, 90), rnd(-25, 45), i * rnd(60, 160));
     const start = new V3(T.x + side + off.x, 380 + off.y, 1300 + off.z);
     const tp = T.clone().add(new V3(rnd(-15, 15), 0, rnd(-15, 15)));
     const path = [
@@ -127,7 +128,7 @@ function raidP47(target) {
       { p: new V3(tp.x, 140, tp.z - 350), v: 160 },
       { p: new V3(tp.x - side, 450, tp.z - 1600), v: 140 },
     ];
-    const pl = new Plane('p47', 'A', start, new V3(0, -10, -140), path); pl.pi = 0;
+    const pl = new Plane('p47', 'A', start, new V3(0, -10, -140), path); pl.pi = 0; if (R() < .3) pl.doomT = rnd(8, 18);
   }
   if (dist2Cam(T) < 400 * 400) after(6, () => shout('de', 'plane', T, { range: 200 }));
 }
@@ -141,7 +142,7 @@ function raidFw190() {
       { p: new V3(xo, 30, 120), v: 165, guns: true },
       { p: new V3(xo + 300, 400, 900), v: 150 },
     ];
-    new Plane('fw190', 'E', new V3(xo, 320, -1300 - i * 40), new V3(0, -15, 150), path);
+    const fw = new Plane('fw190', 'E', new V3(xo + rnd(-60, 60), 320 + rnd(-30, 30), -1300 - i * rnd(60, 150)), new V3(0, -15, 150), path); if (R() < .3) fw.doomT = rnd(10, 20);
   }
 }
 function raidB26() {

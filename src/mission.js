@@ -72,7 +72,7 @@ function initMission() {
   const per = clamp(Math.floor((Q.allyAlive * .55 - 9) / 6), 4, 10);
   for (const x of xs) {
     const me = x === -22;
-    const b = new Boat(x, me ? 380 : rnd(368, 396), me ? 8.5 : rnd(8.2, 8.9), 11);
+    const b = new Boat(x, me ? 380 : rnd(368, 396), me ? 8.5 : rnd(8.2, 8.9), 82);
     if (me) { P.boat = b; fillBoat(b, 10, true, true); } else fillBoat(b, per, false);
   }
   P.inBoat = true; P.yaw = 0; P.seat = new V3(0, .47, 2.2);
@@ -95,11 +95,11 @@ function spawnBeachDefenders() {
     addEnemy(R() < .8 ? 'rifle' : 'smg', x, trenchZ(x) + .2, { state: 'post', stationary: true, inTrench: true, group: 'beach' });
   }
   for (const x of [-140, -65, -30, 30, 55, 135]) addEnemy('mg', x + 2, trenchZ(x + 2) + .3, { state: 'post', stationary: true, inTrench: true, group: 'beach' });
-  for (const b of WORLD.bunkers) b.gunner = addEnemy('mg', b.x, b.z + 2.5, { y: b.base + 1.2, state: 'post', stationary: true, inBunker: true, bunker: b, group: 'beach' });
+  for (const b of WORLD.bunkers) { b.gunner = addEnemy('mg', b.x, b.z + 2.5, { y: b.base + 1.2, state: 'post', stationary: true, inBunker: true, bunker: b, group: 'beach' }); b.gunner.supB = b; }
   for (const [x, z] of [[-140, -104], [125, -106], [-20, -110]]) addEnemy('sniper', x, z, { state: 'post', stationary: true, group: 'beach' });
   for (const [x, z] of [[-80, -74], [-5, -77], [60, -73], [140, -75], [-130, -72], [95, -79], [-110, -78], [-50, -75], [120, -71]]) addEnemy('rifle', x, z, { state: 'post', stationary: true, group: 'beach' });
   for (const mp of WORLD.mortarPits) for (let i = 0; i < 2; i++) addEnemy('rifle', mp.x + (i ? 1.2 : -1.2), mp.z, { state: 'post', stationary: true, group: 'beach', role: 'mortar' });
-  for (const b of WORLD.extraBunkers || []) { b.gunner = addEnemy('mg', b.x, b.z + 2.5, { y: b.base + 1.2, state: 'post', stationary: true, inBunker: true, bunker: null, group: 'wn' }); for (let k = 0; k < 5; k++) addEnemy(randEnemyKind(), b.x + rnd(-25, 25), -84 + rnd(-6, 3), { state: 'post', stationary: true, group: 'wn' }); }
+  for (const b of WORLD.extraBunkers || []) { b.gunner = addEnemy('mg', b.x, b.z + 2.5, { y: b.base + 1.2, state: 'post', stationary: true, inBunker: true, bunker: null, group: 'wn' }); b.gunner.supB = b; for (let k = 0; k < 5; k++) addEnemy(randEnemyKind(), b.x + rnd(-25, 25), -84 + rnd(-6, 3), { state: 'post', stationary: true, group: 'wn' }); }
   for (const a of WORLD.aaSites) for (let i = 0; i < 2; i++) addEnemy('rifle', a.x + (i ? 1 : -1), a.z + .5, { state: 'post', stationary: true, group: 'beach', role: 'aa' });
 }
 // ondata di mezzi da sbarco; se withPlayer, uno dei mezzi trasporta il giocatore
@@ -112,7 +112,7 @@ function spawnWave(withPlayer) {
   for (let i = 0; i < nb; i++) {
     const cx = P.mode === 'foot' ? clamp(P.pos.x, -MAPX + 200, MAPX - 200) : rnd(-600, 600);
     const x = withPlayer && i === 0 ? clamp(P.pos.x || -22, -MAPX + 100, MAPX - 100) : cx + rnd(-220, 220);
-    const b = new Boat(x, withPlayer && i === 0 ? 150 : rnd(200, 260), rnd(8.6, 9.6), 11);
+    const b = new Boat(x, withPlayer && i === 0 ? 150 : rnd(200, 260), rnd(8.6, 9.6), 82);
     fillBoat(b, per, false, withPlayer && i === 0);
     if (withPlayer && i === 0) pb = b;
     else if (R() < .12) b.doom = rnd(20, 120);
@@ -198,7 +198,7 @@ const STAGES = [
     title: 'Omaha Beach — Dog Green',
     start() {
       MISSION.checkpoint = { pos: new V3(P.boat.x, 0, P.boat.z - 10), yaw: 0 };
-      MISSION.allyZone = { zMin: -56.8, zMax: 8, xMin: -200, xMax: 200, step: 13, wait: [2.5, 6] };
+      MISSION.allyZone = { zMin: -56.8, zMax: 90, xMin: -200, xMax: 200, step: 13, wait: [2.5, 6] };
       MISSION.mortar = true; AU.battle = 1.6;
       say(N.sarge, 'Fuori! Fuori! Dritti agli ostacoli, non fermatevi in acqua!'); shout('en', 'move', null, { text: 'Move! Move! Get to the obstacles! Don\'t stop in the water!', priority: true });
       after(8, () => say(N.walsh, 'MG42 sulla scogliera! Ci stanno falciando!'));
@@ -494,7 +494,13 @@ class Sherman {
   }
 }
 
+function suppressBunker(b) {
+  const was = b.supT > 0; b.supT = 4.5; MISSION.suppT = 4.5;
+  if (!was && !b.neutralized) { feed('MG42 soppressa — gli alleati avanzano!'); if (R() < .5) shout('en', 'move', P.pos.clone().add(new V3(rnd(-8, 8), 0, rnd(-5, 5))), { text: pick(['Suppress that bunker! Go, go!', "He's pinned! Move up!", 'Keep his head down! Move!']) }); }
+}
 function updateMission(dt) {
+  MISSION.suppT = Math.max(0, (MISSION.suppT || 0) - dt);
+  for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || [])]) b.supT = Math.max(0, (b.supT || 0) - dt);
   MISSION.stageT += dt; MISSION.nadeCD -= dt; MISSION.eNadeCD -= dt; MISSION.allyNadeCD -= dt;
   STAGES[MISSION.stage].update(dt);
   updateSubs(dt);
@@ -520,11 +526,11 @@ function updateMission(dt) {
       MISSION.mortarT = rnd(1.8, 3.6);
       const pit = pick(crews), pp = new V3(pit.x, Hf(pit.x, pit.z) + 1, pit.z);
       sfxMortar(pp); PS_SMOKE.emit(pp.x, pp.y + .8, pp.z, 0, 2, 0, 2, .5, 2, .5, .5, .5, .5, 1);
-      const onBeach = allies.filter(a => a.alive && a.state !== 'boat' && a.pos.z > -60 && a.pos.z < 12);
+      const onBeach = allies.filter(a => a.alive && a.state !== 'boat' && a.pos.z > -60 && a.pos.z < 90);
       let c;
       if (P.targetable() && P.pos.z > -64 && R() < .22) c = P.pos.clone().add(new V3(rnd(-14, 14), 0, rnd(-12, 12)));
       else if (onBeach.length) c = pick(onBeach).pos.clone().add(new V3(rnd(-9, 9), 0, rnd(-9, 9)));
-      else c = new V3(rnd(-150, 150), 0, rnd(-50, 10));
+      else c = new V3(rnd(-150, 150), 0, rnd(-50, 80));
       c.z = Math.max(c.z, -59); c.y = Math.max(Hf(c.x, c.z), WATER_Y - .2);
       after(2.2, () => { sfxWhistle(c, false); if (P.pos.distanceTo(c) < 25 && R() < .4) shout('en', 'mortar', P.pos.clone().add(new V3(4, 0, 3))); });
       after(3.2, () => explode(c, 4.4, 220, { only: 'A' }));
