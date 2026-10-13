@@ -35,7 +35,8 @@ class Soldier {
 
   damage(a, from, byPlayer, zone, imp) {
     if (!this.alive) return false;
-    if (this.remote) { if (byPlayer) netHit(this, a, zone === 'blast'); this.flinch = 1; return false; }
+    if (this.remote) { if (byPlayer || NET.host) netHit(this, a, zone === 'blast', !byPlayer); this.flinch = 1; return false; }
+    if (this.proxy) { if (byPlayer) netProxyHit(this, a, zone, from || P.pos, (imp && imp.dir) || new V3(0, 0, -1)); this.flinch = 1; return byPlayer ? false : false; }
     if (this.vip) { this.supp = 1; this.flinch = 1; return false; }
     this.hp -= a; this.supp = Math.min(1, this.supp + .6); this.flinch = 1;
     if (this.hp <= 0) {
@@ -56,6 +57,7 @@ class Soldier {
   die(from, byPlayer, zone, imp) {
     if (!this.alive) return;
     this.alive = false; if (this.state !== 'boat') this.state = 'dead';
+    if (NET.host) netAIDeath(this, imp);
     if (this.cover) { this.cover.occ--; this.cover = null; }
     corpses.push(this);
     if (SETTINGS.gore && dist2Cam(this.pos) < 120 * 120) { const bp = this.pos.clone(); for (let i = 0; i < 3; i++) after(.4 + i * 1.2, () => addDecal('blood', bp.clone().add(new V3(rnd(-.5, .5), 0, rnd(-.5, .5))), .9 + i * .45)); }
@@ -327,7 +329,8 @@ class Soldier {
       end.sub(from).multiplyScalar(1.5).add(from);
     }
     const dir = T4.subVectors(tp, from).normalize();
-    if (R() < this.w.tracer && d > 8) fxTracer(from, end, this.kind === 'mg' ? 1.6 : 1);
+    const trc = R() < this.w.tracer && d > 8; if (trc) fxTracer(from, end, this.kind === 'mg' ? 1.6 : 1);
+    if (NET.host) netAIShot(this, from, end, trc);
     sfxShot(this.snd, from);
     if (dist2Cam(from) < 180 * 180) fxMuzzle(from, dir, this.kind === 'mg');
     if (hit) {
@@ -368,6 +371,7 @@ function updateAI(dt) {
     for (const s of list) {
       if (s.removed || !s.alive) continue;
       if (s.remote) { netPuppet(s, dt); continue; }
+      if (s.proxy) { netProxy(s, dt); continue; }
       s.update(dt);
       if (s.alive && s.state !== 'boat') {
         s.thinkT -= dt;

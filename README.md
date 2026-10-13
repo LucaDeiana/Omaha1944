@@ -62,8 +62,9 @@ Serve Node.js (nessun pacchetto da installare).
 3. Nel menu spunta **Multiplayer in rete locale**, scrivi il tuo nome, scegli la fazione e premi INIZIA.
 4. Alla prima esecuzione Windows chiede di consentire Node.js nel firewall: consenti l'accesso alle **reti private**.
 
-Condiviso: posizione, animazioni e nomi degli altri giocatori, colpi sparati, danni tra fazioni opposte (armi, granate, MG42, mortaio), uccisioni, occupazione delle postazioni.
-Non ancora condiviso: i soldati dell'IA, le ondate e le fasi della missione girano su ogni PC in modo indipendente.
+Il primo giocatore che entra è l'**host**: il suo PC simula la battaglia (soldati dell'IA, mezzi da sbarco, fasi della missione, bunker, varchi nel filo) e la trasmette agli altri 10 volte al secondo. Tutti vedono e combattono la stessa battaglia: i colpi dei client sui soldati dell'IA vengono applicati dall'host, e l'IA dell'host può colpire e uccidere tutti i giocatori.
+Condiviso anche: posizione, animazioni e nomi dei giocatori, colpi, danni tra fazioni, uccisioni, postazioni MG42 e mortaio.
+Limiti: se l'host esce, la partita condivisa termina; aerei casuali e bombardamento navale restano locali a ogni PC.
 
 ## Struttura
 ```

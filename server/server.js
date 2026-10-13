@@ -22,6 +22,7 @@ const server = http.createServer((req, res) => {
 // ---------- WebSocket ----------
 const clients = new Map(); let nextId = 1;
 const stations = new Map(); // indice postazione -> id del giocatore
+let hostId = 0; // chi simula la battaglia condivisa
 function frame(str) {
   const pay = Buffer.from(str), n = pay.length;
   const head = n < 126 ? Buffer.from([0x81, n]) : n < 65536 ? Buffer.from([0x81, 126, n >> 8, n & 255]) : (() => { const b = Buffer.alloc(10); b[0] = 0x81; b[1] = 127; b.writeBigUInt64BE(BigInt(n), 2); return b; })();
@@ -32,19 +33,22 @@ function broadcast(obj, except) { for (const c of clients.values()) if (c !== ex
 function drop(c) {
   if (c.dead) return; c.dead = true; clients.delete(c.id); try { c.sock.destroy(); } catch (e) { }
   for (const [k, v] of stations) if (v === c.id) { stations.delete(k); broadcast({ t: 'occ', i: k, by: 0 }); }
+  if (c.joined && c.id === hostId) { hostId = 0; broadcast({ t: 'hostgone' }); console.log("! l'host ha lasciato: la battaglia condivisa termina"); }
   if (c.joined) { broadcast({ t: 'leave', id: c.id }); console.log(`- ${c.name} ha lasciato la partita (${clients.size} connessi)`); }
 }
 function onMessage(c, txt) {
   let m; try { m = JSON.parse(txt); } catch (e) { return; }
   if (m.t === 'join') {
-    c.joined = true; c.name = String(m.name || 'Soldato').slice(0, 20); c.side = m.side === 'E' ? 'E' : 'A';
-    send(c, { t: 'welcome', id: c.id, peers: [...clients.values()].filter(x => x !== c && x.joined).map(x => ({ id: x.id, name: x.name, side: x.side })), occ: [...stations] });
+    c.joined = true; if (!hostId || !clients.get(hostId)) hostId = c.id; c.name = String(m.name || 'Soldato').slice(0, 20); c.side = m.side === 'E' ? 'E' : 'A';
+    send(c, { t: 'welcome', id: c.id, host: hostId, peers: [...clients.values()].filter(x => x !== c && x.joined).map(x => ({ id: x.id, name: x.name, side: x.side })), occ: [...stations] });
     broadcast({ t: 'join', id: c.id, name: c.name, side: c.side }, c);
     console.log(`+ ${c.name} (${c.side === 'E' ? 'Asse' : 'Alleati'}) è entrato (${clients.size} connessi)`);
     return;
   }
   if (!c.joined) return;
   m.id = c.id;
+  if (m.t === 'aihit') { const h = clients.get(hostId); if (h) send(h, m); return; }
+  if (m.t === 'aikill') { const to = clients.get(m.to); if (to) send(to, m); return; }
   if (m.t === 'hit' || m.t === 'kill') { const to = clients.get(m.to); if (to) send(to, m); if (m.t === 'kill') broadcast({ t: 'feed', text: `${to ? to.name : '?'} ha eliminato ${c.name}` }, null); return; }
   if (m.t === 'occ') {
     const cur = stations.get(m.i);

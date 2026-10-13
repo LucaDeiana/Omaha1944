@@ -137,7 +137,7 @@ function updateStation(dt) {
       const fl = 3 + d / 160; tg.x += rnd(-1, 1) * d * .012; tg.z += rnd(-1, 1) * d * .012;
       STN.shells.push({ p: tg, t: fl });
       after(fl - 1.1, () => sfxWhistle(tg, false));
-      after(fl, () => { tg.y = Math.max(Hf(tg.x, tg.z), WATER_Y - .2); explode(tg, 4.6, 230, { byPlayer: true }); netSend({ t: 'boom', p: [tg.x, tg.y, tg.z], r: 4.6, d: 230 }); });
+      after(fl, () => { tg.y = Math.max(Hf(tg.x, tg.z), WATER_Y - .2); explode(tg, 4.6, 230, { byPlayer: true }); });
     }
     for (let i = STN.shells.length - 1; i >= 0; i--) { STN.shells[i].t -= dt; if (STN.shells[i].t <= 0) STN.shells.splice(i, 1); }
     _hv.copy(STN.tgt).project(camera);

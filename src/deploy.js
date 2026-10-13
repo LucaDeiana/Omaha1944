@@ -14,7 +14,7 @@ function deployPoints() {
     return pts;
   }
   pts.push({ label: 'Ultimo checkpoint', sub: 'a piedi con la squadra', kind: 'checkpoint', pos: MISSION.checkpoint.pos });
-  if (st >= 1 && st <= 4) pts.push({ label: 'Ondata di sbarco', sub: 'mezzo Higgins', kind: 'wave', pos: new V3(P.pos.x || 0, 0, 82) });
+  if (st >= 1 && st <= 4 && !NET.client) pts.push({ label: 'Ondata di sbarco', sub: 'mezzo Higgins', kind: 'wave', pos: new V3(P.pos.x || 0, 0, 82) });
   if (st >= 2) pts.push({ label: 'Terrapieno — Dog Green', sub: 'testa di ponte', kind: 'point', pos: new V3(-26, 0, -55) });
   if (st >= 4) pts.push({ label: 'Trincea conquistata', sub: 'cima della scogliera', kind: 'point', pos: new V3(BREACH_X, 0, trenchZ(BREACH_X)) });
   if (st >= 5) pts.push({ label: 'Bocage', sub: 'varco nella siepe', kind: 'point', pos: new V3(-28, 0, -160) });
