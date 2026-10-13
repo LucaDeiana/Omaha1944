@@ -88,7 +88,7 @@ function frame(now) {
   FPS.v = lerp(FPS.v, 1 / Math.max(raw, 1e-3), .05);
   if (!GAME.started) return;
   if (GAME.running) {
-    GAME.timeScale = lerp(GAME.timeScale, P.shock > .3 && P.mode === 'foot' ? .4 : 1, Math.min(1, raw * 4));
+    GAME.timeScale = 1;
     const dt = Math.min(.05, raw) * GAME.timeScale;
     GAME.time += dt;
     updateTimers(dt);

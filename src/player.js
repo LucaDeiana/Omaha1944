@@ -192,7 +192,7 @@ function updatePlayer(dt) {
   }
   if (P.onShip) { if (shipDeckY(P.pos.x, P.pos.z) < 0) { P.pos.x = P.prev.x; P.pos.z = P.prev.z; } }
   else { P.pos.x = clamp(P.pos.x, -MAPX + 20, MAPX - 20); P.pos.z = clamp(P.pos.z, -MAPX + 60, 115); }
-  let ground = Math.max(Hf(P.pos.x, P.pos.z), boatFloor, P.onShip ? Math.max(shipFloor, shipDeckY(P.pos.x, P.pos.z)) : -99);
+  let ground = Math.max(Hf(P.pos.x, P.pos.z), boatFloor, bunkerStep(P.pos.x, P.pos.z), P.onShip ? Math.max(shipFloor, shipDeckY(P.pos.x, P.pos.z)) : -99);
   if (P.swim) ground = Math.max(ground, wl - 1.4);
   if (KEYS.Space && P.grounded && P.stance === 0 && !P.swim && P.depth < .6) { P.vy = 4.8; P.grounded = false; }
   P.vy -= 18 * dt; P.pos.y += P.vy * dt;

@@ -11,7 +11,7 @@ function initStations() {
   for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || [])]) {
     STATIONS.push({
       type: 'mg', b, occupant: null, yaw0: PI,
-      entry: b.door.clone(), cam: new V3(b.x, b.slitY - .02, b.z + 2.7),
+      entry: new V3(b.x, b.base + 1, b.z + 2.1), cam: new V3(b.x, b.slitY - .02, b.z + 2.7),
       usable() { return !b.destroyed && (PT === 'E' || b.neutralized); },
       label: 'Premi E per prendere la MG42 del bunker',
     });
@@ -54,7 +54,7 @@ function enterStation(s) {
     if (!STN.gun) STN.gun = buildMGView();
     STN.gun.visible = true; P.yaw = s.yaw0; P.pitch = -.08;
     P.pos.set(s.cam.x, s.cam.y - 1.55, s.cam.z - .2);
-    if (s.b.gunner && s.b.gunner.alive) s.b.manned = true;
+    if (s.b.gunner && s.b.gunner.alive) { s.b.manned = true; s.b.gunner.pos.x = s.b.x + 2.6; s.b.gunner.pos.z = s.b.z + 1; }
     showMsg('MG42 — click sx: fuoco · R: nastro · E: esci', 3);
   } else {
     STN.tgt.set(s.mp.x, 0, s.mp.z + 120); P.pos.copy(s.entry);
@@ -64,11 +64,11 @@ function enterStation(s) {
 }
 function leaveStation() {
   const s = STN.cur; if (!s) return;
-  s.occupant = null; if (s.b) s.b.manned = false; STN.cur = null; netSend({ t: 'occ', i: STATIONS.indexOf(s), on: false });
+  s.occupant = null; if (s.b) { s.b.manned = false; if (s.b.gunner && s.b.gunner.alive) { s.b.gunner.pos.x = s.b.x; s.b.gunner.pos.z = s.b.z + 2.5; } } STN.cur = null; netSend({ t: 'occ', i: STATIONS.indexOf(s), on: false });
   if (STN.gun) STN.gun.visible = false;
   $('stHud').style.display = 'none'; $('mortRet').style.display = 'none';
   if (P.mode === 'mg' || P.mode === 'mortar') P.mode = 'foot';
-  P.pos.copy(s.type === 'mg' ? s.entry : s.entry.clone().add(new V3(0, 0, -2))); P.pos.y = Hf(P.pos.x, P.pos.z);
+  if (s.type === 'mg') P.pos.copy(s.entry).add(new V3(0, 0, -1.2)); else { P.pos.copy(s.entry).add(new V3(0, 0, -2)); } P.pos.y = Math.max(Hf(P.pos.x, P.pos.z), bunkerStep(P.pos.x, P.pos.z));
   camera.fov = SETTINGS.fov; camera.updateProjectionMatrix();
 }
 function stationMouse(mx, my) {
