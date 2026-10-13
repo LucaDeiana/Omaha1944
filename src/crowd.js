@@ -38,7 +38,7 @@ function buildPartGeo(key, hi) {
     add(U.sph, C.pants, 0, -.07, 0, 0, 0, 0, .15, .08, .1);
     add(cylG(.172, .172, .055, s), C.web, 0, .12, 0, 0, 0, 0, 1, 1, .72);
     if (hi) {
-      if (A) { for (let i = 0; i < 9; i++) { const a = -1.2 + i * .3; add(U.box, C.web, Math.sin(a) * .17, .1, -Math.cos(a) * .12, 0, -a, 0, .055, .07, .035); } add(cylG(.05, .05, .16, 10), C.belt2, .13, .02, .12); add(U.box, C.pack, -.12, -.02, .13, 0, 0, 0, .1, .18, .03); }
+      if (A) { add(new THREE.TorusGeometry(.19, .035, 6, 16), 0x5a5e44, 0, .02, 0, PI / 2, 0, 0, 1, .7, 1); add(U.box, 0x4a4e38, .17, -.02, 0, 0, 0, 0, .05, .1, .08); for (let i = 0; i < 9; i++) { const a = -1.2 + i * .3; add(U.box, C.web, Math.sin(a) * .17, .1, -Math.cos(a) * .12, 0, -a, 0, .055, .07, .035); } add(cylG(.05, .05, .16, 10), C.belt2, .13, .02, .12); add(U.box, C.pack, -.12, -.02, .13, 0, 0, 0, .1, .18, .03); }
       else { for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) add(U.box, C.web, sx * (.04 + i * .045), .1, -.125, 0, 0, 0, .04, .07, .04); add(U.box, 0x777777, 0, .12, -.122, 0, 0, 0, .045, .04, .01); add(U.box, C.pack, .14, .0, .07, 0, -.4, 0, .16, .15, .06); add(cylG(.05, .05, .15, 10), C.belt2, .16, -.02, .12); add(U.box, C.wood, -.15, .04, .06, .2, 0, 0, .025, .22, .03); }
     }
   } else if (part === 'chest') {
@@ -61,6 +61,7 @@ function buildPartGeo(key, hi) {
         add(new THREE.TorusGeometry(.19, .032, 6, 18), C.belt2, 0, .08, 0, PI / 2, 0, 0, 1, .66, 1);
         add(U.box, C.pack, -.07, .2, -.135, 0, 0, 0, .15, .12, .06);
         add(U.box, C.wood, 0, .22, .245, 0, 0, 0, .03, .22, .02); add(U.box, C.metal, 0, .1, .24, 0, 0, 0, .1, .1, .015);
+        add(U.box, 0x4e4a36, 0, .27, -.16, 0, 0, 0, .2, .17, .07); add(U.box, 0x3e3a2a, 0, .36, -.16, 0, 0, 0, .21, .03, .075); add(U.box, 0x5a5640, .1, .4, -.05, 0, 0, -.6, .02, .3, .03);
       }
       if (kind === 'medic') { add(U.box, 0xe5e2d8, -.2, .38, 0, 0, 0, 0, .02, .07, .13); add(U.box, 0xa01010, -.212, .38, 0, 0, 0, 0, .006, .05, .015); add(U.box, 0xa01010, -.212, .38, 0, 0, 0, 0, .006, .015, .05); }
     } else {
@@ -70,6 +71,9 @@ function buildPartGeo(key, hi) {
         for (const sx of [-1, 1]) { add(U.box, C.jacket2, sx * .09, .36, -.12, 0, 0, 0, .085, .1, .02); add(U.box, C.jacket2, sx * .1, .12, -.115, 0, 0, 0, .09, .1, .02); }
         for (let k = 0; k < 6; k++) add(new THREE.TorusGeometry(.061, .006, 4, 10), C.belt2, .02, .12 + k * .045, .16, PI / 2 + .1, 0, 0);
         add(U.box, C.pack, -.08, .28, .15, 0, 0, 0, .14, .1, .06); add(U.box, 0x6b6146, 0, .48, -.06, 0, 0, 0, .1, .02, .02);
+        for (const sx of [-1, 1]) add(U.box, 0x54503c, sx * .19, .43, 0, 0, 0, 0, .05, .02, .12);
+        add(U.box, 0x5a5034, .17, .02, .1, 0, -.3, 0, .18, .2, .1);
+        add(U.cyl12, 0x2e2c28, .14, -.02, -.12, .25, 0, .15, .015, .32, .015); add(U.cyl12, 0x3a3630, .14, .16, -.12, .25, 0, .15, .03, .07, .03);
       }
     }
   } else if (part === 'head') {

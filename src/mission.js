@@ -90,7 +90,16 @@ function initMission() {
 }
 
 const TRENCH_POSTS = [];
+function spawnCityGarrison() {
+  const n = Math.round(22 * Q.enemyAlive / 120);
+  for (let i = 0; i < n; i++) {
+    const c = pick(covers.filter(k => cityIn(k.x, k.z) && (k.kind === 'sand' || k.kind === 'ruin' || k.kind === 'house'))); if (!c) break;
+    addEnemy(R() < .15 ? 'mg' : randEnemyKind(), c.x, c.z, { state: 'post', stationary: true, group: 'city' });
+  }
+  if (WORLD.cityTower) addEnemy('sniper', WORLD.cityTower.x, WORLD.cityTower.z, { y: WORLD.cityTower.y, state: 'post', stationary: true, group: 'city' });
+}
 function spawnBeachDefenders() {
+  spawnCityGarrison();
   const m = Q.enemyAlive / 120, step = 3.4 / m;
   for (let x = -158; x < 158; x += step * rnd(.8, 1.2)) {
     if (WORLD.bunkers.some(b => Math.abs(b.x - x) < 6)) continue;
