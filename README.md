@@ -87,5 +87,9 @@ src/hud.js              HUD, bussola, marcatori
 src/main.js             menu, pausa, ciclo di gioco
 ```
 
+## Crediti texture
+
+Texture fotografiche da [ambientCG](https://ambientcg.com) (licenza CC0): Ground054, Ground109, Grass004, Concrete034, Bricks100, Bricks097, RoofingTiles013A, PavingStones138, Planks037A, PaintedMetal004, Fabric084, Plaster001. Ridotte a 512 px e incluse in `assets/tex_photo.js`.
+
 ## Crediti audio
 Spari reali da [The Free Firearm Sound Library](https://opengameart.org/content/the-free-firearm-sound-library) (CC0).

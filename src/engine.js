@@ -100,10 +100,11 @@ function initEngine() {
   MAT.vc = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .88, metalness: .02 });
   MAT.vcMetal = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .55, metalness: .45 });
   MAT.paint = triMaterial(TEX.metal, .5, { metal: 0, rough: 1, nStr: .5 });
-  MAT.concrete = triMaterial(TEX.concrete, .32, { nStr: 1 });
-  MAT.stone = triMaterial(TEX.stone, .28, { nStr: 1.2 });
-  MAT.roof = triMaterial(TEX.roof, .35, { nStr: 1 });
-  MAT.wood = triMaterial(TEX.wood, .5, { nStr: .8 });
+  MAT.concrete = triMaterial(TEX.concrete, .3, { nStr: 1.2 });
+  MAT.stone = triMaterial(TEX.stone, .42, { nStr: 1.4 });
+  MAT.brick = triMaterial(TEX.brick, .55, { nStr: 1.3 }); MAT.plaster = triMaterial(TEX.plaster, .38, { nStr: 1 }); MAT.cobble = triMaterial(TEX.cobble, .5, { nStr: 1.4 });
+  MAT.roof = triMaterial(TEX.roof, .5, { nStr: 1.3 });
+  MAT.wood = triMaterial(TEX.wood, .55, { nStr: 1 });
   MAT.dirt = triMaterial(TEX.dirt, .45, { nStr: 1 });
   MAT.sack = triMaterial(TEX.fabric, 1.4, { nStr: .7 });
   MAT.soldier = uvMaterial(TEX.fabric, 3, { nScale: .7 });

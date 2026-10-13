@@ -21,7 +21,7 @@ function cityHouseGeo(mb, h, ruined) {
   const { cx, cz, w, d, ht, face, style, base } = h, top = base + ht, fz = cz + face * d / 2;
   const wall = style === 2 ? pick(BRICK) : style === 1 ? pick(PLASTER) : pick(STONE), storeys = Math.max(1, Math.round((ht - 1) / 3.1));
   if (!ruined) {
-    mb.mat = style === 2 ? 'roof' : 'stone';
+    mb.mat = style === 2 ? 'brick' : style === 1 ? 'plaster' : 'stone';
     mb.add(U.box, wall, cx, base + ht / 2, cz, 0, 0, 0, w, ht, d);
     mb.mat = 'concrete'; mb.add(U.box, 0x8a8478, cx, base + .35, cz, 0, 0, 0, w + .08, .7, d + .08);
     for (let s = 1; s < storeys; s++) mb.add(U.box, 0xa49c8a, cx, base + s * 3.1 + .2, fz + face * .04, 0, 0, 0, w + .04, .14, .1);
@@ -59,7 +59,7 @@ function cityHouseGeo(mb, h, ruined) {
   // rovina: muri spezzati, travi carbonizzate, solai pendenti, macerie
   const t = .5, sol = [], segH = [];
   const walls = [[cx, cz - d / 2 + t / 2, w, t], [cx, cz + d / 2 - t / 2, w, t], [cx - w / 2 + t / 2, cz, t, d], [cx + w / 2 - t / 2, cz, t, d]];
-  mb.mat = style === 2 ? 'roof' : 'stone';
+  mb.mat = style === 2 ? 'brick' : 'stone';
   walls.forEach(([wx, wz, ww, wd], wi) => {
     const len = Math.max(ww, wd), along = ww > wd, n = Math.max(3, Math.round(len / 1.1));
     let sum = 0;
@@ -148,7 +148,6 @@ function buildCity() {
 // strade: lampioni, pali del telegrafo, barricate, crateri, relitti, alberi dei viali
 function cityStreets() {
   const S = new MB(), y = CITY.y;
-  if (!MAT.cobble) MAT.cobble = triMaterial(TEX.stone, 1.3, { nStr: 1.3 });
   S.mat = 'cobble'; S.add(U.box, 0x9a958a, (CITY.x0 + CITY.x1) / 2, y - .02, (CITY.z0 + CITY.z1) / 2, 0, 0, 0, CITY.x1 - CITY.x0 + 40, .12, CITY.z1 - CITY.z0 + 40);
   for (let x = CITY.x0; x < CITY.x1; x += 3) for (let z = CITY.z1 + 6; z > CITY.z0; z -= 58) { if (R() < .5) continue; S.mat = 'concrete'; S.add(U.box, 0x8a857a, x, y + .06, z, 0, 0, 0, 3, .12, 1.2); }
   for (let i = 0; i < 160; i++) {

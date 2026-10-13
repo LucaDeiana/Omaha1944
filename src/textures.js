@@ -164,6 +164,32 @@ function genSurface(name, size, opt = {}) {
   renderer.setRenderTarget(null); mat.dispose();
   TEX[name] = out; return out;
 }
+// ---------- texture fotografiche CC0 (ambientCG) ----------
+const PHOTO_IMG = {};
+function preloadPhotos() {
+  const P = window.TEX_PHOTO; if (!P) return Promise.resolve();
+  const jobs = [];
+  for (const k in P) { PHOTO_IMG[k] = {}; for (const ch of ['c', 'n', 'r']) jobs.push(new Promise(res => { const im = new Image(); im.onload = () => { PHOTO_IMG[k][ch] = im; res(); }; im.onerror = () => res(); im.src = P[k][ch]; })); }
+  return Promise.all(jobs);
+}
+function applyPhotoTextures() {
+  const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  for (const k in PHOTO_IMG) {
+    const im = PHOTO_IMG[k]; if (!im.c || !im.n) continue;
+    const S = im.c.width, cv = document.createElement('canvas'); cv.width = cv.height = S;
+    const g = cv.getContext('2d'); g.drawImage(im.c, 0, 0);
+    if (im.r) {
+      const rc = document.createElement('canvas'); rc.width = rc.height = S; const rg = rc.getContext('2d'); rg.drawImage(im.r, 0, 0, S, S);
+      const a = g.getImageData(0, 0, S, S), b = rg.getImageData(0, 0, S, S).data;
+      for (let i = 3; i < a.data.length; i += 4) a.data[i] = b[i - 3];
+      g.putImageData(a, 0, 0);
+    }
+    const map = new THREE.CanvasTexture(cv); map.encoding = THREE.sRGBEncoding;
+    const nor = new THREE.Texture(im.n); nor.needsUpdate = true;
+    for (const t of [map, nor]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = aniso; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; }
+    TEX[k] = { map, normal: nor, photo: true };
+  }
+}
 function buildTextures() {
   const big = Q.tex, mid = Math.min(512, Q.tex), small = Math.min(256, Q.tex);
   genSurface('sand', big, { strength: .03 }); genSurface('pebble', big, { strength: .05 });
@@ -174,6 +200,8 @@ function buildTextures() {
   genSurface('water', mid, { strength: .06 });
   for (const n of ['blood', 'scorch', 'smoke', 'fire']) genSurface(n, n === 'smoke' ? 256 : 128, { normal: false });
   genSurface('grain', 32, { normal: false });
+  applyPhotoTextures();
+  for (const k of ['brick', 'plaster', 'cobble']) if (!TEX[k]) TEX[k] = TEX[k === 'brick' ? 'roof' : k === 'plaster' ? 'concrete' : 'stone'];
 }
 
 // materiale con mappatura triplanare in coordinate dell'oggetto: la texture resta

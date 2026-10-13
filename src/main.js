@@ -50,6 +50,7 @@ async function startGame() {
   $('menu').classList.add('hidden'); $('loading').classList.remove('hidden');
   const step = async (t) => { $('loadT').textContent = t; await new Promise(r => setTimeout(r, 30)); };
   try {
+    await step('Caricamento delle texture fotografiche…'); await preloadPhotos();
     await step('Preparazione del motore grafico e delle texture…'); initEngine(); initFX(); initWeapons(); buildPlaneGeos();
     await step('Generazione della costa normanna…'); buildWorld();
     await step('Imbarco delle truppe…'); initMission(); initHUD(); initNPC(); initStations(); initInput();
