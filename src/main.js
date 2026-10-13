@@ -58,7 +58,7 @@ async function startGame() {
   $('loading').classList.add('hidden');
   GAME.started = true; STATS.start = performance.now();
   lockPointer();
-  showMsg('6 giugno 1944 — Omaha Beach', 4);
+  startCutscene();
 }
 function lockPointer() { const c = renderer.domElement; (c.requestPointerLock || (() => { })).call(c); }
 
@@ -88,7 +88,7 @@ function frame(now) {
     updateWorld(dt, GAME.time);
     updateAircraft(dt);
     updateSide(dt); updateDeploy(dt); updateNPC(dt);
-    updatePlayer(dt);
+    updatePlayer(dt); updateCutscene(dt);
     updateAI(dt);
     updateProjectiles(dt);
     updateGore(dt);

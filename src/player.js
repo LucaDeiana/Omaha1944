@@ -53,7 +53,9 @@ function initInput() {
     const first = !KEYS[e.code]; KEYS[e.code] = true;
     if (!GAME.running || !first) return;
     const c = e.code;
+    if (CUT.active) { if (c === 'Space' || c === 'Enter') endCutscene(); return; }
     if (P.spawnMenu) { deployKey(c); return; }
+    if (P.mode === 'naval' && c === 'KeyE') { leaveTurretToDeck(); return; }
     if (c === 'KeyB') { openSpawnMenu(); return; }
     if (P.mode === 'plane') { if (c === 'KeyF') planeDropBomb(); return; }
     if (P.mode === 'naval') return;
@@ -106,7 +108,7 @@ function chooseSpawn(kind) {
   if (kind === 'wave' && (MISSION.stage < 1 || MISSION.stage > 4)) return;
   closeSpawnMenu(); leaveMode();
   $('fade').style.opacity = 0;
-  if (kind === 'naval') { enterNaval(); return; }
+  if (kind === 'naval') { spawnOnShip(); return; }
   if (kind === 'plane') { enterPlane(); return; }
   if (kind === 'wave') { respawnWave(); return; }
   respawn();
@@ -153,6 +155,8 @@ function updatePlayer(dt) {
   if (P.shock > .3) sp *= .55;
   const g0 = Hf(P.pos.x, P.pos.z), wl = P.pos.z > -10 ? waterLevel(P.pos.x, P.pos.z, GAME.time) : -99;
   let boatFloor = -99;
+  P.onShip = P.pos.y > 5 && shipDeckY(P.pos.x, P.pos.z) > -99;
+  if (P.onShip) boatFloor = SHIP.deckY;
   for (const b of WORLD.boats) if (b.landed && Math.abs(P.pos.x - b.x) < 1.5 && P.pos.z > b.z - 7.1 && P.pos.z < b.z + 5) boatFloor = Math.max(boatFloor, b.y + .45);
   P.depth = Math.max(0, wl - Math.max(g0, boatFloor));
   P.swim = P.depth > 1.4;
@@ -173,8 +177,9 @@ function updatePlayer(dt) {
     const dx = P.pos.x - o.x, dz = P.pos.z - o.z, d2 = dx * dx + dz * dz, rr = o.r + .3;
     if (d2 < rr * rr && d2 > 0) { const d = Math.sqrt(d2); P.pos.x = o.x + dx / d * rr; P.pos.z = o.z + dz / d * rr; }
   }
-  P.pos.x = clamp(P.pos.x, -MAPX + 20, MAPX - 20); P.pos.z = clamp(P.pos.z, -MAPX + 60, 40);
-  let ground = Math.max(Hf(P.pos.x, P.pos.z), boatFloor);
+  if (P.onShip) { if (shipDeckY(P.pos.x, P.pos.z) < 0) { P.pos.x = P.prev.x; P.pos.z = P.prev.z; } }
+  else { P.pos.x = clamp(P.pos.x, -MAPX + 20, MAPX - 20); P.pos.z = clamp(P.pos.z, -MAPX + 60, 40); }
+  let ground = Math.max(Hf(P.pos.x, P.pos.z), boatFloor, P.onShip ? SHIP.deckY : -99);
   if (P.swim) ground = Math.max(ground, wl - 1.4);
   if (KEYS.Space && P.grounded && P.stance === 0 && !P.swim && P.depth < .6) { P.vy = 4.8; P.grounded = false; }
   P.vy -= 18 * dt; P.pos.y += P.vy * dt;

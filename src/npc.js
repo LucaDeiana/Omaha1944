@@ -52,7 +52,8 @@ function initNPC() {
     update(q) { if (q.state === 1 && q.it && !MISSION.interactables.includes(q.it)) MISSION.interactables.push(q.it); },
     marker(q) { return q.state === 1 ? { pos: q.doc.clone().add(new V3(0, 2, 0)), label: 'Carte' } : q.state === 2 ? { pos: pl.pos.clone().add(new V3(0, 2.3, 0)), label: 'Lefèvre' } : null; },
   });
-  for (let i = 0; i < 3; i++) { const d = document.createElement('div'); d.className = 'ntag'; $('markers').appendChild(d); NPC.tags.push(d); }
+  initShipDeck();
+  for (let i = 0; i < NPC.list.length; i++) { const d = document.createElement('div'); d.className = 'ntag'; $('markers').appendChild(d); NPC.tags.push(d); }
 }
 function npcFinish(q) { q.state = 9; showMsg('Missione personale compiuta: ' + q.title, 3); }
 
@@ -60,6 +61,7 @@ function npcFinish(q) { q.state = 9; showMsg('Missione personale compiuta: ' + q
 function updateHayes(dt) {
   const h = NPC.hayes;
   if (P.mode !== 'naval') { if (h.state === 1) { h.state = 0; } return; }
+  if (h.state === 0 && !h.armed) { if (!h.hint) { h.hint = true; say('Lt. Cmdr. Hayes', 'Quando scendi dalla torretta passa a trovarmi in coperta, marinaio.'); } return; }
   if (h.state === 0) { h.state = 1; h.t = 90; h.k0 = STATS.kills; say('Lt. Cmdr. Hayes', 'Marinaio, l\'Ammiraglio guarda. Dieci crucchi in novanta secondi e ti faccio caricare più in fretta.'); }
   else if (h.state === 1) {
     h.t -= dt; const n = STATS.kills - h.k0;
@@ -69,7 +71,7 @@ function updateHayes(dt) {
 }
 
 function npcInteractables() {
-  const out = [];
+  const out = SHIP.its.filter(it => it.active());
   for (const q of NPC.list) {
     if (q.state >= 9 || !q.s.alive || (q.active && !q.active())) continue;
     out.push({ pos: q.s.pos, r: 2.6, label: 'Premi E per parlare con ' + q.s.name, active: () => true, done: () => q.talk(q) });

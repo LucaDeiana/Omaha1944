@@ -120,3 +120,10 @@ kbd { background: #2a2e2a; border: 1px solid #4a5040; padding: 1px 7px; border-r
 
 .ntag{position:absolute;transform:translate(-50%,-100%);font:600 14px Oswald,sans-serif;color:#9fd3ff;text-shadow:0 0 4px #000,0 1px 2px #000;white-space:nowrap;pointer-events:none}
 .ntag b{color:#ffd060}
+
+#cine{position:absolute;inset:0;pointer-events:none}
+#cine .bar{position:absolute;left:0;right:0;height:11vh;background:#000}
+#cine .top{top:0}#cine .bot{bottom:0}
+#cineCap{position:absolute;left:0;right:0;top:15vh;text-align:center;font:400 30px 'Special Elite',monospace;color:#e9e4d4;text-shadow:0 2px 6px #000;transition:opacity 1s}
+#cine .cskip{position:absolute;right:24px;bottom:3vh;color:#aaa;font:13px Oswald,sans-serif}
+#hud.cineHud>*:not(#cine):not(#fade):not(#subs){visibility:hidden}

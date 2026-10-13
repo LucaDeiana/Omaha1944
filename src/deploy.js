@@ -12,7 +12,7 @@ function deployPoints() {
   if (st >= 4) pts.push({ label: 'Trincea conquistata', sub: 'cima della scogliera', kind: 'point', pos: new V3(BREACH_X, 0, trenchZ(BREACH_X)) });
   if (st >= 5) pts.push({ label: 'Bocage', sub: 'varco nella siepe', kind: 'point', pos: new V3(-28, 0, -160) });
   if (st >= 7) pts.push({ label: 'Colleville-sur-Mer', sub: 'piazza della chiesa', kind: 'point', pos: new V3(12, 0, -272) });
-  pts.push({ label: 'USS Texas', sub: 'cannoni da 14 pollici', kind: 'naval', pos: new V3(-230, 0, 780) });
+  pts.push({ label: 'USS Texas', sub: 'ponte di coperta e torretta B', kind: 'naval', pos: new V3(-230, 0, 780) });
   pts.push({ label: 'P-47 Thunderbolt', sub: 'supporto aereo', kind: 'plane', pos: new V3(-30, 0, 1100) });
   return pts;
 }
