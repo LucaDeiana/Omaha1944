@@ -6,34 +6,69 @@
 const TANKS = { list: [], mines: [], hull: null, tur: null, me: null, respawnT: 30 };
 
 function buildPanzerGeo() {
-  const c = 0x8a8460, d = 0x55543e, k = 0x2a2a26;
+  const c = 0x9a8f5e, d = 0x6e6a4c, k = 0x2a2a26, tr = 0x34322c, ol = 0x5a6340, br = 0x6b4e33;
+  const camo = (mb, x, y, z, rx, ry, rz, w, h, dd) => { for (let i = 0; i < 3; i++) mb.add(U.box, R() < .5 ? ol : br, x + rnd(-w / 3, w / 3), y + rnd(-h / 4, h / 4), z + rnd(-dd / 3, dd / 3), rx, ry, rz, w * rnd(.25, .5), h * rnd(.3, .6), dd * rnd(.25, .5)); };
   const h = new MB(); h.mat = 'paint';
-  h.add(U.box, c, 0, 1.05, 0, 0, 0, 0, 2.3, .9, 5.9);
-  h.add(U.box, c, 0, 1.2, -3.0, -.25, 0, 0, 2.3, .7, .5); h.add(U.box, c, 0, .7, -3.0, .5, 0, 0, 2.3, .6, .4);
-  h.add(U.box, c, 0, 1.62, .3, 0, 0, 0, 2.85, .1, 5.6);
-  h.add(U.box, c, -.6, 1.55, -2.2, 0, 0, 0, .9, .45, .9); h.add(U.box, k, -.6, 1.6, -2.66, 0, 0, 0, .3, .1, .04);
+  // scafo: vasca, piastra frontale inclinata, sovrastruttura, parafanghi
+  h.add(U.box, d, 0, .78, .1, 0, 0, 0, 2.0, .7, 5.5);
+  h.add(U.box, c, 0, 1.08, -2.62, -1.15, 0, 0, 2.0, .62, .08); h.add(U.box, c, 0, .62, -2.86, .9, 0, 0, 2.0, .5, .08);
+  h.add(U.box, c, 0, 1.38, .25, 0, 0, 0, 2.3, .62, 4.9);
+  h.add(U.box, c, 0, 1.38, -2.18, -.18, 0, 0, 2.3, .62, .1);
+  h.add(U.box, c, 0, 1.38, 2.72, .1, 0, 0, 2.3, .6, .1);
+  h.add(U.box, c, 0, 1.7, .2, 0, 0, 0, 2.32, .06, 4.95);
+  for (const sx of [-1, 1]) { h.add(U.box, d, sx * 1.33, 1.13, .1, 0, 0, 0, .55, .04, 5.9); h.add(U.box, d, sx * 1.33, 1.05, -2.95, .5, 0, 0, .55, .04, .3); }
+  // portelli e visori del pilota e del radiotelegrafista, mitragliatrice a sfera
+  h.add(U.box, d, -.55, 1.5, -2.25, -.18, 0, 0, .55, .26, .08); h.add(U.box, k, -.55, 1.52, -2.3, -.18, 0, 0, .3, .06, .03);
+  h.add(U.sph, d, .6, 1.42, -2.26, 0, 0, 0, .14, .14, .1); h.add(U.cyl12, k, .6, 1.42, -2.55, PI / 2, 0, 0, .025, .5, .025); h.add(U.cyl12, k, .6, 1.42, -2.42, PI / 2, 0, 0, .045, .22, .045);
+  for (const sx of [-1, 1]) h.add(U.box, d, sx * .55, 1.74, -1.5, 0, 0, 0, .55, .05, .6);
+  // griglie del motore, marmitta, ganci di traino, cassetta degli attrezzi
+  for (let i = 0; i < 5; i++) h.add(U.box, k, -.45 + i * .22, 1.735, 1.9, 0, 0, 0, .12, .01, 1.0);
+  h.add(U.cyl12, k, .3, 1.05, 2.92, 0, 0, PI / 2, .16, .95, .16); h.add(U.cyl12, k, .82, 1.05, 2.92, 0, 0, PI / 2, .07, .25, .07);
+  for (const sx of [-1, 1]) { h.add(U.box, k, sx * .75, .55, -3.0, 0, 0, 0, .12, .12, .2); h.add(U.box, k, sx * .75, .55, 2.85, 0, 0, 0, .12, .12, .2); }
+  h.add(U.box, d, -.95, 1.78, 1.2, 0, 0, 0, .3, .12, 1.0);
+  // attrezzi sul parafango: piccone, pala, cric, crick e maglie di ricambio sul frontale
+  h.mat = 'wood'; h.add(U.box, 0x5a4632, 1.3, 1.2, .8, 0, 0, 0, .05, .05, 1.4); h.add(U.box, 0x5a4632, -1.3, 1.2, -.2, 0, 0, 0, .05, .05, 1.2);
+  h.mat = 'paint'; h.add(U.cyl12, k, -1.3, 1.22, 1.2, PI / 2, 0, 0, .1, .35, .1);
+  for (let i = 0; i < 6; i++) h.add(U.box, tr, -.7 + i * .28, .98, -2.92, .9, 0, 0, .26, .04, .32);
+  // carreggiata: 8 ruote doppie su 4 carrelli, rulli, ruota motrice dentata, tendicingolo, maglie
   for (const sx of [-1, 1]) {
-    h.add(U.box, d, sx * 1.25, .6, 0, 0, 0, 0, .5, 1.0, 6.3);
-    for (let i = 0; i < 8; i++) h.add(U.cyl12, k, sx * 1.25, .42, -2.45 + i * .7, 0, 0, PI / 2, .3, .52, .3);
-    for (let i = 0; i < 4; i++) h.add(U.cyl12, k, sx * 1.15, 1.1, -2 + i * 1.3, 0, 0, PI / 2, .1, .2, .1);
-    h.add(U.cyl12, k, sx * 1.25, .85, -3.05, 0, 0, PI / 2, .36, .5, .36); h.add(U.cyl12, k, sx * 1.25, .75, 2.95, 0, 0, PI / 2, .3, .5, .3);
-    for (let i = 0; i < 5; i++) h.add(U.box, c, sx * 1.52, 1.15, -2.3 + i * 1.15, 0, 0, sx * .05, .04, .95, 1.1);
+    for (let i = 0; i < 8; i++) { const z = -2.05 + i * .56; h.add(U.cyl12, k, sx * 1.15, .36, z, 0, 0, PI / 2, .28, .1, .28); h.add(U.cyl12, k, sx * 1.33, .36, z, 0, 0, PI / 2, .28, .1, .28); h.add(U.cyl12, 0x3c3a32, sx * 1.24, .36, z, 0, 0, PI / 2, .09, .3, .09); }
+    for (let i = 0; i < 4; i++) h.add(U.box, d, sx * 1.04, .45, -1.77 + i * 1.12, 0, 0, 0, .1, .35, .7);
+    for (let i = 0; i < 4; i++) h.add(U.cyl12, k, sx * 1.24, .86, -1.7 + i * 1.12, 0, 0, PI / 2, .1, .3, .1);
+    h.add(U.cyl12, k, sx * 1.24, .68, -2.8, 0, 0, PI / 2, .33, .32, .33); for (let t = 0; t < 12; t++) { const a2 = t / 12 * TAU; h.add(U.box, k, sx * 1.24, .68 + Math.sin(a2) * .37, -2.8 + Math.cos(a2) * .37, a2, 0, 0, .3, .06, .08); }
+    h.add(U.cyl12, k, sx * 1.24, .5, 2.72, 0, 0, PI / 2, .26, .3, .26);
+    for (let i = 0; i < 46; i++) { const z = -2.95 + i * .124; h.add(U.box, tr, sx * 1.24, .07, z, 0, 0, 0, .42, .07, .1); h.add(U.box, tr, sx * 1.24, .99, z + .05, 0, 0, 0, .42, .06, .1); }
+    // gonne distanziate (Schürzen)
+    for (let i = 0; i < 5; i++) h.add(U.box, c, sx * 1.6, 1.0, -2.0 + i * 1.03, 0, 0, sx * -.04, .04, .95, 1.0);
+    h.add(U.box, d, sx * 1.48, 1.45, .1, 0, 0, 0, .3, .04, .05);
   }
-  h.add(U.cyl12, k, -.7, 1.35, 3.0, PI / 2, 0, 0, .1, .4, .1); h.add(U.cyl12, k, .7, 1.35, 3.0, PI / 2, 0, 0, .1, .4, .1);
-  for (let i = 0; i < 4; i++) h.add(U.box, 0x6a6448, -.6 + i * .4, 1.7, 2.2, 0, 0, 0, .3, .12, .9);
-  h.add(U.sph, d, .6, 1.35, -3.12, 0, 0, 0, .14, .14, .1); h.add(U.cyl12, k, .6, 1.35, -3.45, PI / 2, 0, 0, .025, .6, .025); h.add(U.cyl12, k, .6, 1.35, -3.3, PI / 2, 0, 0, .045, .25, .045);
+  camo(h, 0, 1.4, .2, 0, 0, 0, 2.34, .64, 4.9); camo(h, 0, 1.72, 0, 0, 0, 0, 2.34, .07, 4.0);
+  h.mat = 'vc'; for (const sx of [-1, 1]) { h.add(U.box, 0xf2f0e8, sx * 1.165, 1.4, -.5, 0, 0, 0, .02, .36, .1); h.add(U.box, 0xf2f0e8, sx * 1.165, 1.4, -.5, 0, 0, 0, .02, .1, .36); h.add(U.box, 0x101010, sx * 1.17, 1.4, -.5, 0, 0, 0, .02, .26, .05); h.add(U.box, 0x101010, sx * 1.17, 1.4, -.5, 0, 0, 0, .02, .05, .26); }
   TANKS.hull = h.buildGroups();
+  // torretta: piastra frontale, fianchi inclinati, gonna, cupola con visori, portelli, mantelletta
   const t = new MB(); t.mat = 'paint';
-  t.add(U.box, c, 0, .5, .2, 0, 0, 0, 1.9, .85, 2.4); t.add(U.box, c, 0, .52, -1.05, -.2, 0, 0, 1.6, .7, .4);
-  for (const sx of [-1, 1]) t.add(U.box, c, sx * 1.25, .55, .2, 0, 0, 0, .05, 1.0, 2.7);
-  t.add(U.box, c, 0, .55, 1.6, 0, 0, 0, 2.5, 1.0, .05);
-  t.add(U.cyl12, c, -.35, 1.05, .9, 0, 0, 0, .38, .3, .38); t.add(U.cyl12, k, -.35, 1.22, .9, 0, 0, 0, .4, .05, .4);
-  t.add(U.cyl12, d, 0, .45, -1.4, PI / 2, 0, 0, .14, .5, .14);
+  t.add(U.box, c, 0, .48, .25, 0, 0, 0, 1.75, .8, 2.1);
+  t.add(U.box, c, 0, .48, -.88, -.15, 0, 0, 1.45, .78, .12);
+  for (const sx of [-1, 1]) t.add(U.box, c, sx * .9, .48, .25, 0, 0, sx * .18, .08, .82, 2.1);
+  t.add(U.box, c, 0, .9, .25, 0, 0, 0, 1.6, .06, 2.1);
+  t.add(U.box, d, 0, .45, -1.05, 0, 0, 0, .85, .5, .22); t.add(U.cyl12, d, 0, .45, -1.25, PI / 2, 0, 0, .15, .35, .15);
+  for (const sx of [-1, 1]) { t.add(U.box, c, sx * 1.22, .48, .35, 0, 0, sx * -.05, .04, .95, 2.5); t.add(U.box, d, sx * 1.05, .9, .3, 0, 0, 0, .35, .04, .06); }
+  t.add(U.box, c, 0, .48, 1.62, 0, 0, 0, 2.48, .95, .04);
+  t.add(U.cyl12, c, -.35, .98, .9, 0, 0, 0, .36, .22, .36); t.add(U.cyl12, d, -.35, 1.12, .9, 0, 0, 0, .38, .05, .38);
+  t.mat = 'vc'; for (let i = 0; i < 6; i++) { const a2 = i / 6 * TAU; t.add(U.box, 0x141414, -.35 + Math.sin(a2) * .37, .98, .9 + Math.cos(a2) * .37, 0, a2, 0, .12, .06, .02); }
+  t.mat = 'paint'; for (const sx of [-1, 1]) t.add(U.box, d, sx * .45, .93, .55, 0, 0, 0, .4, .04, .55);
+  for (const sx of [-1, 1]) t.add(U.box, d, sx * .92, .55, -.4, 0, 0, sx * .18, .04, .3, .4);
   t.add(U.cyl12, k, .28, .42, -1.55, PI / 2, 0, 0, .025, .5, .025);
   t.add(U.cyl, k, -.35, 1.32, .9, 0, 0, 0, .025, .3, .025); t.add(U.box, k, -.35, 1.5, .78, 0, 0, 0, .07, .1, .5); t.add(U.cyl12, k, -.35, 1.52, .25, PI / 2, 0, 0, .022, .6, .022); t.add(U.box, 0x3a3020, -.28, 1.42, .82, 0, 0, 0, .1, .1, .16);
+  t.add(U.cyl, k, .9, 1.6, 1.2, 0, 0, .05, .012, 2.2, .012);
+  camo(t, 0, .5, .3, 0, 0, 0, 1.8, .8, 2.1); camo(t, 0, .5, .4, 0, 0, 0, 2.5, .95, 2.5);
+  t.mat = 'vc'; for (const sx of [-1, 1]) { t.add(U.box, 0xf0eee6, sx * 1.245, .55, .2, 0, 0, 0, .01, .22, .3); }
   TANKS.tur = t.buildGroups();
+  // cannone da 75 mm L/48 con freno di bocca a doppia camera
   const g = new MB(); g.mat = 'paint';
-  g.add(U.cyl12, d, 0, 0, -2.4, PI / 2, 0, 0, .075, 4.6, .075); g.add(U.cyl12, k, 0, 0, -4.75, PI / 2, 0, 0, .13, .32, .13);
+  g.add(U.cyl12, d, 0, 0, -2.3, PI / 2, 0, 0, .075, 4.4, .075); g.add(U.cyl12, d, 0, 0, -.35, PI / 2, 0, 0, .1, .6, .1);
+  g.add(U.cyl12, k, 0, 0, -4.62, PI / 2, 0, 0, .13, .22, .13); g.add(U.cyl12, k, 0, 0, -4.86, PI / 2, 0, 0, .13, .2, .13); g.add(U.cyl12, k, 0, 0, -4.74, PI / 2, 0, 0, .09, .08, .09);
+  for (const sx of [-1, 1]) g.add(U.box, 0x1a1a18, sx * .13, 0, -4.62, 0, 0, 0, .02, .16, .14);
   TANKS.gun = g.buildGroups();
 }
 class Panzer {

@@ -241,6 +241,7 @@ function addCover(x, z, kind) { covers.push({ x, z, kind, occ: 0 }); }
 function axisSteps(a0, a1, f) { const r = []; let a = a0; while (a < a1) { r.push(a); a += f(a); } r.push(a1); return r; }
 function terrainMaterial() {
   const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: TEX.sand.map, normalMap: TEX.sand.normal, roughness: 1, metalness: 0 });
+  m.color.setScalar(.8);
   m.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, { tPeb: { value: TEX.pebble.map }, tGrass: { value: TEX.grass.map }, tDirt: { value: TEX.dirt.map }, nPeb: { value: TEX.pebble.normal }, nGrass: { value: TEX.grass.normal }, nDirt: { value: TEX.dirt.normal } });
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec4 splat;attribute vec2 aux;varying vec4 vSplat;varying vec2 vAux;')
@@ -609,23 +610,38 @@ function makeFlak(x, z) {
 }
 
 // ---------- modelli statici ----------
+// M4 Sherman: scafo con frontale fuso arrotondato, sospensioni VVSS, torretta fusa, cannone da 75 mm
 function addSherman(mb, x, y, z, ry, burnt) {
-  const c = burnt ? 0x4a4540 : 0x6d7550, d = burnt ? 0x34302b : 0x4f5539, om = mb.mat; mb.mat = 'paint';
+  const c = burnt ? 0x3e3a34 : 0x5f6646, d = burnt ? 0x2e2a25 : 0x464c34, k = burnt ? 0x1c1a17 : 0x26261f, tr = burnt ? 0x221f1b : 0x2f2d27, om = mb.mat; mb.mat = 'paint';
   mb.setBase(x, y, z, 0, ry, 0);
-  mb.add(U.box, c, 0, .75, 0, 0, 0, 0, 2.5, 1.0, 5.8);
-  mb.add(U.box, c, 0, 1.55, .35, 0, 0, 0, 2.4, .75, 4.2);
-  mb.add(U.box, c, 0, 1.3, -2.35, -.62, 0, 0, 2.4, .95, 1.6);
+  mb.add(U.box, d, 0, .78, .15, 0, 0, 0, 2.0, .62, 5.4);
+  mb.add(U.box, c, 0, 1.45, .45, 0, 0, 0, 2.5, .72, 4.3);
+  mb.add(U.box, c, 0, 1.3, -2.15, -.98, 0, 0, 2.5, .95, .1);
+  mb.add(U.cyl12, c, 0, .78, -2.6, 0, 0, PI / 2, .45, 2.3, .45);
+  for (const sx of [-1, 1]) mb.add(U.box, d, sx * .55, 1.82, -1.55, 0, 0, 0, .5, .25, .5);
+  mb.add(U.box, d, .55, 1.62, -2.05, -.98, 0, 0, .25, .12, .2); mb.add(U.cyl12, k, .55, 1.62, -2.3, PI / 2 - .2, 0, 0, .025, .35, .025);
+  for (let i = 0; i < 4; i++) mb.add(U.box, k, -.5 + i * .33, 1.82, 2.1, 0, 0, 0, .25, .02, .8);
+  mb.add(U.box, d, 0, 1.15, 2.67, .2, 0, 0, 2.3, .7, .1);
   for (const sx of [-1, 1]) {
-    mb.add(U.box, d, sx * 1.38, .55, 0, 0, 0, 0, .55, 1.05, 6.0);
-    for (let i = 0; i < 6; i++) mb.add(U.cyl12, d, sx * 1.38, .38, -2.3 + i * .92, 0, 0, PI / 2, .33, .62, .33);
-    for (let i = 0; i < 3; i++) mb.add(U.box, d, sx * 1.2, .55, -2 + i * 2, 0, 0, 0, .15, .5, .4);
-    mb.add(U.cyl12, d, sx * 1.38, .7, -2.9, 0, 0, PI / 2, .35, .58, .35); mb.add(U.cyl12, d, sx * 1.38, .7, 2.9, 0, 0, PI / 2, .3, .58, .3);
+    mb.add(U.box, d, sx * 1.33, 1.0, .15, 0, 0, 0, .45, .05, 5.6);
+    for (let b = 0; b < 3; b++) {
+      const bz = -1.55 + b * 1.6;
+      mb.add(U.box, d, sx * 1.14, .58, bz, 0, 0, 0, .14, .5, .9);
+      for (const wz of [-.33, .33]) { mb.add(U.cyl12, k, sx * 1.24, .33, bz + wz, 0, 0, PI / 2, .3, .32, .3); mb.add(U.cyl12, 0x3c3c34, sx * 1.24, .33, bz + wz, 0, 0, PI / 2, .1, .36, .1); }
+      mb.add(U.cyl12, k, sx * 1.24, .85, bz + .45, 0, 0, PI / 2, .1, .3, .1);
+    }
+    mb.add(U.cyl12, k, sx * 1.24, .62, -2.7, 0, 0, PI / 2, .3, .32, .3); mb.add(U.cyl12, k, sx * 1.24, .5, 2.55, 0, 0, PI / 2, .25, .32, .25);
+    for (let i = 0; i < 44; i++) { const zz = -2.85 + i * .127; mb.add(U.box, tr, sx * 1.24, .05, zz, 0, 0, 0, .42, .07, .1); mb.add(U.box, tr, sx * 1.24, .96, zz + .05, 0, 0, 0, .42, .06, .1); }
   }
-  mb.add(U.cyl12, c, 0, 2.35, .35, 0, 0, 0, 1.05, .9, 1.1); mb.add(U.cyl12, c, 0, 2.85, .4, 0, 0, 0, .9, .15, .95);
-  mb.add(U.box, c, 0, 2.3, -.75, 0, 0, 0, .95, .62, .45);
-  mb.add(U.cyl12, d, 0, 2.3, -2.05, PI / 2, 0, 0, .075, 2.6, .075);
-  mb.add(U.cyl12, d, -.4, 2.95, .5, 0, 0, 0, .3, .1, .3); mb.add(U.cyl, 0x222222, .4, 3.05, .3, PI / 2 - .2, 0, 0, .02, .9, .02);
-  for (let i = 0; i < 4; i++) mb.add(U.box, d, -.9 + i * .6, 1.95, 2.3, 0, 0, 0, .5, .3, .3);
+  // torretta fusa arrotondata
+  mb.add(lath([[0, .85], [.55, .82], [.85, .65], [.98, .35], [1.0, 0], [.95, -.05], [0, -.05]], 18), c, 0, 1.81, .3);
+  mb.add(U.box, c, 0, 2.17, .95, 0, 0, 0, .9, .5, .7);
+  mb.add(U.box, d, 0, 2.18, -.75, 0, 0, 0, .75, .45, .25);
+  mb.add(U.cyl12, d, 0, 2.18, -2.0, PI / 2, 0, 0, .075, 2.5, .075); mb.add(U.cyl12, k, 0, 2.18, -3.22, PI / 2, 0, 0, .09, .12, .09);
+  mb.add(U.cyl12, d, -.4, 2.72, .45, 0, 0, 0, .32, .14, .32); mb.add(U.cyl12, k, -.4, 2.8, .45, 0, 0, 0, .3, .03, .3);
+  mb.add(U.cyl12, k, .42, 2.95, .3, 0, 0, 0, .025, .45, .025); mb.add(U.box, k, .42, 3.15, .15, 0, 0, 0, .07, .12, .55); mb.add(U.cyl12, k, .42, 3.17, -.3, PI / 2, 0, 0, .03, .6, .03);
+  for (let i = 0; i < 4; i++) mb.add(U.box, 0x6a6448, -.9 + i * .6, 1.95, 2.3, 0, 0, 0, .5, .3, .3);
+  if (!burnt) { mb.mat = 'vc'; for (const sx of [-1, 1]) { mb.add(U.cyl12, 0xe8e6dc, sx * 1.26, 1.45, .2, 0, 0, PI / 2, .3, .01, .3); mb.add(U.cyl, 0x5f6646, sx * 1.27, 1.45, .2, 0, 0, PI / 2, .2, .01, .2); } }
   mb.clearBase(); mb.mat = om;
 }
 function addLCVPWreck(mb, x, z, ry, rz) {

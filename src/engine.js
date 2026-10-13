@@ -103,6 +103,7 @@ function initEngine() {
   MAT.concrete = triMaterial(TEX.concrete, .3, { nStr: 1.2 });
   MAT.stone = triMaterial(TEX.stone, .42, { nStr: 1.4 });
   MAT.brick = triMaterial(TEX.brick, .55, { nStr: 1.3 }); MAT.plaster = triMaterial(TEX.plaster, .38, { nStr: 1 }); MAT.cobble = triMaterial(TEX.cobble, .5, { nStr: 1.4 });
+  MAT.plaster.color.setScalar(.74); MAT.stone.color.setScalar(.84); MAT.concrete.color.setScalar(.82);
   MAT.roof = triMaterial(TEX.roof, .5, { nStr: 1.3 });
   MAT.wood = triMaterial(TEX.wood, .55, { nStr: 1 });
   MAT.dirt = triMaterial(TEX.dirt, .45, { nStr: 1 });
