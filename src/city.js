@@ -13,7 +13,7 @@ function cityFlat(x, z, y) {
   const m = smooth(Math.min((x - CITY.x0 + 40) / 40, (CITY.x1 + 40 - x) / 40, (z - CITY.z0 + 40) / 40, (CITY.z1 + 40 - z) / 40));
   return lerp(y, CITY.y, m);
 }
-const STONE = [0xc8bfa8, 0xbdb39b, 0xd2c9b2, 0xb0a68e, 0xc4b79a], PLASTER = [0xd9cfb8, 0xe0d6be, 0xcfc3a5], BRICK = [0x8e5a44, 0x9a6650, 0x7e4e3a];
+const STONE = [0xb8ae96, 0xab9f86, 0xc0b59c, 0xa0957c, 0xb3a68a], PLASTER = [0xc4b99e, 0xbcb094, 0xb3a588], BRICK = [0x8e5a44, 0x9a6650, 0x7e4e3a];
 const ROOFC = [0x5f646b, 0x6a6f76, 0x7a5a48, 0x6e4c3c, 0x585c62];
 
 // geometria di una casa (facciata verso face = ±1 lungo z); restituisce i solidi da creare
@@ -37,7 +37,7 @@ function cityHouseGeo(mb, h, ruined) {
     // finestre con persiane e davanzali
     mb.mat = 'vc';
     const shop = storeys > 1 && R() < .45;
-    for (let s = 0; s < storeys; s++) for (let x = -w / 2 + 1.3; x < w / 2 - .7; x += 2.2) {
+    for (let s = 0; s < storeys; s++) for (let x = -w / 2 + 1.5; x < w / 2 - .9; x += 3.1) {
       if (s === 0 && shop) continue;
       const y = base + 1.9 + s * 3.1, z = fz + face * .06, lit = R() < .03;
       mb.add(U.box, lit ? 0x5a4a28 : 0x141619, cx + x, y, z, 0, 0, 0, .9, 1.35, .06);
@@ -88,7 +88,7 @@ function cityHouseLow(mb, h) {
   mb.add(U.box, h.wallC || 0xc4b79a, cx, base + ht / 2, cz, 0, 0, 0, w, ht, d);
   mb.mat = 'roof'; mb.add(U.prism, h.roofC || 0x5f646b, cx, base + ht, cz, 0, PI / 2, 0, d + .8, d * .55, w + .5);
   mb.mat = 'vc'; const fz = cz + face * (d / 2 + .02), n = Math.max(1, Math.round((ht - 1) / 3.1));
-  for (let s = 0; s < n; s++) mb.add(U.box, 0x24262a, cx, base + 1.9 + s * 3.1, fz, 0, 0, 0, w - 1.2, .9, .04);
+  for (let s = 0; s < n; s++) for (let x = -w / 2 + 1.5; x < w / 2 - .9; x += 3.1) mb.add(U.box, 0x2e2c2a, cx + x, base + 1.9 + s * 3.1, fz, 0, 0, 0, .95, 1.3, .04);
 }
 const CITY_LOD = 230;
 function cityLodUpdate() {

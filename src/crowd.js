@@ -11,7 +11,7 @@ const SCOL2 = {
   E: { jacket: 0x545b54, jacket2: 0x474d48, pants: 0x4b514c, web: 0x23201c, pack: 0x6b6551, helm: 0x4f5650, net: 0x474d48, skin: 0xc9a083, legging: 0x1d1b19, boot: 0x1d1b19, belt2: 0x58625a, metal: 0x252525, wood: 0x5a3a20 },
 };
 const ARM_A = .29, ARM_B = .27;
-const SH_L = new V3(-.2, .44, 0), SH_R = new V3(.2, .44, 0);
+const SH_L = new V3(-.172, .43, 0), SH_R = new V3(.172, .43, 0);
 const POLE_L = new V3(-.5, -1, .35).normalize(), POLE_R = new V3(.6, -1, .3).normalize();
 const qE = (x, y, z) => new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z));
 const WFORE = { rifle: new V3(0, .02, -.36), sniper: new V3(0, .02, -.36), smg: new V3(0, -.04, -.2), bar: new V3(0, .0, -.36), mg: new V3(-.02, .02, -.32) };
@@ -30,42 +30,71 @@ function organic(rings, n) {
   const secs = rings.map(([y, rx, rz, zo = 0]) => { const ring = []; for (let j = 0; j < n; j++) { const a = j / n * TAU, c = Math.cos(a), sn = Math.sin(a); ring.push(new V3(Math.sign(c) * Math.pow(Math.abs(c), .8) * rx, y, zo + Math.sign(sn) * Math.pow(Math.abs(sn), .8) * rz)); } return ring; });
   return loftGeo(secs, null, true);
 }
+// rings: [y, semilarghezza, raggio davanti, raggio dietro, spostamento x, spostamento z]
+// fold: ampiezza delle pieghe del tessuto; shade: ombreggiatura verso le estremità
+function sculpt(rings, n, hex, o = {}) {
+  const base = col(hex), fold = o.fold || 0, seed = o.seed || 1, m = rings.length;
+  const secs = rings.map(([y, rx, rf, rb, xo = 0, zo = 0], i) => {
+    const ring = [];
+    for (let j = 0; j < n; j++) {
+      const a = j / n * TAU, c = Math.cos(a), sn = Math.sin(a), rz = sn < 0 ? rf : rb;
+      const e = o.round || .82, px = Math.sign(c) * Math.pow(Math.abs(c), e) * rx, pz = Math.sign(sn) * Math.pow(Math.abs(sn), e) * rz;
+      const k = fold ? (vnoise(j * 1.7 + seed * 13, i * 2.3 + seed) - .5) * fold * (o.foldMask ? o.foldMask(i / (m - 1), a) : 1) : 0;
+      const len = Math.hypot(px, pz) || 1;
+      ring.push(new V3(xo + px + px / len * k, y, zo + pz + pz / len * k));
+    }
+    return ring;
+  });
+  const cf = (p, i, j) => {
+    const t = i / (m - 1), a = j / n * TAU;
+    let sh = 1 - (o.shadeTop || 0) * (1 - t) * 0 - (o.shadeBottom || .12) * Math.max(0, 1 - t * 4) - (o.shadeTopEnd || .06) * Math.max(0, t * 4 - 3);
+    if (fold) sh *= .9 + (vnoise(j * 1.7 + seed * 13, i * 2.3 + seed)) * .2;
+    if (o.under) sh *= 1 - o.under * Math.max(0, -Math.cos(a - (o.underA || 0)));
+    return new THREE.Color(base.r * sh, base.g * sh, base.b * sh);
+  };
+  return loftGeo(secs, cf, true, o.uvs || 1);
+}
+// arto lungo l'asse z (piedi, scarpe): ruota le sezioni costruite lungo y
+const alongZ = (rings, n, hex, o) => { const g = sculpt(rings, n, hex, o); g.rotateX(-PI / 2); return g; };
 function buildPartGeo(key, hi) {
   const [team, part, kind] = key.split('_'), C = SCOL2[team], s = hi ? 14 : 7, mb = new MB(), A = team === 'A';
   const add = (g, c, x, y, z, rx, ry, rz, sx, sy, sz) => mb.add(g, c, x, y, z, rx || 0, ry || 0, rz || 0, sx ?? 1, sy ?? 1, sz ?? 1);
+  const G = (g) => mb.addG(g, 0, 0, 0, 0, 0, 0, 1, 0xffffff);
   if (part === 'pelvis') {
-    add(cylG(.165, .15, .24, s), C.pants, 0, .02, 0, 0, 0, 0, 1, 1, .7);
-    add(U.sph, C.pants, 0, -.07, 0, 0, 0, 0, .15, .08, .1);
-    add(cylG(.172, .172, .055, s), C.web, 0, .12, 0, 0, 0, 0, 1, 1, .72);
+    // calzoni: bacino con glutei, cavallo e cintura
+    G(sculpt([[-.13, .1, .07, .08], [-.09, .145, .09, .11], [-.02, .16, .095, .12], [.06, .162, .095, .11], [.13, .158, .09, .1]], hi ? 18 : 8, C.pants, { fold: hi ? .012 : 0, seed: 2, shadeBottom: .25 }));
+    for (const sx of [-1, 1]) G(sculpt([[-.16, .055, .06, .065, sx * .085], [-.11, .075, .075, .08, sx * .08], [-.06, .08, .08, .085, sx * .07]], hi ? 12 : 6, C.pants, { shadeBottom: .2 }));
+    G(sculpt([[.1, .168, .1, .118], [.15, .168, .1, .118]], hi ? 18 : 8, C.web, { shadeBottom: 0 }));
     if (hi) {
       if (A) { add(new THREE.TorusGeometry(.19, .035, 6, 16), 0x5a5e44, 0, .02, 0, PI / 2, 0, 0, 1, .7, 1); add(U.box, 0x4a4e38, .17, -.02, 0, 0, 0, 0, .05, .1, .08); for (let i = 0; i < 9; i++) { const a = -1.2 + i * .3; add(U.box, C.web, Math.sin(a) * .17, .1, -Math.cos(a) * .12, 0, -a, 0, .055, .07, .035); } add(cylG(.05, .05, .16, 10), C.belt2, .13, .02, .12); add(U.box, C.pack, -.12, -.02, .13, 0, 0, 0, .1, .18, .03); }
       else { for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) add(U.box, C.web, sx * (.04 + i * .045), .1, -.125, 0, 0, 0, .04, .07, .04); add(U.box, 0x777777, 0, .12, -.122, 0, 0, 0, .045, .04, .01); add(U.box, C.pack, .14, .0, .07, 0, -.4, 0, .16, .15, .06); add(cylG(.05, .05, .15, 10), C.belt2, .16, -.02, .12); add(U.box, C.wood, -.15, .04, .06, .2, 0, 0, .025, .22, .03); }
     }
   } else if (part === 'chest') {
-    add(organic([[-.02, .155, .1, 0], [.08, .16, .105, 0], [.2, .17, .115, -.008], [.32, .19, .125, -.012], [.42, .2, .115, 0], [.48, .17, .095, .01], [.52, .08, .07, .01]], hi ? 18 : 8), C.jacket);
+    // giacca: vita, torace con pettorali e scapole, spalle spioventi, colletto, collo
+    G(sculpt([[-.06, .17, .105, .125], [.02, .158, .1, .115], [.12, .155, .105, .112], [.22, .168, .118, .118], [.32, .162, .122, .12], [.4, .158, .112, .112], [.46, .135, .095, .098], [.5, .12, .075, .08], [.53, .075, .06, .065]], hi ? 18 : 8, C.jacket, { fold: hi ? .014 : 0, seed: 3, shadeBottom: .18, foldMask: (t) => t < .7 ? 1 : .3, under: .12, underA: 0 }));
     if (hi) {
-      add(new THREE.TorusGeometry(.068, .016, 5, 14), C.jacket2, 0, .515, .005, PI / 2, 0, 0, 1, 1, 1);         // colletto
-      for (let k = 0; k < 4; k++) add(U.sph, 0x2a2a22, 0, .44 - k * .1, -.122 + k * .004, 0, 0, 0, .009, .009, .005); // bottoni
-      for (const sx of [-1, 1]) add(U.box, C.jacket2, sx * .095, .43, -.118, -.12, 0, 0, .09, .022, .02); // patte dei taschini
-      for (let k = 0; k < 3; k++) add(new THREE.TorusGeometry(.17, .006, 3, 16), C.jacket2, 0, .14 + k * .07, -.004, PI / 2, 0, 0, 1, .66, 1); // pieghe
+      G(sculpt([[.5, .085, .07, .07, 0, .005], [.545, .082, .068, .07, 0, .005]], 14, C.jacket2, { fold: .006 }));
+      for (let k = 0; k < 4; k++) add(U.sph, 0x2a2a22, 0, .44 - k * .1, -.124 + k * .006, 0, 0, 0, .009, .009, .005);
+      for (const sx of [-1, 1]) { add(U.box, C.jacket2, sx * .095, .41, -.122, -.14, 0, 0, .095, .025, .02); add(U.box, C.jacket2, sx * .095, .37, -.118, -.05, 0, 0, .09, .07, .012); }
+      for (const sx of [-1, 1]) add(U.box, C.jacket2, sx * .17, .47, -.01, 0, 0, sx * -.35, .06, .015, .1);
     }
-    for (const sx of [-1, 1]) add(U.sph, C.jacket, sx * .19, .44, 0, 0, 0, 0, .075, .07, .075);
-    add(cylG(.07, .075, .06, s), C.jacket2, 0, .51, 0);
-    add(cylG(.055, .06, .1, s), C.skin, 0, .54, 0);
+    G(sculpt([[.52, .052, .05, .055], [.6, .048, .045, .05]], hi ? 12 : 6, C.skin, { shadeBottom: .3 }));
     if (A) {
-      add(U.box, C.pack, 0, .32, .16, 0, 0, 0, .3, .32, .13);
+      G(sculpt([[.16, .1, .03, .05, 0, .16], [.22, .13, .04, .07, 0, .165], [.38, .135, .04, .075, 0, .165], [.46, .11, .03, .05, 0, .16]], hi ? 12 : 6, C.pack, { fold: hi ? .008 : 0, seed: 21, shadeBottom: .2 }));
+      for (const sx of [-1, 1]) add(U.box, C.web, sx * .08, .3, .232, 0, 0, 0, .03, .26, .01);
       add(cylG(.06, .06, .34, s), C.belt2, 0, .5, .17, 0, 0, PI / 2);
-      for (const sx of [-1, 1]) add(U.box, C.web, sx * .1, .3, 0, 0, 0, 0, .04, .44, .27);
+      for (const sx of [-1, 1]) { add(U.box, C.web, sx * .088, .28, -.124, -.06, 0, 0, .036, .4, .01); add(U.box, C.web, sx * .1, .468, -.01, 0, 0, sx * -.3, .036, .01, .22); }
       if (hi) {
         for (const sx of [-1, 1]) add(U.box, C.jacket2, sx * .08, .35, -.12, 0, 0, 0, .08, .09, .02);
         add(new THREE.TorusGeometry(.19, .032, 6, 18), C.belt2, 0, .08, 0, PI / 2, 0, 0, 1, .66, 1);
         add(U.box, C.pack, -.07, .2, -.135, 0, 0, 0, .15, .12, .06);
         add(U.box, C.wood, 0, .22, .245, 0, 0, 0, .03, .22, .02); add(U.box, C.metal, 0, .1, .24, 0, 0, 0, .1, .1, .015);
-        add(U.box, 0x4e4a36, 0, .27, -.16, 0, 0, 0, .2, .17, .07); add(U.box, 0x3e3a2a, 0, .36, -.16, 0, 0, 0, .21, .03, .075); add(U.box, 0x5a5640, .1, .4, -.05, 0, 0, -.6, .02, .3, .03);
+        G(sculpt([[.2, .075, .04, .01, 0, -.14], [.24, .088, .05, .012, 0, -.142], [.32, .088, .05, .012, 0, -.142], [.35, .07, .035, .01, 0, -.14]], 10, 0x4e4a36, { fold: .006, seed: 23, shadeBottom: .25 }));
+        add(U.box, 0x3e3a2a, 0, .34, -.188, .2, 0, 0, .17, .03, .05);
       }
       if (kind === 'medic') { add(U.box, 0xe5e2d8, -.2, .38, 0, 0, 0, 0, .02, .07, .13); add(U.box, 0xa01010, -.212, .38, 0, 0, 0, 0, .006, .05, .015); add(U.box, 0xa01010, -.212, .38, 0, 0, 0, 0, .006, .015, .05); }
     } else {
-      for (const sx of [-1, 1]) add(U.box, C.web, sx * .09, .3, 0, 0, 0, sx * .12, .035, .48, .27);
+      for (const sx of [-1, 1]) { add(U.box, C.web, sx * .085, .28, -.124, -.06, 0, sx * .12, .03, .42, .01); add(U.box, C.web, sx * .1, .468, -.01, 0, 0, sx * -.3, .03, .01, .22); add(U.box, C.web, sx * .04, .32, .125, .06, 0, sx * -.25, .03, .36, .01); }
       add(cylG(.06, .06, .27, s), C.belt2, .02, .24, .16, .1, 0, 0);
       if (hi) {
         for (const sx of [-1, 1]) { add(U.box, C.jacket2, sx * .09, .36, -.12, 0, 0, 0, .085, .1, .02); add(U.box, C.jacket2, sx * .1, .12, -.115, 0, 0, 0, .09, .1, .02); }
@@ -77,10 +106,50 @@ function buildPartGeo(key, hi) {
       }
     }
   } else if (part === 'head') {
-    add(organic([[-.02, .045, .05, .0], [.02, .06, .07, -.01], [.045, .072, .085, -.012], [.09, .088, .1, -.004], [.14, .095, .106, .004], [.19, .088, .1, .008], [.225, .06, .07, .008], [.24, .02, .025, .008]], hi ? 16 : 7), C.skin);
-    add(U.box, C.skin, 0, .112, -.103, -.25, 0, 0, .022, .05, .03);
-    if (hi) { add(U.box, C.skin, 0, .086, -.104, 0, 0, 0, .03, .01, .02); add(U.sph, 0x8a6a56, 0, .03, -.06, 0, 0, 0, .055, .03, .04); for (const sx of [-1, 1]) add(U.sph, C.skin, sx * .052, .1, -.075, 0, 0, 0, .025, .018, .02); }
-    if (hi) { for (const sx of [-1, 1]) { add(U.sph, C.skin, sx * .097, .12, .005, 0, 0, 0, .014, .03, .022); add(U.sph, 0x2a2018, sx * .034, .14, -.09, 0, 0, 0, .012, .009, .008); add(U.box, 0x4a3828, sx * .035, .162, -.093, 0, 0, sx * .1, .03, .007, .01); } add(U.box, 0x7a4a40, 0, .074, -.098, 0, 0, 0, .035, .007, .01); }
+    // testa: mascella, mento, zigomi, orbite, arcate, cranio; naso, orecchie, occhi, sopracciglia, labbra, barba
+    const sk = C.skin;
+    G(sculpt([[-.03, .045, .045, .05, 0, .01], [.0, .05, .05, .055, 0, .008], [.03, .062, .072, .062, 0, .002], [.055, .07, .088, .07], [.085, .078, .092, .085, 0, -.002], [.115, .083, .088, .098], [.14, .084, .084, .104], [.165, .087, .092, .106], [.19, .086, .088, .104], [.215, .078, .078, .096, 0, .006], [.238, .055, .052, .07, 0, .01], [.25, .02, .02, .028, 0, .012]], hi ? 20 : 8, sk, { round: .78, shadeBottom: .22, shadeTopEnd: 0, seed: 5 }));
+    if (hi) {
+      add(U.box, sk, 0, .12, -.098, -.32, 0, 0, .026, .055, .034); add(U.sph, sk, 0, .097, -.104, 0, 0, 0, .018, .012, .016);
+      for (const sx of [-1, 1]) {
+        add(U.sph, sk, sx * .086, .135, .012, 0, 0, 0, .012, .032, .022);
+        add(U.sph, 0xd8d2c8, sx * .033, .143, -.083, 0, 0, 0, .013, .008, .006); add(U.sph, 0x2a2a28, sx * .033, .143, -.088, 0, 0, 0, .006, .006, .004);
+        add(U.box, 0x3a2c22, sx * .035, .162, -.09, 0, 0, sx * .08, .032, .008, .012);
+        add(U.sph, sk, sx * .05, .105, -.072, 0, 0, 0, .026, .016, .02);
+      }
+      add(U.box, 0x7a4a40, 0, .066, -.088, 0, 0, 0, .034, .006, .01); add(U.box, 0x8a5a4c, 0, .059, -.087, 0, 0, 0, .028, .005, .01);
+      add(U.sph, 0x9a7a62, 0, .04, -.062, 0, 0, 0, .05, .022, .036);
+    }
+  } else if (part === 'uarm') {
+    // braccio: deltoide che si raccorda alla spalla, bicipite, gomito; manica con pieghe
+    G(sculpt([[.055, .04, .045, .045, -.01], [.025, .058, .058, .062, -.004], [-.04, .058, .057, .058], [-.13, .054, .056, .052], [-.22, .047, .047, .045], [-.29, .045, .045, .045], [-.31, .038, .038, .038]], hi ? 12 : 6, C.jacket, { fold: hi ? .01 : 0, seed: 7, shadeBottom: .1, under: .15, underA: PI }));
+  } else if (part === 'farm') {
+    // avambraccio, polsino, mano con dita piegate attorno all'impugnatura
+    G(sculpt([[.02, .046, .046, .046], [-.06, .046, .046, .044], [-.15, .041, .04, .037], [-.235, .038, .036, .034]], hi ? 12 : 6, C.jacket, { fold: hi ? .008 : 0, seed: 9 }));
+    G(sculpt([[-.215, .045, .043, .041], [-.25, .044, .042, .04]], hi ? 12 : 6, C.jacket2, {}));
+    G(sculpt([[-.245, .028, .02, .02], [-.27, .036, .022, .022], [-.3, .04, .024, .02], [-.325, .038, .02, .016]], hi ? 10 : 5, C.skin, { shadeBottom: .1 }));
+    if (hi) {
+      for (let k = 0; k < 4; k++) { const x = -.027 + k * .018, ln = k === 0 || k === 3 ? .028 : .034; add(cylG(.0095, .009, ln, 6), C.skin, x, -.338, -.004, .9, 0, 0); add(cylG(.009, .008, ln * .85, 6), C.skin, x, -.348, -.03, 2.2, 0, 0); }
+      add(cylG(.01, .009, .045, 6), C.skin, .038, -.29, -.024, .5, 0, .9);
+    } else add(U.box, C.skin, 0, -.34, -.012, .4, 0, 0, .065, .045, .03);
+  } else if (part === 'thigh') {
+    // coscia: gluteo, quadricipite, ginocchio; calzoni con pieghe
+    G(sculpt([[.05, .075, .075, .085], [-.02, .088, .088, .095], [-.12, .084, .086, .084], [-.24, .074, .076, .07], [-.36, .064, .064, .062], [-.44, .06, .066, .058], [-.48, .052, .056, .05]], hi ? 12 : 6, C.pants, { fold: hi ? .014 : 0, seed: 11, shadeBottom: .12, under: .1, underA: PI / 2 }));
+    if (hi) add(U.box, C.jacket2, .088, -.18, -.005, 0, 0, 0, .022, .13, .11);
+    if (hi && A) add(U.box, C.jacket2, 0, -.2, -.075, 0, 0, 0, .1, .12, .02);
+  } else if (part === 'shin') {
+    // stinco e polpaccio, ghette (americani) o stivali (tedeschi), scarpone con punta e tacco
+    if (A) {
+      G(sculpt([[.03, .056, .058, .056], [-.06, .054, .052, .064], [-.15, .05, .048, .06], [-.22, .046, .045, .05]], hi ? 12 : 6, C.pants, { fold: hi ? .01 : 0, seed: 13 }));
+      G(sculpt([[-.2, .058, .056, .062], [-.28, .054, .052, .058], [-.38, .05, .05, .052], [-.4, .052, .055, .055]], hi ? 12 : 6, C.legging, { fold: hi ? .006 : 0, seed: 14, shadeBottom: .15 }));
+      if (hi) for (let k = 0; k < 4; k++) add(U.box, 0x5a5236, .058, -.24 - k * .042, -.012, 0, 0, 0, .006, .01, .024);
+    } else {
+      G(sculpt([[.03, .06, .062, .066], [-.08, .062, .06, .07], [-.2, .06, .058, .065], [-.33, .055, .055, .058], [-.4, .053, .055, .056]], hi ? 12 : 6, C.boot, { fold: hi ? .008 : 0, seed: 15, shadeBottom: .2 }));
+      add(cylG(.064, .064, .03, s), 0x262420, 0, .02, 0);
+    }
+    G(alongZ([[-.08, .045, .05, .05], [-.04, .05, .052, .05], [.02, .052, .045, .045], [.1, .05, .04, .035], [.16, .044, .036, .03], [.19, .03, .024, .02]], hi ? 10 : 6, C.boot, { shadeBottom: 0, round: .7 }).translate(0, -.42, -.04));
+    add(U.box, 0x161210, 0, -.465, -.05, 0, 0, 0, .1, .02, .29);
+    add(U.box, 0x161210, 0, -.455, .055, 0, 0, 0, .09, .03, .07);
   } else if (part === 'helmet') {
     const ls = hi ? 18 : 8;
     if (A) {
