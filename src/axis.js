@@ -74,11 +74,15 @@ const AXIS_STAGES = [
       say(NA.feld, 'Salgono dal canalone! Granate, Handgranaten!');
     },
     update() {
-      const T = 240, inTrench = countFoes(a => a.pos.z < -82 && a.pos.z > -100 && Math.abs(a.pos.x) < 165);
-      MISSION.objText = `Tieni la trincea sulla scogliera — Americani in trincea: ${inTrench}/12 · ${holdText(MISSION.stageT, T)}`;
+      const T = 420, inTrench = countFoes(a => a.pos.z < -82 && a.pos.z > -100 && Math.abs(a.pos.x) < 165);
+      MISSION.objText = `Tieni la trincea sulla scogliera — Americani in trincea: ${inTrench}/8 · ${holdText(MISSION.stageT, T)}`;
       MISSION.markers = [{ pos: new V3(BREACH_X, H(BREACH_X, trenchZ(BREACH_X)) + 2, trenchZ(BREACH_X)), label: 'Canalone' }];
-      if (MISSION.stageT > T) { once('w2', true, () => axisEnd(true, 'La scogliera ha retto: gli Americani sono rimasti inchiodati sulla spiaggia.')); return; }
-      if (inTrench >= 12) setStage(3);
+      if (MISSION.stageT > T) {
+        // la vittoria arriva solo se gli Americani non hanno ancora messo piede sulla scogliera
+        if (countFoes(a => a.pos.z < -64 && a.pos.z > -100 && Math.abs(a.pos.x) < 200) >= 5) { MISSION.stageT = T - 90; say(NA.obg, 'Sono ancora sotto la trincea! Altri novanta secondi!'); }
+        else { once('w2', true, () => axisEnd(true, 'La scogliera ha retto: gli Americani sono rimasti inchiodati sulla spiaggia.')); return; }
+      }
+      if (inTrench >= 8) setStage(3);
     }
   },
   { // 3
