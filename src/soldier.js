@@ -41,7 +41,7 @@ class Soldier {
       if (this.team === 'A' && !this.wounded && zone !== 'head' && zone !== 'blast' && this.state !== 'boat' && R() < .28) { this.becomeWounded(); return false; }
       this.die(from, byPlayer, zone, imp); return true;
     }
-    if (from && this.team === 'E' && byPlayer) { this.target = P; this.tVis = true; this.duck = true; this.duckT = rnd(.6, 1.4); if (R() < .3) shout('de', 'medic', this.pos); }
+    if (from && this.team !== PT && byPlayer) { this.target = P; this.tVis = true; this.duck = true; this.duckT = rnd(.6, 1.4); if (R() < .3) shout('de', 'medic', this.pos); }
     return false;
   }
   becomeWounded() {
@@ -204,7 +204,7 @@ class Soldier {
       const dx = o.pos.x - me.x, dz = o.pos.z - me.z, d2 = dx * dx + dz * dz;
       if (d2 < r * r) cands.push([o, d2]);
     }
-    if (this.team === 'E' && P.targetable()) { const d2 = P.pos.distanceToSquared(me); if (d2 < r * r) cands.push([P, d2 * .5]); }
+    if (this.team !== PT && P.targetable()) { const d2 = P.pos.distanceToSquared(me); if (d2 < r * r) cands.push([P, d2 * .5]); }
     cands.sort((a, b) => a[1] - b[1]);
     const had = this.target;
     this.target = null; this.tVis = false; this.vis.length = 0;
@@ -239,7 +239,7 @@ class Soldier {
       if (d > 10 && d < 28) { throwNadeAt(this, this.target.pos, 'A'); this.nadeT = rnd(20, 40); MISSION.allyNadeCD = rnd(3, 6); if (dist2Cam(this.pos) < 50 * 50) shout('en', 'grenade', this.pos); }
     }
     if (this.state === 'move') return;
-    this.wait -= this.thinkDt * (MISSION.suppT > 0 ? 3 : 1);
+    this.wait -= this.thinkDt * (MISSION.suppT > 0 || PT === 'E' ? 3 : 1);
     if (this.wait <= 0 && Z) this.pickCover(Z);
   }
   pickCover(Z) {
@@ -306,7 +306,8 @@ class Soldier {
     const t = this.target, tp = targetChest(t, T2); if (!tp) return;
     const from = this.muzzle(T1), d = from.distanceTo(tp);
     let p = this.w.acc * clamp(1.15 - d / this.w.range, .12, 1);
-    p *= this.team === 'E' ? D.acc : (d > 60 ? .4 : 1.1);
+    if (PT === 'E') p *= this.team === 'E' ? .3 : (t === P ? D.acc : 1.1); // Asse: i camerati IA sparano peggio, gli Americani premono
+    else p *= this.team === 'E' ? D.acc : (d > 60 ? .4 : 1.1);
     if (this.supp > .3) p *= .6;
     if (t === P) { p *= P.hitMul(); if (!losClear(from, tp)) p = 0; }
     else if (t.isBoat) p = 0;

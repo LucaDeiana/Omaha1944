@@ -261,7 +261,7 @@ function resetPlayerState() {
   for (const s of P.inv) if (s) { const w = WEAPONS[s.id]; s.res = Math.max(s.res, w.mag * 3); if (s.mag === 0) s.mag = Math.min(w.mag, s.res); }
   P.nades = Math.max(P.nades, 3); P.charges = Math.max(P.charges, MISSION.minCharges || 0);
   P.carry = null; P.reloadT = 0; P.switchT = .5;
-  for (let i = projectiles.length - 1; i >= 0; i--) if (projectiles[i].team === 'E' && projectiles[i].type === 'nade') { scene.remove(projectiles[i].m); projectiles.splice(i, 1); }
+  for (let i = projectiles.length - 1; i >= 0; i--) if (projectiles[i].team !== PT && projectiles[i].type === 'nade') { scene.remove(projectiles[i].m); projectiles.splice(i, 1); }
   MISSION.godT = 3.5; $('fade').style.opacity = 0;
 }
 function respawn() {

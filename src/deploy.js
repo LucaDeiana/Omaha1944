@@ -6,6 +6,13 @@
 const DEP = { pts: [], sel: 0, wait: 0 };
 function deployPoints() {
   const st = MISSION.stage, pts = [];
+  if (PT === 'E') {
+    pts.push({ label: 'Ultimo punto', sub: 'con i camerati', kind: 'checkpoint', pos: MISSION.checkpoint.pos });
+    if (st <= 2) pts.push({ label: 'Trincea WN 62', sub: 'sopra la spiaggia', kind: 'point', pos: new V3(-10, 0, trenchZ(-10) + .2), yaw: PI });
+    if (st >= 3) pts.push({ label: 'Linea delle siepi', sub: 'bocage', kind: 'point', pos: new V3(-30, 0, -174), yaw: PI });
+    if (st >= 4) pts.push({ label: 'Colleville-sur-Mer', sub: 'piazza della chiesa', kind: 'point', pos: new V3(12, 0, -280), yaw: PI });
+    return pts;
+  }
   pts.push({ label: 'Ultimo checkpoint', sub: 'a piedi con la squadra', kind: 'checkpoint', pos: MISSION.checkpoint.pos });
   if (st >= 1 && st <= 4) pts.push({ label: 'Ondata di sbarco', sub: 'mezzo Higgins', kind: 'wave', pos: new V3(P.pos.x || 0, 0, 82) });
   if (st >= 2) pts.push({ label: 'Terrapieno — Dog Green', sub: 'testa di ponte', kind: 'point', pos: new V3(-26, 0, -55) });
@@ -30,7 +37,7 @@ function deployKey(c) {
   else if (c === 'KeyB' && !P.dead) closeSpawnMenu();
 }
 function deploy(p) {
-  if (p.kind === 'point') { closeSpawnMenu(); leaveMode(); resetPlayerState(); P.inBoat = false; const x = p.pos.x + rnd(-3, 3), z = p.pos.z + rnd(-2, 2); P.pos.set(x, Hf(x, z), z); P.yaw = 0; showMsg('Schierato: ' + p.label, 2.5); return; }
+  if (p.kind === 'point') { closeSpawnMenu(); leaveMode(); resetPlayerState(); P.inBoat = false; const x = p.pos.x + rnd(-3, 3), z = p.pos.z + rnd(-2, 2); P.pos.set(x, Hf(x, z), z); P.yaw = p.yaw || 0; showMsg('Schierato: ' + p.label, 2.5); return; }
   chooseSpawn(p.kind);
 }
 function updateDeploy(dt) {

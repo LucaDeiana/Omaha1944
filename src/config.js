@@ -59,7 +59,8 @@ const DIFF = {
   regolare: { label: 'Regolare', dmg: .75, acc: .9 },
   veterano: { label: 'Veterano', dmg: 1.15, acc: 1.1 },
 };
-const SETTINGS = { quality: 'medio', diff: 'regolare', sens: 1, fov: 72, gore: true, voices: true, dynres: true, volume: .85, fps: false };
+let PT = 'A'; // fazione del giocatore: 'A' Alleati, 'E' Asse
+const SETTINGS = { side: 'A', quality: 'medio', diff: 'regolare', sens: 1, fov: 72, gore: true, voices: true, dynres: true, volume: .85, fps: false };
 try { Object.assign(SETTINGS, JSON.parse(localStorage.getItem('omaha_settings') || '{}')); } catch (e) { }
 function saveSettings() { try { localStorage.setItem('omaha_settings', JSON.stringify(SETTINGS)); } catch (e) { } }
 let Q = QUALITY[SETTINGS.quality] || QUALITY.medio, D = DIFF[SETTINGS.diff] || DIFF.regolare;

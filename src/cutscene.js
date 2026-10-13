@@ -9,6 +9,11 @@ const CUT_SHOTS = [
   { d: 6, cap: 'Omaha Beach — 06:30', from: [40, 3.5, 95], to: [12, 3, 45], look: [0, 14, -80], look2: [-20, 18, -95] },
 ];
 function startCutscene() {
+  if (PT === 'E') {
+    CUT_SHOTS[0].cap = 'La flotta alleata al largo della Normandia — 05:50';
+    CUT_SHOTS[1].cap = 'Die Landungsboote — arrivano i mezzi da sbarco';
+    Object.assign(CUT_SHOTS[2], { cap: 'Widerstandsnest 62 — 06:25', from: [-40, 30, -92], to: [-15, 27, -90], look: [-30, 2, 40], look2: [0, 1, 120] });
+  }
   CUT.active = true; CUT.t = 0; CUT.i = -1;
   $('cine').classList.remove('hidden'); $('hud').classList.add('cineHud');
 }
@@ -17,7 +22,7 @@ function endCutscene() {
   CUT.active = false; $('cine').classList.add('hidden'); $('hud').classList.remove('cineHud');
   if (vmRoot) vmRoot.visible = true;
   $('fade').style.opacity = 0;
-  showMsg('6 giugno 1944 — Omaha Beach', 4);
+  showMsg(PT === 'E' ? '6 giugno 1944 — WN 62, Colleville' : '6 giugno 1944 — Omaha Beach', 4);
 }
 function updateCutscene(dt) {
   if (!CUT.active) return;

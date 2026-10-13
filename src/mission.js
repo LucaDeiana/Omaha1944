@@ -68,6 +68,7 @@ function addBangaloreCrate(x, z) {
 }
 
 function initMission() {
+  if (PT === 'E') { initAxis(); return; }
   const xs = [-97, -72, -47, -22, 3, 28, 53];
   const per = clamp(Math.floor((Q.allyAlive * .55 - 9) / 6), 4, 10);
   for (const x of xs) {
@@ -359,7 +360,7 @@ const STAGES = [
 
 function setStage(i) {
   MISSION.stage = i; MISSION.stageT = 0; MISSION.markers = []; MISSION.interactables = [];
-  const st = STAGES[i]; MISSION.title = st.title; st.start();
+  const st = (PT === 'E' ? AXIS_STAGES : STAGES)[i]; MISSION.title = st.title; st.start();
   if (i > 0) showMsg(st.title, 3);
 }
 function placeBangalore() {
@@ -381,6 +382,9 @@ function victory() {
 }
 
 function onSoldierDeath(s, byPlayer, zone) {
+  if (s.team !== PT && byPlayer) { if (PT === 'E') { STATS.kills++; feed(zone === 'head' ? 'Americano eliminato — colpo alla testa' : 'Americano eliminato'); } }
+  if (s.team === PT && PT === 'E') { MISSION.alliesLost++; if (R() < .1 && P.pos.distanceTo(s.pos) < 25 && SUBQ.length < 2) say('', pick(['Sanitäter!', 'Er ist tot!', 'Mein Gott, Hans!'])); return; }
+  if (PT === 'E') return;
   if (s.team === 'E') {
     if (byPlayer) { STATS.kills++; feed(zone === 'head' ? 'Nemico eliminato — colpo alla testa' : zone === 'blast' ? 'Nemico eliminato — esplosione' : 'Nemico eliminato'); if (R() < .15) shout('en', 'kill', P.pos.clone().add(new V3(rnd(-6, 6), 0, rnd(-6, 6)))); }
     if (R() < .25 && (s.kind === 'rifle' || s.kind === 'smg' || s.kind === 'sniper') && !s.role && P.pos.distanceTo(s.pos) < 120 && !s.fixedY) spawnPickup(s.kind === 'smg' ? 'mp40' : 'kar98', s.pos.clone());
@@ -502,14 +506,14 @@ function updateMission(dt) {
   MISSION.suppT = Math.max(0, (MISSION.suppT || 0) - dt);
   for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || [])]) b.supT = Math.max(0, (b.supT || 0) - dt);
   MISSION.stageT += dt; MISSION.nadeCD -= dt; MISSION.eNadeCD -= dt; MISSION.allyNadeCD -= dt;
-  STAGES[MISSION.stage].update(dt);
+  (PT === 'E' ? AXIS_STAGES : STAGES)[MISSION.stage].update(dt);
   updateSubs(dt);
   // ondate di sbarco continue
   if (MISSION.stage >= 1) {
     MISSION.waveT -= dt;
-    if (MISSION.waveT <= 0) { MISSION.waveT = MISSION.stage <= 4 ? rnd(30, 45) : rnd(55, 80); spawnWave(false); }
+    if (MISSION.waveT <= 0) { MISSION.waveT = PT === 'E' ? rnd(25, 40) : MISSION.stage <= 4 ? rnd(30, 45) : rnd(55, 80); spawnWave(false); }
   }
-  if (MISSION.stage >= 1 && MISSION.stage <= 4) {
+  if (MISSION.stage >= 1 && MISSION.stage <= (PT === 'E' ? 2 : 4)) {
     MISSION.reinfT -= dt;
     if (MISSION.reinfT <= 0) { MISSION.reinfT = rnd(12, 20); reinforceTrench(); }
   }
@@ -528,7 +532,7 @@ function updateMission(dt) {
       sfxMortar(pp); PS_SMOKE.emit(pp.x, pp.y + .8, pp.z, 0, 2, 0, 2, .5, 2, .5, .5, .5, .5, 1);
       const onBeach = allies.filter(a => a.alive && a.state !== 'boat' && a.pos.z > -60 && a.pos.z < 90);
       let c;
-      if (P.targetable() && P.pos.z > -64 && R() < .22) c = P.pos.clone().add(new V3(rnd(-14, 14), 0, rnd(-12, 12)));
+      if (PT === 'A' && P.targetable() && P.pos.z > -64 && R() < .22) c = P.pos.clone().add(new V3(rnd(-14, 14), 0, rnd(-12, 12)));
       else if (onBeach.length) c = pick(onBeach).pos.clone().add(new V3(rnd(-9, 9), 0, rnd(-9, 9)));
       else c = new V3(rnd(-150, 150), 0, rnd(-50, 80));
       c.z = Math.max(c.z, -59); c.y = Math.max(Hf(c.x, c.z), WATER_Y - .2);

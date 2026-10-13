@@ -71,7 +71,7 @@ function updateHUD(dt) {
   $('cross').style.opacity = (P.adsK > .4 || P.inBoat || P.dead || P.sprint) ? 0 : 1;
   // avviso granata
   let gw = null, gd = 1e9;
-  for (const q of projectiles) if (q.type === 'nade' && q.team === 'E') { const d = q.p.distanceTo(P.pos); if (d < 11 && d < gd) { gd = d; gw = q; } }
+  for (const q of projectiles) if (q.type === 'nade' && q.team !== PT) { const d = q.p.distanceTo(P.pos); if (d < 11 && d < gd) { gd = d; gw = q; } }
   const ge = $('gwarn');
   if (gw && !P.dead) {
     const a = Math.atan2(gw.p.x - P.pos.x, gw.p.z - P.pos.z), rel = -(a - Math.atan2(-Math.sin(P.yaw), -Math.cos(P.yaw)));
@@ -101,6 +101,6 @@ function updateHUD(dt) {
   }
   const slots = P.inv.map((x, i) => x ? `<span class="${i === P.cur ? 'on' : ''}">${i + 1} ${WEAPONS[x.id].name}</span>` : '').join('');
   $('wextra').innerHTML = `${w ? w.cal + '<br>' : ''}Granate: ${P.nades} · Cariche: ${P.charges}<div class="slots">${slots}</div>`;
-  $('info').textContent = `Alleati: ${allies.filter(a => a.alive).length} · Nemici in vista: ${enemies.filter(e => e.alive && dist2Cam(e.pos) < 200 * 200).length} · Uccisioni: ${STATS.kills}`;
+  $('info').textContent = `${PT === 'A' ? 'Alleati' : 'Camerati'}: ${FRIENDS().filter(a => a.alive).length} · Nemici in vista: ${FOES().filter(e => e.alive && dist2Cam(e.pos) < 200 * 200).length} · Uccisioni: ${STATS.kills}`;
   drawCompass();
 }

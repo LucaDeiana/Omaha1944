@@ -442,12 +442,12 @@ function explode(p, radius, dmg, o = {}) {
       if (s.inTrench && d > 2) dm *= .5;
       if (s.prone > .5) dm *= .6;
       if (o.ship) dm *= s.team === 'E' && R() < .25 ? 1 : .12;
-      s.damage(dm, p, !!o.byPlayer && s.team === 'E', 'blast', { blast: p.clone(), power: radius * 1.6 });
+      s.damage(dm, p, !!o.byPlayer && s.team !== PT, 'blast', { blast: p.clone(), power: radius * 1.6 });
     } else if (d < radius * 2.5) s.supp = Math.min(1, s.supp + .5);
   }
   if (P.mode === 'foot' && (P.targetable() || (o.boat && !P.dead))) {
     const d = P.chest(_ex).distanceTo(p), r2 = radius * 1.25;
-    if (d < r2 && o.only !== 'E') {
+    if (d < r2 && (!o.only || o.only === PT)) {
       let dm = dmg * .55 * Math.pow(1 - d / r2, 1.2);
       if (!losClear(new V3(p.x, p.y + .6, p.z), _ex)) dm *= .3;
       if (P.stance === 2) dm *= .7;

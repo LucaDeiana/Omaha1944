@@ -11,8 +11,9 @@ const GAME = {
     document.exitPointerLock && document.exitPointerLock();
     const t = Math.round(GAME.time), acc = STATS.shots ? Math.round(STATS.hits / STATS.shots * 100) : 0;
     $('pause').classList.add('hidden');
-    $('endTitle').textContent = win ? 'COLLEVILLE È LIBERA' : 'MISSIONE FALLITA';
-    $('endText').innerHTML = (win ? 'La testa di ponte su Omaha Beach regge. Il 6 giugno 1944 è costato caro, ma la strada per la Francia è aperta.<br><br>' : '') +
+    const ax = PT === 'E';
+    $('endTitle').textContent = ax ? (win ? 'LO SBARCO È RESPINTO' : 'WN 62 È CADUTO') : win ? 'COLLEVILLE È LIBERA' : 'MISSIONE FALLITA';
+    $('endText').innerHTML = (ax ? (GAME.axisWhy || '') + '<br><br>' : win ? 'La testa di ponte su Omaha Beach regge. Il 6 giugno 1944 è costato caro, ma la strada per la Francia è aperta.<br><br>' : '') +
       `<table><tr><td>Tempo</td><td>${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}</td></tr>
       <tr><td>Nemici eliminati</td><td>${STATS.kills}</td></tr><tr><td>Colpi alla testa</td><td>${STATS.heads}</td></tr>
       <tr><td>Precisione</td><td>${acc}%</td></tr><tr><td>Volte caduto</td><td>${STATS.deaths}</td></tr>
@@ -27,7 +28,7 @@ function fillSelect(id, obj, cur) {
 }
 function bindSettings() {
   fillSelect('optQuality', QUALITY, SETTINGS.quality);
-  fillSelect('optDiff', DIFF, SETTINGS.diff);
+  fillSelect('optDiff', DIFF, SETTINGS.diff); $('optSide').value = SETTINGS.side || 'A';
   const sync = () => {
     for (const [a, b] of [['optSens', 'pSens'], ['optFov', 'pFov'], ['optVol', 'pVol']]) { $(a).value = $(b).value = SETTINGS[{ optSens: 'sens', optFov: 'fov', optVol: 'volume' }[a]]; }
     for (const [a, b, k] of [['optGore', 'pGore', 'gore'], ['optVoices', 'pVoices', 'voices'], ['optDyn', 'pDyn', 'dynres'], ['optFps', 'pFps', 'fps']]) $(a).checked = $(b).checked = SETTINGS[k];
@@ -41,6 +42,7 @@ function bindSettings() {
 }
 
 async function startGame() {
+  SETTINGS.side = $('optSide').value; PT = SETTINGS.side;
   SETTINGS.quality = $('optQuality').value; SETTINGS.diff = $('optDiff').value; saveSettings();
   Q = QUALITY[SETTINGS.quality]; D = DIFF[SETTINGS.diff];
   const audioP = initAudio();
