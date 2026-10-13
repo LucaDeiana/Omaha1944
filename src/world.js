@@ -988,13 +988,14 @@ function buildWorld(step) {
   for (const x of BUNKER_XS) makeBunker(x);
   for (const x of BUNKER_XX) makeBunker(x, true);
   makeFlak(-5, -194); makeFlak(48, -196);
-  buildCity();
+  buildCity(); buildTrees();
 }
 
 function updateWorld(dt, t) {
   waterMat.uniforms.uTime.value = t; waterMat.uniforms.uFogD.value = scene.fog.density;
   if (WORLD.grassMat && WORLD.grassMat.userData.sh) WORLD.grassMat.userData.sh.uniforms.uTime.value = t;
   for (const b of WORLD.boats) b.update(dt, t);
+  updateTrees(dt);
   // bombardamento navale
   for (const g of WORLD.shipGuns) {
     g.t -= dt; if (g.t > 0) continue;

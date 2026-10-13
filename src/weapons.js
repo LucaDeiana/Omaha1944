@@ -433,6 +433,7 @@ function explode(p, radius, dmg, o = {}) {
   const wet = p.z > -9 && Hf(p.x, p.z) < WATER_Y && p.y < WATER_Y + .8;
   fxExplosion(p, radius / 4.5, wet); sfxBoom(p, radius / 5, wet);
   if (!NET.client) cityBlast(p, radius, dmg);
+  treeBlast(p, radius);
   if (radius >= 4 && Math.abs(p.z - WIRE_Z) < 2.6 && !NET.client && addWireGap(p.x)) onWireGap(p.x);
   if (NET.host) netHostEvent([1, r1(p.x), r1(p.y), r1(p.z), radius, wet ? 1 : 0]); else if (NET.on && o.byPlayer) netSend({ t: 'boom', p: [p.x, p.y, p.z], r: radius });
   for (const list of [allies, enemies]) for (const s of list) {

@@ -9,7 +9,7 @@ const AI_BUDGET = { n: 0 };
 
 let soldierId = 0;
 // qualità dei ripari: più alta = più protetto
-const COVER_Q = { bank: 7, tank: 6, sand: 6, bunker: 6, trench: 5, wallN: 5, house: 6, church: 6, ruin: 5, gate: 3, crater: 3.5, hh: 2.5 };
+const COVER_Q = { bank: 7, tank: 6, sand: 6, bunker: 6, trench: 5, wallN: 5, house: 6, church: 6, ruin: 5, gate: 3, crater: 3.5, hh: 2.5, tree: 4 };
 class Soldier {
   constructor(team, kind, x, z, o = {}) {
     this.id = soldierId++; this.team = team; this.kind = kind; this.w = AIW[kind] || AIW.rifle;
