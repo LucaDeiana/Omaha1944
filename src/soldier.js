@@ -35,6 +35,7 @@ class Soldier {
 
   damage(a, from, byPlayer, zone, imp) {
     if (!this.alive) return false;
+    if (this.vip) { this.supp = 1; this.flinch = 1; return false; }
     this.hp -= a; this.supp = Math.min(1, this.supp + .6); this.flinch = 1;
     if (this.hp <= 0) {
       if (this.team === 'A' && !this.wounded && zone !== 'head' && zone !== 'blast' && this.state !== 'boat' && R() < .28) { this.becomeWounded(); return false; }
@@ -139,7 +140,7 @@ class Soldier {
       }
     } else this.duck = false;
     if (this.supB && this.supB.supT > 0) this.duck = true;
-    const wantProne = this.team === 'A' && posted && this.supp > .55 && this.pos.z > -58 && (!this.cover || this.cover.kind !== 'bank');
+    const wantProne = this.forceProne || this.team === 'A' && posted && this.supp > .55 && this.pos.z > -58 && (!this.cover || this.cover.kind !== 'bank');
     this.prone = lerp(this.prone, wantProne ? 1 : 0, dt * 3);
     let wc = 0;
     if (this.moving) wc = this.crouchRun ? .35 : 0;

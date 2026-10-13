@@ -38,7 +38,7 @@ function updateNaval(dt) {
 function angDiff(a, b) { let d = b - a; while (d > PI) d -= TAU; while (d < -PI) d += TAU; return d; }
 function angLerpMax(a, b, m) { const d = angDiff(a, b); return a + clamp(d, -m, m); }
 function fireNaval() {
-  const T = WORLD.texas; NAV.reload = 8; NAV.salvo++;
+  const T = WORLD.texas; NAV.reload = NPC.navRel; NAV.salvo++;
   T.g.updateMatrixWorld(true);
   for (const mz of T.muzzles) {
     const p = mz.clone().applyMatrix4(T.pitch.matrixWorld);

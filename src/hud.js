@@ -53,7 +53,7 @@ function updateHUD(dt) {
   msgT -= dt; if (msgT <= 0) $('msg').style.opacity = 0;
   // marcatori 3D
   for (let i = 0; i < markerEls.length; i++) {
-    const el = markerEls[i], mk = (P.mode !== 'foot' && SIDE.cur ? SIDE.markers : MISSION.markers)[i];
+    const el = markerEls[i], mk = (P.mode !== 'foot' && SIDE.cur ? SIDE.markers : MISSION.markers.concat(NPC.markers || []))[i];
     if (!mk || P.inBoat) { el.style.display = 'none'; continue; }
     _hv.copy(mk.pos).project(camera);
     const behind = _hv.z > 1;

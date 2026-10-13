@@ -196,7 +196,7 @@ function updatePlayer(dt) {
 
 function updateInteract(dt) {
   let best = null, bd = 1e9;
-  for (const it of MISSION.interactables) {
+  for (const it of MISSION.interactables.concat(npcInteractables())) {
     if (!it.active()) continue;
     const d = Math.hypot(P.pos.x - it.pos.x, P.pos.z - it.pos.z);
     if (d < it.r && d < bd && Math.abs(P.pos.y - it.pos.y) < 3) { best = it; bd = d; }

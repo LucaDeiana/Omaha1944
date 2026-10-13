@@ -117,3 +117,6 @@ kbd { background: #2a2e2a; border: 1px solid #4a5040; padding: 1px 7px; border-r
 #depMap{width:420px;max-width:100%;border:1px solid #666;border-radius:4px}
 #depList{flex:1;min-width:240px}
 #depList .sp.on{background:rgba(255,208,96,.18);border-color:#ffd060}
+
+.ntag{position:absolute;transform:translate(-50%,-100%);font:600 14px Oswald,sans-serif;color:#9fd3ff;text-shadow:0 0 4px #000,0 1px 2px #000;white-space:nowrap;pointer-events:none}
+.ntag b{color:#ffd060}
