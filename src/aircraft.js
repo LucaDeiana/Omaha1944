@@ -540,6 +540,7 @@ function updatePlane(dt) {
   PL.gT -= dt; if (PL.gT <= 0) { PL.gT = .15; drawGauges(); }
   P.pos.copy(me.pos);
 }
+const _vbA = new V3(), _vbB = new V3();
 function playerPlaneGuns(me) {
   const f = _a1.set(0, 0, -1).applyQuaternion(me.q), r = _a2.set(1, 0, 0).applyQuaternion(me.q);
   sfxShot('m2', null, true); P.shake = Math.min(.5, P.shake + .05);
@@ -552,14 +553,17 @@ function playerPlaneGuns(me) {
     let water = false; if (tw > 0 && (t < 0 || tw < t) && o.z + d.z * tw > -9) { t = tw; water = true; }
     let hitPlane = null;
     for (const pl of PLANES) if (pl.team === 'E' && pl.alive && !pl.crash) { const tt = raySphere(o, d, pl.pos, 6); if (tt > 0 && (t < 0 || tt < t)) { t = tt; hitPlane = pl; } }
+    // mezzi a terra: il colpo si ferma sulla sagoma del veicolo (cabina, cassone, scafo)
+    let hitVeh = null;
+    for (const v of MISSION.vehicles.concat(TANKS.list || [])) { if (!v.alive || !v.box) continue; const tt = rayBox(o.x, o.y, o.z, d.x, d.y, d.z, { min: _vbA.copy(v.box.min).subScalar(.4), max: _vbB.copy(v.box.max).addScalar(.4) }, t > 0 ? t : 1100); if (tt > 0 && (t < 0 || tt < t)) { t = tt; hitVeh = v; hitPlane = null; } }
     const end = o.clone().addScaledVector(d, t > 0 ? t : 1100);
     if (R() < .4) fxTracer(o, end, 1.5);
     if (hitPlane) { hitPlane.damage(25, true); fxImpact(end, 'metal'); continue; }
+    if (hitVeh) { hitVeh.damage(hitVeh.tank ? 6 : 22, true); fxImpact(end, 'metal'); if (R() < .3) sfxImpact(end, 'metal'); hitMarker(false, false); continue; }
     if (t < 0) continue;
     fxImpact(end, water ? 'water' : end.z > -58 ? 'sand' : 'dirt');
     for (const s of enemies) if (s.alive && !s.inBunker && Math.abs(s.pos.x - end.x) < 1.5 && Math.abs(s.pos.z - end.z) < 1.5) s.damage(rnd(70, 130), o, true, 'body', { dir: d.clone(), power: 3.5, joint: 15 });
-    for (const v of MISSION.vehicles) if (v.alive && v.pos.distanceTo(end) < 3) v.damage(25, true);
-    for (const a of WORLD.aaSites) if (!a.dead && a.mesh && a.mesh.position.distanceTo(end) < 3 && R() < .1) { a.dead = true; burnMeshes(a.mesh); feed('Postazione contraerea distrutta'); }
+    for (const a of WORLD.aaSites) if (!a.dead && a.mesh && a.mesh.position.distanceTo(end) < 3.5 && R() < .3) { a.dead = true; burnMeshes(a.mesh); feed('Postazione contraerea distrutta'); }
   }
 }
 function planeDropBomb() {
