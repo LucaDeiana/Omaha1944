@@ -64,7 +64,7 @@ function initInput() {
     if (c === 'KeyX' && P.mode === 'foot' && PT === 'A') { cycleOrder(); return; }
     if (c === 'KeyH' && P.mode === 'foot' && !P.dead) { if (P.bandages <= 0) showMsg('Nessuna benda rimasta', 1.5); else if (P.hp >= 95) showMsg('Non sei ferito', 1.5); else if (P.bandT <= 0) { P.bandT = 3; P.bandages--; sfxMech('pick'); showMsg('Ti stai bendando…', 3); } return; }
     if (c === 'KeyB') { openSpawnMenu(); return; }
-    if (P.mode === 'plane') { if (c === 'KeyF' || c === 'Space') planeDropBomb(); if (c === 'KeyV') togglePlaneView(); if (c === 'KeyM') togglePlaneAssist(); return; }
+    if (P.mode === 'plane') { if (c === 'KeyF' || c === 'Space') planeDropBomb(); if (c === 'KeyV') togglePlaneView(); if (c === 'KeyM') togglePlaneAssist(); if (c === 'KeyR' && PL.me && PL.me.crash) { exitPlane(); P.mode = 'foot'; P.die(); } return; }
     if (P.mode === 'naval') return;
     if (c === 'KeyR') startReload();
     else if (c === 'KeyC' || c === 'ControlLeft') { if (!P.swim) P.stance = P.stance === 1 ? 0 : 1; }
@@ -84,7 +84,7 @@ function initInput() {
     if (P.mode === 'mg' || P.mode === 'mortar' || P.mode === 'flak') { stationMouse(e.movementX, e.movementY); return; }
     if (P.mode === 'tank') { tankMouse(e.movementX, e.movementY); return; }
     if (P.mode === 'airmark') { airMouse(e.movementX, e.movementY); return; }
-    if (P.mode === 'plane' && PL.assist) { const s = .0021 * SETTINGS.sens; PL.aimYaw -= e.movementX * s; PL.aimPitch = clamp(PL.aimPitch - e.movementY * s, -1.35, 1.35); return; }
+    if (P.mode === 'plane' && PL.assist) { const s = .0013 * SETTINGS.sens; PL.aimYaw -= e.movementX * s; PL.aimPitch = clamp(PL.aimPitch - e.movementY * s, -1.35, 1.35); return; }
     if (P.mode === 'plane') { PL.stickX = clamp(PL.stickX + e.movementX * .0022 * SETTINGS.sens, -1, 1); PL.stickY = clamp(PL.stickY - e.movementY * .0022 * SETTINGS.sens, -1, 1); return; }
     if (P.mode === 'naval') { const s = .0021 * SETTINGS.sens * (camera.fov / 60); NAV.yaw -= e.movementX * s; NAV.pitch = clamp(NAV.pitch - e.movementY * s, -.4, .2); return; }
     const s = .0021 * SETTINGS.sens * (camera.fov / SETTINGS.fov) * (P.shock > .3 ? .5 : 1);

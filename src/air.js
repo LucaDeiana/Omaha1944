@@ -104,7 +104,7 @@ class AirTruck {
   }
   update(dt) {
     if (!this.alive) return;
-    this.z += 7 * dt; if (this.z > 60) this.z = -1250;
+    if (this.z < 40) this.z += 7 * dt; // in fondo alla strada la colonna si ferma
     const x = airRoadX(this.z) + 1.8; this.pos.set(x, Hf(x, this.z), this.z);
     this.g.rotation.y = Math.atan2(airRoadX(this.z + 3) - airRoadX(this.z), 3) + PI;
     this.box.min.set(x - 1.3, this.pos.y, this.z - 3.6); this.box.max.set(x + 1.3, this.pos.y + 2.5, this.z + 3.6);
@@ -186,5 +186,16 @@ function updateAirMode(dt) {
   for (const v of MISSION.vehicles) v.update(dt);
   // a terra il giocatore non ha nulla da fare: torna subito in volo
   if (P.mode === 'foot' && !P.dead && !P.spawnMenu && GAME.started && !CUT.active) enterPlane();
+}
+// rientro in volo a ~1,5 km dall'obiettivo attuale, diretti verso di esso
+function airSpawn() {
+  let t = new V3(0, 0, -400);
+  if (MISSION.stage === 1) { const c = AIRM.convoy.find(v => v.alive); if (c) t = c.pos.clone(); }
+  else if (MISSION.stage === 2 && AIRM.bridge) t = new V3(AIRM.bridge.x, 0, AIRM.bridge.z);
+  else { const h = AIRM.hunters.find(p => p.alive && !p.crash); if (h) t = h.pos.clone(); }
+  const a = Math.atan2(t.x, t.z - 1100) + rnd(-.4, .4), pos = new V3(t.x - Math.sin(a) * 1500, 0, t.z - Math.cos(a) * 1500);
+  pos.x = clamp(pos.x, -1400, 1400); pos.z = clamp(pos.z, -1400, 900); pos.y = Math.max(Hf(pos.x, pos.z), 0) + 450;
+  const d = new V3(t.x - pos.x, 0, t.z - pos.z).normalize().multiplyScalar(130); d.y = -4;
+  return { pos, vel: d };
 }
 const airDeployPoints = () => [{ label: 'P-47 Thunderbolt', sub: 'decollo dalla costa', kind: 'plane', pos: new V3(-30, 0, 1100) }];

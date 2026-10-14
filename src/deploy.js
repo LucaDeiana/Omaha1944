@@ -29,7 +29,7 @@ function deployPoints() {
 }
 function openSpawnMenu() {
   P.spawnMenu = true; DEP.pts = deployPoints(); DEP.sel = Math.min(DEP.sel, DEP.pts.length - 1);
-  DEP.wait = P.dead ? 5 : 0;
+  DEP.wait = P.dead ? (SCEN === 'air' ? 1.5 : 5) : 0;
   $('spawn').classList.remove('hidden'); drawDeploy();
 }
 function deployKey(c) {

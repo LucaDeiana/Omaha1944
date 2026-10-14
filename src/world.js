@@ -349,7 +349,9 @@ function buildWater() {
       vec3 n1=texture2D(tN,p*.045+vec2(t*.012,t*.021)).xyz*2.-1.;
       vec3 n2=texture2D(tN,p*.13-vec2(t*.023,t*.011)).xyz*2.-1.;
       vec3 n3=texture2D(tN,p*.4+vec2(t*.05,-t*.04)).xyz*2.-1.;
-      vec3 n=normalize(vec3(-vD.x,1.,-vD.y)+vec3(n1.x+n2.x*.7+n3.x*.3,0.,n1.y+n2.y*.7+n3.y*.3)*.32);
+      // da lontano (e dall'alto) le onde lunghe si attenuano: niente bande regolari sul mare
+      float fk=1.-smoothstep(120.,700.,length(cameraPosition-vW));
+      vec3 n=normalize(vec3(-vD.x*fk,1.,-vD.y*fk)+vec3(n1.x+n2.x*.7+n3.x*.3*fk,0.,n1.y+n2.y*.7+n3.y*.3*fk)*.32*(.35+.65*fk));
       vec3 v=normalize(cameraPosition-vW);
       float fr=.02+.98*pow(1.-max(dot(n,v),0.),5.);
       vec3 r=reflect(-v,n);r.y=abs(r.y);
@@ -357,7 +359,7 @@ function buildWater() {
       float depth=vW.y-bed(p);
       vec3 wc=mix(uShallow,uDeep,clamp(depth/5.,0.,1.));
       wc+=vec3(.03,.06,.05)*smoothstep(.6,1.,vC)*clamp(depth,0.,1.);
-      vec3 c=mix(wc,sky,fr*.92);
+      vec3 c=mix(wc,sky,fr*.92*(.45+.55*fk));
       c+=vec3(1.,.88,.7)*pow(max(dot(r,uSunDir),0.),260.)*4.;
       float pat=smoothstep(.35,.9,sin(p.x*.37+t*.9+sin(p.y*.8+t*.5)*2.)*.5+.5+sin(p.x*1.3-p.y*.9-t*1.4)*.25+n2.x*.4);
       float foam=smoothstep(.5,.0,depth)*pat*.85;

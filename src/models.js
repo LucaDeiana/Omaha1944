@@ -301,7 +301,7 @@ function placeShip(type, x, z, o = {}) {
 // ============================================================
 //  AEREI
 // ============================================================
-const PLANE_DATA = {};
+const PLANE_DATA = {}, PLANE_MAT = {};
 // stazioni infittite con interpolazione di Catmull-Rom: profilo longitudinale liscio
 function densify(st, k) {
   const out = [];
@@ -358,7 +358,6 @@ function buildPlaneData(type) {
     for (const sx of [-1, 1]) for (let k = 0; k < 4; k++) { const x = sx * (2.35 + k * .28); mb.add(cylG2(.022, .026, .6, 8), 0x222222, x, -.5 + Math.abs(x) * .085, -1.95 + .1 * Math.abs(x) - .2 - k * .05, PI / 2, 0, 0); }
     for (const sx of [-1, 1]) { mb.add(U.box, 0x333333, sx * 1.6, -.82, -.9, 0, 0, 0, .12, .1, 1.1); mb.add(cylG2(.09, .09, .7, 8), 0x333333, sx * .55, -.6, -3.2, PI / 2, 0, 0); }
     mb.add(cylG2(.02, .02, .7, 6), 0x222222, 0, 1.05, .5, -.35, 0, 0);
-    for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) mb.add(cylG2(.06, .07, .22, 10), 0x2b2622, sx * .98, -.35 - k * .12, -3.55 + k * .08, 0, 0, sx * 1.2);
     mb.add(cylG2(.012, .012, .8, 6), 0x9a9a9a, -5.4, -.08, -1.7, PI / 2, 0, 0);
     mb.mat = 'vc'; mb.between(new V3(0, 1.4, .55), new V3(0, .55, 4.5), .006, 0x202020); mb.mat = 'paint';
     for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) mb.add(U.box, 0x3a3e2a, sx * (3.4 + k * .7), -.5 + (3.4 + k * .7) * .085 + .07, -1.95 + .1 * (3.4 + k * .7) + 2.9 - .26 * (3.4 + k * .7) - .1, 0, 0, 0, .05, .01, .04);
@@ -419,12 +418,13 @@ function propSpinner(mb, r, len, hex) {
 }
 function makePlaneModel(type) {
   const d = buildPlaneData(type), I = insignia(), g = new THREE.Group();
-  for (const k in d.paint) { const m = new THREE.Mesh(d.paint[k], MAT[k] || MAT.paint); m.castShadow = true; g.add(m); }
+  if (!PLANE_MAT.paint) { PLANE_MAT.paint = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .62, metalness: .15 }); PLANE_MAT.vc = PLANE_MAT.paint; }
+  for (const k in d.paint) { const m = new THREE.Mesh(d.paint[k], PLANE_MAT[k] || MAT[k] || PLANE_MAT.paint); m.castShadow = true; g.add(m); }
   const gl = new THREE.Mesh(d.glass, I.glass); gl.renderOrder = 2; g.add(gl); g.userData.glass = gl;
   const props = [];
   for (const pp of d.props || [[0, 0, d.prop.z]]) {
     const pg = new THREE.Group(); pg.position.set(pp[0], pp[1], pp[2]);
-    for (const k in d.propG) pg.add(new THREE.Mesh(d.propG[k], MAT.paint));
+    for (const k in d.propG) pg.add(new THREE.Mesh(d.propG[k], PLANE_MAT.paint));
     const disc = new THREE.Mesh(new THREE.CircleGeometry(d.prop.R, 32), new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
     disc.position.z = -.05; pg.add(disc); pg.userData.disc = disc;
     g.add(pg); props.push(pg);

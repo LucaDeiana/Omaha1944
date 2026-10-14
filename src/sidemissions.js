@@ -113,8 +113,10 @@ function startSide(mode) {
   showMsg(def.title, 3); say(N.radio, def.brief);
 }
 // IA dei caccia che danno la caccia al giocatore
+const _hUp = new V3(0, 1, 0);
 function huntPlayer(p, dt) {
-  const me = PL.me; if (!me || P.mode !== 'plane') { p.pos.addScaledVector(p.vel, dt); p.orient(p.roll); return; }
+  // senza bersaglio gira in cerchio sul posto e aspetta
+  const me = PL.me; if (!me || P.mode !== 'plane' || me.crash) { p.vel.applyAxisAngle(_hUp, .35 * dt); p.vel.y *= 1 - dt; if (p.pos.y < Hf(p.pos.x, p.pos.z) + 200) p.vel.y += 20 * dt; p.roll = lerp(p.roll, -.5, dt); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll); return; }
   const dist0 = p.pos.distanceTo(me.pos);
   p.extT = Math.max(0, (p.extT || 0) - dt);
   if (!p.extT && dist0 < 110) { p.extT = rnd(3, 5); p.extDir = p.vel.clone().normalize().add(new V3(rnd(-.6, .6), rnd(.2, .5), rnd(-.6, .6))).normalize(); }

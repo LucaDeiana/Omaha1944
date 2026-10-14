@@ -309,8 +309,8 @@ function drawGauges() {
 function enterPlane() {
   if (!PGEO.ready) return;
   if (!PL.cockpit) buildCockpit();
-  const start = new V3(rnd(-80, 40), 380, 1100);
-  const me = new Plane('p47', 'A', start, new V3(0, -5, -120), []); me.player = true; me.hp = 450;
+  const sp = SCEN === 'air' && MISSION.stage >= 0 ? airSpawn() : { pos: new V3(rnd(-80, 40), 380, 1100), vel: new V3(0, -5, -120) };
+  const me = new Plane('p47', 'A', sp.pos, sp.vel, []); me.player = true; me.hp = 450;
   PL.me = me; PL.throttle = .85; PL.stickX = PL.stickY = PL.rudder = 0; PL.bombs = 2; PL.rearm = 0; PL.av = new V3();
   me.g.add(PL.cockpit); PL.cockpit.visible = true; if (me.g.userData.pilot) me.g.userData.pilot.visible = false;
   P.mode = 'plane'; P.dead = false;
@@ -347,7 +347,7 @@ function togglePlaneView() {
   showMsg(PL.ext ? 'Visuale esterna (V per la cabina)' : 'Visuale in cabina (V per l\'esterno)', 1.5);
 }
 function togglePlaneAssist() { PL.assist = !PL.assist; resetPlaneAim(); showMsg(PL.assist ? 'Comandi assistiti: il mouse indica la direzione' : 'Comandi manuali: il mouse è la cloche', 2); }
-function resetPlaneAim() { const me = PL.me; if (!me) return; const f = _a1.set(0, 0, -1).applyQuaternion(me.q); PL.aimYaw = Math.atan2(-f.x, -f.z); PL.aimPitch = Math.asin(clamp(f.y, -1, 1)); PL.camP = null; }
+function resetPlaneAim() { const me = PL.me; if (!me) return; PL.camD = null; const f = _a1.set(0, 0, -1).applyQuaternion(me.q); PL.aimYaw = Math.atan2(-f.x, -f.z); PL.aimPitch = Math.asin(clamp(f.y, -1, 1)); PL.camP = null; }
 function exitPlane() {
   PL.ext = false; if ($("planeAim")) $("planeAim").style.display = "none"; if ($('mouseAim')) $('mouseAim').style.display = 'none';
   if (PL.me) { PL.me.remove(); PL.me = null; }
@@ -356,6 +356,14 @@ function exitPlane() {
 }
 const _pfw = new V3(), _pup = new V3(), _prt = new V3(), _F = new V3(), _vn = new V3(), _aqi = new THREE.Quaternion(), _aimD = new V3();
 // direzione del punto di mira dell'istruttore (angoli assoluti mossi dal mouse)
+// il punto di mira resta in un cono di ~50° davanti al muso; vicino al suolo o in stallo l'istruttore richiama
+function planeAimGuard(me, V) {
+  const f = _a1.set(0, 0, -1).applyQuaternion(me.q), a = planeAimDir(), c = a.dot(f), lim = Math.cos(.9);
+  if (c < lim) { const ax = _a3.crossVectors(f, a); if (ax.lengthSq() < 1e-8) ax.set(0, 1, 0); ax.normalize(); a.copy(f).applyAxisAngle(ax, .9); PL.aimYaw = Math.atan2(-a.x, -a.z); PL.aimPitch = Math.asin(clamp(a.y, -1, 1)); }
+  const agl = me.pos.y - Math.max(Hf(me.pos.x, me.pos.z), WATER_Y);
+  if (agl < 90) PL.aimPitch = Math.max(PL.aimPitch, lerp(.25, -.1, clamp(agl / 90, 0, 1)));
+  if (V < 80) PL.aimPitch = Math.min(PL.aimPitch, Math.asin(clamp(f.y, -1, 1)) - .05);
+}
 function planeAimDir() { return _aimD.set(-Math.sin(PL.aimYaw) * Math.cos(PL.aimPitch), Math.sin(PL.aimPitch), -Math.cos(PL.aimYaw) * Math.cos(PL.aimPitch)); }
 function updatePlane(dt) {
   const me = PL.me; if (!me) return;
@@ -383,6 +391,7 @@ function updatePlane(dt) {
   const bankR = -Math.asin(clamp(_prt.y, -1, 1));
   let sx = PL.stickX, sy = PL.stickY, ty = 0, level = 0;
   if (PL.assist && !me.crash) {
+    planeAimGuard(me, V);
     // istruttore: l'aereo si inclina verso il punto di mira del mouse e tira per raggiungerlo
     const L = _a2.copy(planeAimDir()).applyQuaternion(_aqi.copy(me.q).invert());
     const yawE = Math.atan2(L.x, -L.z), pitE = Math.atan2(L.y, Math.max(.25, -L.z)), off = Math.acos(clamp(-L.z, -1, 1));
@@ -419,7 +428,7 @@ function updatePlane(dt) {
     explode(me.pos.clone().setY(gy + .5), 12, 600, {});
     exitPlane(); P.mode = 'foot'; P.die(); return;
   }
-  if (me.crash && !PL.crashMsg) { PL.crashMsg = true; showMsg(me.wingLost ? 'Hai perso un\'ala! Stai precipitando!' : 'Colpito! Stai precipitando!', 3); }
+  if (me.crash && !PL.crashMsg) { PL.crashMsg = true; showMsg((me.wingLost ? 'Hai perso un\'ala! ' : 'Colpito! ') + 'Premi R per rientrare subito', 4); }
   if (Math.abs(me.pos.x) > 2400 || Math.abs(me.pos.z) > 2400 || me.pos.y > 2500) { const back = _a2.set(-me.pos.x, 300 - me.pos.y, -me.pos.z).normalize(); v.lerp(back.multiplyScalar(V), dt * .3); }
   // testa del pilota: si inclina con un ritardo verso le virate, viene schiacciata dalle G e oscilla con le raffiche
   const hr = PL.head || (PL.head = { r: 0, p: 0, y: 0, dy: 0 }), k = Math.min(1, dt * 3);
@@ -429,7 +438,9 @@ function updatePlane(dt) {
   if (PL.ext) {
     // visuale esterna: inseguimento morbido dietro e sopra l'aereo
     if (PL.assist) {
-      const ad = planeAimDir(), want = _a3.copy(me.pos).addScaledVector(ad, -15); want.y += 3.2;
+      const fw = _a1.set(0, 0, -1).applyQuaternion(me.q).lerp(planeAimDir(), .3).normalize();
+      PL.camD = PL.camD || fw.clone(); PL.camD.lerp(fw, Math.min(1, dt * 2.5)).normalize();
+      const ad = PL.camD, want = _a3.copy(me.pos).addScaledVector(ad, -15); want.y += 3.2;
       want.y = Math.max(want.y, Hf(want.x, want.z) + 2);
       PL.camP = PL.camP || want.clone(); PL.camP.lerp(want, Math.min(1, dt * 9));
       camera.position.copy(PL.camP);
