@@ -97,11 +97,11 @@ const SURF = {
     float v=.9+.12*n; v*=mix(1.,.78,streak*smoothstep(.4,.8,n));
     c=mix(vec3(v),vec3(.45,.34,.26),chip); h=.5+n*.3-chip*.3; r=mix(.82,.93,chip);}`,
   gunwood: `void surf(vec2 uv,out vec3 c,out float h,out float r){
-    float d=pfbm(vec2(uv.x*3.,uv.y*12.),vec2(3.,12.),4);
-    float g=sin((uv.x*40.+d*6.)*6.283)*.5+.5; g=pow(g,3.);
-    float n=pn(uv*300.,vec2(300.));
-    vec3 w=mix(vec3(.3,.17,.08),vec3(.43,.26,.13),d)*(.75+.3*(1.-g))*(.95+.1*n);
-    c=w; h=g*.3+n*.1; r=.42+g*.15;}`,
+    float d=pfbm(vec2(uv.x*4.,uv.y*16.),vec2(4.,16.),4);
+    float g=sin((uv.y*48.+d*5.)*6.283)*.5+.5; g=pow(g,4.);
+    float fib=pn(vec2(uv.x*40.,uv.y*400.),vec2(40.,400.)), n=pn(uv*300.,vec2(300.));
+    vec3 w=mix(vec3(.32,.18,.09),vec3(.44,.27,.14),d)*(.84+.18*(1.-g))*(.94+.08*fib)*(.97+.06*n);
+    c=w; h=g*.18+fib*.08; r=.38+g*.1;}`,
   gunmetal: `void surf(vec2 uv,out vec3 c,out float h,out float r){
     float n=pn(uv*400.,vec2(400.)),m=pfbm(uv*8.,vec2(8.),4),s=pfbm(uv*30.,vec2(30.),3);
     c=vec3(.21,.22,.21)*(.85+.25*n)*(.9+.2*m); c=mix(c,vec3(.42,.42,.4),smoothstep(.7,.8,s)*.5);

@@ -368,7 +368,7 @@ function skinTemplate(b) {
   const parts = [], ranges = [], white = new THREE.Color(1, 1, 1);
   const base = typeof BASE_MALE !== 'undefined';
   if (base) { const g = baseBodyGeo(b.team); parts.push({ g, m: new THREE.Matrix4(), c: white, vc: true, uvs: 1 }); ranges.push(['base', g.attributes.position.count, null]); }
-  for (const p of r.parts) { const g = buildPartGeo(p.key, true, base); parts.push({ g, m: p.node.matrixWorld.clone(), c: white, vc: true, uvs: 1 }); ranges.push([p.name, g.attributes.position.count, p.node.matrixWorld.clone().invert()]); }
+  for (const p of r.parts) { const g = (p.name === 'weapon' && gunGeo(b.team, b.kind)) || buildPartGeo(p.key, true, base); parts.push({ g, m: p.node.matrixWorld.clone(), c: white, vc: true, uvs: 1 }); ranges.push([p.name, g.attributes.position.count, p.node.matrixWorld.clone().invert()]); }
   const geo = mergeGeos(parts), n = geo.attributes.position.count, si = new Float32Array(n * 4), sw = new Float32Array(n * 4), pa = geo.attributes.position, v = new V3();
   let o = 0;
   for (const [name, cnt, inv] of ranges) {
@@ -432,6 +432,18 @@ function baseBodyGeo(team) {
   g.setAttribute('color', new THREE.BufferAttribute(cl, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   g.setIndex(BASE_MALE.i);
   return g;
+}
+// arma dei soldati vicini: lo stesso modello della vista in prima persona, fuso in un'unica geometria
+// con i colori dei materiali; l'impugnatura cade sull'origine del nodo dell'arma come nei modelli semplici
+const GUN_ID = { A: { rifle: 'garand', sniper: 'springfield', smg: 'thompson', bar: 'bar' }, E: { rifle: 'kar98', sniper: 'kar98zf', smg: 'mp40' } };
+function gunGeo(team, kind) {
+  const id = (GUN_ID[team] || {})[kind]; if (!id || typeof buildGun !== 'function' || !VM.wood) return null;
+  const gi = buildGun(id), grp = gi.group, C = SCOL2[team], parts = [];
+  const tint = m => m === VM.wood ? 0x6b4423 : m === VM.wood2 ? 0x5a3a20 : m === VM.bake ? 0x2c1a10 : m === VM.brass ? 0xb08a3a : m === VM.glass ? 0x203040 : m === VM.olive ? 0x4a5236 : C.metal;
+  grp.updateMatrixWorld(true);
+  const off = new THREE.Matrix4().makeTranslation(-gi.grip.x, -gi.grip.y - .03, -gi.grip.z + .03);
+  grp.traverse(o => { if (!o.isMesh) return; const g = o.geometry.index ? o.geometry : o.geometry; parts.push({ g, m: off.clone().multiply(o.matrixWorld), c: col(tint(o.material)), vc: false, uvs: 1 }); });
+  return mergeGeos(parts);
 }
 function skinMesh(key, t) {
   const pool = SKIN.pool[key] || (SKIN.pool[key] = []), u = SKIN.used[key] || 0;

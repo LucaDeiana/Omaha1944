@@ -9,10 +9,10 @@ const projectiles = [];
 const STATS = { shots: 0, hits: 0, kills: 0, heads: 0, deaths: 0, start: 0 };
 
 function initWeapons() {
-  VM.wood = uvMaterial(TEX.gunwood, 4, { vc: false, rough: 1 });
-  VM.wood2 = uvMaterial(TEX.gunwood, 4, { vc: false, rough: 1, color: 0x9a8070 });
-  VM.metal = uvMaterial(TEX.gunmetal, 10, { vc: false, rough: 1, metal: .85 });
-  VM.blue = uvMaterial(TEX.gunmetal, 10, { vc: false, rough: .7, metal: .95, color: 0x8a92a6 });
+  VM.wood = uvMaterial(TEX.gunwood, 11, { vc: false, rough: .8, nScale: .35, color: 0xb08a70 });
+  VM.wood2 = uvMaterial(TEX.gunwood, 11, { vc: false, rough: .85, nScale: .35, color: 0x8a6c58 });
+  VM.metal = uvMaterial(TEX.gunmetal, 24, { vc: false, rough: .75, metal: .85, nScale: .25, color: 0x9a9a9a });
+  VM.blue = uvMaterial(TEX.gunmetal, 24, { vc: false, rough: .55, metal: .95, nScale: .25, color: 0x7a8296 });
   VM.brass = new THREE.MeshStandardMaterial({ color: col(0xc49a45), roughness: .28, metalness: 1 });
   VM.olive = uvMaterial(TEX.metal, 3, { vc: false, rough: 1, metal: .3, color: 0x6a7350 });
   VM.sleeve = uvMaterial(TEX.fabric, 5, { vc: false, rough: 1, color: 0x8a8660, nScale: 1.2 });
@@ -33,10 +33,26 @@ function part(parent, geo, mat, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0) {
 }
 const CZ = (p, mat, x, y, z, r, len, seg = 16) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg), mat); m.position.set(x, y, z); m.rotation.x = PI / 2; p.add(m); return m; };
 // profilo laterale estruso (punti z,y del modello; la canna punta verso -z)
-function prof(parent, pts, w, mat, x = 0, bev = .004) {
+// i punti con terzo valore 1 restano spigoli vivi, gli altri vengono arrotondati (taglio degli angoli ripetuto)
+function smoothProf(pts, it = 3) {
+  let p = pts;
+  for (let k = 0; k < it; k++) {
+    const o = [], n = p.length;
+    for (let i = 0; i < n; i++) {
+      const v = p[i], u = p[(i + n - 1) % n], w = p[(i + 1) % n];
+      if (v[2]) { o.push(v); continue; }
+      o.push([v[0] * .75 + u[0] * .25, v[1] * .75 + u[1] * .25], [v[0] * .75 + w[0] * .25, v[1] * .75 + w[1] * .25]);
+    }
+    p = o;
+  }
+  return p;
+}
+function prof(parent, pts, w, mat, x = 0, bev) {
+  if (bev === undefined) bev = mat === VM.wood || mat === VM.wood2 || mat === VM.bake ? Math.min(.011, w * .24) : Math.min(.004, w * .15);
+  pts = smoothProf(pts);
   const s = new THREE.Shape(); s.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) s.lineTo(pts[i][0], pts[i][1]);
   const d = Math.max(.001, w - bev * 2);
-  const g = new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: true, bevelThickness: bev, bevelSize: bev, bevelSegments: 2, curveSegments: 4 });
+  const g = new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: true, bevelThickness: bev, bevelSize: bev * .6, bevelOffset: -bev * .6, bevelSegments: 3, curveSegments: 4 });
   g.translate(0, 0, -d / 2); g.rotateY(-PI / 2);
   const m = new THREE.Mesh(g, mat); m.position.x = x; parent.add(m); return m;
 }
@@ -44,17 +60,6 @@ function limb(parent, a, b, r, mat) {
   const d = new V3().subVectors(b, a), m = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.12, 1, 14), mat);
   m.position.copy(a).addScaledVector(d, .5); m.quaternion.setFromUnitVectors(new V3(0, 1, 0), d.clone().normalize());
   m.scale.set(1, d.length(), 1); parent.add(m); return m;
-}
-function hand(parent, p, side) {
-  const h = new THREE.Group(); h.position.copy(p); parent.add(h);
-  part(h, U.box, VM.skin, side * .006, -.005, .012, .036, .075, .085);
-  for (let i = 0; i < 4; i++) {
-    const y = .022 - i * .019;
-    part(h, U.box, VM.skin, side * -.012, y, -.03, .028, .016, .03);
-    part(h, U.box, VM.skin, side * -.03, y - .002, -.012, .016, .015, .03, 0, side * .9, 0);
-  }
-  part(h, U.box, VM.skin, side * -.02, .03, .03, .018, .018, .05, -.4, side * .5, 0);
-  return h;
 }
 
 // mire metalliche: la linea di mira passa a quota 'y'; in mira si allinea al centro dello schermo
@@ -77,114 +82,6 @@ function addSights(g, kind, y, rz, fz, mat, hood, x = 0) {
   part(g, U.box, mat, x, y - .016, fz, .016, .01, .014);
   if (hood) { const hd = new THREE.Mesh(new THREE.TorusGeometry(.01, .0018, 6, 14, PI), mat); hd.position.set(x, y - .006, fz); g.add(hd); }
   else for (const sx of [-1, 1]) part(g, U.box, mat, x + sx * .009, y - .004, fz, .003, .018, .01);
-}
-// costruzione delle armi (usate anche a terra)
-function buildGun(id) {
-  const g = new THREE.Group(); let i = {};
-  if (id === 'garand' || id === 'kar98' || id === 'springfield' || id === 'kar98zf') {
-    const W = id === 'kar98' ? VM.wood2 : VM.wood, Mt = id === 'garand' ? VM.metal : VM.blue;
-    prof(g, [[.43, .03], [.27, .035], [.12, .018], [.05, 0], [-.02, 0], [-.05, .012], [-.3, .012], [-.6, .008], [-.62, -.005], [-.6, -.025], [-.3, -.03], [-.08, -.034], [.02, -.04], [.07, -.085], [.11, -.08], [.15, -.055], [.43, -.105], [.44, -.04]], .042, W);
-    prof(g, [[-.1, .012], [-.1, .03], [-.3, .034], [-.3, .012]], .036, W);
-    prof(g, [[-.38, .012], [-.38, .028], [-.58, .026], [-.58, .012]], .034, W);
-    part(g, U.box, Mt, 0, -.035, .44, .044, .11, .01);
-    CZ(g, Mt, 0, .03, -.62, .0115, .78);
-    part(g, U.box, Mt, 0, -.045, .005, .007, .028, .06); part(g, U.box, Mt, 0, -.025, 0, .004, .025, .008, .3);
-    for (const z of [-.33, -.6]) part(g, U.box, Mt, 0, .012, z, .046, .05, .012);
-    let mag = null, bolt = null;
-    if (id === 'garand') {
-      prof(g, [[.07, 0], [.07, .035], [.04, .05], [-.05, .05], [-.14, .04], [-.17, .03], [-.17, 0]], .03, Mt);
-      CZ(g, Mt, 0, .012, -.84, .013, .12);
-      addSights(g, 'aperture', .068, .055, -.905, Mt);
-      part(g, U.box, Mt, .02, .022, -.3, .008, .014, .42); part(g, U.box, Mt, .026, .025, -.08, .014, .02, .03);
-      mag = new THREE.Group(); mag.position.set(0, .052, -.045); g.add(mag);
-      part(mag, U.box, VM.brass, 0, 0, 0, .022, .012, .062);
-      for (let k = 0; k < 4; k++) CZ(mag, VM.brass, (k % 2 ? .005 : -.005), .008, -.022 + k * .015, .005, .02);
-    } else {
-      CZ(g, Mt, 0, .028, -.05, .016, .24);
-      bolt = new THREE.Group(); bolt.position.set(0, .028, .03); g.add(bolt);
-      CZ(bolt, Mt, 0, 0, 0, .009, .1);
-      const hd = new THREE.Group(); hd.position.set(.01, 0, .03); bolt.add(hd);
-      part(hd, U.box, Mt, .025, id === 'kar98' ? -.012 : -.008, 0, .05, .009, .009, 0, 0, id === 'kar98' ? -.45 : -.25);
-      part(hd, U.sph, Mt, .05, id === 'kar98' ? -.025 : -.016, 0, .012, .012, .012);
-      mag = new THREE.Group(); mag.position.set(0, .046, -.04); g.add(mag);
-      for (let k = 0; k < 5; k++) CZ(mag, VM.brass, 0, 0, -.02 + k * .01, .005, .03);
-      if (id === 'kar98') addSights(g, 'notch', .06, -.17, -.86, Mt, true);
-      if (id === 'springfield' || id === 'kar98zf') {
-        CZ(g, VM.blue, 0, .085, -.04, .013, .3); CZ(g, VM.blue, 0, .085, .135, .019, .07); CZ(g, VM.blue, 0, .085, -.205, .018, .05);
-        part(g, U.box, VM.blue, 0, .062, .04, .012, .03, .016); part(g, U.box, VM.blue, 0, .062, -.12, .012, .03, .016);
-        const k1 = CZ(g, VM.blue, 0, .1, -.04, .007, .015); k1.rotation.set(0, 0, 0);
-        const k2 = CZ(g, VM.blue, .015, .085, -.04, .007, .015); k2.rotation.set(0, 0, PI / 2);
-        CZ(g, VM.glass, 0, .085, .171, .016, .004);
-      }
-    }
-    i = { mag, bolt, muzzle: new V3(0, .03, -1.01), port: new V3(.02, .05, -.04), hip: new V3(.16, -.17, -.32), ads: new V3(0, -.068, -.17), grip: new V3(0, -.045, .065), fore: new V3(0, -.014, -.38), magOut: new V3(0, .2, 0) };
-    if (id === 'springfield' || id === 'kar98zf') i.ads = new V3(0, -.085, -.12);
-    if (id === 'kar98') i.ads = new V3(0, -.06, -.16);
-  } else if (id === 'thompson') {
-    prof(g, [[.36, .01], [.36, -.09], [.14, -.045], [.1, -.03], [.1, .015], [.16, .02]], .04, VM.wood);
-    prof(g, [[.1, 0], [.1, .055], [-.16, .055], [-.18, .04], [-.18, 0]], .044, VM.metal);
-    prof(g, [[.04, 0], [.065, -.1], [.025, -.112], [0, -.02]], .032, VM.wood);
-    prof(g, [[-.18, .01], [-.18, -.028], [-.33, -.024], [-.34, .012]], .042, VM.wood);
-    CZ(g, VM.metal, 0, .035, -.32, .0145, .28); CZ(g, VM.metal, 0, .035, -.46, .017, .015);
-    addSights(g, 'aperture', .078, .075, -.445, VM.metal);
-    const ck = CZ(g, VM.metal, .03, .045, -.05, .007, .02); ck.rotation.set(0, 0, PI / 2);
-    part(g, U.box, VM.metal, 0, -.022, .02, .006, .03, .07);
-    const mag = new THREE.Group(); mag.position.set(0, -.09, -.11); g.add(mag);
-    part(mag, U.box, VM.metal, 0, 0, 0, .028, .17, .048); part(mag, U.box, VM.metal, 0, -.085, 0, .032, .01, .052);
-    i = { mag, muzzle: new V3(0, .035, -.47), port: new V3(.025, .05, -.02), hip: new V3(.15, -.16, -.3), ads: new V3(0, -.078, -.2), grip: new V3(0, -.055, .03), fore: new V3(0, -.012, -.27), magOut: new V3(0, -.25, .05), charge: new V3(.03, .045, -.05) };
-  } else if (id === 'bar') {
-    prof(g, [[.45, .02], [.45, -.1], [.3, -.07], [.12, -.03], [.1, .02], [.3, .03]], .046, VM.wood);
-    prof(g, [[.1, -.02], [.125, -.11], [.075, -.118], [.05, -.02]], .034, VM.wood);
-    prof(g, [[.12, 0], [.12, .06], [-.28, .06], [-.3, .035], [-.3, -.02], [0, -.02], [.02, 0]], .052, VM.metal);
-    prof(g, [[-.3, 0], [-.3, .045], [-.52, .04], [-.52, 0]], .05, VM.wood);
-    CZ(g, VM.metal, 0, .045, -.6, .014, .6); CZ(g, VM.metal, 0, .01, -.6, .012, .3); CZ(g, VM.metal, 0, .045, -.93, .019, .07);
-    for (let k = 0; k < 3; k++) part(g, U.box, VM.metal, 0, .045, -.91 - k * .015, .045, .004, .004);
-    addSights(g, 'aperture', .086, .1, -.9, VM.metal);
-    for (const sx of [-1, 1]) { const l = CZ(g, VM.metal, sx * .025, .02, -.7, .005, .36, 6); l.rotation.x = PI / 2 + .04; }
-    const mag = new THREE.Group(); mag.position.set(0, -.05, -.12); g.add(mag);
-    part(mag, U.box, VM.metal, 0, 0, 0, .036, .1, .076);
-    i = { mag, muzzle: new V3(0, .045, -.97), port: new V3(.028, .04, -.05), hip: new V3(.17, -.17, -.3), ads: new V3(0, -.086, -.17), grip: new V3(0, -.06, .085), fore: new V3(0, -.02, -.4), magOut: new V3(0, -.25, 0), charge: new V3(-.03, .03, -.2) };
-  } else if (id === 'colt') {
-    const slide = new THREE.Group(); g.add(slide);
-    prof(slide, [[.04, .03], [.04, .06], [-.17, .06], [-.17, .035], [-.02, .03]], .028, VM.metal);
-    for (let k = 0; k < 6; k++) part(slide, U.box, VM.metal, 0, .045, .01 + k * .005, .03, .022, .002);
-    addSights(slide, 'notch', .071, .03, -.16, VM.metal);
-    prof(g, [[.04, .03], [.03, .01], [-.12, .012], [-.12, .03]], .027, VM.metal);
-    prof(g, [[.035, .012], [.062, -.085], [.025, -.095], [0, 0]], .033, VM.wood2);
-    CZ(g, VM.metal, 0, .045, -.17, .008, .01);
-    part(g, U.box, VM.metal, 0, .055, .045, .01, .02, .012, -.4);
-    part(g, U.box, VM.metal, 0, -.005, -.045, .006, .025, .05);
-    const mag = new THREE.Group(); mag.position.set(0, -.08, .015); g.add(mag);
-    part(mag, U.box, VM.metal, 0, 0, 0, .024, .012, .04);
-    i = { mag, slide, muzzle: new V3(0, .045, -.19), port: new V3(.016, .05, -.04), hip: new V3(.13, -.14, -.32), ads: new V3(0, -.071, -.28), grip: new V3(0, -.04, .02), fore: new V3(-.012, -.065, .03), magOut: new V3(0, -.2, 0) };
-  } else if (id === 'bazooka') {
-    const tube = new THREE.Mesh(new THREE.CylinderGeometry(.046, .046, 1.45, 20, 1, true), VM.olive); tube.rotation.x = PI / 2; tube.position.z = -.3; g.add(tube);
-    const flare = new THREE.Mesh(new THREE.CylinderGeometry(.07, .048, .14, 20, 1, true), VM.olive); flare.rotation.x = -PI / 2; flare.position.z = .46; g.add(flare);
-    for (const z of [-1.02, -.6, -.1, .3]) CZ(g, VM.olive, 0, 0, z, .053, .04, 20);
-    prof(g, [[.18, -.04], [.18, -.1], [-.08, -.08], [-.08, -.04]], .045, VM.wood);
-    prof(g, [[-.04, -.04], [-.02, -.13], [-.06, -.135], [-.08, -.04]], .03, VM.metal);
-    prof(g, [[-.33, -.04], [-.31, -.13], [-.35, -.135], [-.37, -.04]], .03, VM.metal);
-    addSights(g, 'frame', .045, -.2, -.55, VM.metal, false, -.066);
-    part(g, U.box, VM.olive, 0, -.065, -.22, .04, .05, .1);
-    const mag = new THREE.Group(); mag.position.set(0, 0, -1.09); g.add(mag);
-    const wh = new THREE.Mesh(new THREE.ConeGeometry(.042, .16, 16), VM.olive); wh.rotation.x = -PI / 2; wh.position.z = -.06; mag.add(wh);
-    CZ(mag, VM.olive, 0, 0, .04, .04, .07);
-    i = { mag, muzzle: new V3(0, 0, -1.05), hip: new V3(.2, -.13, -.25), ads: new V3(.066, -.045, -.22), grip: new V3(0, -.11, -.04), fore: new V3(0, -.11, -.34), magOut: new V3(0, 0, -.5) };
-  } else if (id === 'mp40') {
-    CZ(g, VM.blue, 0, .03, -.1, .02, .3); for (let k = 0; k < 8; k++) CZ(g, VM.blue, 0, .03, -.2 + k * .025, .022, .006);
-    CZ(g, VM.blue, 0, .03, -.33, .01, .16); CZ(g, VM.blue, 0, .03, -.41, .013, .02);
-    part(g, U.box, VM.blue, 0, .005, -.37, .015, .02, .04);
-    part(g, U.box, VM.blue, 0, -.02, -.17, .03, .06, .05);
-    prof(g, [[.05, .01], [.07, -.09], [.03, -.1], [.01, 0]], .032, VM.bake);
-    for (const sx of [-1, 1]) part(g, U.box, VM.blue, sx * .012, 0, .16, .006, .012, .25);
-    part(g, U.box, VM.blue, 0, -.03, .29, .03, .07, .01);
-    addSights(g, 'notch', .064, 0, -.4, VM.blue, true);
-    const ck = CZ(g, VM.blue, -.025, .03, -.05, .007, .02); ck.rotation.set(0, 0, PI / 2);
-    const mag = new THREE.Group(); mag.position.set(0, -.09, -.17); g.add(mag);
-    part(mag, U.box, VM.blue, 0, 0, 0, .022, .2, .035);
-    i = { mag, muzzle: new V3(0, .03, -.43), port: new V3(.022, .04, -.05), hip: new V3(.15, -.15, -.3), ads: new V3(0, -.064, -.2), grip: new V3(0, -.045, .04), fore: new V3(0, -.1, -.17), magOut: new V3(0, -.25, 0), charge: new V3(-.03, .03, -.05) };
-  }
-  i.group = g; return i;
 }
 function buildViewmodel(id) {
   const i = buildGun(id), g = i.group;
