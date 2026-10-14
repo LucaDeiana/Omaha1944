@@ -78,7 +78,7 @@ function navalBarrage() {
 }
 
 function updateFun(dt) {
-  updateSpots(dt); updateDowned(dt);
+  updateSpots(dt); updateDowned(dt); updatePriority(dt);
   FUN.multiT -= dt;
   if (P.dead && !FUN.wasDead) { if (FUN.streak >= 5) feed('Serie interrotta a ' + FUN.streak); FUN.streak = 0; }
   FUN.wasDead = P.dead;
@@ -158,4 +158,48 @@ function updateDowned(dt) {
     return;
   }
   if (DOWNED.t <= 0) { if (w) w.rescueP = false; P.downed = false; P.hp = 0; P.die(); }
+}
+
+// ---------- obiettivo prioritario: una mitragliatrice o un tiratore che inchioda la squadra ----------
+const PRIO = { t: 40, target: null, life: 0, el: null, pinT: 0 };
+const PRIO_NAME = { mg: 'Mitragliatrice', sniper: 'Tiratore scelto', bar: 'Fucile automatico', smg: 'Squadra d\'assalto', rifle: 'Postazione nemica' };
+function pickPriority() {
+  const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw); let best = null, bs = -1;
+  for (const e of FOES()) {
+    if (!e.alive || e.removed || e.state === 'boat' || e.wounded) continue;
+    const dx = e.pos.x - P.pos.x, dz = e.pos.z - P.pos.z, d = Math.hypot(dx, dz);
+    if (d < 45 || d > 190) continue;
+    const ahead = (dx * fx + dz * fz) / d; if (ahead < .3) continue;
+    const s = (e.kind === 'mg' ? 3 : e.kind === 'sniper' ? 2.5 : e.kind === 'bar' ? 2 : 1) + ahead - d / 200 + (e.inBunker ? .5 : 0);
+    if (s > bs) { bs = s; best = e; }
+  }
+  return best;
+}
+function updatePriority(dt) {
+  if (P.mode === 'plane' || P.mode === 'naval' || P.dead) { if (PRIO.el) PRIO.el.style.display = 'none'; return; }
+  const t = PRIO.target;
+  if (!t) {
+    PRIO.t -= dt; if (PRIO.el) PRIO.el.style.display = 'none';
+    if (PRIO.t <= 0 && P.mode === 'foot' && !P.inBoat && !P.downed) {
+      PRIO.t = 8; const e = pickPriority(); if (!e) return;
+      PRIO.target = e; PRIO.life = 120; PRIO.pinT = 0;
+      banner('OBIETTIVO PRIORITARIO', `${PRIO_NAME[e.kind] || 'Nemico'} che inchioda la squadra — eliminalo`);
+      say(N.radio, PT === 'A' ? 'Quella posizione ci tiene inchiodati! Toglietela di mezzo!' : 'Quel tiratore americano ci decima! Eliminatelo!');
+    }
+    return;
+  }
+  PRIO.life -= dt;
+  if (!t.alive || t.removed || PRIO.life <= 0) {
+    if (!t.alive) { if (t.lastByPlayer) { addScore(500, 'Obiettivo prioritario', '#9fe08a'); banner('OBIETTIVO ELIMINATO', 'La squadra riprende ad avanzare'); } else addScore(150, 'Obiettivo eliminato dalla squadra', '#9fe08a'); }
+    PRIO.target = null; PRIO.t = rnd(60, 100); return;
+  }
+  // inchioda i compagni nel suo settore
+  PRIO.pinT -= dt;
+  if (PRIO.pinT <= 0) { PRIO.pinT = 1; for (const a of FRIENDS()) if (a.alive && a.state !== 'boat' && Math.abs(a.pos.x - t.pos.x) < 45 && a.pos.distanceToSquared(t.pos) < 140 * 140) a.supp = Math.max(a.supp, .85); }
+  // indicatore a schermo con distanza
+  if (!PRIO.el) { PRIO.el = document.createElement('div'); PRIO.el.style.cssText = 'position:fixed;transform:translate(-50%,-100%);pointer-events:none;color:#f2d27a;font:600 12px Oswald,sans-serif;text-align:center;text-shadow:0 1px 3px #000;z-index:19'; document.body.appendChild(PRIO.el); }
+  const c = t.chest(T5); c.y += 1.2; const d = Math.round(t.pos.distanceTo(P.pos)); c.project(camera);
+  const on = c.z < 1, x = clamp((c.x * .5 + .5) * innerWidth, 30, innerWidth - 30), y = clamp((-c.y * .5 + .5) * innerHeight, 40, innerHeight - 30);
+  PRIO.el.style.display = 'block'; PRIO.el.style.left = (on ? x : (c.x < 0 ? innerWidth - 30 : 30)) + 'px'; PRIO.el.style.top = (on ? y : innerHeight / 2) + 'px';
+  PRIO.el.innerHTML = `◆<br>${PRIO_NAME[t.kind] || 'Obiettivo'} · ${d} m`;
 }

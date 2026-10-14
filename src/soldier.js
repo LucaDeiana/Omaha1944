@@ -94,6 +94,7 @@ class Soldier {
   }
   heal() { this.wounded = false; this.hp = 45; this.state = 'idle'; this.wait = rnd(.5, 2); const p = this.body.parts.find(x => x.name === 'weapon'); if (p) p.hidden = false; }
   die(from, byPlayer, zone, imp) {
+    this.lastByPlayer = !!byPlayer;
     if (this.spotBy) spotKilled(this, byPlayer);
     if (!this.alive) return;
     this.alive = false; if (this.state !== 'boat') this.state = 'dead';
