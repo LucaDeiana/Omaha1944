@@ -94,6 +94,7 @@ class Soldier {
   }
   heal() { this.wounded = false; this.hp = 45; this.state = 'idle'; this.wait = rnd(.5, 2); const p = this.body.parts.find(x => x.name === 'weapon'); if (p) p.hidden = false; }
   die(from, byPlayer, zone, imp) {
+    if (this.spotBy) spotKilled(this, byPlayer);
     if (!this.alive) return;
     this.alive = false; if (this.state !== 'boat') this.state = 'dead';
     if (NET.host) netAIDeath(this, imp);
@@ -255,6 +256,8 @@ class Soldier {
     if (!this.alive || this.state === 'boat' || this.removed || this.state === 'wounded') return;
     this.findTarget();
     this.unstick();
+    // soccorso del giocatore a terra: corre da lui ignorando il resto
+    if (this.rescueP) { if (P.downed && !P.dead) { this.dest = P.pos.clone(); this.state = 'move'; this.crouchRun = true; this.wait = 0; this.shoutT -= this.thinkDt; return; } this.rescueP = false; }
     if (this.team === 'A') this.thinkAlly(); else this.thinkEnemy();
     this.shoutT -= this.thinkDt;
   }
@@ -264,7 +267,7 @@ class Soldier {
     for (const o of opp) {
       if (!o.alive || o.state === 'boat' || o.flee || o.removed) continue;
       const dx = o.pos.x - me.x, dz = o.pos.z - me.z, d2 = dx * dx + dz * dz;
-      if (d2 < r * r) cands.push([o, d2]);
+      if (d2 < r * r) cands.push([o, o.spotT > 0 && this.team === PT ? d2 * .15 : d2]); // i nemici avvistati dal giocatore hanno la precedenza
     }
     if (this.team !== PT && P.targetable()) { const d2 = P.pos.distanceToSquared(me); if (d2 < r * r) cands.push([P, d2 * .5]); }
     cands.sort((a, b) => a[1] - b[1]);

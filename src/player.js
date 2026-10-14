@@ -14,7 +14,7 @@ const P = {
   recoil: 0, kickP: 0, kickY: 0, bloom: 0, shake: 0, hurt: 0, supp: 0, regenT: 0, shock: 0, shockT: 0,
   interacting: false, intT: 0, intTarget: null, ePressed: false, spawnMenu: false,
   slot() { return this.inv[this.cur]; },
-  targetable() { return !this.dead && !this.inBoat && (this.mode === 'foot' || this.mode === 'mg' || this.mode === 'mortar' || this.mode === 'flak'); },
+  targetable() { return !this.dead && !this.downed && !this.inBoat && (this.mode === 'foot' || this.mode === 'mg' || this.mode === 'mortar' || this.mode === 'flak'); },
   chest(o) { return o.set(this.pos.x, this.pos.y + [1.25, .86, .32][this.stance], this.pos.z); },
   hitMul() {
     let m = .6;
@@ -31,7 +31,7 @@ const P = {
     this.kickP += rnd(.02, .05); this.kickY += rnd(-.04, .04);
     if (from) damageIndicator(from);
     sfxThud(); if (SETTINGS.gore && a > 15) lensSplat('blood', a / 60);
-    if (this.hp <= 0) { this.hp = 0; this.die(); }
+    if (this.hp <= 0) { if (!blast && a < 90 && downPlayer()) return; this.hp = 0; this.die(); }
   },
   nearMiss(from, end) {
     this.supp = Math.min(1, this.supp + .2);
@@ -68,6 +68,7 @@ function initInput() {
     if (P.mode === 'naval') return;
     if (c === 'KeyR') startReload();
     else if (c === 'KeyC' || c === 'ControlLeft') { if (!P.swim) P.stance = P.stance === 1 ? 0 : 1; }
+    else if (c === 'KeyY' && P.mode === 'foot') spotEnemy();
     else if (c === 'KeyZ') { if (!P.swim && !P.inBoat) P.stance = P.stance === 2 ? 0 : 2; }
     else if (c === 'KeyG') throwPlayerNade();
     else if (c === 'KeyV') playerMelee();
@@ -93,6 +94,7 @@ function initInput() {
   addEventListener('mousedown', e => {
     if (!GAME.running) return;
     if (e.button === 0) { mouseL = true; P.trigger = true; }
+    if (e.button === 1 && P.mode === 'foot') { e.preventDefault(); spotEnemy(); }
     if (e.button === 2) { P.adsHeld = true; if (P.mode === 'naval') NAV.zoom = true; if (P.mode === 'plane') planeDropBomb(); }
   });
   addEventListener('mouseup', e => { if (e.button === 0) { mouseL = false; P.trigger = false; } if (e.button === 2) { P.adsHeld = false; NAV.zoom = false; } });
@@ -219,7 +221,7 @@ function updatePlayer(dt) {
   P.stepT -= dt * spd;
   if (P.stepT <= 0 && P.grounded) { P.stepT = P.sprint ? 2.5 : 2.1; sfxStep(P.depth > .1 ? 'water' : Math.abs(P.pos.z - BANK_Z) < 2.5 ? 'peb' : 'sand', P.sprint); }
 
-  if (s && mouseL && (w.auto || P.trigger)) playerFire();
+  if (s && mouseL && (w.auto || P.trigger) && !P.downed) playerFire();
   updateInteract(dt);
   updateCamera(dt); updateViewmodel(dt);
 }
@@ -280,7 +282,7 @@ function updateCamera(dt) {
 }
 
 function resetPlayerState() {
-  P.hp = 100; P.dead = false; P.deathT = 0; P.vel.set(0, 0, 0); P.vy = 0; P.stance = 0; P.hurt = 0; P.supp = 0; P.shake = 0; P.shock = 0; P.pitch = 0;
+  P.hp = 100; P.dead = false; P.downed = false; P.deathT = 0; P.vel.set(0, 0, 0); P.vy = 0; P.stance = 0; P.hurt = 0; P.supp = 0; P.shake = 0; P.shock = 0; P.pitch = 0;
   for (const s of P.inv) if (s) { const w = WEAPONS[s.id]; s.res = Math.max(s.res, w.mag * 3); if (s.mag === 0) s.mag = Math.min(w.mag, s.res); }
   P.nades = Math.max(P.nades, 3); P.charges = Math.max(P.charges, MISSION.minCharges || 0); P.bandages = Math.max(P.bandages, 2); P.bandT = 0;
   P.carry = null; P.reloadT = 0; P.switchT = .5;
