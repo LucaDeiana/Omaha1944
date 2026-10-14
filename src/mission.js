@@ -652,15 +652,16 @@ class Sherman {
   }
 }
 
-function suppressBunker(b) {
+function suppressBunker(b, tobruk) {
   const was = b.supT > 0; b.supT = 4.5; MISSION.suppT = 4.5;
-  if (!was && !b.neutralized) { feed('MG42 soppressa — gli alleati avanzano!'); if (R() < .5) shout('en', 'move', P.pos.clone().add(new V3(rnd(-8, 8), 0, rnd(-5, 5))), { text: pick(['Suppress that bunker! Go, go!', "He's pinned! Move up!", 'Keep his head down! Move!']) }); }
+  if (b.gunner && b.gunner.alive) { b.gunner.supp = 1; b.gunner.duck = true; b.gunner.duckT = Math.min(b.gunner.duckT, 1); }
+  if (!was && !b.neutralized) { feed(tobruk ? 'Torretta Tobruk soppressa — il mitragliere si è abbassato!' : 'MG42 soppressa — gli alleati avanzano!'); if (R() < .5) shout('en', 'move', P.pos.clone().add(new V3(rnd(-8, 8), 0, rnd(-5, 5))), { text: pick(['Suppress that bunker! Go, go!', "He's pinned! Move up!", 'Keep his head down! Move!']) }); }
 }
 function updateMission(dt) {
   MISSION.dt = dt;
   if (NET.client) { updateSubs(dt); for (const v of MISSION.vehicles) v.update(dt); return; }
   MISSION.suppT = Math.max(0, (MISSION.suppT || 0) - dt);
-  for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || [])]) b.supT = Math.max(0, (b.supT || 0) - dt);
+  for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || []), ...(WORLD.tobruks || [])]) b.supT = Math.max(0, (b.supT || 0) - dt);
   MISSION.stageT += dt; MISSION.nadeCD -= dt; MISSION.eNadeCD -= dt; MISSION.allyNadeCD -= dt;
   (PT === 'E' ? AXIS_STAGES : STAGES)[MISSION.stage].update(dt);
   stallResolve();

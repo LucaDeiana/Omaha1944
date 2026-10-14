@@ -426,6 +426,7 @@ class Soldier {
     } else {
       if (t === P) P.nearMiss(from, end);
       else if (t.supp !== undefined) t.supp = Math.min(1, t.supp + .2);
+      if (t.supB && this.team === 'A' && R() < .35) t.supB.supT = Math.max(t.supB.supT || 0, 2.5);
       if (t.isBoat) { if (t.b === P.boat || dist2Cam(tp) < 60 * 60) { fxImpact(tp.clone(), 'metal'); sfxImpact(tp, 'metal'); if (R() < .3) sfxRicochet(tp); } }
       else if (R() < .45) {
         const gx = end.x, gz = end.z, gy = Hf(gx, gz), wet = gz > -8 && gy < WATER_Y;

@@ -300,6 +300,7 @@ function playerFire() {
   else if (r.type === 'terrain') { fxImpact(p.clone(), p.z > -58.5 ? 'sand' : 'dirt'); if (r.t < 25) sfxImpact(p, 'sand'); }
   // fuoco di soppressione: colpi vicino alla feritoia o ai nemici
   if (PT === 'A') for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || [])]) if (Math.abs(p.x - b.x) < 5.5 && Math.abs(p.z - (b.z + 3.5)) < 3.5 && Math.abs(p.y - b.slitY) < 1.8) suppressBunker(b);
+  if (PT === 'A') for (const b of WORLD.tobruks || []) if (!b.neutralized && Math.abs(p.x - b.x) < 3 && Math.abs(p.z - b.z) < 3 && Math.abs(p.y - b.slitY) < 1.8) suppressBunker(b, true);
   for (const e of FOES()) if (e.alive && !e.inBunker && e.pos.distanceToSquared(p) < 9) e.supp = Math.min(1, e.supp + .45);
   if (r.type === 'solid') {
     const t = r.obj.tag, k = t === 'boat' || t === 'tank' || t === 'flak' ? 'metal' : t === 'hedge' ? 'dirt' : (t === 'house' || t === 'ruin' || t === 'wall' || t === 'church' || t === 'tower' || t === 'bunker') ? 'stone' : 'wood';

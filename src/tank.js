@@ -105,10 +105,12 @@ class Panzer {
     PS_FIRE.emit(o.x, o.y, o.z, d.x * 3, d.y * 3, d.z * 3, .04, .25, .4, 1, 4, 2.6, 1.2);
     d.x += rnd(-.01, .01); d.y += rnd(-.008, .008); d.normalize();
     if (!byPlayer) { const t = this.target; if (!t) return; const tp = t === P ? P.chest(new V3()) : t.chest(new V3()); if (R() < .4) fxTracer(o, tp.clone().add(new V3(rnd(-2, 2), rnd(-1, 1), rnd(-2, 2))), 1.2); sfxShot('mg42', o); if (R() < .12) { if (t === P) P.damage(rnd(20, 35) * D.dmg, o); else t.damage(rnd(30, 60), o, false, 'body'); } else if (t === P) P.nearMiss(o, tp); return; }
-    const r = hitscan(o, d, 600), p = o.clone().addScaledVector(d, r.t);
-    if (R() < .5) fxTracer(o, p, 1.3, byPlayer); sfxShot('mg42', o, byPlayer);
+    const r = hitscan(o.clone().addScaledVector(d, 3), d, 600), p = o.clone().addScaledVector(d, r.t + 3); // parte fuori dallo scafo
+    if (R() < .5) fxTracer(o, p, 1.3, byPlayer); sfxShot('mg42', o, byPlayer); if (byPlayer) P.shake += .04;
     if (r.type === 'enemy') { const killed = r.obj.damage(70, o, byPlayer, r.zone, { dir: d, power: 2.4, joint: r.joint }); if (byPlayer) hitMarker(killed, r.zone === 'head'); bloodHit(p, d, 1); }
-    else if (r.type === 'terrain') fxImpact(p, 'dirt');
+    else if (r.type === 'vehicle') { r.obj.damage(12, byPlayer); fxImpact(p, 'metal'); }
+    else if (r.type === 'terrain' || r.type === 'solid') fxImpact(p, 'dirt');
+    for (const e of FOES()) if (e.alive && !e.inBunker && e.pos.distanceToSquared(p) < 9) e.supp = Math.min(1, e.supp + .4);
   }
   damage(a, byPlayer) {
     if (!this.alive) return; this.hp -= a;
@@ -160,7 +162,7 @@ class Panzer {
     this.speed = lerp(this.speed, want, dt * .8);
     if (this.target) {
       const tp = this.target.pos, rel = Math.atan2(-(tp.x - this.pos.x), -(tp.z - this.pos.z)) - this.yaw;
-      this.tyaw = angLerp(this.tyaw, rel, dt * .9);
+      this.tyaw = angLerpMax(this.tyaw, rel, dt * TANK_TRAVERSE);
       const hd = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z); this.gpitch = lerp(this.gpitch, Math.atan2(tp.y + 1 - this.pos.y - 2.1, hd) + hd * .00004, dt * 2);
       if (Math.abs(angDiff(this.tyaw, rel)) < .05 && this.speed < 2) this.fireMain(false);
       if (hd < 140 && R() < dt * 3) this.fireMG(false);
@@ -181,7 +183,7 @@ function tankInteractables() {
   return TANKS.list.filter(t => t.alive && !t.player).map(t => ({ pos: t.pos, r: 4, label: 'Premi E per salire sul Panzer IV', active: () => true, done: () => enterTank(t) }));
 }
 function enterTank(t) {
-  t.player = true; TANKS.me = t; P.mode = 'tank'; t.tyaw = 0; t.gpitch = 0;
+  t.player = true; TANKS.me = t; P.mode = 'tank'; t.ayaw = t.tyaw; t.apitch = t.gpitch;
   showMsg('Panzer IV — W/S/A/D guida · mouse torretta · click sx cannone · F mitragliatrice · E esci', 4);
   $('stHud').style.display = 'block';
 }
@@ -191,13 +193,16 @@ function leaveTank() {
   P.pos.set(t.pos.x + Math.cos(t.yaw) * 3, 0, t.pos.z - Math.sin(t.yaw) * 3); P.pos.y = Hf(P.pos.x, P.pos.z);
   camera.fov = SETTINGS.fov; camera.updateProjectionMatrix();
 }
-function tankMouse(mx, my) { const t = TANKS.me; if (!t) return; const s = .0021 * SETTINGS.sens * (camera.fov / 60); t.tyaw -= mx * s; t.gpitch = clamp(t.gpitch - my * s, -.14, .35); }
+// il mouse sposta il punto di mira; torretta e cannone lo raggiungono con la velocità del brandeggio idraulico
+const TANK_TRAVERSE = .55, TANK_ELEV = .3;
+function tankMouse(mx, my) { const t = TANKS.me; if (!t) return; const s = .0021 * SETTINGS.sens * (camera.fov / 60); t.ayaw -= mx * s; t.apitch = clamp(t.apitch - my * s, -.14, .35); }
 function updateTankMode(dt) {
   const t = TANKS.me; if (!t || !t.alive) { leaveTank(); return; }
   P.pos.copy(t.pos); P.pos.y += 1.4;
-  const ay = t.yaw + t.tyaw, zoom = P.adsHeld;
+  t.tyaw = angLerpMax(t.tyaw, t.ayaw, dt * TANK_TRAVERSE); t.gpitch += clamp(t.apitch - t.gpitch, -dt * TANK_ELEV, dt * TANK_ELEV);
+  const ay = t.yaw + (P.adsHeld ? t.tyaw : t.ayaw), zoom = P.adsHeld;
   if (zoom) { const o = t.muzzle(new V3()).addScaledVector(t.aimDir(new V3()), -3.8); o.y += .35; camera.position.copy(o); camera.rotation.set(t.gpitch + t.g.rotation.x * 0, ay, 0, 'YXZ'); }
-  else { camera.position.set(t.pos.x + Math.sin(ay) * 10, t.pos.y + 5.2, t.pos.z + Math.cos(ay) * 10); camera.rotation.set(t.gpitch - .2, ay, 0, 'YXZ'); }
+  else { camera.position.set(t.pos.x + Math.sin(ay) * 10, t.pos.y + 5.2, t.pos.z + Math.cos(ay) * 10); camera.rotation.set(t.apitch - .2, ay, 0, 'YXZ'); }
   camera.position.x += rnd(-1, 1) * P.shake * .05; camera.position.y += rnd(-1, 1) * P.shake * .05; P.shake = Math.max(0, P.shake - dt * 2);
   const fov = zoom ? 18 : 70; if (Math.abs(camera.fov - fov) > .1) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 8)); camera.updateProjectionMatrix(); }
   // punto d'impatto del cannone proiettato sullo schermo
