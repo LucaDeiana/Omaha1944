@@ -9,6 +9,7 @@ const CUT_SHOTS = [
   { d: 6, cap: 'Omaha Beach — 06:30', from: [40, 3.5, 95], to: [12, 3, 45], look: [0, 14, -80], look2: [-20, 18, -95] },
 ];
 function startCutscene() {
+  if (SCEN === 'air') { showMsg('7 giugno 1944 — Cieli di Normandia', 4); return; }
   if (SCEN === 'ard') CUT_SHOTS.splice(0, CUT_SHOTS.length, ...ARD_SHOTS);
   if (PT === 'E') {
     CUT_SHOTS[0].cap = 'La flotta alleata al largo della Normandia — 05:50';

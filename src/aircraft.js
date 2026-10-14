@@ -36,6 +36,9 @@ class Plane {
     this.hp -= a;
     if (this.hp <= 0) {
       this.crash = true; this.trail = addEmitter(this.pos, 'trail', 1.5); this.trail.follow = q => q.copy(this.pos); this.trail.life = 30;
+      const fate = R(), big = this.type === 'b26';
+      if (fate < (big ? .2 : .3)) this.blowUp();
+      else if (fate < .72) this.loseWing(R() < .5 ? -1 : 1);
       if (byPlayer) { STATS.kills += 2; feed(this.team === 'E' ? 'Caccia nemico abbattuto!' : 'Aereo abbattuto'); }
       if (this.team === 'E' && dist2Cam(this.pos) < 900 * 900) say(N.walsh, 'L\'hanno preso! Sta precipitando!');
     }
@@ -45,7 +48,7 @@ class Plane {
     if (this.doomT !== undefined && !this.crash) { this.doomT -= dt; if (this.doomT <= 0) { this.doomT = undefined; fxExplosion(this.pos.clone(), 1.2, false); sfxBoom(this.pos, 1); this.damage(9999, false); if (dist2Cam(this.pos) < 900 * 900) say(N.walsh, this.team === 'A' ? 'Hanno preso un Thunderbolt!' : 'Un crucco abbattuto!'); } }
     for (const p of this.props) { p.rotation.z += dt * 47; p.userData.disc.material.opacity = .14; }
     if (this.crash) {
-      this.vel.y -= 9.8 * dt * 1.4; this.vel.multiplyScalar(1 - .1 * dt); this.roll += dt * 2;
+      this.vel.y -= 9.8 * dt * 1.4; this.vel.multiplyScalar(1 - .1 * dt); this.roll += dt * (this.wingLost ? 6 * this.wingLost : 2);
       this.pos.addScaledVector(this.vel, dt); this.orient(this.roll);
       const gy = Math.max(Hf(this.pos.x, this.pos.z), this.pos.z > -9 ? WATER_Y : -99);
       if (this.pos.y < gy + 1) { explode(this.pos.clone().setY(gy + .5), 12, 500, {}); this.remove(); }
@@ -71,6 +74,22 @@ class Plane {
     } else { this.pos.addScaledVector(this.vel, dt); this.orient(this.roll *= .98); if (this.age > 60 || Math.abs(this.pos.x) > 2500 || Math.abs(this.pos.z) > 2500) this.remove(); }
     this.eng && this.eng.at(this.pos, this.type === 'b26' ? 2.2 : 1.6, 1 + clamp(-_a3.subVectors(this.pos, camera.position).normalize().dot(this.vel) / 343, -.3, .3), this.type === 'b26' ? 500 : 260);
     if (this.alive && !this.crash && this.team === 'E' && dist2Cam(this.pos) < 220 * 220 && !this.shouted) { this.shouted = true; shout('en', 'plane', P.pos.clone().add(new V3(rnd(-8, 8), 0, rnd(-8, 8))), { text: pick(['Aircraft! Get down!', 'Here come the Jerries!']) }); }
+  }
+  // esplode in aria: palla di fuoco, rottami che cadono
+  blowUp() {
+    const p = this.pos.clone(); fxExplosion(p, this.type === 'b26' ? 4 : 2.8, false); sfxBoom(p, 2.6); flashLight(p, 0xffa040, 120, .25);
+    for (let k = 0; k < 7; k++) airDebris(p, this.vel.clone().multiplyScalar(.6).add(new V3(rnd(-25, 25), rnd(-10, 20), rnd(-25, 25))), rnd(.6, 2.2), k < 3 ? 0x4a5033 : 0x2a2a2a, true);
+    this.exploded = true;
+    if (!this.player) this.remove();
+  }
+  // un'ala si stacca: il modello perde l'ala (taglio nello shader) e l'aereo entra in vite
+  loseWing(side) {
+    this.wingLost = side; cutWing(this.g, side);
+    // motori e insegne sull'ala persa spariscono con lei
+    for (const o of this.g.children) if (o.position.x * side > 2.1) o.visible = false;
+    const r = _a2.set(1, 0, 0).applyQuaternion(this.q), p = this.pos.clone().addScaledVector(r, side * 4);
+    fxExplosion(p, 1.2, false); sfxBoom(p, 1.4);
+    airDebris(p, this.vel.clone().addScaledVector(r, side * 10).add(new V3(0, 6, 0)), 0, this.type === 'fw190' ? 0x5c6268 : 0x4a5033, false, side, this.type === 'b26' ? 1.7 : 1);
   }
   strafe(dt) {
     this.fireT -= dt; if (this.fireT > 0) return; this.fireT = .06;
@@ -100,6 +119,44 @@ class Plane {
   }
   remove() { this.alive = false; scene.remove(this.g); if (this.eng) this.eng.stop(); if (this.trail) this.trail.life = 0; const i = PLANES.indexOf(this); if (i >= 0) PLANES.splice(i, 1); }
 }
+// ---------- rottami in volo ----------
+const AIRDEB = [];
+function airDebris(p, v, size, hex, burning, wingSide = 0, scale = 1) {
+  let m;
+  if (wingSide) { const g = new THREE.BoxGeometry(5.2 * scale, .22 * scale, 2.2 * scale); g.translate(wingSide * 2.6 * scale, 0, 0); m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: col(hex), roughness: .8 })); }
+  else m = new THREE.Mesh(U.box, new THREE.MeshStandardMaterial({ color: col(hex), roughness: .9, metalness: .3 })), m.scale.set(size, size * .4, size * 1.3);
+  m.position.copy(p); m.castShadow = true; scene.add(m);
+  const d = { m, v, spin: new V3(rnd(-4, 4), rnd(-4, 4), rnd(-4, 4)), life: 25 };
+  if (burning || wingSide) { d.smoke = addEmitter(m.position, 'trail', wingSide ? .8 : .6); d.smoke.follow = q => q.copy(m.position); d.smoke.life = 20; }
+  AIRDEB.push(d);
+}
+function updateAirDebris(dt) {
+  for (let i = AIRDEB.length - 1; i >= 0; i--) {
+    const d = AIRDEB[i]; d.life -= dt;
+    d.v.y -= 9.8 * dt; d.v.multiplyScalar(1 - .35 * dt); d.m.position.addScaledVector(d.v, dt);
+    d.m.rotation.x += d.spin.x * dt; d.m.rotation.y += d.spin.y * dt; d.m.rotation.z += d.spin.z * dt;
+    const gy = Math.max(Hf(d.m.position.x, d.m.position.z), d.m.position.z > -9 ? WATER_Y : -99);
+    if (d.m.position.y < gy + .3 || d.life <= 0) {
+      if (d.life > 0) { fxImpact(d.m.position.clone().setY(gy + .2), 'dirt'); if (d.m.scale.x > 1.5 || d.m.geometry !== U.box) { const e = addEmitter(d.m.position.clone().setY(gy + .3), 'fire', .5); e.life = 25; } }
+      if (d.smoke) d.smoke.life = 0;
+      if (d.life <= 0 || d.m.position.y < gy - 1) { scene.remove(d.m); AIRDEB.splice(i, 1); } else { d.v.set(0, 0, 0); d.spin.set(0, 0, 0); d.m.position.y = gy + .1; d.life = Math.min(d.life, 15); }
+    }
+  }
+}
+// taglia un'ala dal modello: i frammenti oltre la radice dell'ala vengono scartati nello shader
+function cutWing(g, side) {
+  g.traverse(o => {
+    if (!o.isMesh || o.userData.disc || !o.geometry || !o.geometry.attributes.position) return;
+    const base = o.material, nm = base.clone(), orig = base.onBeforeCompile;
+    nm.onBeforeCompile = (sh, rr) => {
+      if (orig) orig.call(nm, sh, rr);
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying float vCutX;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvCutX = position.x;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vCutX;').replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>\nif (vCutX * ${side.toFixed(1)} > 2.1) discard;`);
+    };
+    nm.customProgramCacheKey = () => 'cutwing' + side + (base.customProgramCacheKey ? base.customProgramCacheKey() : '');
+    o.material = nm;
+  });
+}
 let _bombG = null;
 function BOMB_G() {
   if (_bombG) return _bombG;
@@ -110,6 +167,7 @@ function BOMB_G() {
 function bombImpact(p, q) {
   explode(p, 11, 650, { byPlayer: !!q.byPlayer, bomb: true, only: q.team === 'E' ? 'A' : (q.byPlayer ? undefined : 'E') });
   if (!q.byPlayer) return;
+  if (SCEN === 'air') airBombHit(p);
   for (const b of WORLD.extraBunkers || []) if (!b.destroyed && Math.hypot(b.x - p.x, b.z - p.z) < 8) { b.destroy(); feed('Caposaldo distrutto'); }
   for (const b of WORLD.bunkers) if (!b.destroyed && Math.hypot(b.x - p.x, b.z - p.z) < 8) { b.destroy(); onObjectiveEvent('bunker', b, true); }
   for (const f of WORLD.flaks) if (f.alive && Math.hypot(f.x - p.x, f.z - p.z) < 8) { f.destroy(); onObjectiveEvent('flak', f, true); }
@@ -178,7 +236,7 @@ function updateAA(dt) {
 let raidT = { p47: 25, fw: 70, b26: 6 };
 function updateAircraft(dt) {
   const st = MISSION.stage;
-  if (st >= 0 && P.mode !== 'plane') {
+  if (st >= 0 && P.mode !== 'plane' && SCEN === 'omaha') {
     raidT.b26 -= dt; if (raidT.b26 <= 0) { raidT.b26 = 1e9; raidB26(); }
     raidT.p47 -= dt;
     if (raidT.p47 <= 0 && st >= 1) {
@@ -190,6 +248,7 @@ function updateAircraft(dt) {
     if (raidT.fw <= 0 && st >= 1 && st <= 4) { raidT.fw = rnd(110, 170); raidFw190(); }
   }
   for (let i = PLANES.length - 1; i >= 0; i--) { const p = PLANES[i]; if (p.player) continue; p.update(dt); }
+  updateAirDebris(dt);
   updateAA(dt);
 }
 
@@ -295,7 +354,7 @@ function updatePlane(dt) {
   const v = me.vel, V = Math.max(1, v.length()); _vn.copy(v).multiplyScalar(1 / V);
   const m = 6000, S = 27.9, rho = 1.2, q = .5 * rho * V * V;
   const alpha = Math.atan2(-v.dot(_pup), v.dot(_pfw)), beta = v.dot(_prt) / V;
-  let Cl = .15 + 4.8 * alpha; const st = .3;
+  let Cl = (.15 + 4.8 * alpha) * (me.wingLost ? .45 : 1); const st = .3;
   if (Math.abs(alpha) > st) Cl = Math.sign(alpha) * (.15 + 4.8 * st) * Math.max(.25, 1 - (Math.abs(alpha) - st) * 3.5);
   const lift = q * S * Cl, drag = q * S * (.024 + .065 * Cl * Cl);
   const thrust = me.crash ? 0 : PL.throttle * Math.min(32000, 1.6e6 / Math.max(V, 35));
@@ -306,8 +365,12 @@ function updatePlane(dt) {
   // rotazione: comandi + stabilità aerodinamica
   const auth = clamp(V / 110, .25, 1.3);
   // assistenza: con la cloche al centro le ali tornano orizzontali da sole
-  const level = Math.abs(PL.stickX) < .1 && !me.crash ? -clamp(_prt.y, -.7, .7) * 1.4 * auth : 0;
-  const tp = PL.stickY * 1.0 * auth, tr = -PL.stickX * 1.7 * auth + level, ty = -PL.rudder * .5 * auth;
+  // A/D: virata coordinata (l'aereo si inclina di ~45° e tira da solo); cloche al centro: ali livellate
+  const bankR = -Math.asin(clamp(_prt.y, -1, 1)), hold = Math.abs(PL.rudder) > .1;
+  const level = Math.abs(PL.stickX) < .1 && !me.crash ? -(PL.rudder * .8 - bankR) * 2 * auth : 0;
+  let tp = PL.stickY * 1.0 * auth + (hold && !me.crash ? Math.abs(bankR) * .8 * auth : 0), tr = -PL.stickX * 1.7 * auth + level, ty = -PL.rudder * .35 * auth;
+  // ala persa: avvitamento verso il lato mancante
+  if (me.wingLost) { tr += me.wingLost * 3.2; tp -= .4; }
   PL.av.x = lerp(PL.av.x, tp - alpha * 1.8 * auth, dt * 3); PL.av.z = lerp(PL.av.z, tr, dt * 3); PL.av.y = lerp(PL.av.y, ty - beta * 1.2 * auth, dt * 3);
   _aq.setFromEuler(new THREE.Euler(PL.av.x * dt, PL.av.y * dt, PL.av.z * dt, 'YXZ')); me.q.multiply(_aq).normalize();
   me.pos.addScaledVector(v, dt);
@@ -321,12 +384,13 @@ function updatePlane(dt) {
   }
   PL.rearm -= dt; if (PL.bombs < 2 && PL.rearm <= 0) { PL.bombs = 2; feed('Bombe riarmate'); }
   // contraerea e collisione
+  if (me.exploded) { showMsg('Il tuo aereo è esploso in volo!', 3); exitPlane(); P.mode = 'foot'; P.die(); return; }
   const gy = Math.max(Hf(me.pos.x, me.pos.z), me.pos.z > -9 ? WATER_Y : -99);
   if (me.pos.y < gy + 1.5) {
     explode(me.pos.clone().setY(gy + .5), 12, 600, {});
     exitPlane(); P.mode = 'foot'; P.die(); return;
   }
-  if (me.crash && !PL.crashMsg) { PL.crashMsg = true; showMsg('Colpito! Stai precipitando!', 3); }
+  if (me.crash && !PL.crashMsg) { PL.crashMsg = true; showMsg(me.wingLost ? 'Hai perso un\'ala! Stai precipitando!' : 'Colpito! Stai precipitando!', 3); }
   if (Math.abs(me.pos.x) > 2400 || Math.abs(me.pos.z) > 2400 || me.pos.y > 2500) { const back = _a2.set(-me.pos.x, 300 - me.pos.y, -me.pos.z).normalize(); v.lerp(back.multiplyScalar(V), dt * .3); }
   // testa del pilota: si inclina con un ritardo verso le virate, viene schiacciata dalle G e oscilla con le raffiche
   const hr = PL.head || (PL.head = { r: 0, p: 0, y: 0, dy: 0 }), k = Math.min(1, dt * 3);

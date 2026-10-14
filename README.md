@@ -94,6 +94,7 @@ src/main.js             menu, pausa, ciclo di gioco
 ## Scenari
 - **Omaha Beach — 6 giugno 1944**: sbarco, scogliera, bocage, Colleville e la città (Alleati o Asse, campagna o modalità infinita).
 - **Ardenne — Bois Jacques, dicembre 1944**: la Easy Company tiene le buche nel bosco innevato, ferma i Panzer sulla strada e contrattacca fino a Foy. Si sceglie dal menu "Scenario".
+- **Cieli di Normandia — solo aerei**: P-47 su una mappa dedicata di bocage, costa e fiume; intercettare i Fw 190, distruggere una colonna sotto la Flak, bombardare il ponte sulla Douve. A/D per virare, V per la visuale esterna.
 
 ## Crediti texture
 

@@ -101,6 +101,7 @@ const COMM_X = [-122, -42, 44, 122];
 const TOBRUK_X = [-148, -78, -16, 70, 142];
 function H(x, z) {
   if (SCEN === 'ard') return ardH(x, z);
+  if (SCEN === 'air') return airH(x, z);
   let y = H0(x, z);
   if (z > 100) return y;
   if (z < -84 && z > -97 && x > -165 && x < 165) { const d = Math.abs(z - trenchZ(x)); if (d < 1.7) y -= 1.8 * smooth((1.7 - d) / .6); }
@@ -273,6 +274,7 @@ function buildTerrain() {
     const k = j * nx + i, x = xs[i], z = zs[j], y = (Math.abs(x) < 240 && z > -470) || (z < -78 && z > -99 && inBunkerZone(x, z, 1)) ? H(x, z) : Hc(x, z);
     pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z; uv[k * 2] = x / 3; uv[k * 2 + 1] = z / 3;
     const n2 = fbm(x * .03, z * .03, 3);
+    if (SCEN === 'air') { const s = airSplat(x, z, n2); sp.set(s.sp, k * 4); ax[k * 2] = 0; ax[k * 2 + 1] = 0; cl.set(s.cl, k * 3); continue; }
     if (SCEN === 'ard') { const s = ardSplat(x, z, n2); sp.set(s.sp, k * 4); ax[k * 2] = 0; ax[k * 2 + 1] = s.sc; cl.set(s.cl, k * 3); continue; }
     let sa = 0, pe = 0, gr = 0, di = 0, wet = 0, sc = 0, tr = 1, tg = 1, tb = 1;
     if (z > -59.5) {
@@ -1028,6 +1030,7 @@ function buildFleet() {
 // ---------- costruzione ----------
 function buildWorld(step) {
   if (SCEN === 'ard') { buildArdennes(); return; }
+  if (SCEN === 'air') { buildAirMap(); return; }
   genCraters();
   WORLD.villageY = H0(10, -283); CITY.y = H0(0, -575);
   buildHF(); buildHC();

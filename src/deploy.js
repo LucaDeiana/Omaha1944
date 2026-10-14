@@ -6,6 +6,7 @@
 const DEP = { pts: [], sel: 0, wait: 0 };
 function deployPoints() {
   if (SCEN === 'ard') return ardDeployPoints();
+  if (SCEN === 'air') return airDeployPoints();
   const st = MISSION.stage, pts = [];
   if (PT === 'E') {
     pts.push({ label: 'Ultimo punto', sub: 'con i camerati', kind: 'checkpoint', pos: MISSION.checkpoint.pos });

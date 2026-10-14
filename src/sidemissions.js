@@ -115,7 +115,10 @@ function startSide(mode) {
 // IA dei caccia che danno la caccia al giocatore
 function huntPlayer(p, dt) {
   const me = PL.me; if (!me || P.mode !== 'plane') { p.pos.addScaledVector(p.vel, dt); p.orient(p.roll); return; }
-  const lead = me.pos.clone().addScaledVector(me.vel, p.pos.distanceTo(me.pos) / 700);
+  const dist0 = p.pos.distanceTo(me.pos);
+  p.extT = Math.max(0, (p.extT || 0) - dt);
+  if (!p.extT && dist0 < 110) { p.extT = rnd(3, 5); p.extDir = p.vel.clone().normalize().add(new V3(rnd(-.6, .6), rnd(.2, .5), rnd(-.6, .6))).normalize(); }
+  const lead = p.extT ? p.pos.clone().addScaledVector(p.extDir, 500) : me.pos.clone().addScaledVector(me.vel, dist0 / 700);
   const want = lead.sub(p.pos).normalize(), cur = p.vel.clone().normalize();
   const nv = cur.lerp(want, Math.min(1, dt * .9)).normalize();
   const lat = new V3().crossVectors(cur, nv).y;

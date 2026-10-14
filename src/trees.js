@@ -8,6 +8,7 @@ const _tm = new THREE.Matrix4(), _tq = new THREE.Quaternion(), _te = new THREE.E
 
 function treeSpot(x, z) {
   if (SCEN === 'ard') return ardTreeSpot(x, z);
+  if (SCEN === 'air') return airTreeSpot(x, z);
   if (z > -100 || Math.abs(x) > MAPX - 30 || z < -MAPX + 40) return false;
   if (cityIn(x, z) || roadDist(x, z) < 6 || inBunkerZone(x, z, 3)) return false;
   if (z < -235 && z > -345 && x > -125 && x < 120) return false; // Colleville
@@ -18,7 +19,8 @@ function treeSpot(x, z) {
 function buildTrees() {
   const n = Math.round(1400 + Q.particles * 1400);
   const add = (x, z, s) => { if (treeSpot(x, z)) TREES.list.push({ x, z, y: Hf(x, z), s, h: rnd(6, 10) * s, ry: R() * TAU, fall: 0, ax: 0, az: 0, felled: false, kind: R() < .25 ? 1 : 0 }); };
-  if (SCEN === 'ard') { ardTreeList((x, z, s) => { if (treeSpot(x, z)) TREES.list.push({ x, z, y: Hf(x, z), s, h: rnd(12, 19) * s, ry: R() * TAU, fall: 0, ax: 0, az: 0, felled: false, kind: 0 }); }); }
+  if (SCEN === 'air') airTreeList((x, z, s) => { if (treeSpot(x, z)) TREES.list.push({ x, z, y: Hf(x, z), s, h: rnd(7, 11) * s, ry: R() * TAU, fall: 0, ax: 0, az: 0, felled: false, kind: R() < .25 ? 1 : 0 }); });
+  else if (SCEN === 'ard') { ardTreeList((x, z, s) => { if (treeSpot(x, z)) TREES.list.push({ x, z, y: Hf(x, z), s, h: rnd(12, 19) * s, ry: R() * TAU, fall: 0, ax: 0, az: 0, felled: false, kind: 0 }); }); }
   else {
   // boschi a macchie
   for (let k = 0; k < 40 && TREES.list.length < n * .6; k++) {

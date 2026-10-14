@@ -38,7 +38,7 @@ function bindSettings() {
   fillSelect('optDiff', DIFF, SETTINGS.diff);
   const modeVis = () => { $('modeL').style.display = $('optSide').value === 'E' ? '' : 'none'; }; $('optSide').addEventListener('change', modeVis); setTimeout(modeVis, 0); try { $('optName').value = localStorage.getItem('omahaName') || ''; } catch (e) { }
   $('optNet').addEventListener('change', () => $('netNote').classList.toggle('hidden', !$('optNet').checked || netAvailable())); $('optSide').value = SETTINGS.side || 'A'; $('optMap').value = SETTINGS.map || 'omaha';
-  const mapVis = () => { const a = $('optMap').value === 'ard'; $('optSide').parentNode.style.display = a ? 'none' : ''; if (a) $('modeL').style.display = 'none'; else modeVis(); }; $('optMap').addEventListener('change', mapVis); setTimeout(mapVis, 0);
+  const mapVis = () => { const a = $('optMap').value !== 'omaha'; $('optSide').parentNode.style.display = a ? 'none' : ''; if (a) $('modeL').style.display = 'none'; else modeVis(); }; $('optMap').addEventListener('change', mapVis); setTimeout(mapVis, 0);
   const sync = () => {
     for (const [a, b] of [['optSens', 'pSens'], ['optFov', 'pFov'], ['optVol', 'pVol']]) { $(a).value = $(b).value = SETTINGS[{ optSens: 'sens', optFov: 'fov', optVol: 'volume' }[a]]; }
     for (const [a, b, k] of [['optGore', 'pGore', 'gore'], ['optVoices', 'pVoices', 'voices'], ['optDyn', 'pDyn', 'dynres'], ['optFps', 'pFps', 'fps']]) $(a).checked = $(b).checked = SETTINGS[k];
@@ -52,7 +52,7 @@ function bindSettings() {
 }
 
 async function startGame() {
-  SCEN = $('optMap').value; SETTINGS.map = SCEN; SETTINGS.side = $('optSide').value; if (SCEN === 'ard') SETTINGS.side = 'A'; PT = SETTINGS.side; MISSION.endless = PT === 'E' && $('optMode').value === 'e'; try { localStorage.setItem('omahaName', $('optName').value); } catch (e) { }
+  SCEN = $('optMap').value; SETTINGS.map = SCEN; SETTINGS.side = $('optSide').value; if (SCEN !== 'omaha') SETTINGS.side = 'A'; PT = SETTINGS.side; MISSION.endless = PT === 'E' && $('optMode').value === 'e'; try { localStorage.setItem('omahaName', $('optName').value); } catch (e) { }
   SETTINGS.quality = $('optQuality').value; SETTINGS.diff = $('optDiff').value; saveSettings();
   Q = QUALITY[SETTINGS.quality]; D = DIFF[SETTINGS.diff];
   const audioP = initAudio();

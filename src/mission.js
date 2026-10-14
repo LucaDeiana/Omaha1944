@@ -69,6 +69,7 @@ function addBangaloreCrate(x, z) {
 
 function initMission() {
   if (SCEN === 'ard') { initArdennes(); return; }
+  if (SCEN === 'air') { initAirMode(); return; }
   if (PT === 'E') { initAxis(); return; }
   const xs = [-97, -72, -47, -22, 3, 28, 53];
   const per = clamp(Math.floor((Q.allyAlive * .55 - 9) / 6), 4, 10);
@@ -500,7 +501,7 @@ function stallResolve() {
 }
 function setStage(i) {
   MISSION.stage = i; MISSION.stageT = 0; MISSION.markers = []; MISSION.interactables = [];
-  const st = (SCEN === 'ard' ? ARD_STAGES : PT === 'E' ? AXIS_STAGES : STAGES)[i]; MISSION.title = st.title; st.start();
+  const st = (SCEN === 'air' ? AIR_STAGES : SCEN === 'ard' ? ARD_STAGES : PT === 'E' ? AXIS_STAGES : STAGES)[i]; MISSION.title = st.title; st.start();
   if (i > 0) showMsg(st.title, 3);
 }
 function onWireGap(x) {
@@ -662,6 +663,7 @@ function updateMission(dt) {
   MISSION.dt = dt;
   if (NET.client) { updateSubs(dt); for (const v of MISSION.vehicles) v.update(dt); return; }
   if (SCEN === 'ard') { updateArdennes(dt); return; }
+  if (SCEN === 'air') { updateAirMode(dt); return; }
   MISSION.suppT = Math.max(0, (MISSION.suppT || 0) - dt);
   for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || []), ...(WORLD.tobruks || [])]) b.supT = Math.max(0, (b.supT || 0) - dt);
   MISSION.stageT += dt; MISSION.nadeCD -= dt; MISSION.eNadeCD -= dt; MISSION.allyNadeCD -= dt;
