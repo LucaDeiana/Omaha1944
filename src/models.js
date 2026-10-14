@@ -66,16 +66,19 @@ function airfoil(n, t, camber = .02) {
 }
 // ala costruita per sezioni lungo l'apertura (asse x)
 function wingGeo(o) {
-  const secs = [], af = airfoil(o.af || 10, 1, o.camber ?? .02);
-  for (const x of o.stations) {
+  const secs = [], af = airfoil(o.af || 18, 1, o.camber ?? .02), stn = [];
+  for (let i = 0; i < o.stations.length; i++) { stn.push(o.stations[i]); if (i < o.stations.length - 1) stn.push((o.stations[i] + o.stations[i + 1]) / 2); }
+  const col0 = o.color, color = col0 ? p => { const c = col0(p), f = Math.abs(((p.x / 1.25) % 1 + 1) % 1 - .5); return f > .475 ? new THREE.Color(c.r * .82, c.g * .82, c.b * .82) : c; } : null;
+  for (const x of stn) {
     const c = o.chord(x), le = o.le(x), y0 = o.y(x), t = o.thick(x), tw = (o.twist ? o.twist(x) : 0);
     secs.push(af.map(([u, v]) => { const zc = u * c, yc = v * t * c; return new V3(x, y0 + yc * Math.cos(tw) + (zc - c * .25) * Math.sin(tw), le + zc); }));
   }
-  return loftGeo(secs, o.color, true);
+  return loftGeo(secs, color, true);
 }
 function finGeo(o) {
-  const secs = [], af = airfoil(8, 1, 0);
-  for (const y of o.stations) { const c = o.chord(y), le = o.le(y), t = o.thick(y); secs.push(af.map(([u, v]) => new V3(v * t * c, y, le + u * c))); }
+  const secs = [], af = airfoil(14, 1, 0), stn = [];
+  for (let i = 0; i < o.stations.length; i++) { stn.push(o.stations[i]); if (i < o.stations.length - 1) stn.push((o.stations[i] + o.stations[i + 1]) / 2); }
+  for (const y of stn) { const c = o.chord(y), le = o.le(y), t = o.thick(y); secs.push(af.map(([u, v]) => new V3(v * t * c, y, le + u * c))); }
   return loftGeo(secs, o.color, true);
 }
 function stripeCol(v, a, base, alt) { for (let k = 0; k < 5; k++) if (v >= a + k * .46 && v < a + (k + 1) * .46) return k % 2 ? alt[1] : alt[0]; return base; }
@@ -299,9 +302,25 @@ function placeShip(type, x, z, o = {}) {
 //  AEREI
 // ============================================================
 const PLANE_DATA = {};
+// stazioni infittite con interpolazione di Catmull-Rom: profilo longitudinale liscio
+function densify(st, k) {
+  const out = [];
+  for (let i = 0; i < st.length - 1; i++) {
+    const a = st[Math.max(0, i - 1)], b = st[i], c = st[i + 1], d = st[Math.min(st.length - 1, i + 2)];
+    for (let j = 0; j < k; j++) {
+      const t = j / k, t2 = t * t, t3 = t2 * t;
+      out.push(b.map((_, q) => b[q] === undefined ? undefined : .5 * (2 * b[q] + (-a[q] + c[q]) * t + (2 * a[q] - 5 * b[q] + 4 * c[q] - d[q]) * t2 + (-a[q] + 3 * b[q] - 3 * c[q] + d[q]) * t3)));
+    }
+  }
+  out.push(st[st.length - 1]);
+  return out;
+}
+// linee dei pannelli: anelli ogni ~1.1 m e cucitura dorsale, leggermente più scuri
+const panelShade = (c, p, step = 1.1) => { const f = Math.abs(((p.z / step) % 1 + 1) % 1 - .5); return f > .47 || Math.abs(p.x) < .025 ? new THREE.Color(c.r * .8, c.g * .8, c.b * .8) : c; };
 function fuselageGeo(st, n, pTop, colorFn, skip) {
-  const secs = st.map(([z, w, h, cy, pt]) => superRing(w, h, cy, n, pt || pTop, 2.3, z));
-  return loftGeo(secs, colorFn, true, 1, skip);
+  const ds = densify(st.map(s => [s[0], s[1], s[2], s[3], s[4] ?? pTop]), 3);
+  const secs = ds.map(([z, w, h, cy, pt]) => superRing(Math.max(.001, w), Math.max(.001, h), cy, n * 2, pt, 2.3, z));
+  return loftGeo(secs, colorFn ? p => panelShade(colorFn(p), p) : null, true, 1, skip);
 }
 function propBlades(mb, nB, R, chord, tipHex) {
   const af = airfoil(6, 1, .03), st = [.22, .4, .7, 1, 1.3, 1.6, R * .93, R];
@@ -339,6 +358,12 @@ function buildPlaneData(type) {
     for (const sx of [-1, 1]) for (let k = 0; k < 4; k++) { const x = sx * (2.35 + k * .28); mb.add(cylG2(.022, .026, .6, 8), 0x222222, x, -.5 + Math.abs(x) * .085, -1.95 + .1 * Math.abs(x) - .2 - k * .05, PI / 2, 0, 0); }
     for (const sx of [-1, 1]) { mb.add(U.box, 0x333333, sx * 1.6, -.82, -.9, 0, 0, 0, .12, .1, 1.1); mb.add(cylG2(.09, .09, .7, 8), 0x333333, sx * .55, -.6, -3.2, PI / 2, 0, 0); }
     mb.add(cylG2(.02, .02, .7, 6), 0x222222, 0, 1.05, .5, -.35, 0, 0);
+    for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) mb.add(cylG2(.06, .07, .22, 10), 0x2b2622, sx * .98, -.35 - k * .12, -3.55 + k * .08, 0, 0, sx * 1.2);
+    mb.add(cylG2(.012, .012, .8, 6), 0x9a9a9a, -5.4, -.08, -1.7, PI / 2, 0, 0);
+    mb.mat = 'vc'; mb.between(new V3(0, 1.4, .55), new V3(0, .55, 4.5), .006, 0x202020); mb.mat = 'paint';
+    for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) mb.add(U.box, 0x3a3e2a, sx * (3.4 + k * .7), -.5 + (3.4 + k * .7) * .085 + .07, -1.95 + .1 * (3.4 + k * .7) + 2.9 - .26 * (3.4 + k * .7) - .1, 0, 0, 0, .05, .01, .04);
+    // gambe del carrello retratte: portelli
+    for (const sx of [-1, 1]) mb.add(U.box, 0x6b6e68, sx * 1.6, -.75, -1.0, 0, 0, sx * .08, .5, .02, 1.0);
     glass.addG(loftGeo([-1.55, -1.3, -1.0, -.6, -.2, .15, .35].map((z, i) => { const w = [.2, .6, .74, .78, .74, .6, .3][i], h = [.12, .38, .5, .55, .52, .42, .2][i]; const r = []; for (let k = 0; k < 16; k++) { const a = k / 15 * PI; r.push(new V3(Math.cos(a) * w / 2, .62 + Math.sin(a) * h, z)); } return r; }), null, true));
     for (const z of [-1.35, .12]) mb.add(new THREE.TorusGeometry(.37, .014, 6, 18, PI), 0x30331f, 0, .62, z, 0, 0, 0, 1, 1.4, 1);
     d = { prop: { z: -5.85, R: 1.9, n: 4, chord: .28, tip: 0xd8c040 }, decals: [['us', 1.0, .5, 1.6, .2, .58, PI / 2], ['us', 1.0, .5, 1.6, .2, -.58, -PI / 2], ['usw', 1.1, .55, 4.3, -.48, -1.2]], pilot: [0, .9, -.4], eye: [0, 1.0, -.38], guns: [[-2.6, -.3, -2.3], [2.6, -.3, -2.3]] };
@@ -375,6 +400,10 @@ function buildPlaneData(type) {
     const fs = []; for (let y = .6; y <= 4.6; y += .4) fs.push(y);
     mb.addG(finGeo({ stations: fs, chord: y => 3 - (y - .6) * .35, le: y => 6.0 + (y - .6) * .45, thick: () => .11, color: () => OD }));
     glass.addG(loftGeo([-9.0, -8.6, -8.0, -7.6].map((z, i) => superRing([.25, 1.0, 1.55, 1.65][i], [.25, 1.0, 1.55, 1.7][i], -.05, 18, 2, 2, z)), null, true));
+    glass.addG(loftGeo([-.4, -.1, .3, .6].map((z, i) => superRing([.5, 1.1, 1.1, .5][i], [.35, .7, .7, .35][i], 2.0, 18, 2, 2, z)), null, true));
+    mb.add(cylG2(.55, .6, .25, 20), 0x3a3e2a, 0, 1.95, .1); for (const sx of [-1, 1]) mb.add(cylG2(.025, .025, 1.1, 8), 0x1a1a1a, sx * .12, 2.25, -.5, PI / 2, 0, 0);
+    for (const sx of [-1, 1]) mb.add(cylG2(.025, .025, .7, 8), 0x1a1a1a, sx * .1, .5, 9.5, PI / 2, 0, 0);
+    for (const sx of [-1, 1]) { for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; mb.add(cylG2(.05, .06, .3, 8), 0x2b2622, sx * 3.8 + Math.cos(a) * .7, .2 + Math.sin(a) * .74, -2.4, PI / 2, 0, 0); } mb.add(new THREE.TorusGeometry(.66, .06, 8, 28), 0x2a2a2a, sx * 3.8, .2, -3.3); }
     glass.addG(loftGeo([-6.6, -6.0, -5.2].map((z, i) => { const w = [.4, 1.2, .7][i], h = [.15, .45, .25][i]; const r = []; for (let k = 0; k < 14; k++) { const a = k / 13 * PI; r.push(new V3(Math.cos(a) * w / 2, .9 + Math.sin(a) * h, z)); } return r; }), null, true));
     d = { props: [[-3.8, .2, -3.45], [3.8, .2, -3.45]], prop: { R: 2.05, n: 4, chord: .3, tip: 0xd8c040 }, decals: [['us', 1.3, .65, 2.6, .3, .96, PI / 2], ['us', 1.3, .65, 2.6, .3, -.96, -PI / 2]], pilot: [0, .8, -6] };
     propSpinner(prop, .35, .6, 0x222222);

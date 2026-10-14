@@ -256,10 +256,18 @@ function enterPlane() {
   me.g.add(PL.cockpit); PL.cockpit.visible = true; if (me.g.userData.pilot) me.g.userData.pilot.visible = false;
   P.mode = 'plane'; P.dead = false;
   scene.fog.density = FOG_BASE * .45;
-  showMsg('P-47 Thunderbolt — 8 × .50 cal, 2 bombe da 500 lb', 4);
+  PL.ext = false; PL.head = null;
+  showMsg('P-47 Thunderbolt — 8 × .50 cal, 2 bombe da 500 lb · V visuale esterna', 4);
   say(N.radio, 'Qui Thunderbolt Leader: attaccate le posizioni sulla scogliera. Attenti alla contraerea.');
 }
+function togglePlaneView() {
+  PL.ext = !PL.ext; PL.camP = null;
+  if (PL.cockpit) PL.cockpit.visible = !PL.ext;
+  const me = PL.me; if (me && me.g.userData.pilot) me.g.userData.pilot.visible = PL.ext;
+  showMsg(PL.ext ? 'Visuale esterna (V per la cabina)' : 'Visuale in cabina (V per l\'esterno)', 1.5);
+}
 function exitPlane() {
+  PL.ext = false;
   if (PL.me) { PL.me.remove(); PL.me = null; }
   if (PL.cockpit && PL.cockpit.parent) PL.cockpit.parent.remove(PL.cockpit);
   scene.fog.density = FOG_BASE;
@@ -308,14 +316,28 @@ function updatePlane(dt) {
   }
   if (me.crash && !PL.crashMsg) { PL.crashMsg = true; showMsg('Colpito! Stai precipitando!', 3); }
   if (Math.abs(me.pos.x) > 2400 || Math.abs(me.pos.z) > 2400 || me.pos.y > 2500) { const back = _a2.set(-me.pos.x, 300 - me.pos.y, -me.pos.z).normalize(); v.lerp(back.multiplyScalar(V), dt * .3); }
-  // camera in cabina
-  const head = me.g.localToWorld(_a3.set(0, 1.0, -.36));
-  camera.position.copy(head);
-  camera.quaternion.copy(me.q);
-  camera.rotateY(P.lookYaw || 0); camera.rotateX(P.lookPitch || 0);
+  // testa del pilota: si inclina con un ritardo verso le virate, viene schiacciata dalle G e oscilla con le raffiche
+  const hr = PL.head || (PL.head = { r: 0, p: 0, y: 0, dy: 0 }), k = Math.min(1, dt * 3);
+  hr.r = lerp(hr.r, clamp(-PL.av.z * .09, -.22, .22), k); hr.p = lerp(hr.p, clamp(-PL.av.x * .05 - (PL.G - 1) * .012, -.12, .1), k);
+  hr.y = lerp(hr.y, clamp(-PL.av.y * .12, -.1, .1), k); hr.dy = lerp(hr.dy, clamp(-(PL.G - 1) * .018, -.09, .03), k);
   const shake = (PL.gunT > -.05 ? .002 : 0) + Math.min(.004, V * .00002) + P.shake * .01;
+  if (PL.ext) {
+    // visuale esterna: inseguimento morbido dietro e sopra l'aereo
+    const back = _a2.set(0, 2.6, 11).applyQuaternion(me.q), want = _a3.copy(me.pos).add(back);
+    want.y = Math.max(want.y, Hf(want.x, want.z) + 2);
+    PL.camP = PL.camP || want.clone(); PL.camP.lerp(want, Math.min(1, dt * 6));
+    camera.position.copy(PL.camP);
+    _am.lookAt(camera.position, _a2.copy(me.pos).addScaledVector(_pfw, 20), _a1.copy(_pup).lerp(new V3(0, 1, 0), .5));
+    camera.quaternion.setFromRotationMatrix(_am);
+    camera.rotateY(P.lookYaw || 0); camera.rotateX(P.lookPitch || 0);
+  } else {
+    const head = me.g.localToWorld(_a3.set(0, 1.0 + hr.dy, -.36));
+    camera.position.copy(head);
+    camera.quaternion.copy(me.q);
+    camera.rotateY((P.lookYaw || 0) + hr.y); camera.rotateX((P.lookPitch || 0) + hr.p); camera.rotateZ(hr.r);
+  }
   camera.rotateX(rnd(-shake, shake)); camera.rotateY(rnd(-shake, shake));
-  if (Math.abs(camera.fov - 78) > .01) { camera.fov = 78; camera.updateProjectionMatrix(); }
+  const fov = PL.ext ? 70 : 78; if (Math.abs(camera.fov - fov) > .01) { camera.fov = fov; camera.updateProjectionMatrix(); }
   if (PL.eng !== me.eng) PL.eng = me.eng;
   me.eng && me.eng.set(.75 * (.4 + PL.throttle * .6), 0, .75 + PL.throttle * .5);
   P.supp = Math.max(P.supp, clamp((PL.G - 5) / 3, 0, .9));
