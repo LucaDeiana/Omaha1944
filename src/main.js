@@ -61,7 +61,7 @@ async function startGame() {
     await step('Caricamento delle texture fotografiche…'); await preloadPhotos();
     await step('Preparazione del motore grafico e delle texture…'); initEngine(); initFX(); initWeapons(); buildPlaneGeos();
     await step('Generazione della costa normanna…'); buildWorld();
-    await step('Imbarco delle truppe…'); initMission(); initHUD(); initNPC(); initStations(); initInput();
+    await step('Imbarco delle truppe…'); initMission(); initHUD(); initFun(); initNPC(); initStations(); initInput();
     await step('Registrazione dei suoni…'); await audioP;
     if ($('optNet').checked) {
       await step('Connessione al server multiplayer…');
@@ -122,7 +122,7 @@ function frame(now) {
     updateFX(dt);
     updateEngine(dt, P.pos, GAME.time);
     updateAudio(dt);
-    updateHUD(dt);
+    updateHUD(dt); updateFun(dt);
     updateDynRes(raw);
   }
   camera.updateMatrixWorld();
