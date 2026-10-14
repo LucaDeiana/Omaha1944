@@ -7,8 +7,8 @@ const CROWD = { meshes: {}, frustum: new THREE.Frustum(), pm: new THREE.Matrix4(
 const BODIES = [];
 const DOWN = new V3(0, -1, 0);
 const SCOL2 = {
-  A: { jacket: 0x5f5c40, jacket2: 0x504d34, pants: 0x535038, web: 0x9a9068, pack: 0x77714f, helm: 0x4b5034, net: 0x3c4029, skin: 0xb88a6a, legging: 0xa29775, boot: 0x4a3524, belt2: 0x6b6e5a, metal: 0x2a2a2a, wood: 0x6b4423 },
-  E: { jacket: 0x545b54, jacket2: 0x474d48, pants: 0x4b514c, web: 0x23201c, pack: 0x6b6551, helm: 0x4f5650, net: 0x474d48, skin: 0xc9a083, legging: 0x1d1b19, boot: 0x1d1b19, belt2: 0x58625a, metal: 0x252525, wood: 0x5a3a20 },
+  A: { jacket: 0x5f5c40, jacket2: 0x504d34, pants: 0x535038, web: 0x9a9068, pack: 0x77714f, helm: 0x4b5034, net: 0x3c4029, skin: 0xa87c60, legging: 0xa29775, boot: 0x4a3524, belt2: 0x6b6e5a, metal: 0x2a2a2a, wood: 0x6b4423 },
+  E: { jacket: 0x545b54, jacket2: 0x474d48, pants: 0x4b514c, web: 0x23201c, pack: 0x6b6551, helm: 0x4f5650, net: 0x474d48, skin: 0xb58f74, legging: 0x1d1b19, boot: 0x1d1b19, belt2: 0x58625a, metal: 0x252525, wood: 0x5a3a20 },
 };
 const ARM_A = .29, ARM_B = .27;
 const SH_L = new V3(-.172, .43, 0), SH_R = new V3(.172, .43, 0);
@@ -226,7 +226,7 @@ function makeBody(team, kind) {
   const hips = N(); hips.position.y = .95; root.add(hips);
   const spine = N(); spine.position.y = .1; hips.add(spine);
   const neck = N(); neck.position.y = .52; spine.add(neck);
-  const helmet = N(); helmet.position.y = .12; neck.add(helmet);
+  const helmet = N(); helmet.position.y = team === 'A' ? .185 : .2; helmet.scale.setScalar(.93); neck.add(helmet);
   const shL = N(); shL.position.copy(SH_L); spine.add(shL); const elL = N(); elL.position.y = -ARM_A; shL.add(elL);
   const shR = N(); shR.position.copy(SH_R); spine.add(shR); const elR = N(); elR.position.y = -ARM_A; shR.add(elR);
   const gun = N(); spine.add(gun);
@@ -275,6 +275,175 @@ function poseWeapon(b, wAim, wHip, wBoat) {
   solveArm(SH_L, _tL, POLE_L, b.shL, b.elL);
 }
 
+// ---------- corpo unico deformabile (soldati vicini) ----------
+// ogni vertice è legato al suo osso e, vicino all'articolazione, sfuma sull'osso padre
+const SKIN = { tpl: {}, pool: {}, used: {}, mat: null, max: 40, dist: 42 };
+const SKIN_BONES = ['root', 'hips', 'spine', 'neck', 'helmet', 'shL', 'elL', 'shR', 'elR', 'gun', 'hipL', 'knL', 'hipR', 'knR'];
+// nome parte: [osso, osso padre, verso dell'arto (+1 su, -1 giù), mezza ampiezza della sfumatura]
+const SKIN_MAP = { pelvis: [1, 1, 0, 0], chest: [2, 1, 1, .09], head: [3, 2, 1, .04], helmet: [4, 4, 0, 0], uarmL: [5, 2, -1, .07], farmL: [6, 5, -1, .05], uarmR: [7, 2, -1, .07], farmR: [8, 7, -1, .05], weapon: [9, 9, 0, 0], thighL: [10, 1, -1, .08], shinL: [11, 10, -1, .06], thighR: [12, 1, -1, .08], shinR: [13, 12, -1, .06] };
+const skinKey = b => b.team + '|' + b.kind;
+// atlante: colonna del corpo (u 0..0.5, con un quarto ripetuto oltre la cucitura), colonna delle braccia (0.5..0.75), zona neutra per elmetto e arma
+const SKIN_UA = .4, SKIN_UB = .5, SKIN_US = .2, SKIN_W = 1024, SKIN_H = 2048;
+function paintSoldier(team) {
+  const cv = document.createElement('canvas'); cv.width = SKIN_W; cv.height = SKIN_H;
+  const g = cv.getContext('2d'), A = team === 'A';
+  // trama del tessuto: grana fine e fili incrociati
+  const id = g.createImageData(SKIN_W, SKIN_H), d = id.data;
+  for (let y = 0; y < SKIN_H; y++) for (let x = 0; x < SKIN_W; x++) {
+    const i = (y * SKIN_W + x) * 4, w = ((x + (y >> 1)) % 3 === 0 ? -6 : 0) + ((y + (x >> 1)) % 3 === 0 ? -4 : 0);
+    const val = 240 + w + (Math.random() - .5) * 14 + (vnoise(x * .02, y * .02) - .5) * 24;
+    d[i] = d[i + 1] = d[i + 2] = val; d[i + 3] = 255;
+  }
+  g.putImageData(id, 0, 0);
+  g.fillStyle = '#fff'; g.fillRect(SKIN_W * .86, SKIN_H * .92, SKIN_W * .14, SKIN_H * .08);
+  // (u attorno alla parte, altezza in metri) → pixel; ogni tratto è ripetuto oltre la cucitura
+  const SC = c => SKIN_W * (c ? SKIN_US : SKIN_UA), X = (u, c) => (c ? SKIN_UB * SKIN_W : 0) + u * SC(c), Y = y => (1 - y / 2) * SKIN_H;
+  const offs = (u0, u1) => [0, 1, -1].filter(o => Math.max(u0, u1) + o > -.05 && Math.min(u0, u1) + o < 1.3);
+  const line = (u0, y0, u1, y1, c, w, st) => { for (const o of offs(u0, u1)) { g.strokeStyle = st; g.lineWidth = w; g.beginPath(); g.moveTo(X(u0 + o, c), Y(y0)); g.lineTo(X(u1 + o, c), Y(y1)); g.stroke(); } };
+  const blob = (u, y, rx, ry, c, st) => { for (const o of offs(u - rx, u + rx)) { const x = X(u + o, c), gr = g.createRadialGradient(0, 0, 0, 0, 0, 1); gr.addColorStop(0, st); gr.addColorStop(1, st.replace(/[\d.]+\)$/, '0)')); g.save(); g.translate(x, Y(y)); g.scale(rx * SC(c), ry * SKIN_H / 2); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 1, 0, TAU); g.fill(); g.restore(); } };
+  const rect = (u, y, w, h, c, st) => { for (const o of offs(u - w / 2, u + w / 2)) { g.strokeStyle = st; g.lineWidth = 3; g.strokeRect(X(u + o - w / 2, c), Y(y), w * SC(c), h * SKIN_H / 2); } };
+  const seam = 'rgba(40,36,28,.5)', stitch = 'rgba(50,45,35,.35)', wr = 'rgba(30,28,22,.24)', hl = 'rgba(255,255,255,.3)';
+  // pieghe: tratti curvi scuri con un filo di luce sopra
+  const wrinkle = (u, y, c, n, spread, h) => {
+    for (let k = 0; k < n; k++) {
+      const uu = u + (Math.random() - .5) * spread, yy = y + (Math.random() - .5) * h, l = .03 + Math.random() * .06, bend = (Math.random() - .5) * .025;
+      for (const o of offs(uu - l / 2, uu + l / 2)) {
+        const x0 = X(uu - l / 2 + o, c), x1 = X(uu + l / 2 + o, c), xm = (x0 + x1) / 2;
+        g.lineWidth = 2 + Math.random() * 4; g.strokeStyle = wr; g.beginPath(); g.moveTo(x0, Y(yy)); g.quadraticCurveTo(xm, Y(yy + bend), x1, Y(yy + bend * .3)); g.stroke();
+        g.lineWidth = 1.5; g.strokeStyle = hl; g.beginPath(); g.moveTo(x0, Y(yy) - 4); g.quadraticCurveTo(xm, Y(yy + bend) - 4, x1, Y(yy + bend * .3) - 4); g.stroke();
+      }
+    }
+  };
+  // ---- corpo: cuciture laterali, abbottonatura, carré, tasche ----
+  for (const u of [.25, .75]) { line(u, .45, u, 1.0, 0, 3, seam); line(u, 1.08, u, 1.5, 0, 3, seam); }
+  line(.5, 1.12, .5, 1.53, 0, 3, seam); line(.507, 1.12, .507, 1.53, 0, 1, stitch);
+  line(-.05, 1.43, .2, 1.43, 0, 2, stitch); line(.8, 1.43, 1.05, 1.43, 0, 2, stitch);
+  for (const su of [-1, 1]) { rect(.5 + su * .09, 1.47, .1, .1, 0, seam); line(.5 + su * .09 - .05, 1.44, .5 + su * .09 + .05, 1.44, 0, 2, stitch); }
+  if (!A) for (const su of [-1, 1]) { rect(.5 + su * .1, 1.25, .11, .11, 0, seam); line(.5 + su * .1 - .055, 1.22, .5 + su * .1 + .055, 1.22, 0, 2, stitch); }
+  wrinkle(.5, 1.12, 0, 30, .9, .06); wrinkle(.25, 1.36, 0, 10, .06, .12); wrinkle(.75, 1.36, 0, 10, .06, .12);
+  wrinkle(.5, .86, 0, 16, .3, .08); wrinkle(.5, .5, 0, 30, .9, .1); wrinkle(.0, .58, 0, 12, .3, .12);
+  if (!A) { wrinkle(.5, .14, 0, 30, 1, .16); for (let k = 0; k < 4; k++) line(-.05, .1 + k * .045, 1.3, .1 + k * .045 + .01, 0, 3, 'rgba(20,18,15,.25)'); }
+  else { for (let k = 0; k < 7; k++) line(.34, .12 + k * .04, .34, .14 + k * .04, 0, 5, 'rgba(60,50,30,.5)'); wrinkle(.5, .37, 0, 14, .9, .04); }
+  blob(.5, 1.06, .9, .03, 0, 'rgba(0,0,0,.35)'); blob(.5, 1.555, .35, .025, 0, 'rgba(0,0,0,.3)');
+  // ---- volto ----
+  const FY = 1.57, hair = A ? 'rgba(60,40,25,.85)' : 'rgba(150,120,70,.85)';
+  blob(.5, FY + .23, .3, .05, 0, 'rgba(10,6,4,.6)');
+  blob(.5, FY + .005, .2, .035, 0, 'rgba(20,10,6,.5)');
+  blob(.5, FY + .045, .13, .035, 0, A ? 'rgba(60,60,70,.32)' : 'rgba(80,70,60,.25)');
+  for (const su of [-1, 1]) {
+    const eu = .5 + su * .058;
+    blob(eu, FY + .145, .045, .02, 0, 'rgba(70,40,28,.45)');
+    blob(eu, FY + .143, .018, .005, 0, 'rgba(235,225,210,.55)');
+    blob(eu - su * .003, FY + .143, .007, .005, 0, 'rgba(35,24,16,.9)');
+    line(eu - .02, FY + .15, eu + .02, FY + .149, 0, 2, 'rgba(40,24,16,.6)');
+    line(eu - .026 * su, FY + .162, eu + .028 * su, FY + .167, 0, 4, A ? 'rgba(70,45,25,.6)' : 'rgba(110,85,50,.55)');
+    blob(.5 + su * .09, FY + .1, .05, .03, 0, 'rgba(170,80,60,.1)');
+    line(.5 + su * .035, FY + .115, .5 + su * .052, FY + .072, 0, 2, 'rgba(80,45,30,.2)');
+    blob(.5 + su * .25, FY + .13, .03, .03, 0, 'rgba(90,40,30,.35)');
+    blob(.5 + su * .2, FY + .19, .12, .05, 0, hair);
+  }
+  blob(0, FY + .19, .25, .07, 0, hair);
+  for (const su of [-1, 1]) blob(.5 + su * .16, FY + .1, .08, .09, 0, 'rgba(60,35,25,.22)'); // volume: lati del viso in ombra
+  blob(.5, FY + .125, .012, .025, 0, 'rgba(255,240,230,.25)'); blob(.5, FY + .097, .02, .008, 0, 'rgba(70,30,20,.45)');
+  line(.475, FY + .064, .525, FY + .064, 0, 2, 'rgba(90,40,35,.5)'); blob(.5, FY + .056, .025, .006, 0, 'rgba(150,80,70,.25)');
+  // ---- braccia: cucitura, pieghe al gomito, polsino, nocche ----
+  line(.0, .9, .0, 1.5, 1, 3, seam); line(1, .9, 1, 1.5, 1, 3, seam); line(.75, .95, .75, 1.48, 1, 2, stitch);
+  wrinkle(.5, 1.2, 1, 24, 1, .07); wrinkle(.25, 1.42, 1, 8, .2, .06); line(-.05, .985, 1.3, .985, 1, 3, seam);
+  for (let k = 0; k < 4; k++) line(.38 + k * .08, .855, .38 + k * .08, .875, 1, 2, 'rgba(90,50,40,.4)');
+  const t = new THREE.CanvasTexture(cv); t.anisotropy = 4; t.encoding = THREE.sRGBEncoding;
+  return t;
+}
+function skinMaterial(team) {
+  if (!SKIN.mat) SKIN.mat = {};
+  if (SKIN.mat[team]) return SKIN.mat[team];
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: paintSoldier(team), normalMap: TEX.fabric.normal, roughness: .93, metalness: 0 });
+  m.normalScale.set(.55, .55); m.skinning = true;
+  m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('texture2D( normalMap, vUv )', 'texture2D( normalMap, vUv*vec2(22.,11.) )'); };
+  return SKIN.mat[team] = m;
+}
+function skinTemplate(b) {
+  const key = skinKey(b); let t = SKIN.tpl[key]; if (t) return t;
+  const r = makeBody(b.team, b.kind); BODIES.pop();
+  r.root.updateMatrixWorld(true);
+  const parts = [], ranges = [], white = new THREE.Color(1, 1, 1);
+  for (const p of r.parts) { const g = buildPartGeo(p.key, true); parts.push({ g, m: p.node.matrixWorld.clone(), c: white, vc: true, uvs: 1 }); ranges.push([p.name, g.attributes.position.count, p.node.matrixWorld.clone().invert()]); }
+  const geo = mergeGeos(parts), n = geo.attributes.position.count, si = new Float32Array(n * 4), sw = new Float32Array(n * 4), pa = geo.attributes.position, v = new V3();
+  let o = 0;
+  for (const [name, cnt, inv] of ranges) {
+    const [bone, par, dir, hw] = SKIN_MAP[name];
+    for (let i = o; i < o + cnt; i++) {
+      si[i * 4] = bone; si[i * 4 + 1] = par;
+      let w = 1;
+      if (hw) { v.fromBufferAttribute(pa, i).applyMatrix4(inv); w = clamp(.5 + v.y * dir / (2 * hw), 0, 1); w = w * w * (3 - 2 * w); }
+      sw[i * 4] = w; sw[i * 4 + 1] = 1 - w;
+    }
+    o += cnt;
+  }
+  // coordinate di texture: proiezione cilindrica attorno all'asse di ogni parte (davanti = centro)
+  const ul = new Float32Array(n), vy = new Float32Array(n), cl = new Float32Array(n);
+  o = 0;
+  for (let pi = 0; pi < ranges.length; pi++) {
+    const [name, cnt] = ranges[pi], e = parts[pi].m.elements, arm = name[0] === 'u' || name[0] === 'f', flat = name === 'helmet' || name === 'weapon';
+    const cx = name === 'chest' || name === 'head' || name === 'pelvis' ? 0 : e[12], cz = arm ? e[14] : 0;
+    for (let i = o; i < o + cnt; i++) {
+      v.fromBufferAttribute(pa, i);
+      ul[i] = .5 + Math.atan2(v.x - cx, -(v.z - cz)) / TAU; vy[i] = v.y; cl[i] = flat ? 2 : arm ? 1 : 0;
+    }
+    o += cnt;
+  }
+  geo.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new THREE.BufferAttribute(sw, 4));
+  geo.setAttribute('_ul', new THREE.BufferAttribute(ul, 1)); geo.setAttribute('_vy', new THREE.BufferAttribute(vy, 1)); geo.setAttribute('_cl', new THREE.BufferAttribute(cl, 1));
+  const g2 = geo.toNonIndexed(), m2 = g2.attributes.position.count, U2 = g2.attributes._ul.array, V2 = g2.attributes._vy.array, C2 = g2.attributes._cl.array, uv = g2.attributes.uv.array;
+  // i triangoli a cavallo della cucitura posteriore prendono la copia ripetuta oltre u = 1
+  for (let i = 0; i < m2; i += 3) {
+    if (Math.max(U2[i], U2[i + 1], U2[i + 2]) - Math.min(U2[i], U2[i + 1], U2[i + 2]) > .5) for (let k = 0; k < 3; k++) if (U2[i + k] < .5) U2[i + k] += 1;
+    for (let k = i; k < i + 3; k++) {
+      const cc = C2[k];
+      uv[k * 2] = cc === 2 ? .93 : cc === 1 ? SKIN_UB + U2[k] * SKIN_US : U2[k] * SKIN_UA;
+      uv[k * 2 + 1] = cc === 2 ? .03 : V2[k] / 2;
+    }
+  }
+  g2.deleteAttribute('_ul'); g2.deleteAttribute('_vy'); g2.deleteAttribute('_cl'); geo.dispose();
+  g2.computeBoundingSphere();
+  const inv = SKIN_BONES.map(k => r[k].matrixWorld.clone().invert());
+  t = SKIN.tpl[key] = { geo: g2, inv };
+  return t;
+}
+function skinMesh(key, t) {
+  const pool = SKIN.pool[key] || (SKIN.pool[key] = []), u = SKIN.used[key] || 0;
+  SKIN.used[key] = u + 1;
+  if (pool[u]) return pool[u];
+  const m = new THREE.SkinnedMesh(t.geo, skinMaterial(key[0]));
+  m.frustumCulled = false; m.matrixAutoUpdate = false; m.castShadow = Q.shadows > 0; m.receiveShadow = true;
+  m.bindMode = 'detached';
+  scene.add(m); pool[u] = m; return m;
+}
+const _skc = [];
+function skinCandidates() {
+  _skc.length = 0;
+  if (!Q.lod) return;
+  const cp = camera.position, d2m = SKIN.dist * SKIN.dist;
+  for (const b of BODIES) {
+    b._sk = false;
+    if (b.removed || b.rag || b.parts.some(p => p.hidden)) continue;
+    const e = b.root.matrixWorld.elements, dx = e[12] - cp.x, dz = e[14] - cp.z, d2 = dx * dx + dz * dz;
+    if (d2 > d2m) continue;
+    _cs.center.set(e[12], e[13] + .9, e[14]); _cs.radius = 1.6;
+    if (!CROWD.frustum.intersectsSphere(_cs) && d2 > 64) continue;
+    b._d2 = d2; _skc.push(b);
+  }
+  _skc.sort((a, c) => a._d2 - c._d2);
+  if (_skc.length > SKIN.max) _skc.length = SKIN.max;
+  for (const k in SKIN.used) SKIN.used[k] = 0;
+  for (const b of _skc) {
+    b._sk = true; b.root.updateMatrixWorld(true);
+    const t = skinTemplate(b), m = skinMesh(skinKey(b), t);
+    if (!b.skel) b.skel = new THREE.Skeleton(SKIN_BONES.map(k => b[k]), t.inv);
+    m.skeleton = b.skel; m.visible = true;
+  }
+  for (const k in SKIN.pool) { const pool = SKIN.pool[k]; for (let i = SKIN.used[k] || 0; i < pool.length; i++) pool[i].visible = false; }
+}
+
 // ---------- aggiornamento istanze ----------
 const _cs = new THREE.Sphere(), _cc = new THREE.Color();
 function updateCrowd() {
@@ -283,9 +452,11 @@ function updateCrowd() {
   CROWD.frustum.setFromProjectionMatrix(CROWD.pm);
   for (const k in CROWD.meshes) { const m = CROWD.meshes[k]; m.n[0] = m.n[1] = 0; }
   const cp = camera.position, lod2 = Q.lod * Q.lod;
+  skinCandidates();
   for (let i = BODIES.length - 1; i >= 0; i--) {
     const b = BODIES[i];
     if (b.removed) { BODIES.splice(i, 1); continue; }
+    if (b._sk) continue;
     const rp = b.rag ? b.rag.p[0] : b.root.position;
     _cs.center.set(rp.x, rp.y + .9, rp.z); _cs.radius = 1.6;
     const near = Q.shadows && Math.abs(rp.x - cp.x) < Q.shadowDist * .6 && Math.abs(rp.z - cp.z) < Q.shadowDist * .6;
