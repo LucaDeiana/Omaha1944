@@ -348,7 +348,7 @@ function updatePlane(dt) {
   PL.stickX *= Math.exp(-3 * dt); PL.stickY *= Math.exp(-3 * dt);
   if (KEYS.KeyW) PL.throttle = Math.min(1, PL.throttle + dt * .4);
   if (KEYS.KeyS) PL.throttle = Math.max(0, PL.throttle - dt * .4);
-  PL.rudder = lerp(PL.rudder, (KEYS.KeyD ? 1 : 0) - (KEYS.KeyA ? 1 : 0), dt * 4);
+  PL.rudder = lerp(PL.rudder, (KEYS.KeyD ? 1 : 0) - (KEYS.KeyA ? 1 : 0), dt * 6); // A/D: alettoni (rollio)
   if (me.crash) { PL.stickX = PL.stickY = 0; }
   _pfw.set(0, 0, -1).applyQuaternion(me.q); _pup.set(0, 1, 0).applyQuaternion(me.q); _prt.set(1, 0, 0).applyQuaternion(me.q);
   const v = me.vel, V = Math.max(1, v.length()); _vn.copy(v).multiplyScalar(1 / V);
@@ -365,13 +365,13 @@ function updatePlane(dt) {
   // rotazione: comandi + stabilità aerodinamica
   const auth = clamp(V / 110, .25, 1.3);
   // assistenza: con la cloche al centro le ali tornano orizzontali da sole
-  // A/D: virata coordinata (l'aereo si inclina di ~45° e tira da solo); cloche al centro: ali livellate
-  const bankR = -Math.asin(clamp(_prt.y, -1, 1)), hold = Math.abs(PL.rudder) > .1;
-  const level = Math.abs(PL.stickX) < .1 && !me.crash ? -(PL.rudder * .8 - bankR) * 2 * auth : 0;
-  let tp = PL.stickY * 1.0 * auth + (hold && !me.crash ? Math.abs(bankR) * .8 * auth : 0), tr = -PL.stickX * 1.7 * auth + level, ty = -PL.rudder * .35 * auth;
+  // A/D ruotano l'aereo sul proprio asse (alettoni); a comandi rilasciati le ali tornano orizzontali
+  const bankR = -Math.asin(clamp(_prt.y, -1, 1)), roll = clamp(PL.stickX + PL.rudder, -1, 1);
+  const level = Math.abs(roll) < .1 && !me.crash ? bankR * 2 * auth : 0;
+  let tp = PL.stickY * 1.0 * auth, tr = -roll * 1.9 * auth + level, ty = 0;
   // ala persa: avvitamento verso il lato mancante
   if (me.wingLost) { tr += me.wingLost * 3.2; tp -= .4; }
-  PL.av.x = lerp(PL.av.x, tp - alpha * 1.8 * auth, dt * 3); PL.av.z = lerp(PL.av.z, tr, dt * 3); PL.av.y = lerp(PL.av.y, ty - beta * 1.2 * auth, dt * 3);
+  PL.av.x = lerp(PL.av.x, tp - alpha * 1.8 * auth, dt * 3); PL.av.z = lerp(PL.av.z, tr, dt * 5.5); PL.av.y = lerp(PL.av.y, ty - beta * 1.2 * auth, dt * 3);
   _aq.setFromEuler(new THREE.Euler(PL.av.x * dt, PL.av.y * dt, PL.av.z * dt, 'YXZ')); me.q.multiply(_aq).normalize();
   me.pos.addScaledVector(v, dt);
   me.g.updateMatrixWorld();

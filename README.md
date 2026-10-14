@@ -24,7 +24,7 @@ Fai doppio clic su `Avvia Omaha.bat` (oppure apri `index.html` in Chrome o Edge)
 | Panzer | W/S/A/D guida · mouse torretta · click sx cannone · F mitragliatrice · click dx ottica · E esci |
 | V | Colpo con il calcio del fucile |
 | B | Cambia ruolo (fanteria / corazzata / aereo) |
-| Aereo | mouse = cloche · W/S manetta · A/D timone · click sx mitragliatrici · click dx o F bomba |
+| Aereo | mouse = cloche · W/S manetta · A/D rollio (alettoni) · V visuale esterna · click sx mitragliatrici · click dx o F bomba |
 | Esc | Pausa |
 
 ## Ruoli (tasto B o dopo la morte)
@@ -94,7 +94,7 @@ src/main.js             menu, pausa, ciclo di gioco
 ## Scenari
 - **Omaha Beach — 6 giugno 1944**: sbarco, scogliera, bocage, Colleville e la città (Alleati o Asse, campagna o modalità infinita).
 - **Ardenne — Bois Jacques, dicembre 1944**: la Easy Company tiene le buche nel bosco innevato, ferma i Panzer sulla strada e contrattacca fino a Foy. Si sceglie dal menu "Scenario".
-- **Cieli di Normandia — solo aerei**: P-47 su una mappa dedicata di bocage, costa e fiume; intercettare i Fw 190, distruggere una colonna sotto la Flak, bombardare il ponte sulla Douve. A/D per virare, V per la visuale esterna.
+- **Cieli di Normandia — solo aerei**: P-47 su una mappa dedicata di bocage, costa e fiume; intercettare i Fw 190, distruggere una colonna sotto la Flak, bombardare il ponte sulla Douve. A/D per rollare e mouse per tirare in virata, V per la visuale esterna.
 
 ## Crediti texture
 
