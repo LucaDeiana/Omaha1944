@@ -113,7 +113,7 @@ function startSide(mode) {
   showMsg(def.title, 3); say(N.radio, def.brief);
 }
 // IA dei caccia che danno la caccia al giocatore
-const _hUp = new V3(0, 1, 0);
+const _hUp = new V3(0, 1, 0), _hTo = new V3();
 function huntPlayer(p, dt) {
   // bersaglio: il bombardiere assegnato (scorta) oppure il giocatore; senza bersaglio gira in cerchio sul posto e aspetta
   const me = PL.me, ht = p.huntTarget && p.huntTarget.alive && !p.huntTarget.crash ? p.huntTarget : null;
@@ -129,7 +129,9 @@ function huntPlayer(p, dt) {
   p.roll = lerp(p.roll, clamp(-lat * 40, -1.3, 1.3), dt * 2);
   p.vel.copy(nv).multiplyScalar(165); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll);
   p.fireT -= dt;
-  if (dist0 < 500 && cur.dot(want) > .985 && p.fireT <= 0) {
+  // spara solo se il muso punta davvero il bersaglio (non durante il disimpegno)
+  const toT = _hTo.subVectors(tgt.pos, p.pos).normalize();
+  if (!p.extT && dist0 < 500 && cur.dot(toT) > .985 && p.fireT <= 0) {
     p.fireT = .07;
     const o = p.pos.clone().addScaledVector(cur, 4), e = tgt.pos.clone().add(new V3(rnd(-6, 6), rnd(-6, 6), rnd(-6, 6)));
     fxTracer(o, e, 1.4); sfxShot('mg42', o);
