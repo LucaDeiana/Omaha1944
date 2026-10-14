@@ -1047,6 +1047,17 @@ function buildWorld(step) {
   for (const x of BUNKER_XX) makeBunker(x, true);
   makeFlak(-5, -194); makeFlak(48, -196);
   buildCity(); buildTrees(); buildTobruks();
+  applyWeather();
+}
+// meteo estratto a ogni partita: cielo coperto, nebbia fitta, pioggia o schiarite
+const WEATHER = { kind: 'coperto' };
+function applyWeather() {
+  const r = R();
+  WEATHER.kind = r < .35 ? 'coperto' : r < .55 ? 'nebbia' : r < .8 ? 'pioggia' : 'schiarite';
+  if (WEATHER.kind === 'nebbia') { FOG_K = 1.7; FOG_COL.multiplyScalar(1.04); }
+  else if (WEATHER.kind === 'pioggia') { FOG_K = 1.3; FOG_COL.multiplyScalar(.9); if (sun) sun.intensity *= .75; buildSnowfall(true); }
+  else if (WEATHER.kind === 'schiarite') { FOG_K = .75; if (sun) sun.intensity *= 1.15; }
+  scene.fog.color.copy(FOG_COL); scene.fog.density = FOG_BASE * FOG_K;
 }
 function buildTobruks() {
   WORLD.tobruks = [];

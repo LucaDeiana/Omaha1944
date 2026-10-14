@@ -12,7 +12,7 @@ function enterNaval() {
   showMsg('USS Texas — torretta B, cannoni da 14 pollici', 4);
   say(N.radio, 'Qui USS Texas: torretta B pronta. Inquadrate le postazioni sulla scogliera e fate fuoco.');
 }
-function exitNaval() { scene.fog.density = FOG_BASE; }
+function exitNaval() { scene.fog.density = FOG_BASE * FOG_K; }
 function updateNaval(dt) {
   const T = WORLD.texas;
   camera.position.copy(T.cam);

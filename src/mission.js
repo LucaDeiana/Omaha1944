@@ -664,6 +664,7 @@ function updateMission(dt) {
   if (NET.client) { updateSubs(dt); for (const v of MISSION.vehicles) v.update(dt); return; }
   if (SCEN === 'ard') { updateArdennes(dt); return; }
   if (SCEN === 'air') { updateAirMode(dt); return; }
+  if (ARD.snow) updateSnowfall(dt);
   MISSION.suppT = Math.max(0, (MISSION.suppT || 0) - dt);
   for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || []), ...(WORLD.tobruks || [])]) b.supT = Math.max(0, (b.supT || 0) - dt);
   MISSION.stageT += dt; MISSION.nadeCD -= dt; MISSION.eNadeCD -= dt; MISSION.allyNadeCD -= dt;

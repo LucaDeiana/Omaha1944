@@ -190,6 +190,12 @@ function updatePlayer(dt) {
   P.swim = P.depth > 1.4;
   if (P.depth > .15) sp *= clamp(1 - P.depth * .42, .4, 1);
   if (P.swim) { sp = 1.9; P.stance = 0; }
+  // ferito: zoppica (passo irregolare e più lento) e la mira trema
+  if (P.hp < 45 && !P.downed && !P.dead) {
+    const w = 1 - P.hp / 45; sp *= 1 - w * .38 * (.55 + .45 * Math.abs(Math.sin(P.bobPh * .5)));
+    if (P.hp < 25) P.sprint = false;
+    P.kickY += Math.sin(GAME.time * 1.9) * .0009 * w; P.kickP += Math.sin(GAME.time * 2.7 + 1) * .0007 * w;
+  }
   P.stamina = clamp(P.stamina + (P.sprint && (f || st) ? -.16 : .11) * dt, 0, 1);
   const sy = Math.sin(P.yaw), cy = Math.cos(P.yaw);
   let mx = 0, mz = 0;

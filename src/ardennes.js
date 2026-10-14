@@ -85,22 +85,24 @@ function buildArdennes() {
   addTiled(mb, 120);
   buildTrees();
   // atmosfera invernale: nebbia lattiginosa, sole basso e debole
-  FOG_COL.setRGB(.78, .8, .84); scene.fog.color.copy(FOG_COL); scene.fog.density = FOG_BASE * 1.35;
+  FOG_COL.setRGB(.78, .8, .84); scene.fog.color.copy(FOG_COL); FOG_K = 1.35; scene.fog.density = FOG_BASE * FOG_K;
   if (sun) sun.intensity *= .7;
   buildSnowfall();
 }
 // fiocchi di neve in un volume che segue la camera
-function buildSnowfall() {
-  const n = Math.round(2500 + Q.particles * 3500), pos = new Float32Array(n * 3);
+function buildSnowfall(rain) {
+  ARD.rain = !!rain;
+  const n = Math.round((rain ? 3500 : 2500) + Q.particles * 3500), pos = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) { pos[i * 3] = rnd(-40, 40); pos[i * 3 + 1] = rnd(-5, 25); pos[i * 3 + 2] = rnd(-40, 40); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const m = new THREE.PointsMaterial({ color: 0xffffff, size: .09, transparent: true, opacity: .85, depthWrite: false, fog: true });
+  const m = rain ? new THREE.PointsMaterial({ color: 0xb4bec8, size: .05, transparent: true, opacity: .55, depthWrite: false, fog: true }) : new THREE.PointsMaterial({ color: 0xffffff, size: .09, transparent: true, opacity: .85, depthWrite: false, fog: true });
   const pts = new THREE.Points(g, m); pts.frustumCulled = false; scene.add(pts); ARD.snow = pts;
 }
 function updateSnowfall(dt) {
   const s = ARD.snow; if (!s) return; const a = s.geometry.attributes.position.array, cp = camera.position, t = GAME.time;
   for (let i = 0; i < a.length; i += 3) {
-    a[i + 1] -= dt * (1.1 + (i % 7) * .08); a[i] += Math.sin(t * .7 + i) * dt * .25;
+    if (ARD.rain) { a[i + 1] -= dt * (16 + (i % 5)); a[i] += dt * 1.5; if (a[i] > 40) a[i] -= 80; }
+    else { a[i + 1] -= dt * (1.1 + (i % 7) * .08); a[i] += Math.sin(t * .7 + i) * dt * .25; }
     if (a[i + 1] < -5) a[i + 1] += 30;
   }
   s.geometry.attributes.position.needsUpdate = true;

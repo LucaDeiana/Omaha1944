@@ -352,7 +352,7 @@ function exitPlane() {
   PL.ext = false; if ($("planeAim")) $("planeAim").style.display = "none"; if ($('mouseAim')) $('mouseAim').style.display = 'none';
   if (PL.me) { PL.me.remove(); PL.me = null; }
   if (PL.cockpit && PL.cockpit.parent) PL.cockpit.parent.remove(PL.cockpit);
-  scene.fog.density = FOG_BASE;
+  scene.fog.density = FOG_BASE * FOG_K;
 }
 const _pfw = new V3(), _pup = new V3(), _prt = new V3(), _F = new V3(), _vn = new V3(), _aqi = new THREE.Quaternion(), _aimD = new V3();
 // direzione del punto di mira dell'istruttore (angoli assoluti mossi dal mouse)
