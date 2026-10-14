@@ -196,12 +196,14 @@ function leaveTank() {
 // il mouse sposta il punto di mira; torretta e cannone lo raggiungono con la velocità del brandeggio idraulico
 const TANK_TRAVERSE = .55, TANK_ELEV = .3;
 function tankMouse(mx, my) { const t = TANKS.me; if (!t) return; const s = .0021 * SETTINGS.sens * (camera.fov / 60); t.ayaw -= mx * s; t.apitch = clamp(t.apitch - my * s, -.14, .35); }
+const _am2 = new THREE.Matrix4();
 function updateTankMode(dt) {
   const t = TANKS.me; if (!t || !t.alive) { leaveTank(); return; }
   P.pos.copy(t.pos); P.pos.y += 1.4;
   t.tyaw = angLerpMax(t.tyaw, t.ayaw, dt * TANK_TRAVERSE); t.gpitch += clamp(t.apitch - t.gpitch, -dt * TANK_ELEV, dt * TANK_ELEV);
   const ay = t.yaw + (P.adsHeld ? t.tyaw : t.ayaw), zoom = P.adsHeld;
-  if (zoom) { const o = t.muzzle(new V3()).addScaledVector(t.aimDir(new V3()), -3.8); o.y += .35; camera.position.copy(o); camera.rotation.set(t.gpitch + t.g.rotation.x * 0, ay, 0, 'YXZ'); }
+  // mirino del cannoniere: sull'asse della canna e orientato come la canna (anche con lo scafo inclinato)
+  if (zoom) { t.g.updateMatrixWorld(true); camera.position.set(0, .2, -2.3).applyMatrix4(t.gg.matrixWorld); camera.quaternion.setFromRotationMatrix(_am2.extractRotation(t.gg.matrixWorld)); }
   else { camera.position.set(t.pos.x + Math.sin(ay) * 10, t.pos.y + 5.2, t.pos.z + Math.cos(ay) * 10); camera.rotation.set(t.apitch - .2, ay, 0, 'YXZ'); }
   camera.position.x += rnd(-1, 1) * P.shake * .05; camera.position.y += rnd(-1, 1) * P.shake * .05; P.shake = Math.max(0, P.shake - dt * 2);
   const fov = zoom ? 18 : 70; if (Math.abs(camera.fov - fov) > .1) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 8)); camera.updateProjectionMatrix(); }
