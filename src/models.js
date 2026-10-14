@@ -420,7 +420,7 @@ function propSpinner(mb, r, len, hex) {
 function makePlaneModel(type) {
   const d = buildPlaneData(type), I = insignia(), g = new THREE.Group();
   for (const k in d.paint) { const m = new THREE.Mesh(d.paint[k], MAT[k] || MAT.paint); m.castShadow = true; g.add(m); }
-  const gl = new THREE.Mesh(d.glass, I.glass); gl.renderOrder = 2; g.add(gl);
+  const gl = new THREE.Mesh(d.glass, I.glass); gl.renderOrder = 2; g.add(gl); g.userData.glass = gl;
   const props = [];
   for (const pp of d.props || [[0, 0, d.prop.z]]) {
     const pg = new THREE.Group(); pg.position.set(pp[0], pp[1], pp[2]);

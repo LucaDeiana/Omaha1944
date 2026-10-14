@@ -24,7 +24,7 @@ Fai doppio clic su `Avvia Omaha.bat` (oppure apri `index.html` in Chrome o Edge)
 | Panzer | W/S/A/D guida · mouse torretta · click sx cannone · F mitragliatrice · click dx ottica · E esci |
 | V | Colpo con il calcio del fucile |
 | B | Cambia ruolo (fanteria / corazzata / aereo) |
-| Aereo | mouse = cloche · W/S manetta · A/D rollio (alettoni) · V visuale esterna · click sx mitragliatrici · click dx o F bomba |
+| Aereo | mouse = direzione (istruttore; M per la cloche manuale) · click sx mitragliatrici · click dx zoom · Spazio o F bomba · A/D rollio · W/S manetta · V visuale |
 | Esc | Pausa |
 
 ## Ruoli (tasto B o dopo la morte)

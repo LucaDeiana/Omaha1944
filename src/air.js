@@ -167,7 +167,7 @@ const AIR_STAGES = [
     update(dt) {
       const b = AIRM.bridge;
       MISSION.markers = b.down ? [] : [{ pos: new V3(b.x, b.y + 8, b.z), label: 'Ponte' }];
-      MISSION.objText = b.down ? 'Ponte distrutto' : `Bombarda il ponte — ${b.hp} colpi necessari (F o tasto destro per sganciare)`;
+      MISSION.objText = b.down ? 'Ponte distrutto' : `Bombarda il ponte — ${b.hp} colpi necessari (Spazio per sganciare)`;
       AIRM.harassT -= dt; if (AIRM.harassT <= 0 && PL.me) { AIRM.harassT = rnd(50, 80); spawnHunter(); }
       airCountKills();
       once('airWin', b.down, () => { say('Radio', 'Ponte abbattuto! Le colonne tedesche sono tagliate fuori. Rientrate alla base.'); addScore(1000, 'Missione compiuta', '#9fe08a'); banner('PONTE DISTRUTTO', 'Cieli di Normandia — missione compiuta'); after(10, () => GAME.end(true)); });

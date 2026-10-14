@@ -261,8 +261,8 @@ function buildCockpit() {
   const dk = 0x2c3122, gr = 0x3e4232;
   for (const sx of [-1, 1]) { mb.add(U.box, dk, sx * .4, .45, -.65, 0, 0, 0, .03, .8, 1.6); mb.add(U.box, gr, sx * .37, .62, -.6, 0, 0, 0, .08, .08, 1.1); mb.add(U.box, 0x222222, sx * .37, .7, -.5, 0, 0, 0, .05, .04, .5); mb.add(U.box, 0x2a2c26, sx * .4, .86, -.65, 0, 0, 0, .06, .04, 1.6); }
   mb.add(U.box, dk, 0, .05, -.65, 0, 0, 0, .8, .04, 1.6);
-  mb.add(U.box, 0x2a2c26, 0, .88, -1.38, -.35, 0, 0, .8, .05, .22);
-  mb.add(U.box, dk, 0, .42, -1.46, 0, 0, 0, .8, .9, .05); mb.add(U.box, dk, 0, .3, .2, 0, 0, 0, .8, .6, .05);
+  mb.add(U.box, 0x2a2c26, 0, .8, -1.4, -.35, 0, 0, .8, .05, .18);
+  mb.add(U.box, dk, 0, .38, -1.46, 0, 0, 0, .8, .8, .05); mb.add(U.box, dk, 0, .3, .2, 0, 0, 0, .8, .6, .05);
   mb.add(cylG2(.025, .03, .55, 8), 0x333333, 0, .08, -.62, -.25, 0, 0); mb.add(U.box, 0x222222, 0, .37, -.68, 0, 0, 0, .06, .1, .05);
   mb.add(U.box, 0x333333, -.4, .38, -.75, .3, 0, 0, .04, .2, .04); mb.add(U.sph, 0xaa2222, -.4, .48, -.78, 0, 0, 0, .025, .025, .025);
   mb.add(U.box, 0x6a5a3a, 0, .22, -.15, 0, 0, 0, .55, .08, .5); mb.add(U.box, 0x6a5a3a, 0, .55, .12, -.15, 0, 0, .55, .7, .08);
@@ -272,7 +272,7 @@ function buildCockpit() {
   const cv = document.createElement('canvas'); cv.width = 512; cv.height = 192;
   const tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding;
   const panel = new THREE.Mesh(new THREE.PlaneGeometry(.84, .315), new THREE.MeshStandardMaterial({ map: tex, roughness: .7 }));
-  panel.position.set(0, .66, -1.4); panel.rotation.x = -.18; g.add(panel);
+  panel.position.set(0, .58, -1.4); panel.rotation.x = -.18; g.add(panel);
   const sc = document.createElement('canvas'); sc.width = sc.height = 128; const sg = sc.getContext('2d');
   sg.strokeStyle = 'rgba(255,170,70,1)'; sg.lineWidth = 3; sg.beginPath(); sg.arc(64, 64, 50, 0, TAU); sg.stroke();
   sg.beginPath(); sg.moveTo(64, 20); sg.lineTo(64, 52); sg.moveTo(64, 76); sg.lineTo(64, 108); sg.moveTo(20, 64); sg.lineTo(52, 64); sg.moveTo(76, 64); sg.lineTo(108, 64); sg.stroke();
@@ -314,13 +314,23 @@ function enterPlane() {
   PL.me = me; PL.throttle = .85; PL.stickX = PL.stickY = PL.rudder = 0; PL.bombs = 2; PL.rearm = 0; PL.av = new V3();
   me.g.add(PL.cockpit); PL.cockpit.visible = true; if (me.g.userData.pilot) me.g.userData.pilot.visible = false;
   P.mode = 'plane'; P.dead = false;
-  scene.fog.density = FOG_BASE * .45;
-  PL.ext = false; PL.head = null;
-  showMsg('P-47 Thunderbolt — 8 × .50 cal, 2 bombe da 500 lb · V visuale esterna', 4);
+  scene.fog.density = FOG_BASE * .3;
+  PL.head = null; if (PL.assist === undefined) PL.assist = true; PL.ext = PL.assist; resetPlaneAim();
+  if (PL.cockpit) PL.cockpit.visible = !PL.ext; if (me.g.userData.pilot) me.g.userData.pilot.visible = PL.ext; if (me.g.userData.glass) me.g.userData.glass.visible = PL.ext;
+  showMsg('P-47 — il mouse indica la direzione · click sx mitragliatrici · click dx zoom · Spazio bomba · A/D rollio · W/S manetta · V visuale · M comandi manuali', 4);
   say(N.radio, 'Qui Thunderbolt Leader: attaccate le posizioni sulla scogliera. Attenti alla contraerea.');
 }
 // mirino della visuale esterna: dove arrivano le raffiche (terreno lungo l'asse o punto di convergenza a 320 m)
+function planeAimMarker(me) {
+  let el = $('mouseAim');
+  if (!el) { el = document.createElement('div'); el.id = 'mouseAim'; el.style.cssText = 'position:fixed;width:16px;height:16px;margin:-8px 0 0 -8px;pointer-events:none;z-index:18;color:#e8e2cf;font:700 18px/16px sans-serif;text-align:center;text-shadow:0 0 3px #000'; el.textContent = '+'; document.body.appendChild(el); }
+  if (!PL.assist || !me || me.crash) { el.style.display = 'none'; return; }
+  const p = _a2.copy(camera.position).addScaledVector(planeAimDir(), 400); camera.updateMatrixWorld(); p.project(camera);
+  if (p.z > 1) { el.style.display = 'none'; return; }
+  el.style.display = 'block'; el.style.left = ((p.x * .5 + .5) * innerWidth) + 'px'; el.style.top = ((-p.y * .5 + .5) * innerHeight) + 'px';
+}
 function planeReticle(me) {
+  planeAimMarker(me);
   let el = $("planeAim");
   if (!el) { el = document.createElement("div"); el.id = "planeAim"; el.style.cssText = "position:fixed;width:34px;height:34px;margin:-17px 0 0 -17px;border:2px solid rgba(255,214,120,.9);border-radius:50%;pointer-events:none;z-index:18;box-shadow:0 0 3px #000"; el.innerHTML = "<div style=\"position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;background:#ffd678;border-radius:50%\"></div>"; document.body.appendChild(el); }
   if (!PL.ext || !me || me.crash) { el.style.display = "none"; return; }
@@ -333,15 +343,20 @@ function togglePlaneView() {
   PL.ext = !PL.ext; PL.camP = null;
   if (PL.cockpit) PL.cockpit.visible = !PL.ext;
   const me = PL.me; if (me && me.g.userData.pilot) me.g.userData.pilot.visible = PL.ext;
+  if (me && me.g.userData.glass) me.g.userData.glass.visible = PL.ext;
   showMsg(PL.ext ? 'Visuale esterna (V per la cabina)' : 'Visuale in cabina (V per l\'esterno)', 1.5);
 }
+function togglePlaneAssist() { PL.assist = !PL.assist; resetPlaneAim(); showMsg(PL.assist ? 'Comandi assistiti: il mouse indica la direzione' : 'Comandi manuali: il mouse è la cloche', 2); }
+function resetPlaneAim() { const me = PL.me; if (!me) return; const f = _a1.set(0, 0, -1).applyQuaternion(me.q); PL.aimYaw = Math.atan2(-f.x, -f.z); PL.aimPitch = Math.asin(clamp(f.y, -1, 1)); PL.camP = null; }
 function exitPlane() {
-  PL.ext = false; if ($("planeAim")) $("planeAim").style.display = "none";
+  PL.ext = false; if ($("planeAim")) $("planeAim").style.display = "none"; if ($('mouseAim')) $('mouseAim').style.display = 'none';
   if (PL.me) { PL.me.remove(); PL.me = null; }
   if (PL.cockpit && PL.cockpit.parent) PL.cockpit.parent.remove(PL.cockpit);
   scene.fog.density = FOG_BASE;
 }
-const _pfw = new V3(), _pup = new V3(), _prt = new V3(), _F = new V3(), _vn = new V3();
+const _pfw = new V3(), _pup = new V3(), _prt = new V3(), _F = new V3(), _vn = new V3(), _aqi = new THREE.Quaternion(), _aimD = new V3();
+// direzione del punto di mira dell'istruttore (angoli assoluti mossi dal mouse)
+function planeAimDir() { return _aimD.set(-Math.sin(PL.aimYaw) * Math.cos(PL.aimPitch), Math.sin(PL.aimPitch), -Math.cos(PL.aimYaw) * Math.cos(PL.aimPitch)); }
 function updatePlane(dt) {
   const me = PL.me; if (!me) return;
   // comandi: il mouse sposta una "cloche" virtuale che torna al centro
@@ -364,11 +379,25 @@ function updatePlane(dt) {
   PL.G = lift / (m * 9.8);
   // rotazione: comandi + stabilità aerodinamica
   const auth = clamp(V / 110, .25, 1.3);
-  // assistenza: con la cloche al centro le ali tornano orizzontali da sole
   // A/D ruotano l'aereo sul proprio asse (alettoni); a comandi rilasciati le ali tornano orizzontali
-  const bankR = -Math.asin(clamp(_prt.y, -1, 1)), roll = clamp(PL.stickX + PL.rudder, -1, 1);
-  const level = Math.abs(roll) < .1 && !me.crash ? bankR * 2 * auth : 0;
-  let tp = PL.stickY * 1.0 * auth, tr = -roll * 1.9 * auth + level, ty = 0;
+  const bankR = -Math.asin(clamp(_prt.y, -1, 1));
+  let sx = PL.stickX, sy = PL.stickY, ty = 0, level = 0;
+  if (PL.assist && !me.crash) {
+    // istruttore: l'aereo si inclina verso il punto di mira del mouse e tira per raggiungerlo
+    const L = _a2.copy(planeAimDir()).applyQuaternion(_aqi.copy(me.q).invert());
+    const yawE = Math.atan2(L.x, -L.z), pitE = Math.atan2(L.y, Math.max(.25, -L.z)), off = Math.acos(clamp(-L.z, -1, 1));
+    // vicino al bersaglio: piccole correzioni con le ali quasi livellate
+    const nx = clamp((clamp(yawE * 4.5, -.75, .75) - bankR) * 2.6, -1, 1), ny = clamp(pitE * 3.4, -1, 1);
+    // lontano: ruota finché il punto di mira è «sopra» il muso, poi tira
+    const clock = Math.atan2(L.x, L.y), fx = clamp(clock * 2.2, -1, 1), fy = clamp(off * 2.4, 0, 1) * Math.max(0, Math.cos(clock));
+    const w = smooth((off - .12) / .35);
+    sx = lerp(nx, fx, w); sy = lerp(ny, fy, w); ty = -clamp(yawE * 3, -.5, .5) * auth * (1 - w * .5);
+    if (Math.abs(PL.rudder) > .1) sx = PL.rudder;
+  } else {
+    sx = clamp(PL.stickX + PL.rudder, -1, 1);
+    level = Math.abs(sx) < .1 && !me.crash ? bankR * 2 * auth : 0;
+  }
+  let tp = sy * 1.0 * auth, tr = -sx * 1.9 * auth + level;
   // ala persa: avvitamento verso il lato mancante
   if (me.wingLost) { tr += me.wingLost * 3.2; tp -= .4; }
   PL.av.x = lerp(PL.av.x, tp - alpha * 1.8 * auth, dt * 3); PL.av.z = lerp(PL.av.z, tr, dt * 5.5); PL.av.y = lerp(PL.av.y, ty - beta * 1.2 * auth, dt * 3);
@@ -378,7 +407,7 @@ function updatePlane(dt) {
   for (const p of me.props) p.rotation.z += dt * 60 * PL.throttle;
   // armi
   PL.gunT -= dt;
-  if ((mouseL || KEYS.Space) && PL.gunT <= 0 && !me.crash) {
+  if (mouseL && PL.gunT <= 0 && !me.crash) {
     PL.gunT = .055; me.fireT = 0;
     playerPlaneGuns(me);
   }
@@ -399,22 +428,31 @@ function updatePlane(dt) {
   const shake = (PL.gunT > -.05 ? .002 : 0) + Math.min(.004, V * .00002) + P.shake * .01;
   if (PL.ext) {
     // visuale esterna: inseguimento morbido dietro e sopra l'aereo
-    const back = _a2.set(0, 2.6, 11).applyQuaternion(me.q), want = _a3.copy(me.pos).add(back);
-    want.y = Math.max(want.y, Hf(want.x, want.z) + 2);
-    PL.camP = PL.camP || want.clone(); PL.camP.lerp(want, Math.min(1, dt * 6));
-    camera.position.copy(PL.camP);
-    _am.lookAt(camera.position, _a2.copy(me.pos).addScaledVector(_pfw, 20), _a1.copy(_pup).lerp(new V3(0, 1, 0), .5));
-    camera.quaternion.setFromRotationMatrix(_am);
-    camera.rotateY(P.lookYaw || 0); camera.rotateX(P.lookPitch || 0);
+    if (PL.assist) {
+      const ad = planeAimDir(), want = _a3.copy(me.pos).addScaledVector(ad, -15); want.y += 3.2;
+      want.y = Math.max(want.y, Hf(want.x, want.z) + 2);
+      PL.camP = PL.camP || want.clone(); PL.camP.lerp(want, Math.min(1, dt * 9));
+      camera.position.copy(PL.camP);
+      _am.lookAt(camera.position, _a2.copy(me.pos).addScaledVector(ad, 200), _a1.set(0, 1, 0));
+      camera.quaternion.setFromRotationMatrix(_am);
+    } else {
+      const back = _a2.set(0, 2.6, 11).applyQuaternion(me.q), want = _a3.copy(me.pos).add(back);
+      want.y = Math.max(want.y, Hf(want.x, want.z) + 2);
+      PL.camP = PL.camP || want.clone(); PL.camP.lerp(want, Math.min(1, dt * 6));
+      camera.position.copy(PL.camP);
+      _am.lookAt(camera.position, _a2.copy(me.pos).addScaledVector(_pfw, 20), _a1.copy(_pup).lerp(new V3(0, 1, 0), .5));
+      camera.quaternion.setFromRotationMatrix(_am);
+      camera.rotateY(P.lookYaw || 0); camera.rotateX(P.lookPitch || 0);
+    }
   } else {
-    const head = me.g.localToWorld(_a3.set(0, 1.0 + hr.dy, -.36));
+    const head = me.g.localToWorld(_a3.set(0, 1.12 + hr.dy, -.5));
     camera.position.copy(head);
     camera.quaternion.copy(me.q);
     camera.rotateY((P.lookYaw || 0) + hr.y); camera.rotateX((P.lookPitch || 0) + hr.p); camera.rotateZ(hr.r);
   }
   camera.rotateX(rnd(-shake, shake)); camera.rotateY(rnd(-shake, shake));
   planeReticle(me);
-  const fov = PL.ext ? 70 : 78; if (Math.abs(camera.fov - fov) > .01) { camera.fov = fov; camera.updateProjectionMatrix(); }
+  const fov = (PL.ext ? 70 : 88) * (P.adsHeld ? .45 : 1); if (Math.abs(camera.fov - fov) > .05) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 9)); camera.updateProjectionMatrix(); }
   if (PL.eng !== me.eng) PL.eng = me.eng;
   me.eng && me.eng.set(.75 * (.4 + PL.throttle * .6), 0, .75 + PL.throttle * .5);
   P.supp = Math.max(P.supp, clamp((PL.G - 5) / 3, 0, .9));
