@@ -227,7 +227,9 @@ function airBombHit(p) {
 function spawnHunter() {
   const me = PL.me, base = me ? me.pos : new V3(0, 400, 0), a = R() * TAU;
   const p = new Plane('fw190', 'E', new V3(base.x + Math.cos(a) * 1300, clamp(base.y + rnd(-80, 160), 250, 900), base.z + Math.sin(a) * 1300), new V3(-Math.cos(a) * 160, 0, -Math.sin(a) * 160), []);
-  p.hunter = true; p.hp = 260; AIRM.hunters.push(p); return p;
+  p.hunter = true; p.hp = 260; AIRM.hunters.push(p);
+  const wl = (PL.wing || []).filter(w => w.alive && !w.crash); if (wl.length && R() < .4) p.huntTarget = pick(wl);
+  return p;
 }
 // conta gli abbattimenti dei caccia nemici
 function airCountKills() { for (const p of AIRM.hunters) if (p.crash && !p.counted) { p.counted = true; AIRM.kills++; } AIRM.hunters = AIRM.hunters.filter(p => p.alive && !p.counted); }

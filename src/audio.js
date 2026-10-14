@@ -276,11 +276,24 @@ function loopSound(name, vol = 0) {
 
 // ---------- API usate dal gioco ----------
 const FARMAP = { garand: 'rifle_far', kar98: 'rifle_far', springfield: 'rifle_far', bar: 'rifle_far', thompson: 'smg_far', mp40: 'smg_far', colt: 'smg_far', mg42: 'mg_far', m2: 'mg_far', flak: 'flak_far' };
+// spari: campione reale + rimbombo all'aperto; passaggio graduale da vicino a lontano; .50 cal più pesanti
 function sfxShot(kind, pos, isPlayer, extraDelay = 0) {
-  if (isPlayer) { play(kind, null, { vol: 1, delay: extraDelay, revMul: 1.5, rate: kind === 'mp40' ? 1.12 : 1 }); return; }
+  const heavy = kind === 'm2', rate = kind === 'mp40' ? 1.12 : 1, near = heavy ? 'bar' : kind, nr = heavy ? .74 : rate, far = FARMAP[kind] || 'rifle_far', rv = SCEN === 'ard' ? 1.45 : 1;
+  if (isPlayer) {
+    play(near, null, { vol: 1, delay: extraDelay, revMul: 1.5 * rv, rate: nr });
+    if (heavy) play('m2', null, { vol: .75, delay: extraDelay });
+    // rimbombo che rotola nella campagna subito dopo il colpo
+    play(far, null, { vol: heavy ? .3 : .42, delay: extraDelay + .05 + R() * .05, rate: .88 + R() * .14, revMul: rv });
+    return;
+  }
   const d = pos.distanceTo(camera.position);
-  if (d < 220) play(kind, pos, { ref: 25, delay: extraDelay, echo: true, rate: kind === 'mp40' ? 1.12 : 1 });
-  else play(FARMAP[kind] || 'rifle_far', pos, { ref: 70, delay: extraDelay, echo: true, vol: 1.2 });
+  if (d < 90) play(near, pos, { ref: 25, delay: extraDelay, echo: true, rate: nr, revMul: rv });
+  else if (d < 260) {
+    const k = (d - 90) / 170;
+    play(near, pos, { ref: 25, delay: extraDelay, echo: true, rate: nr, vol: 1 - k * .85, revMul: rv });
+    play(far, pos, { ref: 70, delay: extraDelay, vol: .35 + k * .85, revMul: rv });
+  }
+  else play(far, pos, { ref: 70, delay: extraDelay, echo: true, vol: 1.2, revMul: rv });
 }
 function sfxBoom(pos, size = 1, water = false) {
   const d = pos.distanceTo(camera.position);

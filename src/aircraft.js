@@ -52,6 +52,7 @@ class Plane {
       this.pos.addScaledVector(this.vel, dt); this.orient(this.roll);
       const gy = Math.max(Hf(this.pos.x, this.pos.z), this.pos.z > -9 ? WATER_Y : -99);
       if (this.pos.y < gy + 1) { explode(this.pos.clone().setY(gy + .5), 12, 500, {}); this.remove(); }
+    } else if (this.wing) { wingmanAI(this, dt);
     } else if (this.hunter) { huntPlayer(this, dt);
     } else if (this.pi < this.path.length) {
       const wp = this.path[this.pi];
@@ -306,15 +307,77 @@ function drawGauges() {
   g.strokeStyle = '#f0c040'; g.lineWidth = 3; g.beginPath(); g.moveTo(415, 96); g.lineTo(475, 96); g.stroke();
   PL.gtex.needsUpdate = true;
 }
+// colpo sul P-47: blindatura, poi danno a un componente scelto a caso con effetti in volo
+const PART_NAME = { eng: 'Motore', wl: 'Ala sinistra', wr: 'Ala destra', tail: 'Impennaggi' };
+function playerPlaneHit(me, a, byPlayer) {
+  if (!me.alive || me.crash) return;
+  a *= .7; me.hp -= a;
+  const r = R(), k = r < .32 ? 'eng' : r < .56 ? 'wl' : r < .8 ? 'wr' : 'tail', before = me.parts[k];
+  me.parts[k] = Math.max(0, before - a / 260);
+  const v = me.parts[k];
+  if (before >= .5 && v < .5) showMsg(PART_NAME[k] + ' danneggiato', 1.8);
+  if (k === 'eng' && v < .55 && !me.engSmoke) { me.engSmoke = addEmitter(me.pos, 'trail', .5); me.engSmoke.follow = q => q.copy(me.pos); me.engSmoke.life = 1e9; }
+  if (k === 'eng' && v < .18 && !me.engFire) { me.engFire = addEmitter(me.pos, 'fire', .35); me.engFire.follow = q => q.copy(me.pos); me.engFire.life = 1e9; showMsg('Motore in fiamme!', 2.5); }
+  if ((k === 'wl' || k === 'wr') && v <= 0) { me.hp = 0; }
+  if (me.hp <= 0) {
+    if (me.engSmoke) me.engSmoke.life = 0; if (me.engFire) me.engFire.life = 0;
+    const side = me.parts.wl <= 0 ? -1 : me.parts.wr <= 0 ? 1 : 0;
+    Plane.prototype.damage.call(me, 99999, byPlayer);
+    if (side && !me.wingLost && !me.exploded) me.loseWing(side);
+  }
+}
+// pannello dei danni nella parte bassa dello schermo
+function planeDamageHud(me) {
+  let el = $('planeDmg');
+  if (!el) { el = document.createElement('div'); el.id = 'planeDmg'; el.style.cssText = 'position:fixed;left:16px;bottom:120px;pointer-events:none;z-index:18;font:600 11px/1.5 Oswald,sans-serif;color:#e8e2cf;text-shadow:0 1px 2px #000;letter-spacing:.05em'; document.body.appendChild(el); }
+  if (!me || !me.parts || P.mode !== 'plane') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const bar = v => { const c = v > .6 ? '#8fd16a' : v > .3 ? '#e8c050' : '#e05a45'; return `<span style="display:inline-block;width:70px;height:6px;background:rgba(0,0,0,.45);vertical-align:middle;margin-left:6px"><span style="display:block;height:100%;width:${Math.round(v * 100)}%;background:${c}"></span></span>`; };
+  el.innerHTML = `SCAFO${bar(clamp(me.hp / 1100, 0, 1))}<br>` + Object.keys(PART_NAME).map(k => PART_NAME[k].toUpperCase() + bar(me.parts[k])).join('<br>') + (me.engFire ? '<br><b style="color:#ff7a50">INCENDIO</b>' : '');
+}
+// gregario: in formazione sull'ala del giocatore; se ci sono caccia nemici vicini li attacca
+function wingmanAI(p, dt) {
+  const me = PL.me;
+  let foe = null, bd = 1600;
+  for (const q of PLANES) if (q.team === 'E' && q.alive && !q.crash) { const d = q.pos.distanceTo(p.pos); if (d < bd) { bd = d; foe = q; } }
+  let want, spd = 160;
+  if (foe) want = foe.pos.clone().addScaledVector(foe.vel, bd / 750).sub(p.pos).normalize();
+  else if (me && P.mode === 'plane' && !me.crash) {
+    const slot = _a2.set(p.side * 28, 4, 22 + p.side * 6).applyQuaternion(me.q).add(me.pos), d = slot.distanceTo(p.pos);
+    want = slot.clone().addScaledVector(me.vel, 1.2).sub(p.pos).normalize(); spd = clamp(me.vel.length() + d * .4, 90, 200);
+  } else { p.vel.applyAxisAngle(_wUp, .3 * dt); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll); return; }
+  const cur = p.vel.clone().normalize(), nv = cur.clone().lerp(want, Math.min(1, dt * 1.1)).normalize(), lat = new V3().crossVectors(cur, nv).y;
+  p.roll = lerp(p.roll, clamp(-lat * 40, -1.3, 1.3), dt * 2);
+  p.vel.copy(nv).multiplyScalar(lerp(p.vel.length(), spd, dt * .8)); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll);
+  if (p.pos.y < Hf(p.pos.x, p.pos.z) + 80) p.vel.y += 40 * dt;
+  p.fireT -= dt;
+  if (foe && bd < 450 && cur.dot(want) > .985 && p.fireT <= 0) {
+    p.fireT = .08; const o = p.pos.clone().addScaledVector(cur, 5);
+    fxTracer(o, foe.pos.clone().add(new V3(rnd(-5, 5), rnd(-5, 5), rnd(-5, 5))), 1.4); sfxShot('m2', o);
+    if (R() < .09) foe.damage(rnd(20, 35), false);
+  }
+}
+const _wUp = new V3(0, 1, 0);
+function spawnWingmen() {
+  if (SCEN !== 'air' || !PL.me) return;
+  PL.wing = (PL.wing || []).filter(w => w.alive && !w.crash);
+  for (const side of [-1, 1]) {
+    if (PL.wing.some(w => w.side === side)) continue;
+    const me = PL.me, pos = _a2.set(side * 30, 5, 30).applyQuaternion(me.q).add(me.pos);
+    const w = new Plane('p47', 'A', pos.clone(), me.vel.clone(), []); w.wing = true; w.side = side; w.hp = 600; PL.wing.push(w);
+  }
+}
 function enterPlane() {
   if (!PGEO.ready) return;
   if (!PL.cockpit) buildCockpit();
   const sp = SCEN === 'air' && MISSION.stage >= 0 ? airSpawn() : { pos: new V3(rnd(-80, 40), 380, 1100), vel: new V3(0, -5, -120) };
-  const me = new Plane('p47', 'A', sp.pos, sp.vel, []); me.player = true; me.hp = 450;
+  const me = new Plane('p47', 'A', sp.pos, sp.vel, []); me.player = true; me.hp = 1100;
+  me.parts = { eng: 1, wl: 1, wr: 1, tail: 1 }; me.damage = (a, byPlayer) => playerPlaneHit(me, a, byPlayer);
   PL.me = me; PL.throttle = .85; PL.stickX = PL.stickY = PL.rudder = 0; PL.bombs = 2; PL.rearm = 0; PL.av = new V3();
   me.g.add(PL.cockpit); PL.cockpit.visible = true; if (me.g.userData.pilot) me.g.userData.pilot.visible = false;
   P.mode = 'plane'; P.dead = false;
   scene.fog.density = FOG_BASE * .3;
+  spawnWingmen();
   PL.head = null; if (PL.assist === undefined) PL.assist = true; PL.ext = PL.assist; resetPlaneAim();
   if (PL.cockpit) PL.cockpit.visible = !PL.ext; if (me.g.userData.pilot) me.g.userData.pilot.visible = PL.ext; if (me.g.userData.glass) me.g.userData.glass.visible = PL.ext;
   showMsg('P-47 — il mouse indica la direzione · click sx mitragliatrici · click dx zoom · Spazio bomba · A/D rollio · W/S manetta · V visuale · M comandi manuali', 4);
@@ -349,6 +412,7 @@ function togglePlaneView() {
 function togglePlaneAssist() { PL.assist = !PL.assist; resetPlaneAim(); showMsg(PL.assist ? 'Comandi assistiti: il mouse indica la direzione' : 'Comandi manuali: il mouse è la cloche', 2); }
 function resetPlaneAim() { const me = PL.me; if (!me) return; PL.camD = null; const f = _a1.set(0, 0, -1).applyQuaternion(me.q); PL.aimYaw = Math.atan2(-f.x, -f.z); PL.aimPitch = Math.asin(clamp(f.y, -1, 1)); PL.camP = null; }
 function exitPlane() {
+  if (PL.me) { if (PL.me.engSmoke) PL.me.engSmoke.life = 0; if (PL.me.engFire) PL.me.engFire.life = 0; } if ($('planeDmg')) $('planeDmg').style.display = 'none';
   PL.ext = false; if ($("planeAim")) $("planeAim").style.display = "none"; if ($('mouseAim')) $('mouseAim').style.display = 'none';
   if (PL.me) { PL.me.remove(); PL.me = null; }
   if (PL.cockpit && PL.cockpit.parent) PL.cockpit.parent.remove(PL.cockpit);
@@ -382,7 +446,9 @@ function updatePlane(dt) {
   let Cl = (.15 + 4.8 * alpha) * (me.wingLost ? .45 : 1); const st = .3;
   if (Math.abs(alpha) > st) Cl = Math.sign(alpha) * (.15 + 4.8 * st) * Math.max(.25, 1 - (Math.abs(alpha) - st) * 3.5);
   const lift = q * S * Cl, drag = q * S * (.024 + .065 * Cl * Cl);
-  const thrust = me.crash ? 0 : PL.throttle * Math.min(32000, 1.6e6 / Math.max(V, 35));
+  const pt = me.parts || { eng: 1, wl: 1, wr: 1, tail: 1 };
+  const thrust = me.crash ? 0 : PL.throttle * Math.min(32000, 1.6e6 / Math.max(V, 35)) * (.3 + .7 * pt.eng);
+  if (me.engFire && !me.crash) { me.hp -= dt * 14; if (me.hp <= 0) playerPlaneHit(me, 1, false); }
   _a1.copy(_pup).addScaledVector(_vn, -_pup.dot(_vn)).normalize();
   _F.set(0, -9.8 * m, 0).addScaledVector(_pfw, thrust).addScaledVector(_vn, -drag).addScaledVector(_a1, lift).addScaledVector(_prt, -beta * q * S * .6);
   v.addScaledVector(_F, dt / m);
@@ -408,7 +474,9 @@ function updatePlane(dt) {
     sx = clamp(PL.stickX + PL.rudder, -1, 1);
     level = Math.abs(sx) < .1 && !me.crash ? bankR * 2 * auth : 0;
   }
-  let tp = sy * 1.0 * auth, tr = -sx * 1.9 * auth + level;
+  let tp = sy * 1.0 * auth * (.45 + .55 * pt.tail), tr = -sx * 1.9 * auth + level;
+  // l'ala colpita porta meno: l'aereo tende a rollare da quel lato
+  tr += (pt.wr - pt.wl) * .9 * auth;
   // ala persa: avvitamento verso il lato mancante
   if (me.wingLost) { tr += me.wingLost * 3.2; tp -= .4; }
   PL.av.x = lerp(PL.av.x, tp - alpha * 1.8 * auth, dt * 3); PL.av.z = lerp(PL.av.z, tr, dt * 5.5); PL.av.y = lerp(PL.av.y, ty - beta * 1.2 * auth, dt * 3);
@@ -464,7 +532,7 @@ function updatePlane(dt) {
     camera.rotateY((P.lookYaw || 0) + hr.y); camera.rotateX((P.lookPitch || 0) + hr.p); camera.rotateZ(hr.r);
   }
   camera.rotateX(rnd(-shake, shake)); camera.rotateY(rnd(-shake, shake));
-  planeReticle(me);
+  planeReticle(me); planeDamageHud(me);
   const fov = (PL.ext ? 70 : 88) * (P.adsHeld ? .45 : 1); if (Math.abs(camera.fov - fov) > .05) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 9)); camera.updateProjectionMatrix(); }
   if (PL.eng !== me.eng) PL.eng = me.eng;
   me.eng && me.eng.set(.75 * (.4 + PL.throttle * .6), 0, .75 + PL.throttle * .5);
