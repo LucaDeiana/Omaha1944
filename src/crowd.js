@@ -56,14 +56,14 @@ function sculpt(rings, n, hex, o = {}) {
 }
 // arto lungo l'asse z (piedi, scarpe): ruota le sezioni costruite lungo y
 const alongZ = (rings, n, hex, o) => { const g = sculpt(rings, n, hex, o); g.rotateX(-PI / 2); return g; };
-function buildPartGeo(key, hi) {
+function buildPartGeo(key, hi, gear) {
   const [team, part, kind] = key.split('_'), C = SCOL2[team], s = hi ? 14 : 7, mb = new MB(), A = team === 'A';
   const add = (g, c, x, y, z, rx, ry, rz, sx, sy, sz) => mb.add(g, c, x, y, z, rx || 0, ry || 0, rz || 0, sx ?? 1, sy ?? 1, sz ?? 1);
-  const G = (g) => mb.addG(g, 0, 0, 0, 0, 0, 0, 1, 0xffffff);
+  const G = (g) => mb.addG(g, 0, 0, 0, 0, 0, 0, 1, 0xffffff), B = g => { if (!gear) G(g); };
   if (part === 'pelvis') {
     // calzoni: bacino con glutei, cavallo e cintura
-    G(sculpt([[-.13, .1, .07, .08], [-.09, .145, .09, .11], [-.02, .16, .095, .12], [.06, .162, .095, .11], [.13, .158, .09, .1]], hi ? 18 : 8, C.pants, { fold: hi ? .012 : 0, seed: 2, shadeBottom: .25 }));
-    for (const sx of [-1, 1]) G(sculpt([[-.16, .055, .06, .065, sx * .085], [-.11, .075, .075, .08, sx * .08], [-.06, .08, .08, .085, sx * .07]], hi ? 12 : 6, C.pants, { shadeBottom: .2 }));
+    B(sculpt([[-.13, .1, .07, .08], [-.09, .145, .09, .11], [-.02, .16, .095, .12], [.06, .162, .095, .11], [.13, .158, .09, .1]], hi ? 18 : 8, C.pants, { fold: hi ? .012 : 0, seed: 2, shadeBottom: .25 }));
+    for (const sx of [-1, 1]) B(sculpt([[-.16, .055, .06, .065, sx * .085], [-.11, .075, .075, .08, sx * .08], [-.06, .08, .08, .085, sx * .07]], hi ? 12 : 6, C.pants, { shadeBottom: .2 }));
     G(sculpt([[.1, .168, .1, .118], [.15, .168, .1, .118]], hi ? 18 : 8, C.web, { shadeBottom: 0 }));
     if (hi) {
       if (A) { add(new THREE.TorusGeometry(.19, .035, 6, 16), 0x5a5e44, 0, .02, 0, PI / 2, 0, 0, 1, .7, 1); add(U.box, 0x4a4e38, .17, -.02, 0, 0, 0, 0, .05, .1, .08); for (let i = 0; i < 9; i++) { const a = -1.2 + i * .3; add(U.box, C.web, Math.sin(a) * .17, .1, -Math.cos(a) * .12, 0, -a, 0, .055, .07, .035); } add(cylG(.05, .05, .16, 10), C.belt2, .13, .02, .12); add(U.box, C.pack, -.12, -.02, .13, 0, 0, 0, .1, .18, .03); }
@@ -71,14 +71,14 @@ function buildPartGeo(key, hi) {
     }
   } else if (part === 'chest') {
     // giacca: vita, torace con pettorali e scapole, spalle spioventi, colletto, collo
-    G(sculpt([[-.06, .17, .105, .125], [.02, .158, .1, .115], [.12, .155, .105, .112], [.22, .168, .118, .118], [.32, .162, .122, .12], [.4, .158, .112, .112], [.46, .135, .095, .098], [.5, .12, .075, .08], [.53, .075, .06, .065]], hi ? 18 : 8, C.jacket, { fold: hi ? .014 : 0, seed: 3, shadeBottom: .18, foldMask: (t) => t < .7 ? 1 : .3, under: .12, underA: 0 }));
+    B(sculpt([[-.06, .17, .105, .125], [.02, .158, .1, .115], [.12, .155, .105, .112], [.22, .168, .118, .118], [.32, .162, .122, .12], [.4, .158, .112, .112], [.46, .135, .095, .098], [.5, .12, .075, .08], [.53, .075, .06, .065]], hi ? 18 : 8, C.jacket, { fold: hi ? .014 : 0, seed: 3, shadeBottom: .18, foldMask: (t) => t < .7 ? 1 : .3, under: .12, underA: 0 }));
     if (hi) {
       G(sculpt([[.5, .085, .07, .07, 0, .005], [.545, .082, .068, .07, 0, .005]], 14, C.jacket2, { fold: .006 }));
       for (let k = 0; k < 4; k++) add(U.sph, 0x2a2a22, 0, .44 - k * .1, -.124 + k * .006, 0, 0, 0, .009, .009, .005);
       for (const sx of [-1, 1]) { add(U.box, C.jacket2, sx * .095, .41, -.122, -.14, 0, 0, .095, .025, .02); add(U.box, C.jacket2, sx * .095, .37, -.118, -.05, 0, 0, .09, .07, .012); }
       for (const sx of [-1, 1]) add(U.box, C.jacket2, sx * .17, .47, -.01, 0, 0, sx * -.35, .06, .015, .1);
     }
-    G(sculpt([[.52, .052, .05, .055], [.6, .048, .045, .05]], hi ? 12 : 6, C.skin, { shadeBottom: .3 }));
+    B(sculpt([[.52, .052, .05, .055], [.6, .048, .045, .05]], hi ? 12 : 6, C.skin, { shadeBottom: .3 }));
     if (A) {
       G(sculpt([[.16, .1, .03, .05, 0, .16], [.22, .13, .04, .07, 0, .165], [.38, .135, .04, .075, 0, .165], [.46, .11, .03, .05, 0, .16]], hi ? 12 : 6, C.pack, { fold: hi ? .008 : 0, seed: 21, shadeBottom: .2 }));
       for (const sx of [-1, 1]) add(U.box, C.web, sx * .08, .3, .232, 0, 0, 0, .03, .26, .01);
@@ -122,10 +122,10 @@ function buildPartGeo(key, hi) {
     }
   } else if (part === 'uarm') {
     // braccio: deltoide che si raccorda alla spalla, bicipite, gomito; manica con pieghe
-    G(sculpt([[.055, .04, .045, .045, -.01], [.025, .058, .058, .062, -.004], [-.04, .058, .057, .058], [-.13, .054, .056, .052], [-.22, .047, .047, .045], [-.29, .045, .045, .045], [-.31, .038, .038, .038]], hi ? 12 : 6, C.jacket, { fold: hi ? .01 : 0, seed: 7, shadeBottom: .1, under: .15, underA: PI }));
+    B(sculpt([[.055, .04, .045, .045, -.01], [.025, .058, .058, .062, -.004], [-.04, .058, .057, .058], [-.13, .054, .056, .052], [-.22, .047, .047, .045], [-.29, .045, .045, .045], [-.31, .038, .038, .038]], hi ? 12 : 6, C.jacket, { fold: hi ? .01 : 0, seed: 7, shadeBottom: .1, under: .15, underA: PI }));
   } else if (part === 'farm') {
     // avambraccio, polsino, mano con dita piegate attorno all'impugnatura
-    G(sculpt([[.02, .046, .046, .046], [-.06, .046, .046, .044], [-.15, .041, .04, .037], [-.235, .038, .036, .034]], hi ? 12 : 6, C.jacket, { fold: hi ? .008 : 0, seed: 9 }));
+    B(sculpt([[.02, .046, .046, .046], [-.06, .046, .046, .044], [-.15, .041, .04, .037], [-.235, .038, .036, .034]], hi ? 12 : 6, C.jacket, { fold: hi ? .008 : 0, seed: 9 }));
     G(sculpt([[-.215, .045, .043, .041], [-.25, .044, .042, .04]], hi ? 12 : 6, C.jacket2, {}));
     G(sculpt([[-.245, .028, .02, .02], [-.27, .036, .022, .022], [-.3, .04, .024, .02], [-.325, .038, .02, .016]], hi ? 10 : 5, C.skin, { shadeBottom: .1 }));
     if (hi) {
@@ -134,18 +134,18 @@ function buildPartGeo(key, hi) {
     } else add(U.box, C.skin, 0, -.34, -.012, .4, 0, 0, .065, .045, .03);
   } else if (part === 'thigh') {
     // coscia: gluteo, quadricipite, ginocchio; calzoni con pieghe
-    G(sculpt([[.05, .075, .075, .085], [-.02, .088, .088, .095], [-.12, .084, .086, .084], [-.24, .074, .076, .07], [-.36, .064, .064, .062], [-.44, .06, .066, .058], [-.48, .052, .056, .05]], hi ? 12 : 6, C.pants, { fold: hi ? .014 : 0, seed: 11, shadeBottom: .12, under: .1, underA: PI / 2 }));
-    if (hi) add(U.box, C.jacket2, .088, -.18, -.005, 0, 0, 0, .022, .13, .11);
+    B(sculpt([[.05, .075, .075, .085], [-.02, .088, .088, .095], [-.12, .084, .086, .084], [-.24, .074, .076, .07], [-.36, .064, .064, .062], [-.44, .06, .066, .058], [-.48, .052, .056, .05]], hi ? 12 : 6, C.pants, { fold: hi ? .014 : 0, seed: 11, shadeBottom: .12, under: .1, underA: PI / 2 }));
+    if (hi) add(U.box, C.jacket2, gear ? .1 : .088, -.18, -.005, 0, 0, 0, .022, .13, .11);
     if (hi && A) add(U.box, C.jacket2, 0, -.2, -.075, 0, 0, 0, .1, .12, .02);
   } else if (part === 'shin') {
     // stinco e polpaccio, ghette (americani) o stivali (tedeschi), scarpone con punta e tacco
     if (A) {
-      G(sculpt([[.03, .056, .058, .056], [-.06, .054, .052, .064], [-.15, .05, .048, .06], [-.22, .046, .045, .05]], hi ? 12 : 6, C.pants, { fold: hi ? .01 : 0, seed: 13 }));
-      G(sculpt([[-.2, .058, .056, .062], [-.28, .054, .052, .058], [-.38, .05, .05, .052], [-.4, .052, .055, .055]], hi ? 12 : 6, C.legging, { fold: hi ? .006 : 0, seed: 14, shadeBottom: .15 }));
-      if (hi) for (let k = 0; k < 4; k++) add(U.box, 0x5a5236, .058, -.24 - k * .042, -.012, 0, 0, 0, .006, .01, .024);
+      B(sculpt([[.03, .056, .058, .056], [-.06, .054, .052, .064], [-.15, .05, .048, .06], [-.22, .046, .045, .05]], hi ? 12 : 6, C.pants, { fold: hi ? .01 : 0, seed: 13 }));
+      B(sculpt([[-.2, .058, .056, .062], [-.28, .054, .052, .058], [-.38, .05, .05, .052], [-.4, .052, .055, .055]], hi ? 12 : 6, C.legging, { fold: hi ? .006 : 0, seed: 14, shadeBottom: .15 }));
+      if (hi && !gear) for (let k = 0; k < 4; k++) add(U.box, 0x5a5236, .058, -.24 - k * .042, -.012, 0, 0, 0, .006, .01, .024);
     } else {
-      G(sculpt([[.03, .06, .062, .066], [-.08, .062, .06, .07], [-.2, .06, .058, .065], [-.33, .055, .055, .058], [-.4, .053, .055, .056]], hi ? 12 : 6, C.boot, { fold: hi ? .008 : 0, seed: 15, shadeBottom: .2 }));
-      add(cylG(.064, .064, .03, s), 0x262420, 0, .02, 0);
+      B(sculpt([[.03, .06, .062, .066], [-.08, .062, .06, .07], [-.2, .06, .058, .065], [-.33, .055, .055, .058], [-.4, .053, .055, .056]], hi ? 12 : 6, C.boot, { fold: hi ? .008 : 0, seed: 15, shadeBottom: .2 }));
+      if (!gear) add(cylG(.064, .064, .03, s), 0x262420, 0, .02, 0);
     }
     G(alongZ([[-.08, .045, .05, .05], [-.04, .05, .052, .05], [.02, .052, .045, .045], [.1, .05, .04, .035], [.16, .044, .036, .03], [.19, .03, .024, .02]], hi ? 10 : 6, C.boot, { shadeBottom: 0, round: .7 }).translate(0, -.42, -.04));
     add(U.box, 0x161210, 0, -.465, -.05, 0, 0, 0, .1, .02, .29);
@@ -277,7 +277,7 @@ function poseWeapon(b, wAim, wHip, wBoat) {
 
 // ---------- corpo unico deformabile (soldati vicini) ----------
 // ogni vertice è legato al suo osso e, vicino all'articolazione, sfuma sull'osso padre
-const SKIN = { tpl: {}, pool: {}, used: {}, mat: null, max: 40, dist: 42 };
+const SKIN = { tpl: {}, pool: {}, used: {}, mat: null, max: 30, dist: 40 };
 const SKIN_BONES = ['root', 'hips', 'spine', 'neck', 'helmet', 'shL', 'elL', 'shR', 'elR', 'gun', 'hipL', 'knL', 'hipR', 'knR'];
 // nome parte: [osso, osso padre, verso dell'arto (+1 su, -1 giù), mezza ampiezza della sfumatura]
 const SKIN_MAP = { pelvis: [1, 1, 0, 0], chest: [2, 1, 1, .09], head: [3, 2, 1, .04], helmet: [4, 4, 0, 0], uarmL: [5, 2, -1, .07], farmL: [6, 5, -1, .05], uarmR: [7, 2, -1, .07], farmR: [8, 7, -1, .05], weapon: [9, 9, 0, 0], thighL: [10, 1, -1, .08], shinL: [11, 10, -1, .06], thighR: [12, 1, -1, .08], shinR: [13, 12, -1, .06] };
@@ -366,10 +366,13 @@ function skinTemplate(b) {
   const r = makeBody(b.team, b.kind); BODIES.pop();
   r.root.updateMatrixWorld(true);
   const parts = [], ranges = [], white = new THREE.Color(1, 1, 1);
-  for (const p of r.parts) { const g = buildPartGeo(p.key, true); parts.push({ g, m: p.node.matrixWorld.clone(), c: white, vc: true, uvs: 1 }); ranges.push([p.name, g.attributes.position.count, p.node.matrixWorld.clone().invert()]); }
+  const base = typeof BASE_MALE !== 'undefined';
+  if (base) { const g = baseBodyGeo(b.team); parts.push({ g, m: new THREE.Matrix4(), c: white, vc: true, uvs: 1 }); ranges.push(['base', g.attributes.position.count, null]); }
+  for (const p of r.parts) { const g = buildPartGeo(p.key, true, base); parts.push({ g, m: p.node.matrixWorld.clone(), c: white, vc: true, uvs: 1 }); ranges.push([p.name, g.attributes.position.count, p.node.matrixWorld.clone().invert()]); }
   const geo = mergeGeos(parts), n = geo.attributes.position.count, si = new Float32Array(n * 4), sw = new Float32Array(n * 4), pa = geo.attributes.position, v = new V3();
   let o = 0;
   for (const [name, cnt, inv] of ranges) {
+    if (name === 'base') { const BB = BASE_MALE.b, BW = BASE_MALE.w; for (let i = 0; i < cnt; i++) { si[i * 4] = BB[i * 2]; si[i * 4 + 1] = BB[i * 2 + 1]; sw[i * 4] = BW[i]; sw[i * 4 + 1] = 1 - BW[i]; } o += cnt; continue; }
     const [bone, par, dir, hw] = SKIN_MAP[name];
     for (let i = o; i < o + cnt; i++) {
       si[i * 4] = bone; si[i * 4 + 1] = par;
@@ -383,9 +386,10 @@ function skinTemplate(b) {
   const ul = new Float32Array(n), vy = new Float32Array(n), cl = new Float32Array(n);
   o = 0;
   for (let pi = 0; pi < ranges.length; pi++) {
-    const [name, cnt] = ranges[pi], e = parts[pi].m.elements, arm = name[0] === 'u' || name[0] === 'f', flat = name === 'helmet' || name === 'weapon';
-    const cx = name === 'chest' || name === 'head' || name === 'pelvis' ? 0 : e[12], cz = arm ? e[14] : 0;
+    const [name, cnt] = ranges[pi], e = parts[pi].m.elements, flat = name === 'helmet' || name === 'weapon';
+    let arm = name[0] === 'u' || name[0] === 'f', cx = name === 'chest' || name === 'head' || name === 'pelvis' ? 0 : e[12], cz = arm ? e[14] : 0;
     for (let i = o; i < o + cnt; i++) {
+      if (name === 'base') { const bo = BASE_MALE.b[(i - o) * 2]; arm = bo >= 5 && bo <= 8; cx = arm ? (bo < 7 ? SH_L.x : SH_R.x) : bo >= 10 ? (bo < 12 ? -.1 : .1) : 0; cz = 0; }
       v.fromBufferAttribute(pa, i);
       ul[i] = .5 + Math.atan2(v.x - cx, -(v.z - cz)) / TAU; vy[i] = v.y; cl[i] = flat ? 2 : arm ? 1 : 0;
     }
@@ -408,6 +412,26 @@ function skinTemplate(b) {
   const inv = SKIN_BONES.map(k => r[k].matrixWorld.clone().invert());
   t = SKIN.tpl[key] = { geo: g2, inv };
   return t;
+}
+// corpo base CC0 vestito: giacca, calzoni, ghette o stivali, collo; gonfiato lungo la normale per il volume del tessuto
+function baseBodyGeo(team) {
+  const C = SCOL2[team], A = team === 'A', BP = BASE_MALE.p, BN = BASE_MALE.n, BB = BASE_MALE.b, n = BP.length / 3;
+  const pos = new Float32Array(n * 3), nor = new Float32Array(BN), cl = new Float32Array(n * 3), uv = new Float32Array(n * 2), c = new THREE.Color();
+  for (let i = 0; i < n; i++) {
+    const bo = BB[i * 2], y = BP[i * 3 + 1], arm = bo >= 5 && bo <= 8, leg = bo >= 10, neck = bo === 3 && y > 1.53;
+    let hex = C.jacket, inf = .022;
+    if (arm) { inf = .016; }
+    else if (leg || (bo === 1 && y < .99)) { hex = C.pants; inf = .018; if (bo === 11 || bo === 13) { if (A && y < .3) { hex = C.legging; inf = .02; } else if (!A && y < .47) { hex = C.boot; inf = .012; } } }
+    if (neck) { hex = C.skin; inf = 0; }
+    c.copy(col(hex)); const sh = .92 + (y > .99 && y < 1.06 ? -.12 : 0); // ombra sotto la cintura
+    cl[i * 3] = c.r * sh; cl[i * 3 + 1] = c.g * sh; cl[i * 3 + 2] = c.b * sh;
+    for (let k = 0; k < 3; k++) pos[i * 3 + k] = BP[i * 3 + k] + BN[i * 3 + k] * inf;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(cl, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  g.setIndex(BASE_MALE.i);
+  return g;
 }
 function skinMesh(key, t) {
   const pool = SKIN.pool[key] || (SKIN.pool[key] = []), u = SKIN.used[key] || 0;

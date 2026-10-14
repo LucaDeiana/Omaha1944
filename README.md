@@ -95,5 +95,8 @@ src/main.js             menu, pausa, ciclo di gioco
 
 Texture fotografiche da [ambientCG](https://ambientcg.com) (licenza CC0): Ground054, Ground109, Grass004, Concrete034, Bricks100, Bricks097, RoofingTiles013A, PavingStones138, Planks037A, PaintedMetal004, Fabric084, Plaster001. Ridotte a 512 px e incluse in `assets/tex_photo.js`.
 
+## Crediti modelli
+Corpo umano base da [Godot-Male-Base-Mesh](https://github.com/BoQsc/Godot-Male-Base-Mesh) (orange-juice-games, licenza CC0): `assets/models/male_base.glb`. Lo script `tools/convert_base.js` lo adatta allo scheletro dei soldati, rimuove testa, mani e piedi (sostituiti da quelli scolpiti del gioco), lo leviga con una suddivisione di Loop e scrive `assets/models/male_base.js`.
+
 ## Crediti audio
 Spari reali da [The Free Firearm Sound Library](https://opengameart.org/content/the-free-firearm-sound-library) (CC0).
