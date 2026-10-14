@@ -153,7 +153,7 @@ function genSurface(name, size, opt = {}) {
       minFilter: THREE.LinearMipmapLinearFilter, magFilter: THREE.LinearFilter, wrapS: THREE.RepeatWrapping, wrapT: THREE.RepeatWrapping,
       generateMipmaps: true, depthBuffer: false, stencilBuffer: false,
     });
-    rt.texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    rt.texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
     return rt;
   };
   _tMesh.material = mat;
@@ -173,7 +173,7 @@ function preloadPhotos() {
   return Promise.all(jobs);
 }
 function applyPhotoTextures() {
-  const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  const aniso = renderer.capabilities.getMaxAnisotropy();
   for (const k in PHOTO_IMG) {
     const im = PHOTO_IMG[k]; if (!im.c || !im.n) continue;
     const S = im.c.width, cv = document.createElement('canvas'); cv.width = cv.height = S;

@@ -13,7 +13,7 @@ const DYN = { scale: 1, acc: 0, n: 0, t: 0 };
 const GradeShader = {
   uniforms: {
     tDiffuse: { value: null }, uTime: { value: 0 }, uDamage: { value: 0 }, uSupp: { value: 0 }, uShock: { value: 0 },
-    uWet: { value: 0 }, uFlash: { value: 0 }, uExposure: { value: 1.1 }, uRes: { value: new THREE.Vector2(1, 1) }, uSat: { value: .68 },
+    uWet: { value: 0 }, uFlash: { value: 0 }, uExposure: { value: 1.1 }, uRes: { value: new THREE.Vector2(1, 1) }, uSat: { value: .77 },
   },
   vertexShader: `varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
   fragmentShader: `uniform sampler2D tDiffuse;uniform float uTime,uDamage,uSupp,uShock,uWet,uFlash,uExposure,uSat;uniform vec2 uRes;varying vec2 vUv;
@@ -35,13 +35,21 @@ const GradeShader = {
     if(uWet>0.)uv+=drops(uv,uTime)*uWet;
     float ab=(.0012+uDamage*.01+uSupp*.004+uShock*.012)*length(c)*2.;
     vec3 col=vec3(texture2D(tDiffuse,uv+c*ab).r,texture2D(tDiffuse,uv).g,texture2D(tDiffuse,uv-c*ab).b);
+    // nitidezza adattiva: rinforza i dettagli fini, meno dove il contrasto locale è già alto
+    vec2 px=1./uRes;
+    vec3 sn=texture2D(tDiffuse,uv+vec2(0.,px.y)).rgb,ss=texture2D(tDiffuse,uv-vec2(0.,px.y)).rgb,se=texture2D(tDiffuse,uv+vec2(px.x,0.)).rgb,sw=texture2D(tDiffuse,uv-vec2(px.x,0.)).rgb;
+    vec3 c0=texture2D(tDiffuse,uv).rgb;
+    vec3 mn=min(min(min(sn,ss),min(se,sw)),c0),mx=max(max(max(sn,ss),max(se,sw)),c0);
+    float amp=clamp(min(min(mn.g,1.-mx.g),1.)/max(mx.g,1e-3),0.,1.);
+    col=max(col+(c0*4.-sn-ss-se-sw)*(.05+.1*sqrt(amp)),0.);
     if(uShock>0.){vec3 acc=col;for(int i=1;i<7;i++){float s=1.-float(i)*.018*uShock;acc+=texture2D(tDiffuse,(uv-.5)*s+.5).rgb;}col=acc/7.;}
     col=aces(col*uExposure*(1.+uFlash*3.));
     float l=dot(col,vec3(.2126,.7152,.0722));
     col=mix(vec3(l),col,uSat-uSupp*.3-uShock*.45);
     col*=mix(vec3(.92,.99,1.06),vec3(1.06,1.,.9),smoothstep(.04,.55,l));
     col=pow(col,vec3(1./2.2));
-    col=(col-.5)*1.1+.5;
+    col=(col-.5)*1.12+.5;
+    col*=1.-.05*smoothstep(.35,0.,l); // ombre leggermente più profonde
     float v=smoothstep(.95,.28,length(c*vec2(1.25,1.)));
     col*=mix(.42-uSupp*.2-uShock*.2,1.,v);
     col=mix(col,vec3(.42,.02,.02),clamp(uDamage*(1.15-v),0.,.9));
@@ -51,7 +59,25 @@ const GradeShader = {
   }`
 };
 
+// nebbia esponenziale con attenuazione in quota: la quota del tratto osservato è la media tra camera e punto
+function installHeightFog() {
+  const C = THREE.ShaderChunk;
+  C.fog_pars_vertex = '#ifdef USE_FOG\nvarying float fogDepth;\nvarying float vFogY;\n#endif';
+  C.fog_vertex = '#ifdef USE_FOG\nfogDepth = - mvPosition.z;\nvFogY = cameraPosition.y + dot( viewMatrix[ 1 ].xyz, mvPosition.xyz );\n#endif';
+  C.fog_pars_fragment = C.fog_pars_fragment.replace('varying float fogDepth;', 'varying float fogDepth;\n\tvarying float vFogY;');
+  C.fog_fragment = `#ifdef USE_FOG
+	float fogH = mix( 1.0, 0.32, smoothstep( 8.0, 320.0, 0.5 * ( cameraPosition.y + vFogY ) ) );
+	#ifdef FOG_EXP2
+		float fdH = fogDensity * fogH;
+		float fogFactor = 1.0 - exp( - fdH * fdH * fogDepth * fogDepth );
+	#else
+		float fogFactor = smoothstep( fogNear, fogFar, fogDepth );
+	#endif
+	gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );
+#endif`;
+}
 function initEngine() {
+  installHeightFog();
   renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false });
   renderer.setPixelRatio(Q.pr);
   renderer.setSize(innerWidth, innerHeight);
