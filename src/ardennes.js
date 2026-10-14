@@ -158,6 +158,31 @@ const ARD_STAGES = [
       if (ARD.waveT <= 0 && MISSION.stageT < T) { ARD.waveT = rnd(22, 30); ARD.waves++; ardWave(6 + ARD.waves * 2, ardLineZ(0) - 2); if (ARD.waves > 1) say(NE.guarnere, pick(['Eccoli di nuovo, dal bosco!', 'Krauts a ore dodici!', 'Un\'altra ondata, tenete giù la testa!'])); }
       MISSION.objText = MISSION.stageT < T ? `Tieni la linea — ${Math.ceil(T - MISSION.stageT)} s` : `Elimina gli ultimi attaccanti — ${ardFoes().filter(e => e.pos.z > -200).length} rimasti`;
       if (MISSION.stageT > T && ardFoes().filter(e => e.pos.z > -200).length <= 3) setStage(1);
+      ardBarrage(dt);
+    },
+  },
+  {
+    title: 'Lancio di rifornimenti',
+    start() {
+      MISSION.objText = 'Recupera i rifornimenti paracadutati nel campo';
+      say(NE.radio, 'Easy, qui Dog: i C-47 sono in arrivo. Lanciano munizioni e medicinali davanti a voi!');
+      after(4, () => say(NE.winters, 'Il campo è scoperto. Andate a coppie e coprite chi recupera.'));
+      ARD.crates = []; ARD.got = 0; ARD.waveT = 20; ARD.barT = 30;
+      for (let i = 0; i < 3; i++) {
+        const x0 = -60 + i * 60, path = [{ p: new V3(x0, 170, -60), v: 80 }, { p: new V3(x0, 190, -900), v: 85 }];
+        const pl = new Plane('b26', 'A', new V3(x0, 170, 700 + i * 40), new V3(0, 0, -80), path); pl.hp = 2000;
+        after(9 + i * .8, () => { for (let k = 0; k < 2; k++) ardDropCrate(new V3(x0 + rnd(-25, 25), 0, rnd(-140, -50))); });
+      }
+      MISSION.interactables = [];
+    },
+    update(dt) {
+      for (const c of ARD.crates) ardCrateUpdate(c, dt);
+      const open = ARD.crates.filter(c => c.landed && !c.taken);
+      MISSION.markers = open.map(c => ({ pos: c.pos.clone().add(new V3(0, 2.5, 0)), label: 'Rifornimenti' }));
+      MISSION.objText = ARD.crates.length ? `Recupera i rifornimenti — ${ARD.got}/3 (tieni premuto E sulla cassa)` : 'I C-47 stanno arrivando…';
+      ARD.waveT -= dt; if (ARD.waveT <= 0) { ARD.waveT = rnd(25, 35); ardWave(7, -70); }
+      ardBarrage(dt);
+      if (ARD.got >= 3 || (MISSION.stageT > 240 && ARD.crates.length && !open.length)) { say(NE.lipton, 'Munizioni e plasma! Ora possiamo tenere.'); MISSION.interactables = []; setStage(2); }
     },
   },
   {
@@ -176,7 +201,7 @@ const ARD_STAGES = [
       MISSION.markers = left.map((t, i) => ({ pos: t.pos.clone().add(new V3(0, 3.5, 0)), label: 'Panzer ' + (i + 1) }));
       MISSION.objText = `Distruggi i Panzer — ${left.length} rimasti`;
       ARD.waveT -= dt; if (ARD.waveT <= 0) { ARD.waveT = 35; ardWave(6, ardLineZ(0) - 3); }
-      if (!left.length) { say(NE.lipton, 'Tutti e due in fiamme! Bel lavoro!'); setStage(2); }
+      if (!left.length) { say(NE.lipton, 'Tutti e due in fiamme! Bel lavoro!'); setStage(3); }
     },
   },
   {
@@ -208,6 +233,40 @@ const ARD_STAGES = [
     },
   },
 ];
+// cassa con paracadute: scende lentamente, a terra si può recuperare
+function ardDropCrate(p) {
+  const mb = new MB(); mb.mat = 'wood'; mb.add(U.box, 0x5a6a42, 0, .4, 0, 0, 0, 0, 1.2, .8, .8);
+  mb.mat = 'vc'; mb.add(U.box, 0xd8d0b0, 0, .4, -.41, 0, 0, 0, .5, .2, .01);
+  const g = groupMesh(mb.buildGroups()); scene.add(g);
+  const chute = new THREE.Mesh(new THREE.SphereGeometry(3.2, 14, 6, 0, TAU, 0, PI / 2), new THREE.MeshStandardMaterial({ color: pick([0xd9d3c2, 0x9aa08a, 0xc8b89a]), roughness: .9, side: THREE.DoubleSide }));
+  chute.position.y = 6; g.add(chute);
+  for (let k = 0; k < 4; k++) { const a = k * PI / 2, l = new THREE.Mesh(U.cyl, MAT.vc); l.scale.set(.01, 6, .01); l.position.set(Math.cos(a) * 1.4, 3.3, Math.sin(a) * 1.4); l.rotation.set(Math.sin(a) * .4, 0, -Math.cos(a) * .4); g.add(l); }
+  const c = { g, chute, pos: g.position, landed: false, taken: false, vx: rnd(-1, 1) };
+  c.pos.set(p.x, 120, p.z); ARD.crates.push(c);
+}
+function ardCrateUpdate(c, dt) {
+  if (!c.landed) {
+    c.pos.y -= 7 * dt; c.pos.x += c.vx * dt; c.g.rotation.z = Math.sin(GAME.time * 1.3 + c.vx) * .08;
+    const gy = Hf(c.pos.x, c.pos.z);
+    if (c.pos.y <= gy) {
+      c.pos.y = gy; c.landed = true; c.g.rotation.z = 0; c.chute.scale.set(1, .15, 1); c.chute.position.set(2.5, .2, 0);
+      const it = { pos: c.pos.clone(), r: 2.6, hold: 1.5, label: 'Tieni premuto E per recuperare i rifornimenti', active: () => !c.taken, done: () => { c.taken = true; ARD.got++; resupply(); P.nades += 1; P.bandages = (P.bandages || 0) + 1; c.g.visible = false; addScore(150, 'Rifornimenti recuperati', '#9fe08a'); feed('Rifornimenti recuperati: ' + ARD.got + '/3'); } };
+      MISSION.interactables.push(it);
+    }
+  }
+}
+// sbarramento d'artiglieria tedesca sulla linea: scoppi tra le cime degli abeti
+function ardBarrage(dt) {
+  ARD.barT = (ARD.barT ?? 25) - dt; if (ARD.barT > 0) return;
+  ARD.barT = rnd(40, 65);
+  say(NE.guarnere, pick(['Artiglieria! Giù nelle buche!', 'In arrivo! Tutti giù!', 'Granate sugli alberi, state giù!']));
+  for (let k = 0; k < 9; k++) after(1.5 + k * rnd(.35, .7), () => {
+    const x = clamp(P.pos.x + rnd(-70, 70), -130, 130), z = ardLineZ(x) + rnd(-4, 30), p = new V3(x, 0, z);
+    p.y = Hf(x, z) + (z > ardLineZ(x) + 6 ? rnd(5, 9) : .3);
+    sfxWhistle(p, false);
+    after(1, () => { explode(p, 6.5, 230, { only: 'A' }); treeBlast(p, 9); });
+  });
+}
 function ardVictory() {
   say(NE.winters, 'Foy è nostra. La linea regge: Bastogne non cadrà.');
   for (const e of enemies) if (e.alive) e.flee = true;
@@ -247,7 +306,7 @@ function updateArdennes(dt) {
 function ardDeployPoints() {
   const pts = [{ label: 'Ultimo checkpoint', sub: 'con la squadra', kind: 'checkpoint', pos: MISSION.checkpoint.pos }];
   pts.push({ label: 'Linea delle buche', sub: 'Bois Jacques', kind: 'point', pos: new V3(0, 0, ardLineZ(0) + 3) });
-  if (MISSION.stage >= 2) pts.push({ label: 'Campo innevato', sub: 'a metà strada da Foy', kind: 'point', pos: new V3(ardRoadX(-150) + 8, 0, -150) });
+  if (MISSION.stage >= 3) pts.push({ label: 'Campo innevato', sub: 'a metà strada da Foy', kind: 'point', pos: new V3(ardRoadX(-150) + 8, 0, -150) });
   pts.push({ label: 'P-47 Thunderbolt', sub: 'supporto aereo', kind: 'plane', pos: new V3(-30, 0, 1100) });
   return pts;
 }
