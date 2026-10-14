@@ -84,7 +84,7 @@ function initInput() {
     if (P.mode === 'mg' || P.mode === 'mortar' || P.mode === 'flak') { stationMouse(e.movementX, e.movementY); return; }
     if (P.mode === 'tank') { tankMouse(e.movementX, e.movementY); return; }
     if (P.mode === 'airmark') { airMouse(e.movementX, e.movementY); return; }
-    if (P.mode === 'plane') { PL.stickX = clamp(PL.stickX + e.movementX * .0035 * SETTINGS.sens, -1, 1); PL.stickY = clamp(PL.stickY - e.movementY * .0035 * SETTINGS.sens, -1, 1); return; }
+    if (P.mode === 'plane') { PL.stickX = clamp(PL.stickX + e.movementX * .0022 * SETTINGS.sens, -1, 1); PL.stickY = clamp(PL.stickY - e.movementY * .0022 * SETTINGS.sens, -1, 1); return; }
     if (P.mode === 'naval') { const s = .0021 * SETTINGS.sens * (camera.fov / 60); NAV.yaw -= e.movementX * s; NAV.pitch = clamp(NAV.pitch - e.movementY * s, -.4, .2); return; }
     const s = .0021 * SETTINGS.sens * (camera.fov / SETTINGS.fov) * (P.shock > .3 ? .5 : 1);
     P.yaw -= e.movementX * s; P.pitch = clamp(P.pitch - e.movementY * s, -1.5, 1.5);

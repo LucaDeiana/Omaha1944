@@ -260,6 +260,16 @@ function enterPlane() {
   showMsg('P-47 Thunderbolt — 8 × .50 cal, 2 bombe da 500 lb · V visuale esterna', 4);
   say(N.radio, 'Qui Thunderbolt Leader: attaccate le posizioni sulla scogliera. Attenti alla contraerea.');
 }
+// mirino della visuale esterna: dove arrivano le raffiche (terreno lungo l'asse o punto di convergenza a 320 m)
+function planeReticle(me) {
+  let el = $("planeAim");
+  if (!el) { el = document.createElement("div"); el.id = "planeAim"; el.style.cssText = "position:fixed;width:34px;height:34px;margin:-17px 0 0 -17px;border:2px solid rgba(255,214,120,.9);border-radius:50%;pointer-events:none;z-index:18;box-shadow:0 0 3px #000"; el.innerHTML = "<div style=\"position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;background:#ffd678;border-radius:50%\"></div>"; document.body.appendChild(el); }
+  if (!PL.ext || !me || me.crash) { el.style.display = "none"; return; }
+  const f = _a1.set(0, 0, -1).applyQuaternion(me.q), t = rayTerrain(me.pos, f, 900), p = _a2.copy(me.pos).addScaledVector(f, t > 0 ? Math.min(t, 900) : 320);
+  camera.updateMatrixWorld(); p.project(camera); if (p.z > 1) { el.style.display = "none"; return; }
+  el.style.display = "block"; el.style.left = ((p.x * .5 + .5) * innerWidth) + "px"; el.style.top = ((-p.y * .5 + .5) * innerHeight) + "px";
+  el.style.borderColor = t > 0 && t < 600 ? "rgba(255,120,90,.95)" : "rgba(255,214,120,.9)";
+}
 function togglePlaneView() {
   PL.ext = !PL.ext; PL.camP = null;
   if (PL.cockpit) PL.cockpit.visible = !PL.ext;
@@ -267,7 +277,7 @@ function togglePlaneView() {
   showMsg(PL.ext ? 'Visuale esterna (V per la cabina)' : 'Visuale in cabina (V per l\'esterno)', 1.5);
 }
 function exitPlane() {
-  PL.ext = false;
+  PL.ext = false; if ($("planeAim")) $("planeAim").style.display = "none";
   if (PL.me) { PL.me.remove(); PL.me = null; }
   if (PL.cockpit && PL.cockpit.parent) PL.cockpit.parent.remove(PL.cockpit);
   scene.fog.density = FOG_BASE;
@@ -276,7 +286,7 @@ const _pfw = new V3(), _pup = new V3(), _prt = new V3(), _F = new V3(), _vn = ne
 function updatePlane(dt) {
   const me = PL.me; if (!me) return;
   // comandi: il mouse sposta una "cloche" virtuale che torna al centro
-  PL.stickX *= Math.exp(-1.8 * dt); PL.stickY *= Math.exp(-1.8 * dt);
+  PL.stickX *= Math.exp(-3 * dt); PL.stickY *= Math.exp(-3 * dt);
   if (KEYS.KeyW) PL.throttle = Math.min(1, PL.throttle + dt * .4);
   if (KEYS.KeyS) PL.throttle = Math.max(0, PL.throttle - dt * .4);
   PL.rudder = lerp(PL.rudder, (KEYS.KeyD ? 1 : 0) - (KEYS.KeyA ? 1 : 0), dt * 4);
@@ -295,8 +305,10 @@ function updatePlane(dt) {
   PL.G = lift / (m * 9.8);
   // rotazione: comandi + stabilità aerodinamica
   const auth = clamp(V / 110, .25, 1.3);
-  const tp = PL.stickY * 1.3 * auth, tr = -PL.stickX * 2.6 * auth, ty = -PL.rudder * .5 * auth;
-  PL.av.x = lerp(PL.av.x, tp - alpha * 1.8 * auth, dt * 4); PL.av.z = lerp(PL.av.z, tr, dt * 5); PL.av.y = lerp(PL.av.y, ty - beta * 1.2 * auth, dt * 3);
+  // assistenza: con la cloche al centro le ali tornano orizzontali da sole
+  const level = Math.abs(PL.stickX) < .1 && !me.crash ? -clamp(_prt.y, -.7, .7) * 1.4 * auth : 0;
+  const tp = PL.stickY * 1.0 * auth, tr = -PL.stickX * 1.7 * auth + level, ty = -PL.rudder * .5 * auth;
+  PL.av.x = lerp(PL.av.x, tp - alpha * 1.8 * auth, dt * 3); PL.av.z = lerp(PL.av.z, tr, dt * 3); PL.av.y = lerp(PL.av.y, ty - beta * 1.2 * auth, dt * 3);
   _aq.setFromEuler(new THREE.Euler(PL.av.x * dt, PL.av.y * dt, PL.av.z * dt, 'YXZ')); me.q.multiply(_aq).normalize();
   me.pos.addScaledVector(v, dt);
   me.g.updateMatrixWorld();
@@ -337,6 +349,7 @@ function updatePlane(dt) {
     camera.rotateY((P.lookYaw || 0) + hr.y); camera.rotateX((P.lookPitch || 0) + hr.p); camera.rotateZ(hr.r);
   }
   camera.rotateX(rnd(-shake, shake)); camera.rotateY(rnd(-shake, shake));
+  planeReticle(me);
   const fov = PL.ext ? 70 : 78; if (Math.abs(camera.fov - fov) > .01) { camera.fov = fov; camera.updateProjectionMatrix(); }
   if (PL.eng !== me.eng) PL.eng = me.eng;
   me.eng && me.eng.set(.75 * (.4 + PL.throttle * .6), 0, .75 + PL.throttle * .5);
