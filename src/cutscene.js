@@ -9,6 +9,7 @@ const CUT_SHOTS = [
   { d: 6, cap: 'Omaha Beach — 06:30', from: [40, 3.5, 95], to: [12, 3, 45], look: [0, 14, -80], look2: [-20, 18, -95] },
 ];
 function startCutscene() {
+  if (SCEN === 'ard') CUT_SHOTS.splice(0, CUT_SHOTS.length, ...ARD_SHOTS);
   if (PT === 'E') {
     CUT_SHOTS[0].cap = 'La flotta alleata al largo della Normandia — 05:50';
     CUT_SHOTS[1].cap = 'Die Landungsboote — arrivano i mezzi da sbarco';
@@ -22,7 +23,7 @@ function endCutscene() {
   CUT.active = false; $('cine').classList.add('hidden'); $('hud').classList.remove('cineHud');
   if (vmRoot) vmRoot.visible = true;
   $('fade').style.opacity = 0;
-  showMsg(PT === 'E' ? '6 giugno 1944 — WN 62, Colleville' : '6 giugno 1944 — Omaha Beach', 4);
+  showMsg(SCEN === 'ard' ? '26 dicembre 1944 — Bois Jacques, Ardenne' : PT === 'E' ? '6 giugno 1944 — WN 62, Colleville' : '6 giugno 1944 — Omaha Beach', 4);
 }
 function updateCutscene(dt) {
   if (!CUT.active) return;

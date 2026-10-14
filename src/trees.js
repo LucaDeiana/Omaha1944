@@ -7,6 +7,7 @@ const TREES = { list: [], trunk: null, crown: null, falling: [] };
 const _tm = new THREE.Matrix4(), _tq = new THREE.Quaternion(), _te = new THREE.Euler(), _tp = new V3(), _ts = new V3();
 
 function treeSpot(x, z) {
+  if (SCEN === 'ard') return ardTreeSpot(x, z);
   if (z > -100 || Math.abs(x) > MAPX - 30 || z < -MAPX + 40) return false;
   if (cityIn(x, z) || roadDist(x, z) < 6 || inBunkerZone(x, z, 3)) return false;
   if (z < -235 && z > -345 && x > -125 && x < 120) return false; // Colleville
@@ -17,6 +18,8 @@ function treeSpot(x, z) {
 function buildTrees() {
   const n = Math.round(1400 + Q.particles * 1400);
   const add = (x, z, s) => { if (treeSpot(x, z)) TREES.list.push({ x, z, y: Hf(x, z), s, h: rnd(6, 10) * s, ry: R() * TAU, fall: 0, ax: 0, az: 0, felled: false, kind: R() < .25 ? 1 : 0 }); };
+  if (SCEN === 'ard') { ardTreeList((x, z, s) => { if (treeSpot(x, z)) TREES.list.push({ x, z, y: Hf(x, z), s, h: rnd(12, 19) * s, ry: R() * TAU, fall: 0, ax: 0, az: 0, felled: false, kind: 0 }); }); }
+  else {
   // boschi a macchie
   for (let k = 0; k < 40 && TREES.list.length < n * .6; k++) {
     const cx = rnd(-MAPX + 100, MAPX - 100), cz = rnd(-1350, -140), r = rnd(25, 70);
@@ -29,11 +32,12 @@ function buildTrees() {
   }
   // alberi sparsi lungo siepi e campi
   while (TREES.list.length < n) add(rnd(-MAPX + 40, MAPX - 40), rnd(-1400, -120), rnd(.7, 1.2));
+  }
   const N = TREES.list.length;
   const trunkG = new THREE.CylinderGeometry(.14, .24, 1, 7); trunkG.translate(0, .5, 0);
   const mb = new MB(); mb.mat = 'vc';
   for (let i = 0; i < 6; i++) mb.add(U.ico1, pick([0x3f5228, 0x4a5e2c, 0x37481f, 0x55662f, 0x44562a]), rnd(-.25, .25), rnd(-.15, .2), rnd(-.25, .25), R(), R(), R(), rnd(.3, .45), rnd(.25, .38), rnd(.3, .45));
-  const crownG = mb.build();
+  const crownG = SCEN === 'ard' ? ardTreeCrown() : mb.build();
   const cells = new Map(), CS = 160;
   for (const t of TREES.list) { const k = Math.floor(t.x / CS) + ',' + Math.floor(t.z / CS); let c = cells.get(k); if (!c) cells.set(k, c = []); c.push(t); }
   TREES.cells = [];

@@ -5,7 +5,7 @@
 // ============================================================
 const CONVOY = { trucks: [], depotZ: -560, stop: false };
 const enemyCap = () => Q.enemyAlive + (MISSION.endless ? Math.min(60, Math.floor(MISSION.stageT / 60) * 6) : 0);
-const roadPathX = z => z > -292 ? roadX(clamp(z, -292, -64)) : roadX(-292) + Math.sin(z * .01) * 6;
+const roadPathX = z => SCEN === 'ard' ? ardRoadX(z) : z > -292 ? roadX(clamp(z, -292, -64)) : roadX(-292) + Math.sin(z * .01) * 6;
 
 class SupplyTruck {
   constructor(slot) {

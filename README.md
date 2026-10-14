@@ -91,6 +91,10 @@ src/hud.js              HUD, bussola, marcatori
 src/main.js             menu, pausa, ciclo di gioco
 ```
 
+## Scenari
+- **Omaha Beach — 6 giugno 1944**: sbarco, scogliera, bocage, Colleville e la città (Alleati o Asse, campagna o modalità infinita).
+- **Ardenne — Bois Jacques, dicembre 1944**: la Easy Company tiene le buche nel bosco innevato, ferma i Panzer sulla strada e contrattacca fino a Foy. Si sceglie dal menu "Scenario".
+
 ## Crediti texture
 
 Texture fotografiche da [ambientCG](https://ambientcg.com) (licenza CC0): Ground054, Ground109, Grass004, Concrete034, Bricks100, Bricks097, RoofingTiles013A, PavingStones138, Planks037A, PaintedMetal004, Fabric084, Plaster001. Ridotte a 512 px e incluse in `assets/tex_photo.js`.

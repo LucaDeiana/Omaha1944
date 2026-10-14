@@ -5,7 +5,7 @@
 const NPC = { list: [], tags: [], hayes: { state: 0, k0: 0, t: 0 }, navRel: 8 };
 
 function initNPC() {
-  if (PT === 'E') return;
+  if (PT === 'E' || SCEN === 'ard') return;
   // Pvt. Danny Rizzo: inchiodato a terra dietro un cratere sul bassofondale
   const rz = addAlly('rifle', -14, 24, { name: 'Pvt. Danny Rizzo', stationary: true, state: 'post' });
   rz.vip = true; rz.forceProne = true; rz.prone = 1; rz.yaw = PI;
