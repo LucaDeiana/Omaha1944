@@ -115,24 +115,26 @@ function startSide(mode) {
 // IA dei caccia che danno la caccia al giocatore
 const _hUp = new V3(0, 1, 0);
 function huntPlayer(p, dt) {
-  // senza bersaglio gira in cerchio sul posto e aspetta
-  const me = PL.me; if (!me || P.mode !== 'plane' || me.crash) { p.vel.applyAxisAngle(_hUp, .35 * dt); p.vel.y *= 1 - dt; if (p.pos.y < Hf(p.pos.x, p.pos.z) + 200) p.vel.y += 20 * dt; p.roll = lerp(p.roll, -.5, dt); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll); return; }
-  const dist0 = p.pos.distanceTo(me.pos);
+  // bersaglio: il bombardiere assegnato (scorta) oppure il giocatore; senza bersaglio gira in cerchio sul posto e aspetta
+  const me = PL.me, ht = p.huntTarget && p.huntTarget.alive && !p.huntTarget.crash ? p.huntTarget : null;
+  const tgt = ht || (me && P.mode === 'plane' && !me.crash ? me : null);
+  if (!tgt) { p.vel.applyAxisAngle(_hUp, .35 * dt); p.vel.y *= 1 - dt; if (p.pos.y < Hf(p.pos.x, p.pos.z) + 200) p.vel.y += 20 * dt; p.roll = lerp(p.roll, -.5, dt); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll); return; }
+  const dist0 = p.pos.distanceTo(tgt.pos);
   p.extT = Math.max(0, (p.extT || 0) - dt);
-  if (!p.extT && dist0 < 110) { p.extT = rnd(3, 5); p.extDir = p.vel.clone().normalize().add(new V3(rnd(-.6, .6), rnd(.2, .5), rnd(-.6, .6))).normalize(); }
-  const lead = p.extT ? p.pos.clone().addScaledVector(p.extDir, 500) : me.pos.clone().addScaledVector(me.vel, dist0 / 700);
+  if (!p.extT && dist0 < (ht ? 70 : 110)) { p.extT = rnd(3, 5); p.extDir = p.vel.clone().normalize().add(new V3(rnd(-.6, .6), rnd(.2, .5), rnd(-.6, .6))).normalize(); }
+  const lead = p.extT ? p.pos.clone().addScaledVector(p.extDir, 500) : tgt.pos.clone().addScaledVector(tgt.vel, dist0 / 700);
   const want = lead.sub(p.pos).normalize(), cur = p.vel.clone().normalize();
   const nv = cur.lerp(want, Math.min(1, dt * .9)).normalize();
   const lat = new V3().crossVectors(cur, nv).y;
   p.roll = lerp(p.roll, clamp(-lat * 40, -1.3, 1.3), dt * 2);
   p.vel.copy(nv).multiplyScalar(165); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll);
-  const d = p.pos.distanceTo(me.pos);
   p.fireT -= dt;
-  if (d < 500 && cur.dot(want) > .985 && p.fireT <= 0) {
+  if (dist0 < 500 && cur.dot(want) > .985 && p.fireT <= 0) {
     p.fireT = .07;
-    const o = p.pos.clone().addScaledVector(cur, 4), e = me.pos.clone().add(new V3(rnd(-6, 6), rnd(-6, 6), rnd(-6, 6)));
+    const o = p.pos.clone().addScaledVector(cur, 4), e = tgt.pos.clone().add(new V3(rnd(-6, 6), rnd(-6, 6), rnd(-6, 6)));
     fxTracer(o, e, 1.4); sfxShot('mg42', o);
-    if (R() < .08) { me.damage(rnd(15, 30), false); P.shake += .3; play('imp_metal', null, { vol: .7 }); lensSplat('dirt', .15); }
+    if (tgt === me) { if (R() < .08) { me.damage(rnd(15, 30), false); P.shake += .3; play('imp_metal', null, { vol: .7 }); lensSplat('dirt', .15); } }
+    else if (R() < .1) tgt.damage(rnd(12, 24), false);
   }
   if (p.pos.y < Hf(p.pos.x, p.pos.z) + 60) p.vel.y += 40 * dt;
 }

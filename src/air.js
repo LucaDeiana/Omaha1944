@@ -4,12 +4,17 @@
 //  Solo P-47: mappa dedicata di bocage visto dall'alto, con costa,
 //  fiume e ponte, strada della colonna e villaggio. Missioni:
 //  intercettare i caccia, distruggere la colonna sotto la Flak,
+//  fermare il treno delle munizioni, scortare i B-26 sullo scalo,
 //  bombardare il ponte. Abbattuto, si riparte con un nuovo aereo.
 // ============================================================
 const AIRM = { bridge: null, convoy: [], hunters: [], kills: 0, aa: [] };
 const airRiverX = z => -320 + 110 * Math.sin(z * .0028) + 40 * Math.sin(z * .009);
 const airRoadX = z => 260 + 45 * Math.sin(z * .0042);
 const AIR_BRIDGE_Z = -620;
+// ferrovia est-ovest con scalo merci; attraversa il fiume su un ponte a travata
+const airRailZ = x => -1050 + 60 * Math.sin(x * .0015);
+const airRailY = x => Math.max(6, (airBase(x - 70, airRailZ(x - 70)) + airBase(x, airRailZ(x)) * 2 + airBase(x + 70, airRailZ(x + 70))) / 4);
+const AIR_YARD_X = 620;
 
 // ---------- terreno ----------
 function airBase(x, z) {
@@ -26,6 +31,9 @@ function airH(x, z) {
   // strada della colonna, appiattita
   const rd = Math.abs(x - airRoadX(z));
   if (rd < 7 && z < 120) y = lerp(y, airBase(airRoadX(z), z) * .5 + y * .5, smooth((7 - rd) / 3));
+  // massicciata della ferrovia (larga allo scalo), tranne dove passa sul ponte
+  const dz = Math.abs(z - airRailZ(x)), half = Math.abs(x - AIR_YARD_X) < 110 ? 26 : 5;
+  if (dz < half + 6 && Math.abs(x - airRiverX(z)) > 34) y = lerp(y, airRailY(x), smooth((half + 6 - dz) / 6));
   return y;
 }
 // campi a toppe di colori diversi, sabbia sulla costa, terra sulla strada
@@ -38,6 +46,7 @@ function airSplat(x, z, n2) {
   if (z > 160) { const q = smooth((z - 160) / 80); sa += q * 2; gr *= 1 - q; }
   const rd = Math.abs(x - airRoadX(z)); if (rd < 3.5 && z < 120) di += 2;
   const d = Math.abs(x - airRiverX(z)); if (d < 26) { di += (1 - d / 26) * 1.2; gr *= .6; }
+  const rz = Math.abs(z - airRailZ(x)); if (rz < (Math.abs(x - AIR_YARD_X) < 110 ? 24 : 3.2)) { di += 2.5; gr *= .1; tr = tg = tb = .7; }
   const tot = sa + gr + di || 1, k = .92 + .16 * n2;
   return { sp: [sa / tot, 0, gr / tot, di / tot], cl: [tr * k, tg * k, tb * k] };
 }
@@ -77,13 +86,69 @@ function buildAirMap() {
     const g = groupMesh(m.buildGroups()); g.position.set(x, y, z); scene.add(g);
     return { x, z, mesh: g };
   });
+  buildRailway();
   buildTrees();
+  buildClouds(); buildAirFar();
+}
+function buildRailway() {
+  const mb = new MB(); mb.mat = 'paint';
+  const track = (x0, x1, off) => { for (let x = x0; x < x1; x += 12) { const xa = x, xb = Math.min(x + 12, x1), za = airRailZ(xa) + off, zb = airRailZ(xb) + off, ya = airRailY(xa) + .35, yb = airRailY(xb) + .35; for (const sx of [-.72, .72]) mb.between(new V3(xa, ya, za + sx), new V3(xb, yb, zb + sx), .07, 0x3a3631, U.box); } };
+  track(-1500, 1500, 0);
+  for (const off of [-9, 9, -17, 17]) track(AIR_YARD_X - 100, AIR_YARD_X + 100, off);
+  // ponte a travata sul fiume
+  const rx = airRiverX(airRailZ(-340)), bx = airRiverX(airRailZ(rx)), bz = airRailZ(bx), by = airRailY(bx);
+  for (const sx of [-2.2, 2.2]) { mb.add(U.box, 0x3b3f42, bx, by + 1.6, bz + sx, 0, 0, 0, 80, 3.2, .3); for (let k = -6; k <= 6; k++) mb.add(U.box, 0x34383a, bx + k * 6, by + 1.6, bz + sx, 0, 0, k % 2 ? .6 : -.6, .25, 3.4, .25); }
+  mb.add(U.box, 0x4a4540, bx, by, bz, 0, 0, 0, 80, .6, 5);
+  mb.mat = 'stone'; for (const px of [-40, -14, 14, 40]) mb.add(U.box, 0x8e8778, bx + px, by - 5, bz, 0, 0, 0, 4, 10, 6);
+  // scalo merci: pensilina, magazzini, carri fermi sui binari secondari
+  mb.mat = 'stone';
+  mb.add(U.box, 0xb4ab98, AIR_YARD_X, airRailY(AIR_YARD_X) + 4, airRailZ(AIR_YARD_X) - 26, 0, 0, 0, 60, 8, 12);
+  mb.add(U.box, 0xa89f8c, AIR_YARD_X - 60, airRailY(AIR_YARD_X) + 3, airRailZ(AIR_YARD_X) + 27, 0, 0, 0, 30, 6, 10);
+  mb.mat = 'paint';
+  const yardCars = [];
+  for (const off of [-9, 9, -17, 17]) for (let k = 0; k < 7; k++) { if (R() < .3) continue; const x = AIR_YARD_X - 80 + k * 24, z = airRailZ(x) + off, y = airRailY(x); mb.add(U.box, pick([0x5a3a28, 0x4a3324, 0x5f5546]), x, y + 1.9, z, 0, 0, 0, 12, 2.6, 2.8); yardCars.push(new V3(x, y, z)); }
+  addTiled(mb, 160);
+  AIRM.yard = { x: AIR_YARD_X, z: airRailZ(AIR_YARD_X), cars: yardCars, hits: 0 };
+}
+// nuvole: gruppi di sprite morbidi tra 550 e 900 m
+function buildClouds() {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128; const g = cv.getContext('2d');
+  for (let i = 0; i < 14; i++) { const x = 64 + rnd(-30, 30), y = 64 + rnd(-18, 18), r = rnd(18, 40), gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); }
+  const tex = new THREE.CanvasTexture(cv), mats = [new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: .9, color: 0xf4f4f2 }), new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: .8, color: 0xd8dade })];
+  AIRM.clouds = new THREE.Group();
+  for (let c = 0; c < 46; c++) {
+    const cx = rnd(-3500, 3500), cz = rnd(-3800, 1800), cy = rnd(560, 880);
+    for (let i = 0; i < 7; i++) { const sp = new THREE.Sprite(mats[i % 3 ? 0 : 1]), sc = rnd(130, 280); sp.scale.set(sc * 1.6, sc, 1); sp.position.set(cx + rnd(-180, 180), cy + rnd(-30, 50), cz + rnd(-120, 120)); AIRM.clouds.add(sp); }
+  }
+  scene.add(AIRM.clouds);
+}
+// campagna lontana a bassa risoluzione fino a 6 km e mare aperto
+function buildAirFar() {
+  const S = 80, xs = [], zs = [];
+  for (let x = -6000; x <= 6000; x += S) xs.push(x); for (let z = -6000; z <= 3200; z += S) zs.push(z);
+  const nx = xs.length, nz = zs.length, pos = new Float32Array(nx * nz * 3), cl = new Float32Array(nx * nz * 3), idx = [];
+  const c = new THREE.Color();
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+    const k = j * nx + i, x = xs[i], z = zs[j], y = airBase(x, z) - .8;
+    pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z;
+    const h = hash2(Math.floor(x / 170), Math.floor(z / 130));
+    c.set(z > 200 ? 0xb8ab88 : h < .25 ? 0x7d6e52 : h < .4 ? 0x9a9058 : h < .55 ? 0x56683c : 0x63773f); cl[k * 3] = c.r; cl[k * 3 + 1] = c.g; cl[k * 3 + 2] = c.b;
+  }
+  const inside = (x, z) => x > -1560 && x < 1560 && z > -1460 && z < 380;
+  for (let j = 0; j < nz - 1; j++) for (let i = 0; i < nx - 1; i++) {
+    if (inside(xs[i], zs[j]) && inside(xs[i + 1], zs[j + 1])) continue;
+    const a = j * nx + i, b = a + nx; idx.push(a, b, a + 1, a + 1, b, b + 1);
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(cl, 3)); g.setIndex(idx); g.computeVertexNormals();
+  const far = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true })); far.frustumCulled = false; scene.add(far);
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(14000, 9000), new THREE.MeshLambertMaterial({ color: 0x2e4549 })); sea.rotation.x = -PI / 2; sea.position.set(0, WATER_Y - .25, -1200); sea.frustumCulled = false; scene.add(sea);
 }
 // siepi del bocage lungo i bordi dei campi e boschetti
 function airTreeSpot(x, z) {
   if (Math.abs(x) > 1500 || z < -1450 || z > 150) return false;
   if (Math.abs(x - airRiverX(z)) < 26 || (Math.abs(x - airRoadX(z)) < 8 && z < 120)) return false;
   if (Math.abs(z - AIR_BRIDGE_Z) < 30 && Math.abs(x - airRiverX(z)) < 60) return false;
+  if (Math.abs(z - airRailZ(x)) < (Math.abs(x - AIR_YARD_X) < 120 ? 34 : 9)) return false;
   return true;
 }
 function airTreeList(add) {
@@ -117,7 +182,38 @@ class AirTruck {
     if (byPlayer) { STATS.kills += 2; feed('Mezzo della colonna distrutto'); }
   }
 }
+// treno merci: locomotiva e carri sulla linea; ogni pezzo è un bersaglio
+class AirTrainCar {
+  constructor(train, k) {
+    this.train = train; this.k = k; this.loco = k === 0; this.alive = true; this.hp = this.loco ? 420 : 150; this.truck = true;
+    const mb = new MB(); mb.mat = 'paint';
+    if (this.loco) { mb.add(U.cyl12, 0x1d1d1d, 0, 2.4, -1, PI / 2, 0, 0, 1.25, 8, 1.25); mb.add(U.box, 0x222222, 0, 2.7, 3.6, 0, 0, 0, 2.8, 3.4, 3); mb.add(U.cyl12, 0x1a1a1a, 0, 4.2, -3.6, 0, 0, 0, .45, 1.4, .45); mb.add(U.box, 0x2a1d14, 0, .9, 0, 0, 0, 0, 2.6, 1, 11); for (let w = -2; w <= 2; w++) for (const sx of [-1, 1]) mb.add(U.cyl12, 0x111111, sx * 1.2, .9, w * 2, 0, 0, PI / 2, .85, .2, .85); }
+    else { const c = pick([0x5a3a28, 0x4a3324, 0x5f5546]); mb.add(U.box, c, 0, 2.2, 0, 0, 0, 0, 2.8, 2.8, 11); mb.add(U.box, 0x2a2a2a, 0, .8, 0, 0, 0, 0, 2.4, .6, 10.5); if (k % 3 === 0) { mb.add(U.box, 0x4a5236, 0, 3.9, 0, 0, 0, 0, 2.4, .6, 6); } }
+    this.g = groupMesh(mb.buildGroups()); scene.add(this.g); this.pos = this.g.position; this.box = { min: new V3(), max: new V3() };
+    MISSION.vehicles.push(this);
+  }
+  update() {}
+  damage(a, byPlayer) {
+    if (!this.alive) return; this.hp -= a; if (this.hp > 0) return;
+    this.alive = false; burnMeshes(this.g); const p = this.pos.clone(); p.y += 2; fxExplosion(p, this.loco ? 3 : 2, false); sfxBoom(p, 2.2);
+    const e = addEmitter(p, this.loco ? 'smoke' : 'fire', 1.2); e.life = 120;
+    if (byPlayer) { STATS.kills += this.loco ? 4 : 1; feed(this.loco ? 'Locomotiva distrutta! Il treno è fermo' : 'Vagone distrutto'); }
+    if (this.loco) this.train.stopped = true;
+  }
+}
+class AirTrain {
+  constructor() { this.s = -1450; this.cars = []; this.stopped = false; for (let k = 0; k < 9; k++) this.cars.push(new AirTrainCar(this, k)); }
+  update(dt) {
+    if (!this.stopped && this.s < AIR_YARD_X - 40) this.s += 13 * dt;
+    this.cars.forEach((c, k) => {
+      const x = this.s - k * 12.5, z = airRailZ(x), y = airRailY(x) + .3, ang = Math.atan2(airRailZ(x + 2) - airRailZ(x - 2), 4);
+      c.pos.set(x, y, z); c.g.rotation.y = -ang - PI / 2;
+      c.box.min.set(x - 6, y, z - 1.6); c.box.max.set(x + 6, y + 4.5, z + 1.6);
+    });
+  }
+}
 function airBombHit(p) {
+  const y = AIRM.yard; if (y && MISSION.stage === 3 && Math.abs(p.x - y.x) < 110 && Math.abs(p.z - y.z) < 30) y.hits++;
   const b = AIRM.bridge; if (!b || b.down) return;
   if (Math.abs(p.x - b.x) < 40 && Math.abs(p.z - b.z) < 14 && p.y < b.y + 12) {
     b.hp--; feed(b.hp > 0 ? `Colpo sul ponte! Ancora ${b.hp}` : 'Il ponte crolla!');
@@ -158,7 +254,46 @@ const AIR_STAGES = [
       MISSION.objText = `Distruggi la colonna — ${AIRM.convoy.length - left.length}/8 mezzi (attento alla Flak)`;
       AIRM.harassT -= dt; if (AIRM.harassT <= 0 && PL.me) { AIRM.harassT = rnd(60, 90); spawnHunter(); }
       airCountKills();
-      if (AIRM.convoy.length - left.length >= 8) { say('Radio', 'Colonna fermata! Ultimo obiettivo: il ponte sul fiume. Usate le bombe.'); setStage(2); }
+      if (AIRM.convoy.length - left.length >= 8) { say('Radio', 'Colonna fermata! Un treno di munizioni sta entrando nello scalo: fermatelo!'); setStage(2); }
+    },
+  },
+  {
+    title: 'Il treno delle munizioni',
+    start() { AIRM.train = new AirTrain(); AIRM.harassT = 45; },
+    update(dt) {
+      const t = AIRM.train; t.update(dt);
+      const loco = t.cars[0], dead = t.cars.filter(c => !c.alive).length;
+      MISSION.markers = loco.alive ? [{ pos: loco.pos.clone().add(new V3(0, 7, 0)), label: 'Locomotiva' }] : [];
+      MISSION.objText = loco.alive ? `Ferma il treno: distruggi la locomotiva prima che arrivi allo scalo (${Math.max(0, Math.round((AIR_YARD_X - 40 - t.s) / 13))} s)` : `Treno fermo — vagoni distrutti ${dead - 1}/4`;
+      AIRM.harassT -= dt; if (AIRM.harassT <= 0 && PL.me) { AIRM.harassT = rnd(55, 85); spawnHunter(); }
+      airCountKills();
+      // arrivato allo scalo il treno si ferma: basta distruggere locomotiva e 4 vagoni
+      if (!loco.alive && dead - 1 >= 4) { say('Radio', 'Treno distrutto! Ora scortate i B-26 sullo scalo ferroviario.'); setStage(3); }
+      else if (loco.alive && t.s >= AIR_YARD_X - 41 && !t.warned) { t.warned = true; say('Radio', 'Il treno è nello scalo! Colpitelo comunque, è fermo.'); }
+    },
+  },
+  {
+    title: 'Scorta ai Marauder',
+    start() {
+      AIRM.bombers = []; AIRM.wave = 0;
+      const y = AIRM.yard;
+      for (let i = 0; i < 6; i++) {
+        const o = new V3((i % 3) * 45 - 45, (i % 2) * 15, Math.floor(i / 3) * 60);
+        const path = [{ p: new V3(y.x + o.x - 200, 560, 200 + o.z), v: 95 }, { p: new V3(y.x + o.x, 540, y.z + 300), v: 95 }, { p: new V3(y.x + o.x, 520, y.z - 80 + o.z), v: 95, bomb: new V3(y.x + o.x * .6 + rnd(-20, 20), 0, y.z + rnd(-15, 15)), r: 120 }, { p: new V3(y.x + o.x + 600, 600, -2600), v: 100 }];
+        const b = new Plane('b26', 'A', new V3(y.x + o.x - 400, 560, 1400 + o.z), new V3(0, 0, -95), path); b.hp = 700; AIRM.bombers.push(b);
+      }
+      AIRM.escortT = 8; say('Radio', 'Little friends, qui Marauder Leader: arriviamo da nord, copriteci!');
+    },
+    update(dt) {
+      const live = AIRM.bombers.filter(b => b.alive && !b.crash);
+      AIRM.escortT -= dt;
+      if (AIRM.escortT <= 0 && live.length && AIRM.wave < 4) { AIRM.escortT = 26; AIRM.wave++; for (let k = 0; k < 2; k++) { const h = spawnHunter(); h.huntTarget = pick(live); } say('Radio', pick(['Banditi sui bombardieri!', 'Caccia in attacco alla formazione, a ore sei!', 'Ci sono addosso, Thunderbolt!'])); }
+      airCountKills();
+      MISSION.markers = live.slice(0, 1).map(b => ({ pos: b.pos.clone(), label: 'B-26' })).concat(AIRM.hunters.filter(h => !h.crash && h.huntTarget).map(h => ({ pos: h.pos.clone(), label: 'Fw 190' })));
+      const done = AIRM.bombers.filter(b => b.pi >= 3).length;
+      MISSION.objText = `Proteggi i B-26 fino allo sgancio — ${live.length}/6 in volo · sganci ${done}`;
+      if (done >= 2 || (AIRM.yard.hits >= 4)) { say('Radio', 'Bombe sullo scalo! Grazie per la scorta. Ultimo obiettivo: il ponte sulla Douve.'); setStage(4); }
+      else if (!live.length) { say('Radio', 'Abbiamo perso la formazione... arriva una seconda ondata!'); this.start(); }
     },
   },
   {
@@ -191,7 +326,9 @@ function updateAirMode(dt) {
 function airSpawn() {
   let t = new V3(0, 0, -400);
   if (MISSION.stage === 1) { const c = AIRM.convoy.find(v => v.alive); if (c) t = c.pos.clone(); }
-  else if (MISSION.stage === 2 && AIRM.bridge) t = new V3(AIRM.bridge.x, 0, AIRM.bridge.z);
+  else if (MISSION.stage === 2 && AIRM.train) t = AIRM.train.cars[0].pos.clone();
+  else if (MISSION.stage === 3 && AIRM.bombers) { const b = AIRM.bombers.find(p => p.alive && !p.crash); if (b) t = b.pos.clone(); }
+  else if (MISSION.stage === 4 && AIRM.bridge) t = new V3(AIRM.bridge.x, 0, AIRM.bridge.z);
   else { const h = AIRM.hunters.find(p => p.alive && !p.crash); if (h) t = h.pos.clone(); }
   const a = Math.atan2(t.x, t.z - 1100) + rnd(-.4, .4), pos = new V3(t.x - Math.sin(a) * 1500, 0, t.z - Math.cos(a) * 1500);
   pos.x = clamp(pos.x, -1400, 1400); pos.z = clamp(pos.z, -1400, 900); pos.y = Math.max(Hf(pos.x, pos.z), 0) + 450;
