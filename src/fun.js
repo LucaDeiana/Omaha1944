@@ -78,7 +78,7 @@ function navalBarrage() {
 }
 
 function updateFun(dt) {
-  updateSpots(dt); updateDowned(dt); updatePriority(dt);
+  updateSpots(dt); updateDowned(dt); updatePriority(dt); updateCounter(dt);
   FUN.multiT -= dt;
   if (P.dead && !FUN.wasDead) { if (FUN.streak >= 5) feed('Serie interrotta a ' + FUN.streak); FUN.streak = 0; }
   FUN.wasDead = P.dead;
@@ -202,4 +202,35 @@ function updatePriority(dt) {
   const on = c.z < 1, x = clamp((c.x * .5 + .5) * innerWidth, 30, innerWidth - 30), y = clamp((-c.y * .5 + .5) * innerHeight, 40, innerHeight - 30);
   PRIO.el.style.display = 'block'; PRIO.el.style.left = (on ? x : (c.x < 0 ? innerWidth - 30 : 30)) + 'px'; PRIO.el.style.top = (on ? y : innerHeight / 2) + 'px';
   PRIO.el.innerHTML = `◆<br>${PRIO_NAME[t.kind] || 'Obiettivo'} · ${d} m`;
+}
+
+// ---------- contrattacchi tedeschi (campagna dell'Asse): ondate dalle retrovie verso il punto più avanzato degli Americani ----------
+const COUNTER = { t: 150, wave: null };
+function updateCounter(dt) {
+  if (PT !== 'E' || MISSION.endless || NET.client || MISSION.stage < 2 || MISSION.stage > 5) return;
+  if (COUNTER.wave) {
+    const alive = COUNTER.wave.filter(s => s.alive).length;
+    if (alive < COUNTER.wave.length * .35 || (COUNTER.waveT -= dt) <= 0) {
+      // la difesa resiste più a lungo se il contrattacco ha respinto gli Americani dal punto conteso
+      const held = countFoes(a => a.pos.distanceTo(COUNTER.pt) < 30) < 3;
+      if (held) { MISSION.stageT = Math.max(0, MISSION.stageT - 60); banner('CONTRATTACCO RIUSCITO', 'Gli Americani sono respinti — la linea regge più a lungo'); addScore(300, 'Contrattacco riuscito', '#9fe08a'); }
+      else feed('Il contrattacco si è esaurito');
+      COUNTER.wave = null; COUNTER.t = rnd(130, 180);
+    }
+    return;
+  }
+  COUNTER.t -= dt; if (COUNTER.t > 0) return;
+  let pt = null; for (const a of FOES()) if (a.alive && a.state !== 'boat' && (!pt || a.pos.z < pt.z)) pt = a.pos;
+  if (!pt) { COUNTER.t = 30; return; }
+  COUNTER.pt = new V3(pt.x, 0, pt.z);
+  const n = clamp(enemyCap() - aliveE(), 5, 10), wave = [];
+  for (let k = 0; k < n; k++) {
+    const x = pt.x + rnd(-25, 25), z = pt.z - rnd(45, 65);
+    wave.push(addEnemy(k === 0 ? 'mg' : k < 3 ? 'smg' : randEnemyKind(), x, z, { state: 'assault', group: 'counter', objective: new V3(pt.x + rnd(-8, 8), 0, pt.z + rnd(-6, 6)) }));
+  }
+  const tk = TANKS.list.find(t => t.alive && !t.player); if (tk) tk.goal = new V3(pt.x, 0, pt.z - 15);
+  COUNTER.wave = wave; COUNTER.waveT = 90;
+  banner('CONTRATTACCO!', `Unisciti all'assalto — ${Math.round(Math.hypot(pt.x - P.pos.x, pt.z - P.pos.z))} m`);
+  say(NA.feld, 'Gegenangriff! Contrattacchiamo, ricacciateli in mare!');
+  MISSION.markers = [{ pos: new V3(pt.x, Hf(pt.x, pt.z) + 2, pt.z), label: 'Contrattacco' }].concat(MISSION.markers || []);
 }
