@@ -438,8 +438,8 @@ function updatePlane(dt) {
   if (PL.ext) {
     // visuale esterna: inseguimento morbido dietro e sopra l'aereo
     if (PL.assist) {
-      const fw = _a1.set(0, 0, -1).applyQuaternion(me.q).lerp(planeAimDir(), .3).normalize();
-      PL.camD = PL.camD || fw.clone(); PL.camD.lerp(fw, Math.min(1, dt * 2.5)).normalize();
+      const fw = _a1.set(0, 0, -1).applyQuaternion(me.q).lerp(planeAimDir(), .55).normalize();
+      PL.camD = PL.camD || fw.clone(); PL.camD.lerp(fw, Math.min(1, dt * 3.5)).normalize();
       const ad = PL.camD, want = _a3.copy(me.pos).addScaledVector(ad, -15); want.y += 3.2;
       want.y = Math.max(want.y, Hf(want.x, want.z) + 2);
       PL.camP = PL.camP || want.clone(); PL.camP.lerp(want, Math.min(1, dt * 9));

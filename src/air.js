@@ -141,7 +141,11 @@ function buildAirFar() {
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(cl, 3)); g.setIndex(idx); g.computeVertexNormals();
   const far = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true })); far.frustumCulled = false; scene.add(far);
-  const sea = new THREE.Mesh(new THREE.PlaneGeometry(14000, 9000), new THREE.MeshLambertMaterial({ color: 0x2e4549 })); sea.rotation.x = -PI / 2; sea.position.set(0, WATER_Y - .25, -1200); sea.frustumCulled = false; scene.add(sea);
+  // mare calmo unico: l'acqua a onde di Omaha (fondale e schiuma della spiaggia) qui darebbe chiazze e bande
+  scene.traverse(o => { if (o.material === waterMat) o.visible = false; });
+  const nt = TEX.water.normal.clone(); nt.wrapS = nt.wrapT = THREE.RepeatWrapping; nt.repeat.set(350, 225); nt.needsUpdate = true;
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(14000, 9000), new THREE.MeshStandardMaterial({ color: 0x2f474c, roughness: .32, metalness: .15, normalMap: nt, normalScale: new THREE.Vector2(.35, .35) }));
+  sea.rotation.x = -PI / 2; sea.position.set(0, WATER_Y, -1200); sea.frustumCulled = false; sea.receiveShadow = true; scene.add(sea); AIRM.sea = sea;
 }
 // siepi del bocage lungo i bordi dei campi e boschetti
 function airTreeSpot(x, z) {
