@@ -358,10 +358,12 @@ const _pfw = new V3(), _pup = new V3(), _prt = new V3(), _F = new V3(), _vn = ne
 // direzione del punto di mira dell'istruttore (angoli assoluti mossi dal mouse)
 // il punto di mira resta in un cono di ~50° davanti al muso; vicino al suolo o in stallo l'istruttore richiama
 function planeAimGuard(me, V) {
-  const f = _a1.set(0, 0, -1).applyQuaternion(me.q), a = planeAimDir(), c = a.dot(f), lim = Math.cos(.9);
-  if (c < lim) { const ax = _a3.crossVectors(f, a); if (ax.lengthSq() < 1e-8) ax.set(0, 1, 0); ax.normalize(); a.copy(f).applyAxisAngle(ax, .9); PL.aimYaw = Math.atan2(-a.x, -a.z); PL.aimPitch = Math.asin(clamp(a.y, -1, 1)); }
+  const f = _a1.set(0, 0, -1).applyQuaternion(me.q), a = planeAimDir(), c = a.dot(f), lim = Math.cos(1.2);
+  if (c < lim) { const ax = _a3.crossVectors(f, a); if (ax.lengthSq() < 1e-8) ax.set(0, 1, 0); ax.normalize(); a.copy(f).applyAxisAngle(ax, 1.2); PL.aimYaw = Math.atan2(-a.x, -a.z); PL.aimPitch = Math.asin(clamp(a.y, -1, 1)); }
   const agl = me.pos.y - Math.max(Hf(me.pos.x, me.pos.z), WATER_Y);
-  if (agl < 90) PL.aimPitch = Math.max(PL.aimPitch, lerp(.25, -.1, clamp(agl / 90, 0, 1)));
+  // si può puntare il terreno: la richiamata interviene solo se l'impatto è imminente
+  const sink = -me.vel.y, tti = sink > 1 ? agl / sink : 99;
+  if (tti < 2.5 || agl < 18) PL.aimPitch = Math.max(PL.aimPitch, lerp(.3, 0, clamp(tti / 2.5, 0, 1)));
   if (V < 80) PL.aimPitch = Math.min(PL.aimPitch, Math.asin(clamp(f.y, -1, 1)) - .05);
 }
 function planeAimDir() { return _aimD.set(-Math.sin(PL.aimYaw) * Math.cos(PL.aimPitch), Math.sin(PL.aimPitch), -Math.cos(PL.aimYaw) * Math.cos(PL.aimPitch)); }
