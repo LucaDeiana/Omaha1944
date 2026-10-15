@@ -514,7 +514,9 @@ function exitPlane() {
   AB.lock = null;
   if (PL.me) { if (PL.me.engSmoke) PL.me.engSmoke.life = 0; if (PL.me.engFire) PL.me.engFire.life = 0; } if ($('planeDmg')) $('planeDmg').style.display = 'none';
   PL.ext = false; if ($("planeAim")) $("planeAim").style.display = "none"; if ($('mouseAim')) $('mouseAim').style.display = 'none';
-  if (PL.me) { PL.me.remove(); PL.me = null; }
+  if (PL.me && PL.wreck) { const w = PL.me; w.alive = false; if (w.eng) w.eng.stop(); const i = PLANES.indexOf(w); if (i >= 0) PLANES.splice(i, 1); if (w.g.userData.pilot) w.g.userData.pilot.visible = false; PL.me = null; }  // il relitto resta dov'è
+  else if (PL.me) { PL.me.remove(); PL.me = null; }
+  PL.wreck = null;
   if (PL.cockpit && PL.cockpit.parent) PL.cockpit.parent.remove(PL.cockpit);
   scene.fog.density = FOG_BASE * FOG_K;
 }
@@ -553,7 +555,7 @@ function updatePlane(dt) {
   const thrust = me.crash ? 0 : PL.throttle * (SP.jet ? 17000 : Math.min(32000, 1.6e6 / Math.max(V, 35))) * planeThrustK(SP, PL.type) * (m / 6000) * (.3 + .7 * pt.eng);
   if (me.engFire && !me.crash) { me.hp -= dt * 14; if (me.hp <= 0) playerPlaneHit(me, 1, false); }
   updateGear(me, dt);
-  if (PL.onDeck) carrierRoll(me, dt, thrust, m); else {
+  if (PL.wreck) wreckStep(me, dt); else if (PL.onDeck) carrierRoll(me, dt, thrust, m); else {
   _a1.copy(_pup).addScaledVector(_vn, -_pup.dot(_vn)).normalize();
   _F.set(0, -9.8 * m, 0).addScaledVector(_pfw, thrust).addScaledVector(_vn, -drag).addScaledVector(_a1, lift).addScaledVector(_prt, -beta * q * S * .6);
   v.addScaledVector(_F, dt / m);
@@ -606,8 +608,8 @@ function updatePlane(dt) {
   const dkY = landSurfY(me.pos.x, me.pos.z), gy = Math.max(Hf(me.pos.x, me.pos.z), me.pos.z > -9 ? WATER_Y : -99, dkY);
   PL.liftT = Math.max(0, (PL.liftT || 0) - dt);
   // ruote a contatto col ponte (carrello giù, assetto e discesa ragionevoli): niente schianto, l'aereo rulla
-  if (!PL.onDeck && dkY > -99 && me.pos.y < dkY + (PL.gearH || 2.25) && me.pos.y > dkY - 1 && PL.gearK > .9 && !me.crash && -v.y < 6) { me.pos.y = dkY + (PL.gearH || 2.25); if (v.y < 0) v.y = 0; }
-  if (!PL.onDeck && PL.liftT <= 0 && v.y <= .5 && (PL.throttle < .6 || V < 30) && dkY > -99 && me.pos.y < dkY + (PL.gearH || 2.25) + .05 && me.pos.y > dkY - 1) {
+  if (!PL.wreck && !PL.onDeck && dkY > -99 && me.pos.y < dkY + (PL.gearH || 2.25) && me.pos.y > dkY - 1 && PL.gearK > .9 && !me.crash && -v.y < 6) { me.pos.y = dkY + (PL.gearH || 2.25); if (v.y < 0) v.y = 0; }
+  if (!PL.wreck && !PL.onDeck && PL.liftT <= 0 && v.y <= .5 && (PL.throttle < .6 || V < 30) && dkY > -99 && me.pos.y < dkY + (PL.gearH || 2.25) + .05 && me.pos.y > dkY - 1) {
     const f = _a1.set(0, 0, -1).applyQuaternion(me.q), r = _a2.set(1, 0, 0).applyQuaternion(me.q), pitch = Math.asin(clamp(f.y, -1, 1));
     if (!me.crash && PL.gearK > .9 && -v.y < 6 && Math.abs(r.y) < .2 && pitch > -.1 && pitch < .35 && V < 80) {
       PL.onDeck = true; PL.deckV = Math.hypot(v.x, v.z); PL.deckYaw = Math.atan2(-f.x, -f.z); PL.throttle = 0; PL.landed = true; PL.atBase = carrierDeckAt(me.pos.x, me.pos.z) > -99; PL.arrest = PL.atBase && CARRIER.type !== 'field' && me.pos.z > CARRIER.z + CARRIER.len * .15; if (PL.arrest) { P.shake += .8; play('imp_metal', null, { vol: .9, rate: .6 }); }
@@ -615,18 +617,17 @@ function updatePlane(dt) {
       else { showMsg(CARRIER.type === 'field' ? 'Atterraggio riuscito! Frena con S' : PL.arrest ? 'Appontaggio riuscito! Cavo agganciato' : 'Appontaggio lungo: frena con S!', 2.5); addScore(300, 'Appontaggio', '#9fe08a'); me.hp = Math.min(me.hpMax, me.hp + 300); for (const k in me.parts) me.parts[k] = Math.max(me.parts[k], .8); PL.bombs = PL.spec.bombs; }
     }
   }
-  if (!PL.onDeck && me.pos.y < gy + (dkY > -99 && PL.gearK > .9 && !me.crash ? .5 : 1.5)) {
-    explode(me.pos.clone().setY(gy + .5), 12, 600, {});
-    exitPlane(); P.mode = 'foot'; P.die(); return;
-  }
-  if (me.crash && !PL.crashMsg) { PL.crashMsg = true; showMsg((me.wingLost ? 'Hai perso un\'ala! ' : 'Colpito! ') + 'Premi R per rientrare subito', 4); }
+  // contatto col suolo fuori dall'atterraggio: niente morte istantanea, l'aereo si schianta con la sua fisica
+  if (!PL.wreck && !PL.onDeck && me.pos.y < gy + (dkY > -99 && PL.gearK > .9 && !me.crash ? .5 : 1.5)) startWreck(me, gy);
+  if (me.crash && !PL.wreck && !PL.crashMsg) { PL.crashMsg = true; showMsg((me.wingLost ? 'Hai perso un\'ala! ' : 'Colpito! ') + 'Premi R per rientrare subito', 4); }
   if (Math.abs(me.pos.x) > 2400 || Math.abs(me.pos.z) > 2400 || me.pos.y > 2500) { const back = _a2.set(-me.pos.x, 300 - me.pos.y, -me.pos.z).normalize(); v.lerp(back.multiplyScalar(V), dt * .3); }
   // testa del pilota: si inclina con un ritardo verso le virate, viene schiacciata dalle G e oscilla con le raffiche
   const hr = PL.head || (PL.head = { r: 0, p: 0, y: 0, dy: 0 }), k = Math.min(1, dt * 3);
   hr.r = lerp(hr.r, clamp(-PL.av.z * .09, -.22, .22), k); hr.p = lerp(hr.p, clamp(-PL.av.x * .05 - (PL.G - 1) * .012, -.12, .1), k);
   hr.y = lerp(hr.y, clamp(-PL.av.y * .12, -.1, .1), k); hr.dy = lerp(hr.dy, clamp(-(PL.G - 1) * .018, -.09, .03), k);
   const shake = (PL.gunT > -.05 ? .002 : 0) + Math.min(.004, V * .00002) + P.shake * .01;
-  if (PL.ext) {
+  if (PL.wreck) wreckCam(me, dt);
+  else if (PL.ext) {
     // visuale esterna: inseguimento morbido dietro e sopra l'aereo
     if (PL.assist) {
       const fw = _a1.set(0, 0, -1).applyQuaternion(me.q).lerp(planeAimDir(), .55).normalize();
@@ -695,4 +696,76 @@ function planeDropBomb() {
   m.position.copy(me.pos).add(new V3(0, -1.2, 0)).addScaledVector(r, PL.bombs ? -1.2 : 1.2); scene.add(m);
   projectiles.push({ type: 'bomb', p: m.position, v: me.vel.clone(), life: 40, m, byPlayer: true, team: 'A' });
   play('mag_out', null, { vol: .8, rate: .5 }); feed('Bomba sganciata');
+}
+
+// ---------- schianto fisico ----------
+// gravità dell'urto: 0 = strisciata sulla pancia, oltre 1 = impatto violento (il pilota non sopravvive)
+function startWreck(me, gy) {
+  const v = me.vel, V = v.length(), vy = Math.max(0, -v.y);
+  const water = Hf(me.pos.x, me.pos.z) < WATER_Y && gy <= WATER_Y + .05;
+  const f = _a1.set(0, 0, -1).applyQuaternion(me.q), nose = Math.max(0, -f.y);
+  const sev = clamp((vy - 5) / 22 + Math.max(0, V - 45) / 110 + nose * .8, 0, 1.6) * (water ? .7 : 1);
+  PL.wreck = { t: 0, rest: 0, sev, water, sink: 0, lethal: sev > 1.05, av: new V3(rnd(-1, 1) * sev * 2.5 + nose * 2, rnd(-1, 1) * sev * 1.5, rnd(-1, 1) * sev * 4) };
+  me.crash = true; PL.throttle = 0; PL.onDeck = false; AB.lock = null;
+  if (me.gear) me.gear.g.visible = false;  // il carrello cede
+  for (const p of me.props) p.rotation.x = rnd(-.4, .4);  // eliche piegate
+  me.pos.y = gy + 1;
+  v.y = vy * (water ? .1 : .3); v.multiplyScalar(water ? .55 : .8 - Math.min(.35, sev * .25));
+  P.shake += .8 + sev; play('imp_metal', null, { vol: 1, rate: .45 }); sfxBoom(me.pos, 1 + sev * 2.5, water);
+  if (water) { for (let i = 0; i < 25; i++) PS_SMOKE.emit(me.pos.x + rnd(-3, 3), WATER_Y, me.pos.z + rnd(-3, 3), rnd(-3, 3), rnd(4, 10), rnd(-3, 3), rnd(1, 2), .8, 3, .55, .85, .9, .95, .2, 0); }
+  else fxDebris(me.pos, 12 + Math.round(sev * 20), 1 + sev);
+  // impatto forte: si staccano pezzi, il motore prende fuoco
+  if (sev > .55) { for (let k = 0; k < 4; k++) airDebris(me.pos.clone(), v.clone().multiplyScalar(.5).add(new V3(rnd(-12, 12), rnd(4, 14), rnd(-12, 12))), rnd(.5, 1.6), 0x3c4130, R() < .5); }
+  if (sev > .8 && !water && !me.engFire) { me.engFire = addEmitter(me.pos, 'fire', .6); me.engFire.follow = q => q.copy(me.pos); me.engFire.life = 1e9; }
+  if (sev > 1.2 && !water) fxExplosion(me.pos.clone(), 1.6, false);
+  if (!me.engSmoke) { me.engSmoke = addEmitter(me.pos, 'trail', .6); me.engSmoke.follow = q => q.copy(me.pos); me.engSmoke.life = 1e9; }
+  if (PL.cockpit) PL.cockpit.visible = false; if (me.g.userData.pilot) me.g.userData.pilot.visible = true; if (me.g.userData.glass) me.g.userData.glass.visible = true;
+  PL.camP = null;
+  showMsg(water ? 'Ammaraggio!' : sev > 1 ? 'Schianto!' : 'Atterraggio di fortuna!', 2.5);
+}
+const _wkq = new THREE.Quaternion(), _wke = new THREE.Euler();
+function wreckStep(me, dt) {
+  const W = PL.wreck, v = me.vel; W.t += dt;
+  v.y -= 9.8 * dt; me.pos.addScaledVector(v, dt);
+  const gy = W.water ? WATER_Y : Hf(me.pos.x, me.pos.z), clear = (W.water ? .4 : .9) - W.sink;
+  const onG = me.pos.y <= gy + clear + .05;
+  if (me.pos.y < gy + clear) {
+    me.pos.y = gy + clear;
+    if (v.y < -3) {  // rimbalzo: perde energia e prende a girare
+      const imp = -v.y; v.y = imp * (W.water ? .08 : .28);
+      W.av.x += rnd(-1, 1) * imp * .07; W.av.z += rnd(-1, 1) * imp * .1; W.av.y += rnd(-1, 1) * imp * .04;
+      P.shake += Math.min(1, imp * .05); play('imp_metal', null, { vol: Math.min(1, imp / 15), rate: .5 + R() * .2 });
+      if (!W.water) fxDebris(me.pos, 6, .8 + imp * .03);
+    } else if (v.y < 0) v.y = 0;
+    // strisciamento: attrito molto più forte nell'acqua; la terra frena e solleva polvere
+    const sp = Math.hypot(v.x, v.z), fr = W.water ? 1.8 : .9 + (sp < 15 ? 1.2 : 0);
+    v.x *= Math.exp(-fr * dt); v.z *= Math.exp(-fr * dt);
+    W.av.multiplyScalar(Math.exp(-2.2 * dt));
+    if (sp > 4 && R() < .6) { if (W.water) PS_SMOKE.emit(me.pos.x, WATER_Y, me.pos.z, rnd(-2, 2), rnd(2, 5), rnd(-2, 2), rnd(.8, 1.5), .6, 2.5, .5, .85, .9, .95, .2, 0); else PS_SMOKE.emit(me.pos.x, gy + .3, me.pos.z, rnd(-1, 1), rnd(1, 3), rnd(-1, 1), rnd(2, 4), 1, 5, .45, .55, .48, .38, .1, 0); }
+    // quasi fermo: si adagia sul ventre (o sul dorso se è capovolto)
+    if (sp < 6) {
+      _wke.setFromQuaternion(me.q, 'YXZ'); const up = _a2.set(0, 1, 0).applyQuaternion(me.q).y;
+      _wkq.setFromEuler(new THREE.Euler(.04, _wke.y, up < 0 ? PI : 0, 'YXZ'));
+      me.q.slerp(_wkq, Math.min(1, dt * 2.5)); W.av.multiplyScalar(Math.exp(-4 * dt));
+    }
+    if (W.water && sp < 3) W.sink = Math.min(3.5, W.sink + dt * .25);  // in acqua il relitto affonda piano
+  }
+  _aq.setFromEuler(new THREE.Euler(W.av.x * dt, W.av.y * dt, W.av.z * dt, 'YXZ')); me.q.multiply(_aq).normalize();
+  // fermo da un paio di secondi: esito per il pilota
+  if (onG && v.length() < 1.2) W.rest += dt; else W.rest = 0;
+  if ((W.rest > 2 || W.t > 14) && !W.done) {
+    W.done = true;
+    if (W.lethal) { showMsg('Il pilota non è sopravvissuto all’impatto', 3); after(2.5, () => { if (PL.wreck === W) { exitPlane(); P.mode = 'foot'; P.die(); } }); }
+    else showMsg(W.water ? 'Sei riuscito a uscire dall’abitacolo! R per rientrare' : 'Sei vivo, l’aereo è un rottame · R per rientrare', 6);
+  }
+}
+// visuale sul relitto: la camera gira piano attorno all'aereo e lo segue nella scivolata
+function wreckCam(me, dt) {
+  const W = PL.wreck;
+  if (W.a0 === undefined) W.a0 = Math.atan2(me.vel.x, me.vel.z) + PI * .75;
+  const a = W.t * .25 + W.a0, d = 24 - Math.min(8, W.t * 1.5);
+  const want = _a3.set(me.pos.x + Math.sin(a) * d, me.pos.y + 7, me.pos.z + Math.cos(a) * d);
+  want.y = Math.max(want.y, Hf(want.x, want.z) + 2.5, WATER_Y + 2);
+  PL.camP = PL.camP || want.clone(); PL.camP.lerp(want, Math.min(1, dt * 4));
+  camera.position.copy(PL.camP); camera.lookAt(me.pos);
 }
