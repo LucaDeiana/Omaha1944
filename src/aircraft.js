@@ -368,10 +368,11 @@ function wingmanAI(p, dt) {
   let foe = null, bd = 1600;
   for (const q of PLANES) if (q.team === 'E' && q.alive && !q.crash) { const d = q.pos.distanceTo(p.pos); if (d < bd) { bd = d; foe = q; } }
   let want, spd = 160;
-  if (foe) want = foe.pos.clone().addScaledVector(foe.vel, bd / 750).sub(p.pos).normalize();
+  let aimP = null;
+  if (foe) { aimP = bd < 900 ? aiAirGuns(p, foe, dt) : null; want = (aimP || foe.pos.clone().addScaledVector(foe.vel, bd / 750)).clone().sub(p.pos).normalize(); spd = (PLANE_VMAX[p.type] || 640) / 3.6 * .93; }
   else if (me && P.mode === 'plane' && !me.crash && !PL.onDeck) {
     const slot = _a2.set(p.side * 28, 4, 22 + p.side * 6).applyQuaternion(me.q).add(me.pos), d = slot.distanceTo(p.pos);
-    want = slot.clone().addScaledVector(me.vel, 1.2).sub(p.pos).normalize(); spd = clamp(me.vel.length() + d * .4, 90, 200);
+    want = slot.clone().addScaledVector(me.vel, 1.2).sub(p.pos).normalize(); spd = clamp(me.vel.length() + d * .4, 90, (PLANE_VMAX[p.type] || 640) / 3.6);
   } else {
     // senza giocatore in volo (a terra, sul ponte, abbattuto): giro d'attesa in quota a velocità di crociera
     p.vel.applyAxisAngle(_wUp, .25 * dt); p.vel.y = lerp(p.vel.y, clamp((Hf(p.pos.x, p.pos.z) + 300 - p.pos.y) * .05, -8, 8), dt);
@@ -382,12 +383,6 @@ function wingmanAI(p, dt) {
   const sp0 = p.vel.length();  // letta prima di sovrascrivere la direzione (prima si leggeva il versore: i gregari restavano a 3 m/s)
   p.vel.copy(nv).multiplyScalar(lerp(sp0, spd, dt * .8)); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll);
   if (p.pos.y < Hf(p.pos.x, p.pos.z) + 80) p.vel.y += 40 * dt;
-  p.fireT -= dt;
-  if (foe && bd < 450 && cur.dot(want) > .985 && p.fireT <= 0) {
-    p.fireT = .08; const o = p.pos.clone().addScaledVector(cur, 5);
-    fxTracer(o, foe.pos.clone().add(new V3(rnd(-5, 5), rnd(-5, 5), rnd(-5, 5))), 1.4); sfxShot('m2', o);
-    if (R() < .09) foe.damage(rnd(20, 35), false);
-  }
 }
 const _wUp = new V3(0, 1, 0);
 function spawnWingmen() {

@@ -123,23 +123,16 @@ function huntPlayer(p, dt) {
   p.extT = Math.max(0, (p.extT || 0) - dt);
   if (!p.extT && dist0 < (ht ? 70 : 110)) { p.extT = rnd(3, 5); p.extDir = p.vel.clone().normalize().add(new V3(rnd(-.6, .6), rnd(.2, .5), rnd(-.6, .6))).normalize(); }
   if (p.extT && !p.extDir) p.extDir = p.vel.clone().normalize();
-  const lead = p.extT ? p.pos.clone().addScaledVector(p.extDir, 500) : tgt.pos.clone().addScaledVector(tgt.vel, dist0 / 700);
+  // vicino al bersaglio punta il cerchio d'anticipo, da lontano gli va incontro
+  const aimP = !p.extT && dist0 < 900 ? aiAirGuns(p, tgt, dt) : null; if (p.extT) p.fireT -= dt;
+  const lead = p.extT ? p.pos.clone().addScaledVector(p.extDir, 500) : aimP || tgt.pos.clone().addScaledVector(tgt.vel, dist0 / 700);
   const want = lead.sub(p.pos).normalize(), cur = p.vel.clone().normalize();
   // virata limitata come un aereo vero (~22°/s, meno per i caccia pesanti) e velocità persa nelle virate strette
   const ang = Math.acos(clamp(cur.dot(want), -1, 1)), rate = (p.turnRate || .38) * dt, nv = ang > 1e-4 ? cur.clone().lerp(want, Math.min(1, rate / ang)).normalize() : cur.clone();
   const lat = new V3().crossVectors(cur, nv).y;
   p.roll = lerp(p.roll, clamp(-lat / Math.max(dt, 1e-3) * .9, -1.3, 1.3), dt * 2);
-  p.spd = clamp((p.spd || 165) + (ang > .5 ? -14 : 8) * dt, 125, p.maxSpd || 170);
+  const vmx = p.maxSpd || (PLANE_VMAX[p.type] || 640) / 3.6 * .95;
+  p.spd = clamp((p.spd || vmx * .9) + (ang > .5 ? -14 : 8) * dt, 120, vmx);
   p.vel.copy(nv).multiplyScalar(p.spd); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll);
-  p.fireT -= dt;
-  // spara solo se il muso punta davvero il bersaglio (non durante il disimpegno)
-  const toT = _hTo.subVectors(tgt.pos, p.pos).normalize();
-  if (!p.extT && dist0 < 500 && cur.dot(toT) > .985 && p.fireT <= 0) {
-    p.fireT = .07;
-    const o = p.pos.clone().addScaledVector(cur, 4), e = tgt.pos.clone().add(new V3(rnd(-6, 6), rnd(-6, 6), rnd(-6, 6)));
-    fxTracer(o, e, 1.4); sfxShot('mg42', o);
-    if (tgt === me) { if (R() < .08) { me.damage(rnd(15, 30), false); P.shake += .3; play('imp_metal', null, { vol: .7 }); lensSplat('dirt', .15); } }
-    else if (R() < .1) tgt.damage(rnd(12, 24), false);
-  }
   if (p.pos.y < Hf(p.pos.x, p.pos.z) + 60) p.vel.y += 40 * dt;
 }

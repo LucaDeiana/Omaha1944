@@ -198,7 +198,7 @@ function buildSpecPlane(type) {
 }
 
 // velocità massime storiche in volo livellato (km/h): la spinta di ogni aereo è tarata per raggiungerle a manetta piena col carrello retratto
-const PLANE_VMAX = { p47: 690, p51: 703, f4u: 671, spit: 657, typhoon: 652, hurri: 518, bf109: 640, stuka: 400, me262: 870, mosquito: 610, ju88: 470 };
+const PLANE_VMAX = { p47: 690, p51: 703, f4u: 671, spit: 657, typhoon: 652, hurri: 518, bf109: 640, stuka: 400, me262: 870, mosquito: 610, ju88: 470, fw190: 655, b26: 460 };
 function planeThrustK(SP, type) {
   if (SP._tk) return SP._tk;
   const V = (PLANE_VMAX[type] || 560) / 3.6, m = SP.mass, S = SP.S, q = .6 * V * V, Cl = m * 9.8 / (q * S), drag = q * S * (.024 + .065 * Cl * Cl);

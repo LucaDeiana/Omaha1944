@@ -10,15 +10,18 @@ function bulletDrag(cal) { return cal >= 30 ? .22 : cal >= 20 ? .17 : .14; }
 
 function initAirBullets() {
   if (AB.mesh || !FXP.tr) return;
-  AB.mesh = new THREE.InstancedMesh(FXP.tr.geometry, FXP.tr.material, 400);
+  AB.mesh = new THREE.InstancedMesh(FXP.tr.geometry, FXP.tr.material, 700);
   AB.mesh.frustumCulled = false; AB.mesh.renderOrder = 5; scene.add(AB.mesh);
-  for (let i = 0; i < 400; i++) AB.mesh.setMatrixAt(i, _fz);
+  for (let i = 0; i < 700; i++) AB.mesh.setMatrixAt(i, _fz);
 }
-function fireAirBullet(o, d, vel, G, dmg, byPlayer) {
+// armi dei caccia controllati dall'IA (a colpo singolo, cadenza in secondi)
+const AI_GUNS = { fw190: { cal: 20, dmg: 7, int: .07 }, bf109: { cal: 20, dmg: 6.5, int: .075 }, me262: { cal: 30, dmg: 26, int: .2, he: 1.2 }, ju88: { cal: 7.9, dmg: 4, int: .1 }, def: { cal: 12.7, dmg: 6, int: .07 } };
+function aiGuns(type, team) { if (team === 'A') { const G = (PLANE_SPECS[type] || PLANE_SPECS.p47).guns; return { cal: G.cal, dmg: G.cal >= 30 ? 50 : G.cal >= 20 ? 14 : 10, int: G.cal >= 30 ? .2 : .07, he: G.he }; } return AI_GUNS[type] || AI_GUNS.def; }
+function fireAirBullet(o, d, vel, G, dmg, byPlayer, team = 'A') {
   initAirBullets();
-  if (AB.list.length >= 400) AB.list.shift();
+  if (AB.list.length >= 700) AB.list.shift();
   const u = muzzleV(G.cal);
-  AB.list.push({ p: o.clone(), v: vel.clone().addScaledVector(d, u), life: 1700 / u, G, dmg, byPlayer, tr: true });
+  AB.list.push({ p: o.clone(), v: vel.clone().addScaledVector(d, u), life: 1700 / u, G, dmg, byPlayer, team, tr: true });
 }
 
 const _bd = new V3(), _bn = new V3(), _bq = new THREE.Quaternion(), _bm = new THREE.Matrix4(), _bs = new V3(), _bp = new V3();
@@ -33,21 +36,26 @@ function updateAirBullets(dt) {
     // cosa incontra il proiettile lungo il tratto di questo fotogramma
     let t = rayTerrain(b.p, _bd, seg), water = false, hitPlane = null, hitVeh = null;
     if (_bn.y < WATER_Y && Hf(_bn.x, _bn.z) < WATER_Y) { const tw = _bd.y < 0 ? (WATER_Y - b.p.y) / _bd.y : -1; if (tw >= 0 && tw <= seg && (t < 0 || tw < t)) { t = tw; water = true; } }
-    for (const pl of PLANES) if (pl.team === 'E' && pl.alive && !pl.crash) {
+    const foe = b.team === 'A' ? 'E' : 'A';
+    for (const pl of PLANES) if (pl.team === foe && pl.alive && !pl.crash) {
       const r = pl.type === 'b26' || pl.type === 'ju88' ? 8 : 5, tt = raySphere(b.p, _bd, pl.pos, r);
       if (tt >= 0 && tt <= seg && (t < 0 || tt < t)) { t = tt; hitPlane = pl; water = false; }
     }
-    for (const v of MISSION.vehicles.concat(TANKS.list || [])) {
+    if (b.team === 'A') for (const v of MISSION.vehicles.concat(TANKS.list || [])) {
       if (!v.alive || !v.box) continue;
       const tt = rayBox(b.p.x, b.p.y, b.p.z, _bd.x, _bd.y, _bd.z, { min: _vbA.copy(v.box.min).subScalar(.4), max: _vbB.copy(v.box.max).addScalar(.4) }, seg);
       if (tt > 0 && tt <= seg && (t < 0 || tt < t)) { t = tt; hitVeh = v; hitPlane = null; water = false; }
     }
-    if (t >= 0) { airBulletImpact(b.p.clone(), _bd.clone(), t, hitPlane, hitVeh, water, b.G, b.dmg); L.splice(i, 1); continue; }
+    if (t >= 0) {
+      if (b.byPlayer) airBulletImpact(b.p.clone(), _bd.clone(), t, hitPlane, hitVeh, water, b.G, b.dmg);
+      else aiBulletImpact(b, b.p.clone().addScaledVector(_bd, t), hitPlane, water);
+      L.splice(i, 1); continue;
+    }
     b.p.copy(_bn);
   }
   // traccianti legati ai proiettili: la scia mostra esattamente dove vanno i colpi
   if (!AB.mesh) return;
-  const cp = camera.position, n = Math.min(L.length, 400);
+  const cp = camera.position, n = Math.min(L.length, 700);
   for (let i = 0; i < n; i++) {
     const b = L[i], sp = b.v.length(); _bd.copy(b.v).multiplyScalar(1 / sp);
     const len = Math.min(sp * .028, 22); _bp.copy(b.p).addScaledVector(_bd, -len);
@@ -126,4 +134,31 @@ function updateAirSight() {
     if (ts) { const dx = ls[0] - ts[0], dy = ls[1] - ts[1]; E.line.style.display = 'block'; E.line.style.left = ts[0] + 'px'; E.line.style.top = ts[1] + 'px'; E.line.style.width = Math.hypot(dx, dy) + 'px'; E.line.style.transform = 'rotate(' + Math.atan2(dy, dx) + 'rad)'; }
     else E.line.style.display = 'none';
   } else { E.lead.style.display = E.line.style.display = 'none'; }
+}
+
+// colpo dell'IA (nemici o gregari): danneggia solo gli aerei; contro il giocatore scossone e rumore di lamiera
+function aiBulletImpact(b, end, hitPlane, water) {
+  if (b.G.he) fxExplosion(end.clone(), b.G.he * .35, false);
+  if (hitPlane) {
+    hitPlane.damage(b.dmg * (b.G.he ? 1.2 : 1), false); fxImpact(end, 'metal');
+    if (hitPlane.player) { P.shake += b.G.cal >= 30 ? .6 : .25; play('imp_metal', null, { vol: .7 }); if (R() < .3) lensSplat('dirt', .12); }
+    return;
+  }
+  if (dist2Cam(end) < 600 * 600) fxImpact(end, water ? 'water' : 'dirt');
+}
+// mira dell'IA: punta il cerchio d'anticipo (con un errore di mira) e spara quando il muso è allineato
+function aiAirGuns(p, tgt, dt, maxD = 600) {
+  const G = p.aiG || (p.aiG = aiGuns(p.type, p.team));
+  p.fireT -= dt;
+  const L = airLeadPoint(p, tgt, G); if (!L) return null;
+  const dirL = L.p.clone().sub(p.pos), d = dirL.length(); dirL.multiplyScalar(1 / d);
+  const cur = p.vel.clone().normalize();
+  if (d < maxD && cur.dot(dirL) > .9965 && p.fireT <= 0) {
+    p.fireT = G.int;
+    const err = .009 + (p.team === 'E' ? .006 : .003), dir = dirL.clone().lerp(cur, .5).add(new V3(rnd(-err, err), rnd(-err, err), rnd(-err, err))).normalize();
+    const o = p.pos.clone().addScaledVector(cur, 5);
+    fireAirBullet(o, dir, p.vel, G, G.dmg, false, p.team);
+    if (dist2Cam(o) < 900 * 900) sfxShot(p.team === 'E' ? 'mg42' : 'm2', o);
+  }
+  return L.p;
 }
