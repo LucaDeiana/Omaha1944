@@ -217,6 +217,7 @@ function raidB26() {
 // contraerea tedesca (Flak 38 da 20 mm) e navale alleata
 const AA = { t: 0 };
 function updateAA(dt) {
+  AA.cool = Math.max(0, (AA.cool || 0) - dt);
   AA.t -= dt; if (AA.t > 0) return; AA.t = .1;
   for (const a of WORLD.aaSites) {
     if (a.dead || !a.mesh) continue;
@@ -229,7 +230,9 @@ function updateAA(dt) {
     lead.add(new V3(rnd(-25, 25), rnd(-20, 20), rnd(-25, 25)));
     fxTracer(o, lead, 1.6); sfxShot('flak', o);
     if (R() < .25) { PS_SMOKE.emit(lead.x, lead.y, lead.z, 0, 0, 0, 4, 2, 6, .8, .05, .05, .05, .2, 0); PS_FIRE.emit(lead.x, lead.y, lead.z, 0, 0, 0, .15, 2, 3, 1, 4, 2.5, 1); if (dist2Cam(lead) < 300 * 300) play('boom_far', lead, { ref: 80, vol: .6, rate: 1.6 }); }
-    if (R() < (tgt.player ? .05 : .015)) { tgt.damage(rnd(25, 60), false); if (tgt.player) { P.shake += .4; lensSplat('dirt', .2); play('imp_metal', null, { vol: .8 }); } }
+    // colpo a segno: probabilità che cala con la distanza e con la velocità; al giocatore al massimo un colpo ogni 0,6 s
+    const near = (1 - bd / 1100) ** 1.6, fast = clamp(1.4 - tgt.vel.length() / 160, .45, 1);
+    if (tgt.player ? AA.cool <= 0 && R() < .03 * near * fast : R() < .015) { if (tgt.player) AA.cool = .6; tgt.damage(tgt.player ? rnd(14, 32) : rnd(25, 60), false); if (tgt.player) { P.shake += .4; lensSplat('dirt', .2); play('imp_metal', null, { vol: .8 }); } }
   }
   for (const p of PLANES) {
     if (p.team !== 'E' || p.crash || p.pos.z < 150) continue;

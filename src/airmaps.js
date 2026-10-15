@@ -155,7 +155,7 @@ class AirShip {
     if (this.fireT <= 0 && d < 1000) {
       this.fireT = this.kind === 'flak' ? .15 : .5; const o = this.pos.clone().add(new V3(rnd(-10, 10), 8, 0)), aim = me.pos.clone().addScaledVector(me.vel, d / 800).add(new V3(rnd(-20, 20), rnd(-15, 15), rnd(-20, 20)));
       fxTracer(o, aim, 1.4); if (dist2Cam(o) < 900 * 900) sfxShot('flak', o);
-      if (R() < (this.kind === 'flak' ? .035 : .015) * (1 - d / 1200)) me.damage(rnd(20, 45), false);
+      if (AA.cool <= 0 && R() < (this.kind === 'flak' ? .02 : .01) * (1 - d / 1200) ** 1.6) { AA.cool = .6; me.damage(rnd(14, 32), false); }
     }
   }
   damage(a, byPlayer) {
