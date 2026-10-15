@@ -42,6 +42,7 @@ const P = {
   shellShock(k) { this.shock = Math.max(this.shock, k); this.shockT = 1.6 + k * 1.5; this.stance = Math.max(this.stance, k > .7 ? 2 : this.stance); },
   die() {
     if (this.dead) return;
+    if (SCEN === 'tun') tunPlayerDied();
     this.dead = true; this.deathT = 0; STATS.deaths++;
     this.trigger = false; mouseL = false; this.adsHeld = false;
     showMsg('Sei stato colpito', 2.5);

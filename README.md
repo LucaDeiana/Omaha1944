@@ -98,6 +98,8 @@ src/main.js             menu, pausa, ciclo di gioco
 - **Ardenne — Bois Jacques, dicembre 1944**: la Easy Company tiene le buche nel bosco innevato sotto gli sbarramenti d'artiglieria che abbattono gli abeti, recupera i rifornimenti paracadutati dai C-47 nel campo, ferma i Panzer sulla strada e contrattacca fino a Foy. Si sceglie dal menu "Scenario".
 - **Cieli di Normandia — solo aerei**: P-47 su una mappa dedicata di bocage, costa e fiume; intercettare i Fw 190, distruggere una colonna sotto la Flak, fermare il treno delle munizioni, scortare i B-26 sullo scalo ferroviario, bombardare il ponte sulla Douve. Nuvole attraversabili e campagna visibile fino a 6 km. A/D per rollare e mouse per tirare in virata, V per la visuale esterna.
 
+- **Tunisia — Medjez el-Bab, aprile 1943**: città araba imbiancata con vicoli, piazza, minareto, mercato e palme, circondata da mura e dune. Deathmatch (tutti contro tutti, 11 bot, primo a 25) o deathmatch a squadre (USA contro Afrika Korps, 8 contro 8, prima squadra a 50), partite da 10 minuti.
+
 ## Crediti texture
 
 Texture fotografiche da [ambientCG](https://ambientcg.com) (licenza CC0): Ground054, Ground109, Grass004, Concrete034, Bricks100, Bricks097, RoofingTiles013A, PavingStones138, Planks037A, PaintedMetal004, Fabric084, Plaster001. Ridotte a 512 px e incluse in `assets/tex_photo.js`.

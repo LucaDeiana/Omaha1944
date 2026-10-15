@@ -55,7 +55,8 @@
     <p class="lead">Tre fronti del 1944. <b>Omaha Beach</b>: sbarca sotto il fuoco delle mitragliatrici, apri un varco nel filo spinato e libera Colleville, o difendi il WN 62 con la Wehrmacht. <b>Ardenne</b>: tieni le buche nel bosco innevato di Bastogne, ferma i Panzer e riprendi Foy. <b>Cieli di Normandia</b>: ai comandi di un P-47 intercetta i caccia, distruggi colonne e treni, scorta i bombardieri.</p>
     <div class="grid">
       <div class="opts">
-        <label>Scenario <select id="optMap"><option value="omaha">Omaha Beach — 6 giugno 1944</option><option value="ard">Ardenne — Bois Jacques, dicembre 1944</option><option value="air">Cieli di Normandia — solo aerei</option></select></label>
+        <label>Scenario <select id="optMap"><option value="omaha">Omaha Beach — 6 giugno 1944</option><option value="ard">Ardenne — Bois Jacques, dicembre 1944</option><option value="air">Cieli di Normandia — solo aerei</option><option value="tun">Tunisia — Medjez el-Bab (deathmatch)</option></select></label>
+        <label id="tunModeL" style="display:none">Modalità (Tunisia) <select id="optTunMode"><option value="dm">Deathmatch — tutti contro tutti</option><option value="tdm">Deathmatch a squadre — USA contro Afrika Korps</option></select></label>
         <label>Fazione <select id="optSide"><option value="A">Alleati — 29ª Divisione USA</option><option value="E">Asse — 352ª Divisione, WN 62</option></select></label>
         <label id="modeL">Modalità (Asse) <select id="optMode"><option value="c">Campagna</option><option value="e">Infinita — ondate sempre più grandi</option></select></label>
         <label>Qualità grafica <select id="optQuality"></select></label>
@@ -141,6 +142,7 @@
 <script src="assets/models/male_base.js"></script>
 <script src="src/ardennes.js"></script>
 <script src="src/air.js"></script>
+<script src="src/tunisia.js"></script>
 <script src="src/crowd.js"></script>
 <script src="src/gore.js"></script>
 <script src="src/soldier.js"></script>

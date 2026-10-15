@@ -70,6 +70,7 @@ function addBangaloreCrate(x, z) {
 function initMission() {
   if (SCEN === 'ard') { initArdennes(); return; }
   if (SCEN === 'air') { initAirMode(); return; }
+  if (SCEN === 'tun') { initTunisia(); return; }
   if (PT === 'E') { initAxis(); return; }
   const xs = [-97, -72, -47, -22, 3, 28, 53];
   const per = clamp(Math.floor((Q.allyAlive * .55 - 9) / 6), 4, 10);
@@ -538,6 +539,7 @@ function victory() {
 }
 
 function onSoldierDeath(s, byPlayer, zone) {
+  if (SCEN === 'tun') { tunOnDeath(s, byPlayer); return; }
   if (s.team !== PT && byPlayer) { if (PT === 'E') { STATS.kills++; feed(zone === 'head' ? 'Americano eliminato — colpo alla testa' : 'Americano eliminato'); } }
   if (s.team === PT && PT === 'E') { MISSION.alliesLost++; if (R() < .1 && P.pos.distanceTo(s.pos) < 25 && SUBQ.length < 2) say('', pick(['Sanitäter!', 'Er ist tot!', 'Mein Gott, Hans!'])); return; }
   if (PT === 'E') return;
@@ -664,6 +666,7 @@ function updateMission(dt) {
   if (NET.client) { updateSubs(dt); for (const v of MISSION.vehicles) v.update(dt); return; }
   if (SCEN === 'ard') { updateArdennes(dt); return; }
   if (SCEN === 'air') { updateAirMode(dt); return; }
+  if (SCEN === 'tun') { updateTunisia(dt); return; }
   if (ARD.snow) updateSnowfall(dt);
   MISSION.suppT = Math.max(0, (MISSION.suppT || 0) - dt);
   for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || []), ...(WORLD.tobruks || [])]) b.supT = Math.max(0, (b.supT || 0) - dt);

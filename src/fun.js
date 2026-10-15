@@ -125,7 +125,7 @@ function updateSpots(dt) {
 // ---------- giocatore a terra: 15 s per essere soccorso da un medico o da un compagno ----------
 const DOWNED = { t: 0, rescueT: 0, msgT: 0, who: null };
 function downPlayer() {
-  if (P.downed || P.mode !== 'foot' || P.swim || P.inBoat) return false;
+  if (P.downed || P.mode !== 'foot' || P.swim || P.inBoat || (SCEN === 'tun' && TUN.ffa)) return false;
   P.downed = true; P.hp = 1; P.stance = 2; P.trigger = false; mouseL = false; P.adsHeld = false;
   DOWNED.t = 15; DOWNED.rescueT = 0; DOWNED.msgT = 0; DOWNED.who = null;
   FUN.streak = 0;

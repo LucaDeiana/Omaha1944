@@ -259,14 +259,14 @@ class Soldier {
     this.unstick();
     // soccorso del giocatore a terra: corre da lui ignorando il resto
     if (this.rescueP) { if (P.downed && !P.dead) { this.dest = P.pos.clone(); this.state = 'move'; this.crouchRun = true; this.wait = 0; this.shoutT -= this.thinkDt; return; } this.rescueP = false; }
-    if (this.team === 'A') this.thinkAlly(); else this.thinkEnemy();
+    if (this.team === 'A' && SCEN !== 'tun') this.thinkAlly(); else this.thinkEnemy();
     this.shoutT -= this.thinkDt;
   }
   findTarget() {
     const r = this.w.range, me = this.pos, cands = [];
-    const opp = this.team === 'A' ? enemies : allies;
+    const opp = SCEN === 'tun' && TUN.ffa ? enemies : this.team === 'A' ? enemies : allies;
     for (const o of opp) {
-      if (!o.alive || o.state === 'boat' || o.flee || o.removed) continue;
+      if (!o.alive || o.state === 'boat' || o.flee || o.removed || o === this) continue;
       const dx = o.pos.x - me.x, dz = o.pos.z - me.z, d2 = dx * dx + dz * dz;
       if (d2 < r * r) cands.push([o, o.spotT > 0 && this.team === PT ? d2 * .15 : d2]); // i nemici avvistati dal giocatore hanno la precedenza
     }
@@ -369,7 +369,7 @@ class Soldier {
     if (this.toPost && !this.dest && this.objective) { this.dest = this.objective.clone(); this.state = 'move'; this.crouchRun = R() < .6; }
     if (this.state === 'assault' && !this.dest) {
       this.wait -= this.thinkDt * (this.supp > .45 ? .25 : 1);
-      if (this.wait <= 0) { const th = foesNear('E', this.pos.x, this.pos.z, 24); if (th.cnt) { this.wait = rnd(1.5, 3); if (!this.target) { this.target = th.best; this.tVis = true; } } }
+      if (this.wait <= 0) { const th = foesNear(this.team, this.pos.x, this.pos.z, 24); if (th.cnt) { this.wait = rnd(1.5, 3); if (!this.target) { this.target = th.best; this.tVis = true; } } }
       if (this.wait <= 0) {
         const o = this.objective, dx = o.x - this.pos.x, dz = o.z - this.pos.z, d = Math.hypot(dx, dz);
         if (d < 22) this.state = 'hold';
@@ -389,7 +389,7 @@ class Soldier {
         this.nadeT -= this.thinkDt;
         const cd = t === P ? MISSION.nadeCD : MISSION.eNadeCD;
         if (this.nadeT <= 0 && cd <= 0) {
-          throwNadeAt(this, t === P ? P.pos.clone().add(new V3(rnd(-2.5, 2.5) / D.acc, 0, rnd(-2.5, 2.5) / D.acc)) : t.pos, 'E');
+          throwNadeAt(this, t === P ? P.pos.clone().add(new V3(rnd(-2.5, 2.5) / D.acc, 0, rnd(-2.5, 2.5) / D.acc)) : t.pos, this.team);
           this.nadeT = rnd(18, 32); if (t === P) MISSION.nadeCD = rnd(6, 11) / D.acc; else MISSION.eNadeCD = rnd(3, 6);
           if (dist2Cam(this.pos) < 60 * 60) shout('de', 'grenade', this.pos, { priority: true });
         }
@@ -403,6 +403,7 @@ class Soldier {
     const from = this.muzzle(T1), d = from.distanceTo(tp);
     let p = this.w.acc * clamp(1.15 - d / this.w.range, .12, 1);
     if (PT === 'E') p *= this.team === 'E' ? .3 : (t === P ? D.acc : 1.1); // Asse: i camerati IA sparano peggio, gli Americani premono
+    else if (SCEN === 'tun' && t !== P) p *= 1.6; // deathmatch: i bot si colpiscono tra loro con decisione
     else p *= this.team === 'E' ? (t === P ? D.acc : D.acc * .45) : (d > 60 ? .5 : 1.15);
     if (this.supp > .3) p *= .6;
     if (t === P) { p *= P.hitMul(); if (!losClear(from, tp)) p = 0; }
@@ -426,7 +427,7 @@ class Soldier {
     if (hit) {
       const dm = rnd(this.w.dmg[0], this.w.dmg[1]);
       if (t === P) P.damage(dm * D.dmg, from);
-      else { const zone = R() < .12 ? 'head' : R() < .2 ? 'legs' : 'body'; const hp = zone === 'head' ? t.head(T5) : tp.clone(); t.damage(dm * (zone === 'head' ? 4 : 1.8), from, false, zone); if (dist2Cam(tp) < 130 * 130) bloodHit(hp, dir, zone === 'head' ? 1.4 : 1); }
+      else { const zone = R() < .12 ? 'head' : R() < .2 ? 'legs' : 'body'; const hp = zone === 'head' ? t.head(T5) : tp.clone(); t.lastHit = this; t.damage(dm * (zone === 'head' ? 4 : 1.8), from, false, zone); if (dist2Cam(tp) < 130 * 130) bloodHit(hp, dir, zone === 'head' ? 1.4 : 1); }
     } else {
       if (t === P) P.nearMiss(from, end);
       else if (t.supp !== undefined) t.supp = Math.min(1, t.supp + .2);

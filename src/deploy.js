@@ -7,6 +7,7 @@ const DEP = { pts: [], sel: 0, wait: 0 };
 function deployPoints() {
   if (SCEN === 'ard') return ardDeployPoints();
   if (SCEN === 'air') return airDeployPoints();
+  if (SCEN === 'tun') return tunDeployPoints();
   const st = MISSION.stage, pts = [];
   if (PT === 'E') {
     pts.push({ label: 'Ultimo punto', sub: 'con i camerati', kind: 'checkpoint', pos: MISSION.checkpoint.pos });
@@ -29,7 +30,7 @@ function deployPoints() {
 }
 function openSpawnMenu() {
   P.spawnMenu = true; DEP.pts = deployPoints(); DEP.sel = Math.min(DEP.sel, DEP.pts.length - 1);
-  DEP.wait = P.dead ? (SCEN === 'air' ? 1.5 : 5) : 0;
+  DEP.wait = P.dead ? (SCEN === 'air' ? 1.5 : SCEN === 'tun' ? 3 : 5) : 0;
   $('spawn').classList.remove('hidden'); drawDeploy();
 }
 function deployKey(c) {

@@ -12,8 +12,8 @@ const GAME = {
     const t = Math.round(GAME.time), acc = STATS.shots ? Math.round(STATS.hits / STATS.shots * 100) : 0;
     $('pause').classList.add('hidden');
     const ax = PT === 'E';
-    $('endTitle').textContent = ax ? (win ? 'LO SBARCO È RESPINTO' : 'WN 62 È CADUTO') : win ? 'COLLEVILLE È LIBERA' : 'MISSIONE FALLITA';
-    $('endText').innerHTML = (ax ? (GAME.axisWhy || '') + '<br><br>' : win ? 'La testa di ponte su Omaha Beach regge. Il 6 giugno 1944 è costato caro, ma la strada per la Francia è aperta.<br><br>' : '') +
+    $('endTitle').textContent = GAME.endTitle || (ax ? (win ? 'LO SBARCO È RESPINTO' : 'WN 62 È CADUTO') : win ? 'COLLEVILLE È LIBERA' : 'MISSIONE FALLITA');
+    $('endText').innerHTML = GAME.endText ? GAME.endText + `<table><tr><td>Colpi alla testa</td><td>${STATS.heads}</td></tr><tr><td>Precisione</td><td>${acc}%</td></tr></table>` : (ax ? (GAME.axisWhy || '') + '<br><br>' : win ? 'La testa di ponte su Omaha Beach regge. Il 6 giugno 1944 è costato caro, ma la strada per la Francia è aperta.<br><br>' : '') +
       `<table><tr><td>Tempo</td><td>${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}</td></tr>
       <tr><td>Nemici eliminati</td><td>${STATS.kills}</td></tr><tr><td>Colpi alla testa</td><td>${STATS.heads}</td></tr>
       <tr><td>Precisione</td><td>${acc}%</td></tr><tr><td>Volte caduto</td><td>${STATS.deaths}</td></tr>
@@ -38,7 +38,7 @@ function bindSettings() {
   fillSelect('optDiff', DIFF, SETTINGS.diff);
   const modeVis = () => { $('modeL').style.display = $('optSide').value === 'E' ? '' : 'none'; }; $('optSide').addEventListener('change', modeVis); setTimeout(modeVis, 0); try { $('optName').value = localStorage.getItem('omahaName') || ''; } catch (e) { }
   $('optNet').addEventListener('change', () => $('netNote').classList.toggle('hidden', !$('optNet').checked || netAvailable())); $('optSide').value = SETTINGS.side || 'A'; $('optMap').value = SETTINGS.map || 'omaha';
-  const mapVis = () => { const a = $('optMap').value !== 'omaha'; $('optSide').parentNode.style.display = a ? 'none' : ''; if (a) $('modeL').style.display = 'none'; else modeVis(); }; $('optMap').addEventListener('change', mapVis); setTimeout(mapVis, 0);
+  const mapVis = () => { const a = $('optMap').value !== 'omaha'; $('optSide').parentNode.style.display = a ? 'none' : ''; $('tunModeL').style.display = $('optMap').value === 'tun' ? '' : 'none'; if (a) $('modeL').style.display = 'none'; else modeVis(); }; $('optMap').addEventListener('change', mapVis); setTimeout(mapVis, 0);
   const sync = () => {
     for (const [a, b] of [['optSens', 'pSens'], ['optFov', 'pFov'], ['optVol', 'pVol']]) { $(a).value = $(b).value = SETTINGS[{ optSens: 'sens', optFov: 'fov', optVol: 'volume' }[a]]; }
     for (const [a, b, k] of [['optGore', 'pGore', 'gore'], ['optVoices', 'pVoices', 'voices'], ['optDyn', 'pDyn', 'dynres'], ['optFps', 'pFps', 'fps']]) $(a).checked = $(b).checked = SETTINGS[k];
@@ -52,7 +52,7 @@ function bindSettings() {
 }
 
 async function startGame() {
-  SCEN = $('optMap').value; SETTINGS.map = SCEN; SETTINGS.side = $('optSide').value; if (SCEN !== 'omaha') SETTINGS.side = 'A'; PT = SETTINGS.side; MISSION.endless = PT === 'E' && $('optMode').value === 'e'; try { localStorage.setItem('omahaName', $('optName').value); } catch (e) { }
+  SCEN = $('optMap').value; TUN.mode = $('optTunMode') ? $('optTunMode').value : 'dm'; SETTINGS.map = SCEN; SETTINGS.side = $('optSide').value; if (SCEN !== 'omaha') SETTINGS.side = 'A'; PT = SETTINGS.side; MISSION.endless = PT === 'E' && $('optMode').value === 'e'; try { localStorage.setItem('omahaName', $('optName').value); } catch (e) { }
   SETTINGS.quality = $('optQuality').value; SETTINGS.diff = $('optDiff').value; saveSettings();
   Q = QUALITY[SETTINGS.quality]; D = DIFF[SETTINGS.diff];
   const audioP = initAudio();
