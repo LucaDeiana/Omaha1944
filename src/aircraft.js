@@ -257,6 +257,7 @@ function updateAircraft(dt) {
   for (let i = PLANES.length - 1; i >= 0; i--) { const p = PLANES[i]; if (p.player) continue; p.update(dt); }
   updateAirDebris(dt);
   updateAA(dt);
+  updateAirBullets(dt); updateAirSight();
 }
 
 // ============================================================
@@ -471,7 +472,7 @@ function enterPlane() {
   PL.head = null; if (PL.assist === undefined) PL.assist = true; PL.ext = PL.assist; resetPlaneAim();
   if (PL.cockpit) PL.cockpit.visible = !PL.ext; if (me.g.userData.pilot) me.g.userData.pilot.visible = PL.ext; if (me.g.userData.glass) me.g.userData.glass.visible = PL.ext;
   if (PL.onDeck) { PL.throttle = 0; after(.1, () => showMsg((CARRIER.type === 'field' ? 'In testata pista' : 'Sul ponte della portaerei') + ': W per dare motore, a 150 km/h tira su · G carrello', 6)); }
-  showMsg('P-47 — il mouse indica la direzione · click sx mitragliatrici · click dx zoom · Spazio bomba · A/D rollio · W/S manetta · V visuale · M comandi manuali', 4);
+  showMsg(PL.spec.name + ' — mouse: direzione · click sx: fuoco · T: aggancia e segui il cerchio d’anticipo · rotella: manetta', 4);
   say(N.radio, 'Qui Thunderbolt Leader: attaccate le posizioni sulla scogliera. Attenti alla contraerea.');
 }
 // mirino della visuale esterna: dove arrivano le raffiche (terreno lungo l'asse o punto di convergenza a 320 m)
@@ -509,6 +510,7 @@ function swapPlane(type) {
   else showMsg(nm + ' pronto: lo avrai al prossimo decollo (atterra alla base o rientra)', 4);
 }
 function exitPlane() {
+  AB.lock = null;
   if (PL.me) { if (PL.me.engSmoke) PL.me.engSmoke.life = 0; if (PL.me.engFire) PL.me.engFire.life = 0; } if ($('planeDmg')) $('planeDmg').style.display = 'none';
   PL.ext = false; if ($("planeAim")) $("planeAim").style.display = "none"; if ($('mouseAim')) $('mouseAim').style.display = 'none';
   if (PL.me) { PL.me.remove(); PL.me = null; }
@@ -666,28 +668,23 @@ function playerPlaneGuns(me, G = (PL.spec || PLANE_SPECS.p47).guns) {
   for (const gp of pts) {
     const dmg = heavy ? G.dmg : G.dmg * (gp[3] || 1) / 4;
     const o = me.g.localToWorld(new V3(gp[0], gp[1], gp[2])).addScaledVector(f, .5);
-    const conv = me.pos.clone().addScaledVector(f, 320);
-    const sd = G.spread, d = conv.sub(o).normalize().add(new V3(rnd(-sd, sd), rnd(-sd, sd), rnd(-sd, sd))).normalize();
-    o.addScaledVector(me.vel, .016);
-    let t = rayTerrain(o, d, 1100); const tw = d.y < 0 ? (WATER_Y - o.y) / d.y : -1;
-    let water = false; if (tw > 0 && (t < 0 || tw < t) && o.z + d.z * tw > -9) { t = tw; water = true; }
-    let hitPlane = null;
-    for (const pl of PLANES) if (pl.team === 'E' && pl.alive && !pl.crash) { const tt = raySphere(o, d, pl.pos, 6); if (tt > 0 && (t < 0 || tt < t)) { t = tt; hitPlane = pl; } }
-    // mezzi a terra: il colpo si ferma sulla sagoma del veicolo (cabina, cassone, scafo)
-    let hitVeh = null;
-    for (const v of MISSION.vehicles.concat(TANKS.list || [])) { if (!v.alive || !v.box) continue; const tt = rayBox(o.x, o.y, o.z, d.x, d.y, d.z, { min: _vbA.copy(v.box.min).subScalar(.4), max: _vbB.copy(v.box.max).addScalar(.4) }, t > 0 ? t : 1100); if (tt > 0 && (t < 0 || tt < t)) { t = tt; hitVeh = v; hitPlane = null; } }
-    const end = o.clone().addScaledVector(d, t > 0 ? t : 1100);
-    if (heavy || R() < .4) fxTracer(o, end, heavy ? 3 : G.cal >= 20 ? 2 : 1.5);
+    // proiettile vero: parte dalla bocca dell'arma con la velocità dell'aereo più quella iniziale del calibro
+    const sd = G.spread, d = f.clone().add(new V3(rnd(-sd, sd), rnd(-sd, sd), rnd(-sd, sd))).normalize();
+    fireAirBullet(o, d, me.vel, G, dmg, true);
+  }
+}
+// impatto di un proiettile del giocatore (aereo, mezzo, terreno o acqua)
+function airBulletImpact(o, d, t, hitPlane, hitVeh, water, G, dmg) {
+  const heavy = G.cal >= 30;
+    const end = o.clone().addScaledVector(d, t);
     // proiettili esplosivi: piccolo scoppio all'impatto
     if (G.he && t > 0) { fxExplosion(end.clone(), G.he * .35, false); if (dist2Cam(end) < 300 * 300) sfxBoom(end, G.he * .3); }
-    if (hitPlane) { hitPlane.damage(dmg * (G.he ? 1.2 : 1), true); fxImpact(end, 'metal'); hitMarker(false, false); continue; }
-    if (hitVeh) { hitVeh.damage(hitVeh.tank ? (G.cal >= 37 ? dmg * .9 : G.cal >= 20 ? dmg * .12 : dmg * .25) : dmg * .9, true); fxImpact(end, 'metal'); if (R() < .3) sfxImpact(end, 'metal'); hitMarker(false, false); continue; }
-    if (t < 0) continue;
+    if (hitPlane) { hitPlane.damage(dmg * (G.he ? 1.2 : 1), true); fxImpact(end, 'metal'); hitMarker(false, false); return; }
+    if (hitVeh) { hitVeh.damage(hitVeh.tank ? (G.cal >= 37 ? dmg * .9 : G.cal >= 20 ? dmg * .12 : dmg * .25) : dmg * .9, true); fxImpact(end, 'metal'); if (R() < .3) sfxImpact(end, 'metal'); hitMarker(false, false); return; }
     if (G.he) { explode(end, G.he, dmg * 1.4, { byPlayer: true }); if (SCEN === 'air' && G.cal >= 30) airBombHit(end, G.cal >= 37 ? .25 : .12); }
     fxImpact(end, water ? 'water' : end.z > -58 ? 'sand' : 'dirt');
     for (const s of enemies) if (s.alive && !s.inBunker && Math.abs(s.pos.x - end.x) < 1.5 && Math.abs(s.pos.z - end.z) < 1.5) s.damage(rnd(70, 130), o, true, 'body', { dir: d.clone(), power: 3.5, joint: 15 });
     for (const a of WORLD.aaSites) if (!a.dead && a.mesh && a.mesh.position.distanceTo(end) < 3.5 && R() < .3) { a.dead = true; burnMeshes(a.mesh); feed('Postazione contraerea distrutta'); }
-  }
 }
 function planeDropBomb() {
   const me = PL.me; if (!me || PL.bombs <= 0 || me.crash) return;
