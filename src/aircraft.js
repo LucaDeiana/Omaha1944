@@ -368,13 +368,18 @@ function wingmanAI(p, dt) {
   for (const q of PLANES) if (q.team === 'E' && q.alive && !q.crash) { const d = q.pos.distanceTo(p.pos); if (d < bd) { bd = d; foe = q; } }
   let want, spd = 160;
   if (foe) want = foe.pos.clone().addScaledVector(foe.vel, bd / 750).sub(p.pos).normalize();
-  else if (me && P.mode === 'plane' && !me.crash) {
+  else if (me && P.mode === 'plane' && !me.crash && !PL.onDeck) {
     const slot = _a2.set(p.side * 28, 4, 22 + p.side * 6).applyQuaternion(me.q).add(me.pos), d = slot.distanceTo(p.pos);
     want = slot.clone().addScaledVector(me.vel, 1.2).sub(p.pos).normalize(); spd = clamp(me.vel.length() + d * .4, 90, 200);
-  } else { p.vel.applyAxisAngle(_wUp, .3 * dt); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll); return; }
+  } else {
+    // senza giocatore in volo (a terra, sul ponte, abbattuto): giro d'attesa in quota a velocità di crociera
+    p.vel.applyAxisAngle(_wUp, .25 * dt); p.vel.y = lerp(p.vel.y, clamp((Hf(p.pos.x, p.pos.z) + 300 - p.pos.y) * .05, -8, 8), dt);
+    p.vel.setLength(lerp(p.vel.length(), 120, dt * .5)); p.roll = lerp(p.roll, -.5, dt); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll); return;
+  }
   const cur = p.vel.clone().normalize(), ang = Math.acos(clamp(cur.dot(want), -1, 1)), nv = ang > 1e-4 ? cur.clone().lerp(want, Math.min(1, .4 * dt / ang)).normalize() : cur.clone(), lat = new V3().crossVectors(cur, nv).y;
   p.roll = lerp(p.roll, clamp(-lat * 40, -1.3, 1.3), dt * 2);
-  p.vel.copy(nv).multiplyScalar(lerp(p.vel.length(), spd, dt * .8)); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll);
+  const sp0 = p.vel.length();  // letta prima di sovrascrivere la direzione (prima si leggeva il versore: i gregari restavano a 3 m/s)
+  p.vel.copy(nv).multiplyScalar(lerp(sp0, spd, dt * .8)); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll);
   if (p.pos.y < Hf(p.pos.x, p.pos.z) + 80) p.vel.y += 40 * dt;
   p.fireT -= dt;
   if (foe && bd < 450 && cur.dot(want) > .985 && p.fireT <= 0) {
@@ -390,7 +395,8 @@ function spawnWingmen() {
   for (const side of [-1, 1]) {
     if (PL.wing.some(w => w.side === side)) continue;
     const me = PL.me, pos = _a2.set(side * 30, 5, 30).applyQuaternion(me.q).add(me.pos);
-    const w = new Plane(PL.type && PLANE_SPECS[PL.type].nation !== 'de' ? PL.type : 'p47', 'A', pos.clone(), me.vel.clone(), []); w.wing = true; w.side = side; w.hp = 600; PL.wing.push(w);
+    const v0 = me.vel.clone(); if (v0.length() < 95) v0.setLength(95);  // al decollo il giocatore è lento: i gregari partono già in velocità
+    const w = new Plane(PL.type && PLANE_SPECS[PL.type].nation !== 'de' ? PL.type : 'p47', 'A', pos.clone(), v0, []); w.wing = true; w.side = side; w.hp = 600; PL.wing.push(w);
   }
 }
 // carrello: due gambe principali nelle ali e ruotino di coda; G lo ritrae o lo estrae (circa 2 secondi)
@@ -496,6 +502,12 @@ function togglePlaneView() {
 }
 function togglePlaneAssist() { PL.assist = !PL.assist; resetPlaneAim(); showMsg(PL.assist ? 'Comandi assistiti: il mouse indica la direzione' : 'Comandi manuali: il mouse è la cloche', 2); }
 function resetPlaneAim() { const me = PL.me; if (!me) return; PL.camD = null; const f = _a1.set(0, 0, -1).applyQuaternion(me.q); PL.aimYaw = Math.atan2(-f.x, -f.z); PL.aimPitch = Math.asin(clamp(f.y, -1, 1)); PL.camP = null; }
+function swapPlane(type) {
+  if (!PLAYER_PLANES.includes(type) || type === SETTINGS.plane) return;
+  SETTINGS.plane = type; const nm = PLANE_SPECS[type].name;
+  if (P.mode === 'plane' && PL.me && !PL.me.crash && PL.onDeck && (PL.deckV || 0) < 3) { exitPlane(); PL.spawnCarrier = true; enterPlane(); showMsg('Ora piloti il ' + nm, 3); }
+  else showMsg(nm + ' pronto: lo avrai al prossimo decollo (atterra alla base o rientra)', 4);
+}
 function exitPlane() {
   if (PL.me) { if (PL.me.engSmoke) PL.me.engSmoke.life = 0; if (PL.me.engFire) PL.me.engFire.life = 0; } if ($('planeDmg')) $('planeDmg').style.display = 'none';
   PL.ext = false; if ($("planeAim")) $("planeAim").style.display = "none"; if ($('mouseAim')) $('mouseAim').style.display = 'none';
@@ -533,9 +545,9 @@ function updatePlane(dt) {
   const flap = V < 75 ? .55 * smooth((75 - V) / 15) : 0;
   let Cl = (.15 + flap + 4.8 * alpha) * (me.wingLost ? .45 : 1); const st = .3;
   if (Math.abs(alpha) > st) Cl = Math.sign(alpha) * (.15 + flap + 4.8 * st) * Math.max(.25, 1 - (Math.abs(alpha) - st) * 3.5);
-  const lift = q * S * Cl, drag = q * S * (.024 + .065 * Cl * Cl + .02 * (PL.gearK || 0));
+  const lift = q * S * Cl, drag = q * S * (.024 + .065 * Cl * Cl + .012 * (PL.gearK || 0));
   const pt = me.parts || { eng: 1, wl: 1, wr: 1, tail: 1 };
-  const thrust = me.crash ? 0 : PL.throttle * (SP.jet ? 17000 : Math.min(32000, 1.6e6 / Math.max(V, 35))) * SP.thrust * (m / 6000) * (.3 + .7 * pt.eng);
+  const thrust = me.crash ? 0 : PL.throttle * (SP.jet ? 17000 : Math.min(32000, 1.6e6 / Math.max(V, 35))) * planeThrustK(SP, PL.type) * (m / 6000) * (.3 + .7 * pt.eng);
   if (me.engFire && !me.crash) { me.hp -= dt * 14; if (me.hp <= 0) playerPlaneHit(me, 1, false); }
   updateGear(me, dt);
   if (PL.onDeck) carrierRoll(me, dt, thrust, m); else {
@@ -554,7 +566,7 @@ function updatePlane(dt) {
     const L = _a2.copy(planeAimDir()).applyQuaternion(_aqi.copy(me.q).invert());
     const yawE = Math.atan2(L.x, -L.z), pitE = Math.atan2(L.y, Math.max(.25, -L.z)), off = Math.acos(clamp(-L.z, -1, 1));
     // vicino al bersaglio: piccole correzioni con le ali quasi livellate
-    const nx = clamp((clamp(yawE * 4.5, -.75, .75) - bankR) * 2.6, -1, 1), ny = clamp(pitE * 3.4, -1, 1);
+    const nx = clamp((clamp(yawE * 4.5, -.75, .75) - bankR) * 2.6, -1, 1), ny = clamp((pitE + clamp(alpha, -.1, .25)) * 3.4, -1, 1);  // punta la traiettoria (non il muso) sul mirino: in orizzontale non perde quota
     // lontano: ruota finché il punto di mira è «sopra» il muso, poi tira
     const clock = Math.atan2(L.x, L.y), fx = clamp(clock * 2.2, -1, 1), fy = clamp(off * 2.4, 0, 1) * Math.max(0, Math.cos(clock));
     const w = smooth((off - .12) / .35);

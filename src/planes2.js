@@ -196,3 +196,12 @@ function buildSpecPlane(type) {
   d.gear = { x: half * .3, y: wy(half * .3) + .05, z: le(half * .3) + chord(half * .3) * .35, len: sp.h * 1.05, tailZ: tl.z + .4, fixed: !!sp.spats };
   return d;
 }
+
+// velocità massime storiche in volo livellato (km/h): la spinta di ogni aereo è tarata per raggiungerle a manetta piena col carrello retratto
+const PLANE_VMAX = { p47: 690, p51: 703, f4u: 671, spit: 657, typhoon: 652, hurri: 518, bf109: 640, stuka: 400, me262: 870, mosquito: 610, ju88: 470 };
+function planeThrustK(SP, type) {
+  if (SP._tk) return SP._tk;
+  const V = (PLANE_VMAX[type] || 560) / 3.6, m = SP.mass, S = SP.S, q = .6 * V * V, Cl = m * 9.8 / (q * S), drag = q * S * (.024 + .065 * Cl * Cl);
+  const base = (SP.jet ? 17000 : Math.min(32000, 1.6e6 / Math.max(V, 35))) * (m / 6000);
+  return (SP._tk = drag / base);
+}

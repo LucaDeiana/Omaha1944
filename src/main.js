@@ -96,6 +96,7 @@ document.addEventListener('pointerlockchange', () => {
   const locked = renderer && document.pointerLockElement === renderer.domElement;
   GAME.running = locked && GAME.started && !GAME.over;
   if (!locked && GAME.started && !GAME.over) {
+    if (SCEN === 'air') { const ps = $('pPlane'); if (!ps.options.length) ps.innerHTML = $('optPlane').innerHTML; ps.value = SETTINGS.plane; $('pPlaneL').style.display = ''; }
     $('pause').classList.remove('hidden'); mouseL = false; P.trigger = false; P.adsHeld = false; for (const k in KEYS) KEYS[k] = false;
     if (window.speechSynthesis) speechSynthesis.cancel();
     if (AU.ctx) AU.ctx.suspend();
@@ -141,6 +142,8 @@ window.addEventListener('DOMContentLoaded', () => {
   bindSettings();
   $('startBtn').addEventListener('click', startGame);
   $('resumeBtn').addEventListener('click', lockPointer);
+  // cambio d'aereo in partita: subito se si è fermi alla base, altrimenti al prossimo decollo
+  $('pPlane').addEventListener('change', e => swapPlane(e.target.value));
   $('roleBtn').addEventListener('click', () => { lockPointer(); setTimeout(openSpawnMenu, 100); });
   $('restartBtn').addEventListener('click', () => location.reload());
   $('againBtn').addEventListener('click', () => location.reload());
