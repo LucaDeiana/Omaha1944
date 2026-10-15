@@ -110,6 +110,7 @@ function airHudEl() {
     box: mk('width:40px;height:40px;margin:-20px 0 0 -20px;border:2px solid #ffb43a;box-shadow:0 0 3px #000'),
     txt: mk('font:12px Oswald, sans-serif;color:#ffb43a;text-shadow:0 0 3px #000;transform:translate(-50%, 0);white-space:nowrap'),
     line: mk('height:1px;background:rgba(255,255,255,.35);transform-origin:0 0'),
+    bomb: mk('width:26px;height:26px;margin:-13px 0 0 -13px', '<svg width="26" height="26" viewBox="0 0 26 26"><g stroke="#ffd34a" stroke-width="2" fill="none" style="filter:drop-shadow(0 0 2px #000)"><path d="M13 2v7M13 17v7M2 13h7M17 13h7"/><circle cx="13" cy="13" r="4"/></g></svg>'),
   };
   return AB.el;
 }
@@ -117,7 +118,8 @@ const _bsc = new V3();
 function toScreen(p) { _bsc.copy(p).project(camera); if (_bsc.z > 1) return null; return [(_bsc.x + 1) / 2 * innerWidth, (1 - _bsc.y) / 2 * innerHeight]; }
 function updateAirSight() {
   const E = airHudEl(), me = PL.me, hide = () => { E.lead.style.display = E.box.style.display = E.txt.style.display = E.line.style.display = 'none'; };
-  if (P.mode !== 'plane' || !me || me.crash || CUT.active) { hide(); return; }
+  if (P.mode !== 'plane' || !me || me.crash || CUT.active) { hide(); E.bomb.style.display = 'none'; return; }
+  updateBombSight(me, E);
   if (AB.lock && (!AB.lock.alive || AB.lock.crash || AB.lock.pos.distanceTo(me.pos) > 3500)) { AB.lock = null; }
   // senza aggancio l'anticipo appare per il nemico più vicino al mirino
   const tgt = AB.lock || pickAirTarget(me, .26, 1100);
@@ -161,4 +163,18 @@ function aiAirGuns(p, tgt, dt, maxD = 600) {
     if (dist2Cam(o) < 900 * 900) sfxShot(p.team === 'E' ? 'mg42' : 'm2', o);
   }
   return L.p;
+}
+
+// punto d'impatto della bomba (CCIP): stessa caduta e resistenza della bomba vera, finché tocca terra o acqua
+const _bsP = new V3(), _bsV = new V3();
+function updateBombSight(me, E) {
+  const agl = me.pos.y - Math.max(Hf(me.pos.x, me.pos.z), WATER_Y);
+  if (PL.bombs <= 0 || agl < 15 || agl > 1800) { E.bomb.style.display = 'none'; return; }
+  _bsP.copy(me.pos); _bsP.y -= 1.2; _bsV.copy(me.vel);
+  for (let i = 0; i < 600; i++) {
+    const dt = .05; _bsV.y -= 9.8 * dt; _bsV.multiplyScalar(1 - .02 * dt); _bsP.addScaledVector(_bsV, dt);
+    const g = Hf(_bsP.x, _bsP.z); if (_bsP.y < g || (_bsP.y < WATER_Y && g < WATER_Y)) break;
+  }
+  const s = toScreen(_bsP);
+  if (s) { E.bomb.style.display = 'block'; E.bomb.style.left = s[0] + 'px'; E.bomb.style.top = s[1] + 'px'; } else E.bomb.style.display = 'none';
 }

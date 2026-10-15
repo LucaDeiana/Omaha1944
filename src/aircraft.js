@@ -170,6 +170,8 @@ function BOMB_G() {
 function bombImpact(p, q) {
   explode(p, 11, 650, { byPlayer: !!q.byPlayer, bomb: true, only: q.team === 'E' ? 'A' : (q.byPlayer ? undefined : 'E') });
   if (!q.byPlayer) return;
+  // bomba da 500 libbre: schegge e onda d'urto distruggono i mezzi leggeri fino a ~25 m, un colpo diretto ferma anche un carro
+  for (const v of MISSION.vehicles) if (v.alive) { const d = v.pos.distanceTo(p); if (d >= 13.5 && d < 25) v.damage(420 * (1 - (d - 13.5) / 11.5), true); else if (d < 6 && v.tank) v.damage(900, true); }
   if (SCEN === 'air') airBombHit(p);
   for (const b of WORLD.extraBunkers || []) if (!b.destroyed && Math.hypot(b.x - p.x, b.z - p.z) < 8) { b.destroy(); feed('Caposaldo distrutto'); }
   for (const b of WORLD.bunkers) if (!b.destroyed && Math.hypot(b.x - p.x, b.z - p.z) < 8) { b.destroy(); onObjectiveEvent('bunker', b, true); }
@@ -438,14 +440,18 @@ function carrierRoll(me, dt, thrust, m) {
   sp = Math.max(0, sp); PL.deckV = sp;
   if (sp < 15) PL.deckYaw -= PL.rudder * dt * .35;
   const yaw = PL.deckYaw, fx = -Math.sin(yaw), fz = -Math.cos(yaw);
-  me.pos.x += fx * sp * dt; me.pos.z += fz * sp * dt; me.pos.y = CARRIER.deckY + (PL.gearH || 2.25);
+  me.pos.x += fx * sp * dt; me.pos.z += fz * sp * dt;
+  const sy = landSurfY(me.pos.x, me.pos.z, .6);  // già a terra si regge anche su dossi più ripidi
+  // in rullaggio su terreno troppo ripido o in acqua il carrello cede
+  if (sy < -90 && carrierDeckAt(me.pos.x - fx * sp * dt, me.pos.z - fz * sp * dt) < -90 && sp < 36) { PL.onDeck = false; me.vel.set(fx * sp, -8, fz * sp); me.pos.y -= 2; return; }
+  me.pos.y = (sy > -90 ? sy : CARRIER.deckY) + (PL.gearH || 2.25);
   me.vel.set(fx * sp, 0, fz * sp);
   const pitch = lerp(.19, .035, smooth((sp - 18) / 24));
   me.q.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ')); PL.av.set(0, 0, 0); PL.G = 1;
   PL.aimYaw = yaw;
   const pull = PL.assist ? PL.aimPitch > .1 : PL.stickY > .25;
   if (sp > 41 && (pull || sp > 50)) { PL.onDeck = false; PL.liftT = 2; me.vel.y = 4; showMsg('Decollo! G per ritrarre il carrello', 2); spawnWingmen(); return; }
-  if (carrierDeckAt(me.pos.x, me.pos.z) < -90) { PL.onDeck = false; PL.liftT = 2; me.vel.y = 0; if (sp < 36) showMsg('Velocità insufficiente!', 2); else spawnWingmen(); }
+  if (landSurfY(me.pos.x, me.pos.z, .6) < -90) { PL.onDeck = false; PL.liftT = 2; me.vel.y = 0; if (sp < 36) showMsg('Velocità insufficiente!', 2); else spawnWingmen(); }
 }
 function enterPlane() {
   if (!PGEO.ready) return;
@@ -457,7 +463,7 @@ function enterPlane() {
   const me = new Plane(PL.type, 'A', sp.pos, sp.vel, []); me.player = true; me.hpMax = PL.spec.hp; me.hp = me.hpMax;
   me.parts = { eng: 1, wl: 1, wr: 1, tail: 1 }; me.damage = (a, byPlayer) => playerPlaneHit(me, a, byPlayer);
   buildGear(me);
-  PL.onDeck = deck; PL.deckV = 0; PL.deckYaw = 0; PL.gearUp = !deck; PL.gearK = deck ? 1 : 0;
+  PL.onDeck = deck; PL.atBase = true; PL.deckV = 0; PL.deckYaw = 0; PL.gearUp = !deck; PL.gearK = deck ? 1 : 0;
   if (deck) { me.q.setFromEuler(new THREE.Euler(.19, 0, 0, 'YXZ')); me.vel.set(0, 0, 0); }
   PL.me = me; PL.throttle = .85; PL.stickX = PL.stickY = PL.rudder = 0; PL.bombs = PL.spec.bombs; PL.rearm = 0; PL.av = new V3();
   me.g.add(PL.cockpit); PL.cockpit.visible = true; if (me.g.userData.pilot) me.g.userData.pilot.visible = false;
@@ -501,7 +507,7 @@ function resetPlaneAim() { const me = PL.me; if (!me) return; PL.camD = null; co
 function swapPlane(type) {
   if (!PLAYER_PLANES.includes(type) || type === SETTINGS.plane) return;
   SETTINGS.plane = type; const nm = PLANE_SPECS[type].name;
-  if (P.mode === 'plane' && PL.me && !PL.me.crash && PL.onDeck && (PL.deckV || 0) < 3) { exitPlane(); PL.spawnCarrier = true; enterPlane(); showMsg('Ora piloti il ' + nm, 3); }
+  if (P.mode === 'plane' && PL.me && !PL.me.crash && PL.onDeck && PL.atBase !== false && (PL.deckV || 0) < 3) { exitPlane(); PL.spawnCarrier = true; enterPlane(); showMsg('Ora piloti il ' + nm, 3); }
   else showMsg(nm + ' pronto: lo avrai al prossimo decollo (atterra alla base o rientra)', 4);
 }
 function exitPlane() {
@@ -597,15 +603,16 @@ function updatePlane(dt) {
   PL.rearm -= dt; if (PL.bombs < PL.spec.bombs && PL.rearm <= 0) { PL.bombs = PL.spec.bombs; feed('Bombe riarmate'); }
   // contraerea e collisione
   if (me.exploded) { showMsg('Il tuo aereo è esploso in volo!', 3); exitPlane(); P.mode = 'foot'; P.die(); return; }
-  const dkY = carrierDeckAt(me.pos.x, me.pos.z), gy = Math.max(Hf(me.pos.x, me.pos.z), me.pos.z > -9 ? WATER_Y : -99, dkY);
+  const dkY = landSurfY(me.pos.x, me.pos.z), gy = Math.max(Hf(me.pos.x, me.pos.z), me.pos.z > -9 ? WATER_Y : -99, dkY);
   PL.liftT = Math.max(0, (PL.liftT || 0) - dt);
   // ruote a contatto col ponte (carrello giù, assetto e discesa ragionevoli): niente schianto, l'aereo rulla
   if (!PL.onDeck && dkY > -99 && me.pos.y < dkY + (PL.gearH || 2.25) && me.pos.y > dkY - 1 && PL.gearK > .9 && !me.crash && -v.y < 6) { me.pos.y = dkY + (PL.gearH || 2.25); if (v.y < 0) v.y = 0; }
   if (!PL.onDeck && PL.liftT <= 0 && v.y <= .5 && (PL.throttle < .6 || V < 30) && dkY > -99 && me.pos.y < dkY + (PL.gearH || 2.25) + .05 && me.pos.y > dkY - 1) {
     const f = _a1.set(0, 0, -1).applyQuaternion(me.q), r = _a2.set(1, 0, 0).applyQuaternion(me.q), pitch = Math.asin(clamp(f.y, -1, 1));
     if (!me.crash && PL.gearK > .9 && -v.y < 6 && Math.abs(r.y) < .2 && pitch > -.1 && pitch < .35 && V < 80) {
-      PL.onDeck = true; PL.deckV = Math.hypot(v.x, v.z); PL.deckYaw = Math.atan2(-f.x, -f.z); PL.throttle = 0; PL.landed = true; PL.arrest = CARRIER.type !== 'field' && me.pos.z > CARRIER.z + CARRIER.len * .15; if (PL.arrest) { P.shake += .8; play('imp_metal', null, { vol: .9, rate: .6 }); }
-      showMsg(CARRIER.type === 'field' ? 'Atterraggio riuscito! Frena con S' : PL.arrest ? 'Appontaggio riuscito! Cavo agganciato' : 'Appontaggio lungo: frena con S!', 2.5); addScore(300, 'Appontaggio', '#9fe08a'); me.hp = Math.min(me.hpMax, me.hp + 300); for (const k in me.parts) me.parts[k] = Math.max(me.parts[k], .8); PL.bombs = PL.spec.bombs;
+      PL.onDeck = true; PL.deckV = Math.hypot(v.x, v.z); PL.deckYaw = Math.atan2(-f.x, -f.z); PL.throttle = 0; PL.landed = true; PL.atBase = carrierDeckAt(me.pos.x, me.pos.z) > -99; PL.arrest = PL.atBase && CARRIER.type !== 'field' && me.pos.z > CARRIER.z + CARRIER.len * .15; if (PL.arrest) { P.shake += .8; play('imp_metal', null, { vol: .9, rate: .6 }); }
+      if (!PL.atBase) showMsg('Atterrato in campo aperto · frena con S · per riparare e riarmare atterra alla base', 3.5);
+      else { showMsg(CARRIER.type === 'field' ? 'Atterraggio riuscito! Frena con S' : PL.arrest ? 'Appontaggio riuscito! Cavo agganciato' : 'Appontaggio lungo: frena con S!', 2.5); addScore(300, 'Appontaggio', '#9fe08a'); me.hp = Math.min(me.hpMax, me.hp + 300); for (const k in me.parts) me.parts[k] = Math.max(me.parts[k], .8); PL.bombs = PL.spec.bombs; }
     }
   }
   if (!PL.onDeck && me.pos.y < gy + (dkY > -99 && PL.gearK > .9 && !me.crash ? .5 : 1.5)) {

@@ -9,6 +9,13 @@
 // ============================================================
 // portaerei al largo della costa: ponte di volo lungo l'asse z, prua verso terra
 const CARRIER = { type: 'carrier', x: -150, z: 1450, len: 250, w: 34, deckY: 18 };
+// superficie su cui si può atterrare: ponte o pista, altrimenti terreno asciutto e poco inclinato (sotto ~14°)
+function landSurfY(x, z, maxG = .25) {
+  const dk = carrierDeckAt(x, z); if (dk > -99) return dk;
+  const h = Hf(x, z); if (h < WATER_Y + .4) return -99;
+  const gx = (Hf(x + 4, z) - Hf(x - 4, z)) / 8, gz = (Hf(x, z + 4) - Hf(x, z - 4)) / 8;
+  return Math.hypot(gx, gz) < maxG ? h : -99;
+}
 const carrierDeckAt = (x, z) => SCEN === 'air' && Math.abs(x - CARRIER.x) < CARRIER.w / 2 && Math.abs(z - CARRIER.z) < CARRIER.len / 2 ? CARRIER.deckY : -99;
 function buildCarrier() {
   const C = CARRIER, mb = new MB(), L = C.len, Y = C.deckY, gray = 0x5d6670, dark = 0x474f57;

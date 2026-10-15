@@ -104,6 +104,8 @@ src/main.js             menu, pausa, ciclo di gioco
 Nella modalità aerea si sceglie l'aereo e la mappa:
 - **Aerei**: P-47D, P-51D Mustang, F4U Corsair, Spitfire Mk IX, Hawker Typhoon (4×20 mm esplosivi), Hurricane IID (2×40 mm anticarro), Bf 109G, Ju 87G Stuka (2×37 mm), Me 262 (4×30 mm, a reazione), Mosquito FB.VI (bimotore con 4×20 mm e 4 mitragliatrici più 4 bombe). I cannoni pesanti sparano lenti ma i proiettili esplodono e distruggono mezzi, navi e ponti; ogni aereo ha massa, spinta, agilità e robustezza proprie.
 - **Tiro**: i colpi hanno una velocità alla bocca per calibro, tempo di volo, caduta e rallentamento; con **T** si aggancia il nemico più vicino al mirino e un cerchio d'anticipo indica dove mirare perché i proiettili lo incontrino (rosso a tiro utile).
+- **Atterraggio ovunque**: su prati e campi asciutti e poco inclinati (sotto ~14°) si può atterrare e ripartire; riparazione e riarmo solo alla base.
+- **Bombe**: un mirino giallo mostra dove cadrà la bomba; le bombe distruggono i mezzi leggeri fino a ~25 m.
 - **Normandia**: decollo dalla portaerei (cavi d'arresto all'appontaggio).
 - **La Manica**: aeroporto RAF di Hawkinge sulle scogliere; intercettare i Ju 88, affondare il convoglio, atterrare.
 - **Caccia libera**: su ogni mappa, ondate di caccia sempre più numerose con record salvato.

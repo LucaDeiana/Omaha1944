@@ -244,10 +244,10 @@ function airLandingStage(title) {
     start() { PL.landed = false; },
     update(dt) {
       const f = CARRIER;
-      MISSION.markers = PL.onDeck ? [] : [{ pos: new V3(f.x, f.deckY + 30, f.z + f.len / 2), label: 'Pista' }];
+      MISSION.markers = PL.onDeck && PL.atBase ? [] : [{ pos: new V3(f.x, f.deckY + 30, f.z + f.len / 2), label: 'Pista' }];
       MISSION.objText = PL.onDeck ? 'Fermati sulla pista (S per frenare)' : 'Atterra: carrello giù (G), motore al minimo, discesa lenta verso la testata della pista';
       airCountKills();
-      once('airLand', PL.landed && PL.onDeck && PL.deckV < 3, () => { say('Radio', 'Bentornato a terra. Missione compiuta!'); addScore(1000, 'Missione compiuta', '#9fe08a'); banner('MISSIONE COMPIUTA', AIRMAP_NAMES[AIRMAP]); after(8, () => GAME.end(true)); });
+      once('airLand', PL.landed && PL.onDeck && PL.atBase && PL.deckV < 3, () => { say('Radio', 'Bentornato a terra. Missione compiuta!'); addScore(1000, 'Missione compiuta', '#9fe08a'); banner('MISSIONE COMPIUTA', AIRMAP_NAMES[AIRMAP]); after(8, () => GAME.end(true)); });
     },
   };
 }
