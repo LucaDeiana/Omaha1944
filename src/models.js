@@ -356,13 +356,11 @@ function buildPlaneData(type) {
     const fs = []; for (let y = .3; y <= 2.2; y += .19) fs.push(y);
     mb.addG(finGeo({ stations: fs, chord: y => 1.95 - (y - .3) * .52, le: y => 4.0 + (y - .3) * .48, thick: () => .1, color: () => OD }));
     for (const sx of [-1, 1]) for (let k = 0; k < 4; k++) { const x = sx * (2.35 + k * .28); mb.add(cylG2(.022, .026, .6, 8), 0x222222, x, -.5 + Math.abs(x) * .085, -1.95 + .1 * Math.abs(x) - .2 - k * .05, PI / 2, 0, 0); }
-    for (const sx of [-1, 1]) { mb.add(U.box, 0x333333, sx * 1.6, -.82, -.9, 0, 0, 0, .12, .1, 1.1); mb.add(cylG2(.09, .09, .7, 8), 0x333333, sx * .55, -.6, -3.2, PI / 2, 0, 0); }
+    for (const sx of [-1, 1]) mb.add(cylG2(.09, .09, .7, 8), 0x333333, sx * .55, -.6, -3.2, PI / 2, 0, 0);
     mb.add(cylG2(.02, .02, .7, 6), 0x222222, 0, 1.05, .5, -.35, 0, 0);
     mb.add(cylG2(.012, .012, .8, 6), 0x9a9a9a, -5.4, -.08, -1.7, PI / 2, 0, 0);
     mb.mat = 'vc'; mb.between(new V3(0, 1.4, .55), new V3(0, .55, 4.5), .006, 0x202020); mb.mat = 'paint';
     for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) mb.add(U.box, 0x3a3e2a, sx * (3.4 + k * .7), -.5 + (3.4 + k * .7) * .085 + .07, -1.95 + .1 * (3.4 + k * .7) + 2.9 - .26 * (3.4 + k * .7) - .1, 0, 0, 0, .05, .01, .04);
-    // gambe del carrello retratte: portelli
-    for (const sx of [-1, 1]) mb.add(U.box, 0x6b6e68, sx * 1.6, -.75, -1.0, 0, 0, sx * .08, .5, .02, 1.0);
     glass.addG(loftGeo([-1.55, -1.3, -1.0, -.6, -.2, .15, .35].map((z, i) => { const w = [.2, .6, .74, .78, .74, .6, .3][i], h = [.12, .38, .5, .55, .52, .42, .2][i]; const r = []; for (let k = 0; k < 16; k++) { const a = k / 15 * PI; r.push(new V3(Math.cos(a) * w / 2, .62 + Math.sin(a) * h, z)); } return r; }), null, true));
     for (const z of [-1.35, .12]) mb.add(new THREE.TorusGeometry(.37, .014, 6, 18, PI), 0x30331f, 0, .62, z, 0, 0, 0, 1, 1.4, 1);
     d = { prop: { z: -5.85, R: 1.9, n: 4, chord: .28, tip: 0xd8c040 }, decals: [['us', 1.0, .5, 1.6, .2, .58, PI / 2], ['us', 1.0, .5, 1.6, .2, -.58, -PI / 2], ['usw', 1.1, .55, 4.3, -.48, -1.2]], pilot: [0, .9, -.4], eye: [0, 1.0, -.38], guns: [[-2.6, -.3, -2.3], [2.6, -.3, -2.3]] };
