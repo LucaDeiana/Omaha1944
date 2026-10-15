@@ -122,6 +122,7 @@ function huntPlayer(p, dt) {
   const dist0 = p.pos.distanceTo(tgt.pos);
   p.extT = Math.max(0, (p.extT || 0) - dt);
   if (!p.extT && dist0 < (ht ? 70 : 110)) { p.extT = rnd(3, 5); p.extDir = p.vel.clone().normalize().add(new V3(rnd(-.6, .6), rnd(.2, .5), rnd(-.6, .6))).normalize(); }
+  if (p.extT && !p.extDir) p.extDir = p.vel.clone().normalize();
   const lead = p.extT ? p.pos.clone().addScaledVector(p.extDir, 500) : tgt.pos.clone().addScaledVector(tgt.vel, dist0 / 700);
   const want = lead.sub(p.pos).normalize(), cur = p.vel.clone().normalize();
   const nv = cur.lerp(want, Math.min(1, dt * .9)).normalize();

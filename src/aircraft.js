@@ -327,13 +327,33 @@ function playerPlaneHit(me, a, byPlayer) {
   }
 }
 // pannello dei danni nella parte bassa dello schermo
+// schema del P-47 visto dall'alto: ogni parte colorata secondo i danni (verde, giallo, rosso, nero se persa)
+const DMG_SVG = '<svg viewBox="0 0 140 150" width="140" height="150" style="display:block;margin:0 auto">' +
+  '<g stroke="#0c0e09" stroke-width="1.5" stroke-linejoin="round">' +
+  '<path id="dmWl" d="M58 52 L6 62 Q2 66 6 72 L58 78 Z"/>' +
+  '<path id="dmWr" d="M82 52 L134 62 Q138 66 134 72 L82 78 Z"/>' +
+  '<path id="dmTail" d="M64 118 L36 126 Q34 130 38 132 L66 132 L70 146 L74 132 L102 132 Q106 130 104 126 L76 118 Z"/>' +
+  '<path id="dmHull" d="M60 34 Q58 30 70 28 Q82 30 80 34 L80 82 Q78 112 72 128 L68 128 Q62 112 60 82 Z"/>' +
+  '<path id="dmEng" d="M58 34 Q56 14 70 8 Q84 14 82 34 Z"/>' +
+  '<ellipse cx="70" cy="46" rx="5" ry="8" fill="#9bb4c0" opacity=".7"/></g>' +
+  '<line x1="52" y1="5" x2="88" y2="5" stroke="#c9c3ad" stroke-width="2" opacity=".6"/></svg><div id="dmTxt"></div>';
 function planeDamageHud(me) {
   let el = $('planeDmg');
-  if (!el) { el = document.createElement('div'); el.id = 'planeDmg'; el.style.cssText = 'position:fixed;left:16px;bottom:120px;pointer-events:none;z-index:18;font:600 11px/1.5 Oswald,sans-serif;color:#e8e2cf;text-shadow:0 1px 2px #000;letter-spacing:.05em'; document.body.appendChild(el); }
+  if (!el) {
+    el = document.createElement('div'); el.id = 'planeDmg';
+    el.style.cssText = 'position:fixed;right:16px;top:96px;width:150px;pointer-events:none;z-index:18;font:600 10px/1.3 Oswald,sans-serif;color:#e8e2cf;text-shadow:0 1px 2px #000;letter-spacing:.06em;text-align:center;background:rgba(10,12,8,.35);border:1px solid rgba(232,226,207,.25);border-radius:6px;padding:6px 4px';
+    el.innerHTML = DMG_SVG; document.body.appendChild(el);
+  }
   if (!me || !me.parts || P.mode !== 'plane') { el.style.display = 'none'; return; }
   el.style.display = 'block';
-  const bar = v => { const c = v > .6 ? '#8fd16a' : v > .3 ? '#e8c050' : '#e05a45'; return `<span style="display:inline-block;width:70px;height:6px;background:rgba(0,0,0,.45);vertical-align:middle;margin-left:6px"><span style="display:block;height:100%;width:${Math.round(v * 100)}%;background:${c}"></span></span>`; };
-  el.innerHTML = `SCAFO${bar(clamp(me.hp / 1100, 0, 1))}<br>` + Object.keys(PART_NAME).map(k => PART_NAME[k].toUpperCase() + bar(me.parts[k])).join('<br>') + (me.engFire ? '<br><b style="color:#ff7a50">INCENDIO</b>' : '');
+  const colr = (v, lost) => lost ? '#151515' : v > .66 ? '#6fae4f' : v > .33 ? '#d9b443' : '#c8432f';
+  const pt = me.parts, hull = clamp(me.hp / 1100, 0, 1), blink = Math.sin(GAME.time * 10) > 0;
+  $('dmEng').setAttribute('fill', me.engFire && blink ? '#ff7a30' : colr(pt.eng));
+  $('dmWl').setAttribute('fill', colr(pt.wl, me.wingLost === -1 || pt.wl <= 0));
+  $('dmWr').setAttribute('fill', colr(pt.wr, me.wingLost === 1 || pt.wr <= 0));
+  $('dmTail').setAttribute('fill', colr(pt.tail));
+  $('dmHull').setAttribute('fill', colr(hull));
+  $('dmTxt').innerHTML = 'SCAFO ' + Math.round(hull * 100) + '% · MOTORE ' + Math.round(pt.eng * 100) + '%' + (me.engFire ? '<br><b style="color:#ff7a50">MOTORE IN FIAMME</b>' : '');
 }
 // gregario: in formazione sull'ala del giocatore; se ci sono caccia nemici vicini li attacca
 function wingmanAI(p, dt) {

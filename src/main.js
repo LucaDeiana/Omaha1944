@@ -104,7 +104,7 @@ document.addEventListener('pointerlockchange', () => {
 let last = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
-  const raw = Math.min(.1, (now - last) / 1000); last = now;
+  const raw = Math.min(.1, Math.max(0, (now - last) / 1000)); last = now;
   FPS.v = lerp(FPS.v, 1 / Math.max(raw, 1e-3), .05);
   if (!GAME.started) return;
   if (GAME.running) {
