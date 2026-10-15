@@ -56,6 +56,8 @@
     <div class="grid">
       <div class="opts">
         <label>Scenario <select id="optMap"><option value="omaha">Omaha Beach — 6 giugno 1944</option><option value="ard">Ardenne — Bois Jacques, dicembre 1944</option><option value="air">Cieli di Normandia — solo aerei</option><option value="tun">Tunisia — Medjez el-Bab (deathmatch)</option></select></label>
+        <label id="airMapL" style="display:none">Mappa aerea <select id="optAirMap"><option value="norm">Normandia — decollo dalla portaerei</option><option value="manica">La Manica — aeroporto RAF di Hawkinge</option><option value="reno">Il Reno — pista avanzata Y-29</option></select></label>
+        <label id="planeL" style="display:none">Aereo <select id="optPlane"></select></label>
         <label id="tunModeL" style="display:none">Modalità (Tunisia) <select id="optTunMode"><option value="dm">Deathmatch — tutti contro tutti</option><option value="tdm">Deathmatch a squadre — USA contro Afrika Korps</option></select></label>
         <label>Fazione <select id="optSide"><option value="A">Alleati — 29ª Divisione USA</option><option value="E">Asse — 352ª Divisione, WN 62</option></select></label>
         <label id="modeL">Modalità (Asse) <select id="optMode"><option value="c">Campagna</option><option value="e">Infinita — ondate sempre più grandi</option></select></label>
@@ -135,6 +137,7 @@
 <script src="src/config.js"></script>
 <script src="src/textures.js"></script>
 <script src="src/models.js"></script>
+<script src="src/planes2.js"></script>
 <script src="src/engine.js"></script>
 <script src="src/audio.js"></script>
 <script src="src/fx.js"></script>
@@ -142,6 +145,7 @@
 <script src="assets/models/male_base.js"></script>
 <script src="src/ardennes.js"></script>
 <script src="src/air.js"></script>
+<script src="src/airmaps.js"></script>
 <script src="src/tunisia.js"></script>
 <script src="src/crowd.js"></script>
 <script src="src/gore.js"></script>

@@ -336,6 +336,7 @@ function propBlades(mb, nB, R, chord, tipHex) {
 }
 function buildPlaneData(type) {
   if (PLANE_DATA[type]) return PLANE_DATA[type];
+  if (typeof PLANE_SPECS !== 'undefined' && PLANE_SPECS[type] && !PLANE_SPECS[type].builtin) return PLANE_DATA[type] = buildSpecPlane(type);
   const I = insignia(), mb = new MB(), glass = new MB(), prop = new MB(); mb.mat = glass.mat = prop.mat = 'paint';
   const W = col(0xe6e3da), K = col(0x161616);
   let d;
@@ -431,6 +432,7 @@ function makePlaneModel(type) {
     if (kind === 'us' || kind === 'de') decal(g, kind === 'us' ? I.us : I.de, w * 1.6, w * (kind === 'us' ? .8 : 1), xs, y, z, 0, ry, 0);
     else for (const sx of [-1, 1]) decal(g, kind === 'usw' ? I.us : I.de, w * 1.6, w * (kind === 'usw' ? .8 : 1), sx * xs * -3.4, y + .13 + Math.abs(xs * 3.4) * .085, z - 3.3, -PI / 2, 0, 0);
   }
+  for (const [k, w, h, x, y, z, rx, ry] of d.decals2 || []) decal(g, k === 'uk' ? ukRoundel() : I[k], w, h, x, y, z, rx, ry, 0);
   if (d.pilot) { const ph = new MB(); ph.add(U.sph, 0xc69a7a, 0, 0, 0, 0, 0, 0, .11, .13, .12); ph.add(U.hemi, 0x3a2a1a, 0, .03, 0, 0, 0, 0, .13, .12, .14); const pm = new THREE.Mesh(ph.build(), MAT.vc); pm.position.set(...d.pilot); g.add(pm); g.userData.pilot = pm; }
   g.userData.props = props; g.userData.data = d;
   return g;

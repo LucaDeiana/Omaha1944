@@ -125,10 +125,12 @@ function huntPlayer(p, dt) {
   if (p.extT && !p.extDir) p.extDir = p.vel.clone().normalize();
   const lead = p.extT ? p.pos.clone().addScaledVector(p.extDir, 500) : tgt.pos.clone().addScaledVector(tgt.vel, dist0 / 700);
   const want = lead.sub(p.pos).normalize(), cur = p.vel.clone().normalize();
-  const nv = cur.lerp(want, Math.min(1, dt * .9)).normalize();
+  // virata limitata come un aereo vero (~22°/s, meno per i caccia pesanti) e velocità persa nelle virate strette
+  const ang = Math.acos(clamp(cur.dot(want), -1, 1)), rate = (p.turnRate || .38) * dt, nv = ang > 1e-4 ? cur.clone().lerp(want, Math.min(1, rate / ang)).normalize() : cur.clone();
   const lat = new V3().crossVectors(cur, nv).y;
-  p.roll = lerp(p.roll, clamp(-lat * 40, -1.3, 1.3), dt * 2);
-  p.vel.copy(nv).multiplyScalar(165); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll);
+  p.roll = lerp(p.roll, clamp(-lat / Math.max(dt, 1e-3) * .9, -1.3, 1.3), dt * 2);
+  p.spd = clamp((p.spd || 165) + (ang > .5 ? -14 : 8) * dt, 125, p.maxSpd || 170);
+  p.vel.copy(nv).multiplyScalar(p.spd); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll);
   p.fireT -= dt;
   // spara solo se il muso punta davvero il bersaglio (non durante il disimpegno)
   const toT = _hTo.subVectors(tgt.pos, p.pos).normalize();

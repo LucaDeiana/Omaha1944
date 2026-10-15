@@ -8,7 +8,7 @@
 //  bombardare il ponte. Abbattuto, si riparte con un nuovo aereo.
 // ============================================================
 // portaerei al largo della costa: ponte di volo lungo l'asse z, prua verso terra
-const CARRIER = { x: -150, z: 1450, len: 250, w: 34, deckY: 18 };
+const CARRIER = { type: 'carrier', x: -150, z: 1450, len: 250, w: 34, deckY: 18 };
 const carrierDeckAt = (x, z) => SCEN === 'air' && Math.abs(x - CARRIER.x) < CARRIER.w / 2 && Math.abs(z - CARRIER.z) < CARRIER.len / 2 ? CARRIER.deckY : -99;
 function buildCarrier() {
   const C = CARRIER, mb = new MB(), L = C.len, Y = C.deckY, gray = 0x5d6670, dark = 0x474f57;
@@ -52,11 +52,13 @@ const AIR_YARD_X = 620;
 
 // ---------- terreno ----------
 function airBase(x, z) {
+  if (AIRMAP !== 'norm') return AIRMAPS[AIRMAP].base(x, z);
   let y = 28 + (fbm(x * .0016 + 7, z * .0016, 4) - .5) * 95 + (fbm(x * .009, z * .009, 2) - .5) * 7;
   if (z > 120) y = lerp(y, -7, smooth((z - 120) / 260)); // la costa scende verso il mare
   return y;
 }
 function airH(x, z) {
+  if (AIRMAP !== 'norm') return AIRMAPS[AIRMAP].H(x, z);
   let y = airBase(x, z);
   // valle del fiume e alveo
   const d = Math.abs(x - airRiverX(z));
@@ -72,6 +74,7 @@ function airH(x, z) {
 }
 // campi a toppe di colori diversi, sabbia sulla costa, terra sulla strada
 function airSplat(x, z, n2) {
+  if (AIRMAP !== 'norm') return AIRMAPS[AIRMAP].splat(x, z, n2);
   let sa = 0, gr = 1, di = 0, tr = 1, tg = 1, tb = 1;
   const cx = Math.floor((x + 30 * Math.sin(z * .013)) / 85), cz = Math.floor((z + 25 * Math.sin(x * .011)) / 65), h = hash2(cx, cz);
   if (h < .22) { di = 1.4; gr = .2; tr = 1.05; tg = .95; tb = .85; }          // arato
@@ -88,6 +91,7 @@ function hash2(i, j) { const s = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; r
 
 // ---------- costruzione ----------
 function buildAirMap() {
+  if (AIRMAP !== 'norm') { buildAirMap2(); return; }
   WORLD.mortarPits = []; WORLD.tobruks = []; WORLD.bombard = 'off';
   buildHF(); buildHC();
   buildTerrain(); buildWater();
@@ -183,6 +187,7 @@ function buildAirFar() {
 }
 // siepi del bocage lungo i bordi dei campi e boschetti
 function airTreeSpot(x, z) {
+  if (AIRMAP !== 'norm') return AIRMAPS[AIRMAP].treeSpot(x, z);
   if (Math.abs(x) > 1500 || z < -1450 || z > 150) return false;
   if (Math.abs(x - airRiverX(z)) < 26 || (Math.abs(x - airRoadX(z)) < 8 && z < 120)) return false;
   if (Math.abs(z - AIR_BRIDGE_Z) < 30 && Math.abs(x - airRiverX(z)) < 60) return false;
@@ -190,6 +195,7 @@ function airTreeSpot(x, z) {
   return true;
 }
 function airTreeList(add) {
+  if (AIRMAP !== 'norm') { AIRMAPS[AIRMAP].trees(add); return; }
   for (let i = 0; i < 2600; i++) {
     const x = rnd(-1300, 1300), z = rnd(-1400, 100), cx = Math.floor((x + 30 * Math.sin(z * .013)) / 85), cz = Math.floor((z + 25 * Math.sin(x * .011)) / 65);
     // punto spostato sul bordo del campo più vicino: le siepi disegnano la scacchiera
@@ -250,18 +256,21 @@ class AirTrain {
     });
   }
 }
-function airBombHit(p) {
+function airBombHit(p, w = 1) {
+  if (AIRM.ships) for (const s of AIRM.ships) if (s.alive && p.x > s.box.min.x - 8 && p.x < s.box.max.x + 8 && p.z > s.box.min.z - 8 && p.z < s.box.max.z + 8) s.damage(650 * w, true);
   const y = AIRM.yard; if (y && MISSION.stage === 3 && Math.abs(p.x - y.x) < 110 && Math.abs(p.z - y.z) < 30) y.hits++;
   const b = AIRM.bridge; if (!b || b.down) return;
-  if (Math.abs(p.x - b.x) < 40 && Math.abs(p.z - b.z) < 14 && p.y < b.y + 12) {
-    b.hp--; feed(b.hp > 0 ? `Colpo sul ponte! Ancora ${b.hp}` : 'Il ponte crolla!');
+  if ((b.alongZ ? Math.abs(p.x - b.x) < 14 && Math.abs(p.z - b.z) < 95 : Math.abs(p.x - b.x) < 40 && Math.abs(p.z - b.z) < 14) && p.y < b.y + 25) {
+    b.hp = Math.round((b.hp - w) * 10) / 10; if (w >= 1 || b.hp <= 0) feed(b.hp > 0 ? `Colpo sul ponte! Ancora ${Math.ceil(b.hp)}` : 'Il ponte crolla!');
     if (b.hp <= 0) { b.down = true; burnMeshes(b.mesh); b.mesh.position.y -= 5; b.mesh.rotation.z = .06; for (let i = 0; i < 4; i++) addEmitter(new V3(b.x + rnd(-25, 25), b.y, b.z), 'smoke', 2).life = 120; STATS.kills += 8; }
   }
 }
-function spawnHunter() {
+function spawnHunter(type) {
   const me = PL.me, base = me ? me.pos : new V3(0, 400, 0), a = R() * TAU;
-  const p = new Plane('fw190', 'E', new V3(base.x + Math.cos(a) * 1300, clamp(base.y + rnd(-80, 160), 250, 900), base.z + Math.sin(a) * 1300), new V3(-Math.cos(a) * 160, 0, -Math.sin(a) * 160), []);
-  p.hunter = true; p.hp = 260; AIRM.hunters.push(p);
+  type = type || (AIRMAP === 'norm' ? (R() < .65 ? 'fw190' : 'bf109') : R() < .5 ? 'bf109' : 'fw190');
+  const p = new Plane(type, 'E', new V3(base.x + Math.cos(a) * 1300, clamp(base.y + rnd(-80, 160), 250, 900), base.z + Math.sin(a) * 1300), new V3(-Math.cos(a) * 160, 0, -Math.sin(a) * 160), []);
+  p.hunter = true; p.hp = type === 'me262' ? 320 : 260; AIRM.hunters.push(p);
+  if (type === 'me262') { p.maxSpd = 235; p.spd = 220; p.turnRate = .28; } else if (type === 'bf109') p.turnRate = .42;
   const wl = (PL.wing || []).filter(w => w.alive && !w.crash); if (wl.length && R() < .4) p.huntTarget = pick(wl);
   return p;
 }
@@ -350,13 +359,14 @@ const AIR_STAGES = [
   },
 ];
 function initAirMode() {
+  if (AIRMAP !== 'norm') { MISSION.checkpoint = { pos: new V3(CARRIER.x, 0, CARRIER.z), yaw: 0 }; P.inBoat = false; P.boat = null; P.mode = 'foot'; P.pos.set(CARRIER.x, CARRIER.deckY + 2, CARRIER.z); setStage(0); return; }
   P.inBoat = false; P.boat = null; P.mode = 'foot'; P.pos.set(0, 500, 1100);
   MISSION.checkpoint = { pos: new V3(-30, 0, 1100), yaw: 0 };
   setStage(0);
 }
 function updateAirMode(dt) {
   MISSION.stageT += dt;
-  AIR_STAGES[MISSION.stage].update(dt);
+  airStageList()[MISSION.stage].update(dt);
   updateSubs(dt);
   for (const v of MISSION.vehicles) v.update(dt);
   // a terra il giocatore non ha nulla da fare: torna subito in volo
@@ -364,6 +374,7 @@ function updateAirMode(dt) {
 }
 // rientro in volo a ~1,5 km dall'obiettivo attuale, diretti verso di esso
 function airSpawn() {
+  if (AIRMAP !== 'norm') return airSpawn2();
   let t = new V3(0, 0, -400);
   if (MISSION.stage === 1) { const c = AIRM.convoy.find(v => v.alive); if (c) t = c.pos.clone(); }
   else if (MISSION.stage === 2 && AIRM.train) t = AIRM.train.cars[0].pos.clone();
@@ -376,6 +387,6 @@ function airSpawn() {
   return { pos, vel: d };
 }
 const airDeployPoints = () => [
-  { label: 'Portaerei', sub: 'decollo dal ponte di volo', kind: 'plane', carrier: true, pos: new V3(CARRIER.x, 0, CARRIER.z) },
+  { label: CARRIER.type === 'field' ? AIRMAPS[AIRMAP].field.name : 'Portaerei', sub: CARRIER.type === 'field' ? 'decollo dalla pista' : 'decollo dal ponte di volo', kind: 'plane', carrier: true, pos: new V3(CARRIER.x, 0, CARRIER.z) },
   { label: 'In volo', sub: 'vicino all\'obiettivo', kind: 'plane', carrier: false, pos: new V3(-30, 0, 1100) },
 ];

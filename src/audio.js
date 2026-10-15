@@ -339,8 +339,11 @@ function updateAudio(dt) {
   if (!AU.ready) return;
   AU.master.gain.value = SETTINGS.volume;
   const shore = Math.abs(camera.position.z + 6);
-  AU.surf.set(.15 + .85 / (1 + shore / 18), 0, 1, P.mode === 'plane' ? 600 : 20000);
-  AU.wind.set(P.mode === 'plane' ? .35 : .07, 0, P.mode === 'plane' ? 1.4 : 1);
+  // risacca solo dove c'è mare, e si spegne salendo di quota (in volo resta il vento)
+  const cp = camera.position, alt = cp.y - Math.max(Hf(cp.x, cp.z), WATER_Y), altK = clamp(1 - (alt - 30) / 120, 0, 1);
+  const seaK = SCEN === 'omaha' ? .15 + .85 / (1 + shore / 18) : SCEN === 'air' && Hf(cp.x, cp.z) < WATER_Y + 1 ? .5 : 0;
+  AU.surf.set(seaK * altK, 0, 1, 20000);
+  AU.wind.set(P.mode === 'plane' ? .35 + (1 - altK) * .15 : SCEN === 'ard' ? .14 : .07, 0, P.mode === 'plane' ? 1.4 : 1);
   AU.bed.set(.22 * AU.battle);
   AU.boatEng.set(P.inBoat ? .35 : 0);
   ambT -= dt;

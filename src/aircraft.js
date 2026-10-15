@@ -18,11 +18,13 @@ class Plane {
     this.type = type; this.team = team; this.g = makePlaneModel(type);
     this.props = this.g.userData.props;
     this.pos = this.g.position; this.pos.copy(pos); this.vel = vel.clone(); this.q = this.g.quaternion;
-    this.hp = type === 'b26' ? 900 : 350; this.alive = true; this.path = path || []; this.pi = 0; this.fireT = 0; this.bombs = type === 'b26' ? 6 : 2; this.bombT = 0;
+    const spc = typeof PLANE_SPECS !== 'undefined' && PLANE_SPECS[type];
+    this.hp = type === 'b26' ? 900 : spc && !spc.builtin ? spc.hp * .35 : 350; this.alive = true; this.path = path || []; this.pi = 0; this.fireT = 0; this.bombs = type === 'b26' ? 6 : 2; this.bombT = 0;
     this.crash = false; this.age = 0; this.roll = 0;
     this.g.traverse(o => { if (o.isMesh) o.castShadow = true; });
     scene.add(this.g); PLANES.push(this);
-    this.eng = loopSound(type === 'fw190' ? 'eng_fw' : type === 'b26' ? 'eng_bomber' : 'eng_p47', 0);
+    this.eng = loopSound(type === 'fw190' || (spc && spc.nation === 'de') ? 'eng_fw' : type === 'b26' ? 'eng_bomber' : 'eng_p47', 0);
+    if (spc && spc.jet) this.jet = true;
     this.orient(0);
   }
   orient(roll) {
@@ -347,7 +349,7 @@ function planeDamageHud(me) {
   if (!me || !me.parts || P.mode !== 'plane') { el.style.display = 'none'; return; }
   el.style.display = 'block';
   const colr = (v, lost) => lost ? '#151515' : v > .66 ? '#6fae4f' : v > .33 ? '#d9b443' : '#c8432f';
-  const pt = me.parts, hull = clamp(me.hp / 1100, 0, 1), blink = Math.sin(GAME.time * 10) > 0;
+  const pt = me.parts, hull = clamp(me.hp / (me.hpMax || 1100), 0, 1), blink = Math.sin(GAME.time * 10) > 0;
   $('dmEng').setAttribute('fill', me.engFire && blink ? '#ff7a30' : colr(pt.eng));
   $('dmWl').setAttribute('fill', colr(pt.wl, me.wingLost === -1 || pt.wl <= 0));
   $('dmWr').setAttribute('fill', colr(pt.wr, me.wingLost === 1 || pt.wr <= 0));
@@ -366,7 +368,7 @@ function wingmanAI(p, dt) {
     const slot = _a2.set(p.side * 28, 4, 22 + p.side * 6).applyQuaternion(me.q).add(me.pos), d = slot.distanceTo(p.pos);
     want = slot.clone().addScaledVector(me.vel, 1.2).sub(p.pos).normalize(); spd = clamp(me.vel.length() + d * .4, 90, 200);
   } else { p.vel.applyAxisAngle(_wUp, .3 * dt); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll); return; }
-  const cur = p.vel.clone().normalize(), nv = cur.clone().lerp(want, Math.min(1, dt * 1.1)).normalize(), lat = new V3().crossVectors(cur, nv).y;
+  const cur = p.vel.clone().normalize(), ang = Math.acos(clamp(cur.dot(want), -1, 1)), nv = ang > 1e-4 ? cur.clone().lerp(want, Math.min(1, .4 * dt / ang)).normalize() : cur.clone(), lat = new V3().crossVectors(cur, nv).y;
   p.roll = lerp(p.roll, clamp(-lat * 40, -1.3, 1.3), dt * 2);
   p.vel.copy(nv).multiplyScalar(lerp(p.vel.length(), spd, dt * .8)); p.pos.addScaledVector(p.vel, dt); p.orient(p.roll);
   if (p.pos.y < Hf(p.pos.x, p.pos.z) + 80) p.vel.y += 40 * dt;
@@ -384,22 +386,26 @@ function spawnWingmen() {
   for (const side of [-1, 1]) {
     if (PL.wing.some(w => w.side === side)) continue;
     const me = PL.me, pos = _a2.set(side * 30, 5, 30).applyQuaternion(me.q).add(me.pos);
-    const w = new Plane('p47', 'A', pos.clone(), me.vel.clone(), []); w.wing = true; w.side = side; w.hp = 600; PL.wing.push(w);
+    const w = new Plane(PL.type && PLANE_SPECS[PL.type].nation !== 'de' ? PL.type : 'p47', 'A', pos.clone(), me.vel.clone(), []); w.wing = true; w.side = side; w.hp = 600; PL.wing.push(w);
   }
 }
 // carrello: due gambe principali nelle ali e ruotino di coda; G lo ritrae o lo estrae (circa 2 secondi)
 function buildGear(me) {
+  const gd = me.g.userData && me.g.userData.data && me.g.userData.data.gear;
+  if (gd && gd.fixed) { if (me.player) PL.gearH = 2.4; return; }
+  const GX = gd ? gd.x : 1.55, GY = gd ? gd.y : -.42, GZ = gd ? gd.z : -.9, GL = gd ? gd.len : 1.55, TZ = gd ? gd.tailZ : 4.6;
+  if (me.player) PL.gearH = .42 + GL - GY - .14;
   const g = new THREE.Group(), mat = PLANE_MAT.paint || MAT.paint, dk = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: .8 }), mt = new THREE.MeshStandardMaterial({ color: 0x8a8d86, roughness: .45, metalness: .6 });
   const legs = [];
   for (const side of [-1, 1]) {
-    const piv = new THREE.Group(); piv.position.set(side * 1.55, -.42, -.9); g.add(piv);
-    const strut = new THREE.Mesh(new THREE.CylinderGeometry(.07, .08, 1.55, 8), mt); strut.position.y = -.78; piv.add(strut);
-    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(.42, .42, .22, 16), dk); wheel.rotation.z = PI / 2; wheel.position.set(side * -.12, -1.55, 0); piv.add(wheel);
+    const piv = new THREE.Group(); piv.position.set(side * GX, GY, GZ); g.add(piv);
+    const strut = new THREE.Mesh(new THREE.CylinderGeometry(.07, .08, GL, 8), mt); strut.position.y = -GL / 2; piv.add(strut);
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(.42, .42, .22, 16), dk); wheel.rotation.z = PI / 2; wheel.position.set(side * -.12, -GL, 0); piv.add(wheel);
     const hub = new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .24, 10), mt); hub.rotation.z = PI / 2; hub.position.copy(wheel.position); piv.add(hub);
     const door = new THREE.Mesh(new THREE.BoxGeometry(.04, 1.1, .55), new THREE.MeshStandardMaterial({ color: 0x6b6e68, roughness: .6 })); door.position.set(side * .12, -.6, 0); piv.add(door);
     legs.push({ piv, side });
   }
-  const tp = new THREE.Group(); tp.position.set(0, -.25, 4.6); g.add(tp);
+  const tp = new THREE.Group(); tp.position.set(0, -.25, TZ); g.add(tp);
   const ts = new THREE.Mesh(new THREE.CylinderGeometry(.04, .05, .55, 6), mt); ts.position.y = -.27; tp.add(ts);
   const tw = new THREE.Mesh(new THREE.CylinderGeometry(.17, .17, .1, 12), dk); tw.rotation.z = PI / 2; tw.position.y = -.55; tp.add(tw);
   me.g.add(g); me.gear = { g, legs, tail: tp };
@@ -426,7 +432,7 @@ function carrierRoll(me, dt, thrust, m) {
   sp = Math.max(0, sp); PL.deckV = sp;
   if (sp < 15) PL.deckYaw -= PL.rudder * dt * .35;
   const yaw = PL.deckYaw, fx = -Math.sin(yaw), fz = -Math.cos(yaw);
-  me.pos.x += fx * sp * dt; me.pos.z += fz * sp * dt; me.pos.y = CARRIER.deckY + 2.25;
+  me.pos.x += fx * sp * dt; me.pos.z += fz * sp * dt; me.pos.y = CARRIER.deckY + (PL.gearH || 2.25);
   me.vel.set(fx * sp, 0, fz * sp);
   const pitch = lerp(.19, .035, smooth((sp - 18) / 24));
   me.q.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ')); PL.av.set(0, 0, 0); PL.G = 1;
@@ -438,9 +444,11 @@ function carrierRoll(me, dt, thrust, m) {
 function enterPlane() {
   if (!PGEO.ready) return;
   if (!PL.cockpit) buildCockpit();
-  const deck = SCEN === 'air' && PL.spawnCarrier !== false;
-  const sp = deck ? { pos: new V3(CARRIER.x, CARRIER.deckY + 2.25, CARRIER.z + CARRIER.len / 2 - 36), vel: new V3(0, 0, -.01) } : SCEN === 'air' && MISSION.stage >= 0 ? airSpawn() : { pos: new V3(rnd(-80, 40), 380, 1100), vel: new V3(0, -5, -120) };
-  const me = new Plane('p47', 'A', sp.pos, sp.vel, []); me.player = true; me.hp = 1100;
+  const jetT = PLANE_SPECS[PLAYER_PLANES.includes(SETTINGS.plane) ? SETTINGS.plane : 'p47'].jet;
+  const deck = SCEN === 'air' && PL.spawnCarrier !== false && !(jetT && CARRIER.type !== 'field');
+  const sp = deck ? { pos: new V3(CARRIER.x, CARRIER.deckY + 2.3, CARRIER.z + CARRIER.len / 2 - 36), vel: new V3(0, 0, -.01) } : SCEN === 'air' && MISSION.stage >= 0 ? airSpawn() : { pos: new V3(rnd(-80, 40), 380, 1100), vel: new V3(0, -5, -120) };
+  PL.type = PLAYER_PLANES.includes(SETTINGS.plane) ? SETTINGS.plane : 'p47'; PL.spec = PLANE_SPECS[PL.type];
+  const me = new Plane(PL.type, 'A', sp.pos, sp.vel, []); me.player = true; me.hpMax = PL.spec.hp; me.hp = me.hpMax;
   me.parts = { eng: 1, wl: 1, wr: 1, tail: 1 }; me.damage = (a, byPlayer) => playerPlaneHit(me, a, byPlayer);
   buildGear(me);
   PL.onDeck = deck; PL.deckV = 0; PL.deckYaw = 0; PL.gearUp = !deck; PL.gearK = deck ? 1 : 0;
@@ -448,14 +456,14 @@ function enterPlane() {
   buildGear(me);
   PL.onDeck = deck; PL.deckV = 0; PL.deckYaw = 0; PL.gearUp = !deck; PL.gearK = deck ? 1 : 0;
   if (deck) { me.q.setFromEuler(new THREE.Euler(.19, 0, 0, 'YXZ')); me.vel.set(0, 0, 0); }
-  PL.me = me; PL.throttle = .85; PL.stickX = PL.stickY = PL.rudder = 0; PL.bombs = 2; PL.rearm = 0; PL.av = new V3();
+  PL.me = me; PL.throttle = .85; PL.stickX = PL.stickY = PL.rudder = 0; PL.bombs = PL.spec.bombs; PL.rearm = 0; PL.av = new V3();
   me.g.add(PL.cockpit); PL.cockpit.visible = true; if (me.g.userData.pilot) me.g.userData.pilot.visible = false;
   P.mode = 'plane'; P.dead = false;
   scene.fog.density = FOG_BASE * .3;
   if (!PL.onDeck) spawnWingmen();
   PL.head = null; if (PL.assist === undefined) PL.assist = true; PL.ext = PL.assist; resetPlaneAim();
   if (PL.cockpit) PL.cockpit.visible = !PL.ext; if (me.g.userData.pilot) me.g.userData.pilot.visible = PL.ext; if (me.g.userData.glass) me.g.userData.glass.visible = PL.ext;
-  if (PL.onDeck) { PL.throttle = 0; after(.1, () => showMsg('Sul ponte della portaerei: W per dare motore, a 150 km/h tira su · G carrello', 6)); }
+  if (PL.onDeck) { PL.throttle = 0; after(.1, () => showMsg((CARRIER.type === 'field' ? 'In testata pista' : 'Sul ponte della portaerei') + ': W per dare motore, a 150 km/h tira su · G carrello', 6)); }
   showMsg('P-47 — il mouse indica la direzione · click sx mitragliatrici · click dx zoom · Spazio bomba · A/D rollio · W/S manetta · V visuale · M comandi manuali', 4);
   say(N.radio, 'Qui Thunderbolt Leader: attaccate le posizioni sulla scogliera. Attenti alla contraerea.');
 }
@@ -518,7 +526,7 @@ function updatePlane(dt) {
   if (me.crash) { PL.stickX = PL.stickY = 0; }
   _pfw.set(0, 0, -1).applyQuaternion(me.q); _pup.set(0, 1, 0).applyQuaternion(me.q); _prt.set(1, 0, 0).applyQuaternion(me.q);
   const v = me.vel, V = Math.max(1, v.length()); _vn.copy(v).multiplyScalar(1 / V);
-  const m = 6000, S = 27.9, rho = 1.2, q = .5 * rho * V * V;
+  const SP = PL.spec || PLANE_SPECS.p47, m = SP.mass, S = SP.S, rho = 1.2, q = .5 * rho * V * V;
   const alpha = Math.atan2(-v.dot(_pup), v.dot(_pfw)), beta = v.dot(_prt) / V;
   // ipersostentatori abbassati col carrello a bassa velocità: più portanza per decollo e appontaggio
   const flap = V < 75 ? .55 * smooth((75 - V) / 15) : 0;
@@ -526,7 +534,7 @@ function updatePlane(dt) {
   if (Math.abs(alpha) > st) Cl = Math.sign(alpha) * (.15 + flap + 4.8 * st) * Math.max(.25, 1 - (Math.abs(alpha) - st) * 3.5);
   const lift = q * S * Cl, drag = q * S * (.024 + .065 * Cl * Cl + .02 * (PL.gearK || 0));
   const pt = me.parts || { eng: 1, wl: 1, wr: 1, tail: 1 };
-  const thrust = me.crash ? 0 : PL.throttle * Math.min(32000, 1.6e6 / Math.max(V, 35)) * (.3 + .7 * pt.eng);
+  const thrust = me.crash ? 0 : PL.throttle * (SP.jet ? 17000 : Math.min(32000, 1.6e6 / Math.max(V, 35))) * SP.thrust * (m / 6000) * (.3 + .7 * pt.eng);
   if (me.engFire && !me.crash) { me.hp -= dt * 14; if (me.hp <= 0) playerPlaneHit(me, 1, false); }
   updateGear(me, dt);
   if (PL.onDeck) carrierRoll(me, dt, thrust, m); else {
@@ -535,7 +543,7 @@ function updatePlane(dt) {
   v.addScaledVector(_F, dt / m);
   PL.G = lift / (m * 9.8);
   // rotazione: comandi + stabilità aerodinamica
-  const auth = clamp(V / 110, .25, 1.3);
+  const auth = clamp(V / 110, .25, 1.3) * SP.agile;
   // A/D ruotano l'aereo sul proprio asse (alettoni); a comandi rilasciati le ali tornano orizzontali
   const bankR = -Math.asin(clamp(_prt.y, -1, 1));
   let sx = PL.stickX, sy = PL.stickY, ty = 0, level = 0;
@@ -571,21 +579,21 @@ function updatePlane(dt) {
   // armi
   PL.gunT -= dt;
   if (mouseL && PL.gunT <= 0 && !me.crash) {
-    PL.gunT = .055; me.fireT = 0;
+    PL.gunT = (PL.spec || PLANE_SPECS.p47).guns.int; me.fireT = 0;
     playerPlaneGuns(me);
   }
-  PL.rearm -= dt; if (PL.bombs < 2 && PL.rearm <= 0) { PL.bombs = 2; feed('Bombe riarmate'); }
+  PL.rearm -= dt; if (PL.bombs < PL.spec.bombs && PL.rearm <= 0) { PL.bombs = PL.spec.bombs; feed('Bombe riarmate'); }
   // contraerea e collisione
   if (me.exploded) { showMsg('Il tuo aereo è esploso in volo!', 3); exitPlane(); P.mode = 'foot'; P.die(); return; }
   const dkY = carrierDeckAt(me.pos.x, me.pos.z), gy = Math.max(Hf(me.pos.x, me.pos.z), me.pos.z > -9 ? WATER_Y : -99, dkY);
   PL.liftT = Math.max(0, (PL.liftT || 0) - dt);
   // ruote a contatto col ponte (carrello giù, assetto e discesa ragionevoli): niente schianto, l'aereo rulla
-  if (!PL.onDeck && dkY > -99 && me.pos.y < dkY + 2.25 && me.pos.y > dkY - 1 && PL.gearK > .9 && !me.crash && -v.y < 6) { me.pos.y = dkY + 2.25; if (v.y < 0) v.y = 0; }
-  if (!PL.onDeck && PL.liftT <= 0 && v.y <= .5 && (PL.throttle < .6 || V < 30) && dkY > -99 && me.pos.y < dkY + 2.3 && me.pos.y > dkY - 1) {
+  if (!PL.onDeck && dkY > -99 && me.pos.y < dkY + (PL.gearH || 2.25) && me.pos.y > dkY - 1 && PL.gearK > .9 && !me.crash && -v.y < 6) { me.pos.y = dkY + (PL.gearH || 2.25); if (v.y < 0) v.y = 0; }
+  if (!PL.onDeck && PL.liftT <= 0 && v.y <= .5 && (PL.throttle < .6 || V < 30) && dkY > -99 && me.pos.y < dkY + (PL.gearH || 2.25) + .05 && me.pos.y > dkY - 1) {
     const f = _a1.set(0, 0, -1).applyQuaternion(me.q), r = _a2.set(1, 0, 0).applyQuaternion(me.q), pitch = Math.asin(clamp(f.y, -1, 1));
     if (!me.crash && PL.gearK > .9 && -v.y < 6 && Math.abs(r.y) < .2 && pitch > -.1 && pitch < .35 && V < 80) {
-      PL.onDeck = true; PL.deckV = Math.hypot(v.x, v.z); PL.deckYaw = Math.atan2(-f.x, -f.z); PL.throttle = 0; PL.landed = true; PL.arrest = me.pos.z > CARRIER.z + CARRIER.len * .15; if (PL.arrest) { P.shake += .8; play('imp_metal', null, { vol: .9, rate: .6 }); }
-      showMsg(PL.arrest ? 'Appontaggio riuscito! Cavo agganciato' : 'Appontaggio lungo: frena con S!', 2.5); addScore(300, 'Appontaggio', '#9fe08a'); me.hp = Math.min(1100, me.hp + 300); for (const k in me.parts) me.parts[k] = Math.max(me.parts[k], .8); PL.bombs = 2;
+      PL.onDeck = true; PL.deckV = Math.hypot(v.x, v.z); PL.deckYaw = Math.atan2(-f.x, -f.z); PL.throttle = 0; PL.landed = true; PL.arrest = CARRIER.type !== 'field' && me.pos.z > CARRIER.z + CARRIER.len * .15; if (PL.arrest) { P.shake += .8; play('imp_metal', null, { vol: .9, rate: .6 }); }
+      showMsg(CARRIER.type === 'field' ? 'Atterraggio riuscito! Frena con S' : PL.arrest ? 'Appontaggio riuscito! Cavo agganciato' : 'Appontaggio lungo: frena con S!', 2.5); addScore(300, 'Appontaggio', '#9fe08a'); me.hp = Math.min(me.hpMax, me.hp + 300); for (const k in me.parts) me.parts[k] = Math.max(me.parts[k], .8); PL.bombs = PL.spec.bombs;
     }
   }
   if (!PL.onDeck && me.pos.y < gy + (dkY > -99 && PL.gearK > .9 && !me.crash ? .5 : 1.5)) {
@@ -620,7 +628,7 @@ function updatePlane(dt) {
       camera.rotateY(P.lookYaw || 0); camera.rotateX(P.lookPitch || 0);
     }
   } else {
-    const head = me.g.localToWorld(_a3.set(0, 1.12 + hr.dy, -.5));
+    const ey = (PL.spec && PL.spec.eye) || [0, 1.12, -.5], head = me.g.localToWorld(_a3.set(ey[0], ey[1] + hr.dy, ey[2]));
     camera.position.copy(head);
     camera.quaternion.copy(me.q);
     camera.rotateY((P.lookYaw || 0) + hr.y); camera.rotateX((P.lookPitch || 0) + hr.p); camera.rotateZ(hr.r);
@@ -636,12 +644,15 @@ function updatePlane(dt) {
 }
 const _vbA = new V3(), _vbB = new V3();
 function playerPlaneGuns(me) {
-  const f = _a1.set(0, 0, -1).applyQuaternion(me.q), r = _a2.set(1, 0, 0).applyQuaternion(me.q);
-  sfxShot('m2', null, true); P.shake = Math.min(.5, P.shake + .05);
-  for (const sx of [-1, 1]) {
-    const o = me.pos.clone().addScaledVector(r, sx * 2.7).addScaledVector(f, 1);
+  const f = _a1.set(0, 0, -1).applyQuaternion(me.q), r = _a2.set(1, 0, 0).applyQuaternion(me.q), G = (PL.spec || PLANE_SPECS.p47).guns, heavy = G.cal >= 30;
+  sfxShot(G.snd, null, true); if (heavy) play('boom', null, { vol: .25, rate: 2.2 }); P.shake = Math.min(.8, P.shake + (heavy ? .25 : .05));
+  // armi leggere: due fasci (ala sinistra e destra) col danno di tutte le armi; cannoni pesanti: un colpo per arma
+  const pts = heavy ? G.pos : [-1, 1].map(s => { const l = G.pos.filter(p => Math.sign(p[0] || s) === s); const n = l.length || 1; return [l.reduce((a, p) => a + p[0], 0) / n, l.reduce((a, p) => a + p[1], 0) / n, l.reduce((a, p) => a + p[2], 0) / n, n]; });
+  for (const gp of pts) {
+    const dmg = heavy ? G.dmg : G.dmg * (gp[3] || 1) / 4;
+    const o = me.g.localToWorld(new V3(gp[0], gp[1], gp[2])).addScaledVector(f, .5);
     const conv = me.pos.clone().addScaledVector(f, 320);
-    const d = conv.sub(o).normalize().add(new V3(rnd(-.006, .006), rnd(-.006, .006), rnd(-.006, .006))).normalize();
+    const sd = G.spread, d = conv.sub(o).normalize().add(new V3(rnd(-sd, sd), rnd(-sd, sd), rnd(-sd, sd))).normalize();
     o.addScaledVector(me.vel, .016);
     let t = rayTerrain(o, d, 1100); const tw = d.y < 0 ? (WATER_Y - o.y) / d.y : -1;
     let water = false; if (tw > 0 && (t < 0 || tw < t) && o.z + d.z * tw > -9) { t = tw; water = true; }
@@ -651,10 +662,13 @@ function playerPlaneGuns(me) {
     let hitVeh = null;
     for (const v of MISSION.vehicles.concat(TANKS.list || [])) { if (!v.alive || !v.box) continue; const tt = rayBox(o.x, o.y, o.z, d.x, d.y, d.z, { min: _vbA.copy(v.box.min).subScalar(.4), max: _vbB.copy(v.box.max).addScalar(.4) }, t > 0 ? t : 1100); if (tt > 0 && (t < 0 || tt < t)) { t = tt; hitVeh = v; hitPlane = null; } }
     const end = o.clone().addScaledVector(d, t > 0 ? t : 1100);
-    if (R() < .4) fxTracer(o, end, 1.5);
-    if (hitPlane) { hitPlane.damage(25, true); fxImpact(end, 'metal'); continue; }
-    if (hitVeh) { hitVeh.damage(hitVeh.tank ? 6 : 22, true); fxImpact(end, 'metal'); if (R() < .3) sfxImpact(end, 'metal'); hitMarker(false, false); continue; }
+    if (heavy || R() < .4) fxTracer(o, end, heavy ? 3 : G.cal >= 20 ? 2 : 1.5);
+    // proiettili esplosivi: piccolo scoppio all'impatto
+    if (G.he && t > 0) { fxExplosion(end.clone(), G.he * .35, false); if (dist2Cam(end) < 300 * 300) sfxBoom(end, G.he * .3); }
+    if (hitPlane) { hitPlane.damage(dmg * (G.he ? 1.2 : 1), true); fxImpact(end, 'metal'); hitMarker(false, false); continue; }
+    if (hitVeh) { hitVeh.damage(hitVeh.tank ? (G.cal >= 37 ? dmg * .9 : G.cal >= 20 ? dmg * .12 : dmg * .25) : dmg * .9, true); fxImpact(end, 'metal'); if (R() < .3) sfxImpact(end, 'metal'); hitMarker(false, false); continue; }
     if (t < 0) continue;
+    if (G.he) { explode(end, G.he, dmg * 1.4, { byPlayer: true }); if (SCEN === 'air' && G.cal >= 30) airBombHit(end, G.cal >= 37 ? .25 : .12); }
     fxImpact(end, water ? 'water' : end.z > -58 ? 'sand' : 'dirt');
     for (const s of enemies) if (s.alive && !s.inBunker && Math.abs(s.pos.x - end.x) < 1.5 && Math.abs(s.pos.z - end.z) < 1.5) s.damage(rnd(70, 130), o, true, 'body', { dir: d.clone(), power: 3.5, joint: 15 });
     for (const a of WORLD.aaSites) if (!a.dead && a.mesh && a.mesh.position.distanceTo(end) < 3.5 && R() < .3) { a.dead = true; burnMeshes(a.mesh); feed('Postazione contraerea distrutta'); }

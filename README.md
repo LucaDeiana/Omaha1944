@@ -100,6 +100,13 @@ src/main.js             menu, pausa, ciclo di gioco
 
 - **Tunisia — Medjez el-Bab, aprile 1943**: città araba imbiancata con vicoli, piazza, minareto, mercato e palme, circondata da mura e dune. Deathmatch (tutti contro tutti, 11 bot, primo a 25) o deathmatch a squadre (USA contro Afrika Korps, 8 contro 8, prima squadra a 50), partite da 10 minuti.
 
+## Aerei e mappe aeree
+Nella modalità aerea si sceglie l'aereo e la mappa:
+- **Aerei**: P-47D, P-51D Mustang, F4U Corsair, Spitfire Mk IX, Hawker Typhoon (4×20 mm esplosivi), Hurricane IID (2×40 mm anticarro), Bf 109G, Ju 87G Stuka (2×37 mm), Me 262 (4×30 mm, a reazione). I cannoni pesanti sparano lenti ma i proiettili esplodono e distruggono mezzi, navi e ponti; ogni aereo ha massa, spinta, agilità e robustezza proprie.
+- **Normandia**: decollo dalla portaerei (cavi d'arresto all'appontaggio).
+- **La Manica**: aeroporto RAF di Hawkinge sulle scogliere; intercettare i Ju 88, affondare il convoglio, atterrare.
+- **Il Reno**: pista avanzata in lamiera; spegnere la Flak, abbattere i Me 262, distruggere il ponte d'acciaio, atterrare.
+
 ## Crediti texture
 
 Texture fotografiche da [ambientCG](https://ambientcg.com) (licenza CC0): Ground054, Ground109, Grass004, Concrete034, Bricks100, Bricks097, RoofingTiles013A, PavingStones138, Planks037A, PaintedMetal004, Fabric084, Plaster001. Ridotte a 512 px e incluse in `assets/tex_photo.js`.

@@ -502,7 +502,7 @@ function stallResolve() {
 }
 function setStage(i) {
   MISSION.stage = i; MISSION.stageT = 0; MISSION.markers = []; MISSION.interactables = [];
-  const st = (SCEN === 'air' ? AIR_STAGES : SCEN === 'ard' ? ARD_STAGES : PT === 'E' ? AXIS_STAGES : STAGES)[i]; MISSION.title = st.title; st.start();
+  const st = (SCEN === 'air' ? airStageList() : SCEN === 'ard' ? ARD_STAGES : PT === 'E' ? AXIS_STAGES : STAGES)[i]; MISSION.title = st.title; st.start();
   if (i > 0) showMsg(st.title, 3);
 }
 function onWireGap(x) {
