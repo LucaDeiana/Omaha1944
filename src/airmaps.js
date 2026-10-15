@@ -111,7 +111,7 @@ function buildRhine() {
   const mb = new MB(), bx = -250, bz = renoRiverZ(bx), by = 14;
   // nastro del fiume
   const rp = [], ri = [];
-  for (let x = -2000, k = 0; x <= 2000; x += 15, k++) { const z = renoRiverZ(x); rp.push(x, WATER_Y, z - 70, x, WATER_Y, z + 70); if (k) { const o = (k - 1) * 2; ri.push(o, o + 1, o + 2, o + 2, o + 1, o + 3); } }
+  for (let x = -6000, k = 0; x <= 6000; x += 15, k++) { const z = renoRiverZ(x); rp.push(x, WATER_Y, z - 70, x, WATER_Y, z + 70); if (k) { const o = (k - 1) * 2; ri.push(o, o + 1, o + 2, o + 2, o + 1, o + 3); } }
   const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(rp, 3)); rg.setIndex(ri); rg.computeVertexNormals();
   scene.add(new THREE.Mesh(rg, new THREE.MeshStandardMaterial({ color: col(0x3f5458), roughness: .15, metalness: .3 })));
   // ponte: impalcato lungo z, archi e torri alle estremità
@@ -127,7 +127,7 @@ function buildRhine() {
   for (const e of [-1, 1]) for (let i = 0; i < 14; i++) { const x = bx + rnd(-120, 120), z = bz + e * rnd(110, 200); addHouse(vm, x, z, rnd(8, 11), rnd(8, 10), rnd(5, 8), R() < .25); }
   addTiled(vm, 160);
   // batterie contraeree attorno al ponte
-  const sites = []; for (let k = 0; k < 8; k++) { const a = k / 8 * TAU, r = rnd(140, 230); sites.push([bx + Math.cos(a) * r, bz + Math.sin(a) * r]); }
+  const sites = []; for (let k = 0; k < 8; k++) { const a = k / 8 * TAU, r = rnd(140, 230); const x = bx + Math.cos(a) * r; let z = bz + Math.sin(a) * r; const dz = z - renoRiverZ(x); if (Math.abs(dz) < 85) z = renoRiverZ(x) + (dz < 0 ? -1 : 1) * rnd(85, 110); sites.push([x, z]); }  // mai in acqua
   WORLD.aaSites = sites.map(([x, z]) => { const m = new MB(), y = Hf(x, z); m.mat = 'sack'; for (let a = 0; a < TAU; a += TAU / 10) m.add(U.box, 0x8a7d5e, Math.cos(a) * 2.4, .4, Math.sin(a) * 2.4, 0, -a, 0, .6, .8, 1.3); m.mat = 'paint'; m.add(U.cyl12, 0x4a4e3c, 0, 1, 0, 0, 0, 0, .55, .7, .55); for (const s of [-.15, .15]) m.add(U.cyl12, 0x2a2a26, s, 1.7, -.7, -.9, 0, 0, .05, 1.8, .05); const g = groupMesh(m.buildGroups()); g.position.set(x, y, z); scene.add(g); return { x, z, mesh: g }; });
 }
 

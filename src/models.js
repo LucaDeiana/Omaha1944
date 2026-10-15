@@ -111,6 +111,33 @@ function insignia() {
   INSIG.dark = new THREE.MeshStandardMaterial({ color: col(0x141414), roughness: .6, metalness: .3 });
   return INSIG;
 }
+// appoggia le insegne sulla superficie vera: quelle sulle ali al centro della corda (raggi dall'alto), quelle sui fianchi a filo della fusoliera
+const DECAL_SNAP = {};
+function snapDecals(g, type) {
+  const ds = g.children.filter(m => m.isMesh && m.geometry.type === 'PlaneGeometry'); if (!ds.length) return;
+  const C = DECAL_SNAP[type]; if (C && C.length === ds.length) { ds.forEach((m, i) => { m.position.fromArray(C[i], 0); m.scale.setScalar(C[i][3]); }); return; }
+  for (const m of ds) m.visible = false;
+  g.updateMatrixWorld(true); const rc = new THREE.Raycaster(), solid = [];
+  g.traverse(o => { if (o.isMesh && o.visible && o.geometry.type !== 'PlaneGeometry' && o.geometry.type !== 'CircleGeometry') solid.push(o); });
+  const inv = new THREE.Matrix4().copy(g.matrixWorld).invert(), tmp = new THREE.Vector3();
+  const cast = (o, d) => { rc.set(o.clone().applyMatrix4(g.matrixWorld), d.clone().transformDirection(g.matrixWorld)); const h = rc.intersectObjects(solid, false)[0]; return h ? tmp.copy(h.point).applyMatrix4(inv).clone() : null; };
+  for (const m of ds) {
+    m.visible = true; const p = m.position;
+    if (Math.abs(m.rotation.x + PI / 2) < .01) {
+      // ala: cerca il tratto di corda sotto l'insegna più vicino e mettila a metà
+      const hits = []; for (let z = -7; z <= 7; z += .1) { const h = cast(new THREE.Vector3(p.x, 6, z), new THREE.Vector3(0, -1, 0)); if (h && Math.abs(h.y - p.y) < 1.2) hits.push(h); }
+      if (!hits.length) continue; let segs = [[hits[0]]]; for (let i = 1; i < hits.length; i++) { if (hits[i].z - hits[i - 1].z > .15) segs.push([]); segs[segs.length - 1].push(hits[i]); }
+      segs = segs.filter(sg => sg.length > 6); if (!segs.length) continue;
+      const sg = segs.reduce((b, c) => Math.abs((c[0].z + c[c.length - 1].z) / 2 - p.z) < Math.abs((b[0].z + b[b.length - 1].z) / 2 - p.z) ? c : b);
+      const mid = sg[Math.floor(sg.length / 2)], span = sg[sg.length - 1].z - sg[0].z; p.z = (sg[0].z + sg[sg.length - 1].z) / 2; p.y = mid.y + .03;
+      const sc = Math.min(1, span * .8 / m.geometry.parameters.height); m.scale.setScalar(sc);
+    } else if (Math.abs(Math.abs(m.rotation.y) - PI / 2) < .01) {
+      const sx = Math.sign(p.x) || 1, h = cast(new THREE.Vector3(sx * 6, p.y, p.z), new THREE.Vector3(-sx, 0, 0));
+      if (h) p.x = h.x + sx * .03;
+    }
+  }
+  if (type) DECAL_SNAP[type] = ds.map(m => [m.position.x, m.position.y, m.position.z, m.scale.x]);
+}
 function decal(group, mat, w, h, x, y, z, rx, ry, rz) {
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz, 'YXZ'); group.add(m); return m;
 }
@@ -433,6 +460,7 @@ function makePlaneModel(type) {
     else for (const sx of [-1, 1]) decal(g, kind === 'usw' ? I.us : I.de, w * 1.6, w * (kind === 'usw' ? .8 : 1), sx * xs * -3.4, y + .13 + Math.abs(xs * 3.4) * .085, z - 3.3, -PI / 2, 0, 0);
   }
   for (const [k, w, h, x, y, z, rx, ry] of d.decals2 || []) decal(g, k === 'uk' ? ukRoundel() : I[k], w, h, x, y, z, rx, ry, 0);
+  snapDecals(g, type);
   if (d.pilot) { const ph = new MB(); ph.add(U.sph, 0xc69a7a, 0, 0, 0, 0, 0, 0, .11, .13, .12); ph.add(U.hemi, 0x3a2a1a, 0, .03, 0, 0, 0, 0, .13, .12, .14); const pm = new THREE.Mesh(ph.build(), MAT.vc); pm.position.set(...d.pilot); g.add(pm); g.userData.pilot = pm; }
   g.userData.props = props; g.userData.data = d;
   return g;

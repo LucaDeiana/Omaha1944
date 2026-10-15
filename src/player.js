@@ -102,6 +102,8 @@ function initInput() {
   addEventListener('mouseup', e => { if (e.button === 0) { mouseL = false; P.trigger = false; } if (e.button === 2) { P.adsHeld = false; NAV.zoom = false; } });
   addEventListener('contextmenu', e => e.preventDefault());
   addEventListener('wheel', e => {
+    // in volo la rotella regola la manetta (su = più motore), a passi del 5%
+    if (GAME.running && P.mode === 'plane' && PL.me) { PL.throttle = clamp(Math.round((PL.throttle + (e.deltaY < 0 ? .05 : -.05)) * 20) / 20, 0, 1); showMsg('Manetta ' + Math.round(PL.throttle * 100) + '%', .8); return; }
     if (!GAME.running || P.mode !== 'foot') return;
     const dir = e.deltaY > 0 ? 1 : -1;
     for (let k = 1; k <= 3; k++) { const i = (P.cur + dir * k + 3) % 3; if (P.inv[i]) { selectSlot(i); break; } }

@@ -162,6 +162,8 @@ function buildClouds() {
 }
 // campagna lontana a bassa risoluzione fino a 6 km e mare aperto
 function buildAirFar() {
+  // colore medio (lineare) delle texture del terreno: sabbia, ciottoli, erba, terra
+  const AV = [TEX.sand, TEX.pebble, TEX.grass, TEX.dirt].map(t => { const im = t.map.image, cv = document.createElement('canvas'); cv.width = cv.height = 4; const g = cv.getContext('2d'); try { g.drawImage(im, 0, 0, 4, 4); const d = g.getImageData(0, 0, 4, 4).data; let r = 0, gg = 0, b = 0; for (let i = 0; i < 64; i += 4) { r += d[i]; gg += d[i + 1]; b += d[i + 2]; } const c = new THREE.Color(r / 4080, gg / 4080, b / 4080).convertSRGBToLinear(); return [c.r, c.g, c.b]; } catch (e) { return [.3, .3, .2]; } });
   const S = 80, xs = [], zs = [];
   for (let x = -6000; x <= 6000; x += S) xs.push(x); for (let z = -6000; z <= 3200; z += S) zs.push(z);
   const nx = xs.length, nz = zs.length, pos = new Float32Array(nx * nz * 3), cl = new Float32Array(nx * nz * 3), idx = [];
@@ -170,7 +172,9 @@ function buildAirFar() {
     const k = j * nx + i, x = xs[i], z = zs[j], y = airBase(x, z) - .8;
     pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z;
     const h = hash2(Math.floor(x / 170), Math.floor(z / 130));
-    c.set(z > 200 ? 0xb8ab88 : h < .25 ? 0x7d6e52 : h < .4 ? 0x9a9058 : h < .55 ? 0x56683c : 0x63773f); cl[k * 3] = c.r; cl[k * 3 + 1] = c.g; cl[k * 3 + 2] = c.b;
+    // stessi colori del terreno vicino (texture assente: un po' più scuri), così il bordo della mappa non si vede
+    const S4 = airSplat(x, z, fbm(x * .03, z * .03, 3)), w = S4.sp, ws = w[0] + w[1] + w[2] + w[3] || 1, dk = .8 * (.85 + h * .3);
+    for (let q = 0; q < 3; q++) cl[k * 3 + q] = S4.cl[q] * dk * (w[0] * AV[0][q] + w[1] * AV[1][q] + w[2] * AV[2][q] + w[3] * AV[3][q]) / ws;
   }
   const inside = (x, z) => x > -1560 && x < 1560 && z > -1460 && z < 380;
   for (let j = 0; j < nz - 1; j++) for (let i = 0; i < nx - 1; i++) {
@@ -178,7 +182,7 @@ function buildAirFar() {
     const a = j * nx + i, b = a + nx; idx.push(a, b, a + 1, a + 1, b, b + 1);
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(cl, 3)); g.setIndex(idx); g.computeVertexNormals();
-  const far = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true })); far.frustumCulled = false; scene.add(far);
+  const far = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); far.frustumCulled = false; scene.add(far);
   // mare calmo unico: l'acqua a onde di Omaha (fondale e schiuma della spiaggia) qui darebbe chiazze e bande
   scene.traverse(o => { if (o.material === waterMat) o.visible = false; });
   const nt = TEX.water.normal.clone(); nt.wrapS = nt.wrapT = THREE.RepeatWrapping; nt.repeat.set(350, 225); nt.needsUpdate = true;

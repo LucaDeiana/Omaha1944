@@ -235,7 +235,8 @@ function updateAA(dt) {
     if (tgt.player ? AA.cool <= 0 && R() < .03 * near * fast : R() < .015) { if (tgt.player) AA.cool = .6; tgt.damage(tgt.player ? rnd(14, 32) : rnd(25, 60), false); if (tgt.player) { P.shake += .4; lensSplat('dirt', .2); play('imp_metal', null, { vol: .8 }); } }
   }
   for (const p of PLANES) {
-    if (p.team !== 'E' || p.crash || p.pos.z < 150) continue;
+    // contraerea delle navi alleate al largo di Omaha: solo dove le navi ci sono davvero
+    if (SCEN !== 'omaha' || p.team !== 'E' || p.crash || p.pos.z < 150) continue;
     if (R() < .4) { const o = new V3(rnd(-400, 400), 10, rnd(400, 800)); fxTracer(o, p.pos.clone().add(new V3(rnd(-40, 40), rnd(-30, 30), rnd(-40, 40))), 1.2); if (R() < .03) p.damage(rnd(40, 90), false); }
   }
 }
@@ -577,7 +578,9 @@ function updatePlane(dt) {
   me.g.updateMatrixWorld();
   for (const p of me.props) p.rotation.z += dt * 60 * PL.throttle;
   // armi
-  PL.gunT -= dt;
+  PL.gunT -= dt; PL.gunT2 = (PL.gunT2 || 0) - dt;
+  // seconda batteria (es. mitragliatrici del Mosquito accanto ai cannoni) con la sua cadenza
+  const G2 = (PL.spec || {}).guns2; if (G2 && mouseL && PL.gunT2 <= 0 && !me.crash) { PL.gunT2 = G2.int; playerPlaneGuns(me, G2); }
   if (mouseL && PL.gunT <= 0 && !me.crash) {
     PL.gunT = (PL.spec || PLANE_SPECS.p47).guns.int; me.fireT = 0;
     playerPlaneGuns(me);
@@ -643,8 +646,8 @@ function updatePlane(dt) {
   P.pos.copy(me.pos);
 }
 const _vbA = new V3(), _vbB = new V3();
-function playerPlaneGuns(me) {
-  const f = _a1.set(0, 0, -1).applyQuaternion(me.q), r = _a2.set(1, 0, 0).applyQuaternion(me.q), G = (PL.spec || PLANE_SPECS.p47).guns, heavy = G.cal >= 30;
+function playerPlaneGuns(me, G = (PL.spec || PLANE_SPECS.p47).guns) {
+  const f = _a1.set(0, 0, -1).applyQuaternion(me.q), r = _a2.set(1, 0, 0).applyQuaternion(me.q), heavy = G.cal >= 30;
   sfxShot(G.snd, null, true); if (heavy) play('boom', null, { vol: .25, rate: 2.2 }); P.shake = Math.min(.8, P.shake + (heavy ? .25 : .05));
   // armi leggere: due fasci (ala sinistra e destra) col danno di tutte le armi; cannoni pesanti: un colpo per arma
   const pts = heavy ? G.pos : [-1, 1].map(s => { const l = G.pos.filter(p => Math.sign(p[0] || s) === s); const n = l.length || 1; return [l.reduce((a, p) => a + p[0], 0) / n, l.reduce((a, p) => a + p[1], 0) / n, l.reduce((a, p) => a + p[2], 0) / n, n]; });

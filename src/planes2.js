@@ -80,6 +80,17 @@ const PLANE_SPECS = {
     mass: 6400, S: 21.7, thrust: 1.6, agile: .85, hp: 1000, bombs: 0, jet: true,
   },
 };
+// cacciabombardiere bimotore: il più armato, 4 cannoni da 20 mm e 4 mitragliatrici nel muso più 4 bombe; pesante e poco agile
+PLANE_SPECS.mosquito = {
+  name: 'Mosquito FB.VI', nation: 'uk', engine: 'inline', len: 12.4, w: 1.35, h: 1.7, nose: .7, twin: 2.6,
+  wing: { span: 16.5, root: 3.6, tip: 1.5, le: -1.8, sweep: .05, dihedral: .08, y0: -.15 }, tail: { span: 6, root: 1.7, z: 5.1 }, fin: { h: 2.4, root: 2.1, z: 4.8, round: true },
+  canopy: { z0: -2.9, z1: -1.4, w: .95, h: .6, y: .62, framed: true }, stripes: true,
+  colors: { top: 0x5f6a4e, camo: 0x4d4b3c, bottom: 0xa9aea4, band: 0xc9bf9a },
+  prop: { R: 1.9, n: 3, chord: .28, tip: 0xd8c040 }, eye: [0, 1.0, -2.2],
+  guns: { pos: [[-.35, -.55, -4.4], [-.15, -.6, -4.5], [.15, -.6, -4.5], [.35, -.55, -4.4]], dmg: 40, int: .11, cal: 20, snd: 'flak', spread: .007, he: 1.3 },
+  guns2: { pos: [[-.3, .35, -5.7], [-.1, .4, -5.8], [.1, .4, -5.8], [.3, .35, -5.7]], dmg: 10, int: .05, cal: 7.7, snd: 'm2', spread: .009 },
+  mass: 8800, S: 42.2, thrust: 1.05, agile: .75, hp: 1500, bombs: 4,
+};
 // bombardiere bimotore nemico (solo IA)
 PLANE_SPECS.ju88 = {
   name: 'Ju 88A-4', nation: 'de', engine: 'inline', len: 14.4, w: 1.6, h: 1.9, nose: .5, twin: 3.3, glassNose: true, ai: true,
@@ -90,7 +101,7 @@ PLANE_SPECS.ju88 = {
   guns: { pos: [[0, .6, -2]], dmg: 10, int: .1, cal: 7.9, snd: 'mg42', spread: .01 }, mass: 12000, S: 54.7, thrust: 1, agile: .5, hp: 2200, bombs: 4,
 };
 PLANE_SPECS.p47 = { name: 'P-47D Thunderbolt', nation: 'us', builtin: true, guns: { pos: [[-2.5, -.3, -2.2], [-2.8, -.3, -2.2], [-3.1, -.3, -2.2], [-3.4, -.3, -2.2], [2.5, -.3, -2.2], [2.8, -.3, -2.2], [3.1, -.3, -2.2], [3.4, -.3, -2.2]], dmg: 25, int: .055, cal: 12.7, snd: 'm2', spread: .006 }, mass: 6000, S: 27.9, thrust: 1, agile: 1, hp: 1100, bombs: 2, eye: [0, 1.12, -.5] };
-const PLAYER_PLANES = ['p47', 'p51', 'f4u', 'spit', 'typhoon', 'hurri', 'bf109', 'stuka', 'me262'];
+const PLAYER_PLANES = ['p47', 'p51', 'f4u', 'spit', 'typhoon', 'hurri', 'bf109', 'stuka', 'me262', 'mosquito'];
 
 // tondo britannico
 function ukRoundel() {

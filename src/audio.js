@@ -343,8 +343,9 @@ function updateAudio(dt) {
   const cp = camera.position, alt = cp.y - Math.max(Hf(cp.x, cp.z), WATER_Y), altK = clamp(1 - (alt - 30) / 120, 0, 1);
   const seaK = SCEN === 'omaha' ? .15 + .85 / (1 + shore / 18) : SCEN === 'air' && Hf(cp.x, cp.z) < WATER_Y + 1 ? .5 : 0;
   AU.surf.set(seaK * altK, 0, 1, 20000);
-  AU.wind.set(P.mode === 'plane' ? .35 + (1 - altK) * .15 : SCEN === 'ard' ? .14 : .07, 0, P.mode === 'plane' ? 1.4 : 1);
-  AU.bed.set(.22 * AU.battle);
+  // in volo: fruscio dell'aria che cresce con la velocità, basso (a volume alto sembrava il mare)
+  AU.wind.set(P.mode === 'plane' && PL.me ? .04 + .14 * clamp(PL.me.vel.length() / 180, 0, 1) : SCEN === 'ard' ? .14 : .07, 0, P.mode === 'plane' ? 1.4 : 1);
+  AU.bed.set(.22 * AU.battle * (P.mode === 'plane' ? altK : 1));  // il brusio della battaglia a terra non arriva in quota
   AU.boatEng.set(P.inBoat ? .35 : 0);
   ambT -= dt;
   if (ambT <= 0) {
