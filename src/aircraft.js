@@ -387,19 +387,75 @@ function spawnWingmen() {
     const w = new Plane('p47', 'A', pos.clone(), me.vel.clone(), []); w.wing = true; w.side = side; w.hp = 600; PL.wing.push(w);
   }
 }
+// carrello: due gambe principali nelle ali e ruotino di coda; G lo ritrae o lo estrae (circa 2 secondi)
+function buildGear(me) {
+  const g = new THREE.Group(), mat = PLANE_MAT.paint || MAT.paint, dk = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: .8 }), mt = new THREE.MeshStandardMaterial({ color: 0x8a8d86, roughness: .45, metalness: .6 });
+  const legs = [];
+  for (const side of [-1, 1]) {
+    const piv = new THREE.Group(); piv.position.set(side * 1.55, -.42, -.9); g.add(piv);
+    const strut = new THREE.Mesh(new THREE.CylinderGeometry(.07, .08, 1.55, 8), mt); strut.position.y = -.78; piv.add(strut);
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(.42, .42, .22, 16), dk); wheel.rotation.z = PI / 2; wheel.position.set(side * -.12, -1.55, 0); piv.add(wheel);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .24, 10), mt); hub.rotation.z = PI / 2; hub.position.copy(wheel.position); piv.add(hub);
+    const door = new THREE.Mesh(new THREE.BoxGeometry(.04, 1.1, .55), new THREE.MeshStandardMaterial({ color: 0x6b6e68, roughness: .6 })); door.position.set(side * .12, -.6, 0); piv.add(door);
+    legs.push({ piv, side });
+  }
+  const tp = new THREE.Group(); tp.position.set(0, -.25, 4.6); g.add(tp);
+  const ts = new THREE.Mesh(new THREE.CylinderGeometry(.04, .05, .55, 6), mt); ts.position.y = -.27; tp.add(ts);
+  const tw = new THREE.Mesh(new THREE.CylinderGeometry(.17, .17, .1, 12), dk); tw.rotation.z = PI / 2; tw.position.y = -.55; tp.add(tw);
+  me.g.add(g); me.gear = { g, legs, tail: tp };
+}
+function updateGear(me, dt) {
+  const G = me.gear; if (!G) return;
+  PL.gearK = clamp((PL.gearK ?? 0) + (PL.gearUp ? -1 : 1) * dt * .55, 0, 1);
+  const k = smooth(PL.gearK);
+  for (const l of G.legs) l.piv.rotation.z = -l.side * (1 - k) * PI / 2;
+  G.tail.rotation.x = (1 - k) * PI / 2;
+  G.g.visible = PL.gearK > .02;
+}
+function togglePlaneGear() {
+  if (PL.onDeck) { showMsg('Non puoi ritrarre il carrello sul ponte', 1.5); return; }
+  PL.gearUp = !PL.gearUp; showMsg(PL.gearUp ? 'Carrello: retrazione' : 'Carrello: estrazione', 1.5); play('mag_in', null, { vol: .5, rate: .5 });
+}
+// rullaggio sul ponte: spinta contro attrito, coda a terra che si alza con la velocità, decollo o caduta oltre la prua
+function carrierRoll(me, dt, thrust, m) {
+  // cavo d'arresto agganciato: frenata decisa fino all'arresto
+  const brake = (KEYS.KeyS && PL.throttle < .05 ? 9 : 0) + (PL.arrest ? 16 : 0);
+  if (PL.arrest && PL.deckV < .5) PL.arrest = false;
+  let sp = PL.deckV + (thrust * 1.65 / m - (PL.deckV > .5 ? .7 : 0) - brake) * dt; // nave controvento: il vento sul ponte aiuta la corsa
+  if (PL.throttle < .02 && sp < .6) sp = 0;
+  sp = Math.max(0, sp); PL.deckV = sp;
+  if (sp < 15) PL.deckYaw -= PL.rudder * dt * .35;
+  const yaw = PL.deckYaw, fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+  me.pos.x += fx * sp * dt; me.pos.z += fz * sp * dt; me.pos.y = CARRIER.deckY + 2.25;
+  me.vel.set(fx * sp, 0, fz * sp);
+  const pitch = lerp(.19, .035, smooth((sp - 18) / 24));
+  me.q.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ')); PL.av.set(0, 0, 0); PL.G = 1;
+  PL.aimYaw = yaw;
+  const pull = PL.assist ? PL.aimPitch > .1 : PL.stickY > .25;
+  if (sp > 41 && (pull || sp > 50)) { PL.onDeck = false; PL.liftT = 2; me.vel.y = 4; showMsg('Decollo! G per ritrarre il carrello', 2); spawnWingmen(); return; }
+  if (carrierDeckAt(me.pos.x, me.pos.z) < -90) { PL.onDeck = false; PL.liftT = 2; me.vel.y = 0; if (sp < 36) showMsg('Velocità insufficiente!', 2); else spawnWingmen(); }
+}
 function enterPlane() {
   if (!PGEO.ready) return;
   if (!PL.cockpit) buildCockpit();
-  const sp = SCEN === 'air' && MISSION.stage >= 0 ? airSpawn() : { pos: new V3(rnd(-80, 40), 380, 1100), vel: new V3(0, -5, -120) };
+  const deck = SCEN === 'air' && PL.spawnCarrier !== false;
+  const sp = deck ? { pos: new V3(CARRIER.x, CARRIER.deckY + 2.25, CARRIER.z + CARRIER.len / 2 - 36), vel: new V3(0, 0, -.01) } : SCEN === 'air' && MISSION.stage >= 0 ? airSpawn() : { pos: new V3(rnd(-80, 40), 380, 1100), vel: new V3(0, -5, -120) };
   const me = new Plane('p47', 'A', sp.pos, sp.vel, []); me.player = true; me.hp = 1100;
   me.parts = { eng: 1, wl: 1, wr: 1, tail: 1 }; me.damage = (a, byPlayer) => playerPlaneHit(me, a, byPlayer);
+  buildGear(me);
+  PL.onDeck = deck; PL.deckV = 0; PL.deckYaw = 0; PL.gearUp = !deck; PL.gearK = deck ? 1 : 0;
+  if (deck) { me.q.setFromEuler(new THREE.Euler(.19, 0, 0, 'YXZ')); me.vel.set(0, 0, 0); }
+  buildGear(me);
+  PL.onDeck = deck; PL.deckV = 0; PL.deckYaw = 0; PL.gearUp = !deck; PL.gearK = deck ? 1 : 0;
+  if (deck) { me.q.setFromEuler(new THREE.Euler(.19, 0, 0, 'YXZ')); me.vel.set(0, 0, 0); }
   PL.me = me; PL.throttle = .85; PL.stickX = PL.stickY = PL.rudder = 0; PL.bombs = 2; PL.rearm = 0; PL.av = new V3();
   me.g.add(PL.cockpit); PL.cockpit.visible = true; if (me.g.userData.pilot) me.g.userData.pilot.visible = false;
   P.mode = 'plane'; P.dead = false;
   scene.fog.density = FOG_BASE * .3;
-  spawnWingmen();
+  if (!PL.onDeck) spawnWingmen();
   PL.head = null; if (PL.assist === undefined) PL.assist = true; PL.ext = PL.assist; resetPlaneAim();
   if (PL.cockpit) PL.cockpit.visible = !PL.ext; if (me.g.userData.pilot) me.g.userData.pilot.visible = PL.ext; if (me.g.userData.glass) me.g.userData.glass.visible = PL.ext;
+  if (PL.onDeck) { PL.throttle = 0; after(.1, () => showMsg('Sul ponte della portaerei: W per dare motore, a 150 km/h tira su · G carrello', 6)); }
   showMsg('P-47 — il mouse indica la direzione · click sx mitragliatrici · click dx zoom · Spazio bomba · A/D rollio · W/S manetta · V visuale · M comandi manuali', 4);
   say(N.radio, 'Qui Thunderbolt Leader: attaccate le posizioni sulla scogliera. Attenti alla contraerea.');
 }
@@ -448,14 +504,15 @@ function planeAimGuard(me, V) {
   // si può puntare il terreno: la richiamata interviene solo se l'impatto è imminente
   const sink = -me.vel.y, tti = sink > 1 ? agl / sink : 99;
   if (tti < 2.5 || agl < 18) PL.aimPitch = Math.max(PL.aimPitch, lerp(.3, 0, clamp(tti / 2.5, 0, 1)));
-  if (V < 80) PL.aimPitch = Math.min(PL.aimPitch, Math.asin(clamp(f.y, -1, 1)) - .05);
+  // anti-stallo solo vicino alla velocità minima (più bassa con gli ipersostentatori)
+  if (V < 40) PL.aimPitch = Math.min(PL.aimPitch, Math.asin(clamp(f.y, -1, 1)) - .05);
 }
 function planeAimDir() { return _aimD.set(-Math.sin(PL.aimYaw) * Math.cos(PL.aimPitch), Math.sin(PL.aimPitch), -Math.cos(PL.aimYaw) * Math.cos(PL.aimPitch)); }
 function updatePlane(dt) {
   const me = PL.me; if (!me) return;
   // comandi: il mouse sposta una "cloche" virtuale che torna al centro
   PL.stickX *= Math.exp(-3 * dt); PL.stickY *= Math.exp(-3 * dt);
-  if (KEYS.KeyW) PL.throttle = Math.min(1, PL.throttle + dt * .4);
+  if (KEYS.KeyW) PL.throttle = Math.min(1, PL.throttle + dt * (PL.onDeck ? 1.1 : .4));
   if (KEYS.KeyS) PL.throttle = Math.max(0, PL.throttle - dt * .4);
   PL.rudder = lerp(PL.rudder, (KEYS.KeyD ? 1 : 0) - (KEYS.KeyA ? 1 : 0), dt * 6); // A/D: alettoni (rollio)
   if (me.crash) { PL.stickX = PL.stickY = 0; }
@@ -463,12 +520,16 @@ function updatePlane(dt) {
   const v = me.vel, V = Math.max(1, v.length()); _vn.copy(v).multiplyScalar(1 / V);
   const m = 6000, S = 27.9, rho = 1.2, q = .5 * rho * V * V;
   const alpha = Math.atan2(-v.dot(_pup), v.dot(_pfw)), beta = v.dot(_prt) / V;
-  let Cl = (.15 + 4.8 * alpha) * (me.wingLost ? .45 : 1); const st = .3;
-  if (Math.abs(alpha) > st) Cl = Math.sign(alpha) * (.15 + 4.8 * st) * Math.max(.25, 1 - (Math.abs(alpha) - st) * 3.5);
-  const lift = q * S * Cl, drag = q * S * (.024 + .065 * Cl * Cl);
+  // ipersostentatori abbassati col carrello a bassa velocità: più portanza per decollo e appontaggio
+  const flap = V < 75 ? .55 * smooth((75 - V) / 15) : 0;
+  let Cl = (.15 + flap + 4.8 * alpha) * (me.wingLost ? .45 : 1); const st = .3;
+  if (Math.abs(alpha) > st) Cl = Math.sign(alpha) * (.15 + flap + 4.8 * st) * Math.max(.25, 1 - (Math.abs(alpha) - st) * 3.5);
+  const lift = q * S * Cl, drag = q * S * (.024 + .065 * Cl * Cl + .02 * (PL.gearK || 0));
   const pt = me.parts || { eng: 1, wl: 1, wr: 1, tail: 1 };
   const thrust = me.crash ? 0 : PL.throttle * Math.min(32000, 1.6e6 / Math.max(V, 35)) * (.3 + .7 * pt.eng);
   if (me.engFire && !me.crash) { me.hp -= dt * 14; if (me.hp <= 0) playerPlaneHit(me, 1, false); }
+  updateGear(me, dt);
+  if (PL.onDeck) carrierRoll(me, dt, thrust, m); else {
   _a1.copy(_pup).addScaledVector(_vn, -_pup.dot(_vn)).normalize();
   _F.set(0, -9.8 * m, 0).addScaledVector(_pfw, thrust).addScaledVector(_vn, -drag).addScaledVector(_a1, lift).addScaledVector(_prt, -beta * q * S * .6);
   v.addScaledVector(_F, dt / m);
@@ -499,9 +560,12 @@ function updatePlane(dt) {
   tr += (pt.wr - pt.wl) * .9 * auth;
   // ala persa: avvitamento verso il lato mancante
   if (me.wingLost) { tr += me.wingLost * 3.2; tp -= .4; }
+  // subito dopo il decollo il muso sale da solo verso ~8° per allontanarsi dal ponte
+  if (PL.liftT > 0 && !me.crash) { const pch = Math.asin(clamp(_pfw.y, -1, 1)); tp += clamp((.14 - pch) * 3, -.3, .6); tr += bankR * 2 * auth; }
   PL.av.x = lerp(PL.av.x, tp - alpha * 1.8 * auth, dt * 3); PL.av.z = lerp(PL.av.z, tr, dt * 5.5); PL.av.y = lerp(PL.av.y, ty - beta * 1.2 * auth, dt * 3);
   _aq.setFromEuler(new THREE.Euler(PL.av.x * dt, PL.av.y * dt, PL.av.z * dt, 'YXZ')); me.q.multiply(_aq).normalize();
   me.pos.addScaledVector(v, dt);
+  }
   me.g.updateMatrixWorld();
   for (const p of me.props) p.rotation.z += dt * 60 * PL.throttle;
   // armi
@@ -513,8 +577,18 @@ function updatePlane(dt) {
   PL.rearm -= dt; if (PL.bombs < 2 && PL.rearm <= 0) { PL.bombs = 2; feed('Bombe riarmate'); }
   // contraerea e collisione
   if (me.exploded) { showMsg('Il tuo aereo è esploso in volo!', 3); exitPlane(); P.mode = 'foot'; P.die(); return; }
-  const gy = Math.max(Hf(me.pos.x, me.pos.z), me.pos.z > -9 ? WATER_Y : -99);
-  if (me.pos.y < gy + 1.5) {
+  const dkY = carrierDeckAt(me.pos.x, me.pos.z), gy = Math.max(Hf(me.pos.x, me.pos.z), me.pos.z > -9 ? WATER_Y : -99, dkY);
+  PL.liftT = Math.max(0, (PL.liftT || 0) - dt);
+  // ruote a contatto col ponte (carrello giù, assetto e discesa ragionevoli): niente schianto, l'aereo rulla
+  if (!PL.onDeck && dkY > -99 && me.pos.y < dkY + 2.25 && me.pos.y > dkY - 1 && PL.gearK > .9 && !me.crash && -v.y < 6) { me.pos.y = dkY + 2.25; if (v.y < 0) v.y = 0; }
+  if (!PL.onDeck && PL.liftT <= 0 && v.y <= .5 && (PL.throttle < .6 || V < 30) && dkY > -99 && me.pos.y < dkY + 2.3 && me.pos.y > dkY - 1) {
+    const f = _a1.set(0, 0, -1).applyQuaternion(me.q), r = _a2.set(1, 0, 0).applyQuaternion(me.q), pitch = Math.asin(clamp(f.y, -1, 1));
+    if (!me.crash && PL.gearK > .9 && -v.y < 6 && Math.abs(r.y) < .2 && pitch > -.1 && pitch < .35 && V < 80) {
+      PL.onDeck = true; PL.deckV = Math.hypot(v.x, v.z); PL.deckYaw = Math.atan2(-f.x, -f.z); PL.throttle = 0; PL.landed = true; PL.arrest = me.pos.z > CARRIER.z + CARRIER.len * .15; if (PL.arrest) { P.shake += .8; play('imp_metal', null, { vol: .9, rate: .6 }); }
+      showMsg(PL.arrest ? 'Appontaggio riuscito! Cavo agganciato' : 'Appontaggio lungo: frena con S!', 2.5); addScore(300, 'Appontaggio', '#9fe08a'); me.hp = Math.min(1100, me.hp + 300); for (const k in me.parts) me.parts[k] = Math.max(me.parts[k], .8); PL.bombs = 2;
+    }
+  }
+  if (!PL.onDeck && me.pos.y < gy + (dkY > -99 && PL.gearK > .9 && !me.crash ? .5 : 1.5)) {
     explode(me.pos.clone().setY(gy + .5), 12, 600, {});
     exitPlane(); P.mode = 'foot'; P.die(); return;
   }

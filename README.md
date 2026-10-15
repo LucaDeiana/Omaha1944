@@ -26,7 +26,7 @@ Fai doppio clic su `Avvia Fronte Occidentale 1944.bat` (oppure apri `index.html`
 | Panzer | W/S/A/D guida · mouse torretta · click sx cannone · F mitragliatrice · click dx ottica · E esci |
 | V | Colpo con il calcio del fucile |
 | B | Cambia ruolo (fanteria / corazzata / aereo) |
-| Aereo | mouse = direzione (istruttore; M per la cloche manuale) · click sx mitragliatrici · click dx zoom · Spazio o F bomba · A/D rollio · W/S manetta · V visuale |
+| Aereo | mouse = direzione (istruttore; M per la cloche manuale) · click sx mitragliatrici · click dx zoom · Spazio o F bomba · A/D rollio · W/S manetta · G carrello · V visuale |
 | Esc | Pausa |
 
 ## Ruoli (tasto B o dopo la morte)
@@ -96,7 +96,7 @@ src/main.js             menu, pausa, ciclo di gioco
 ## Scenari
 - **Omaha Beach — 6 giugno 1944**: sbarco, scogliera, bocage, Colleville e la città (Alleati o Asse, campagna o modalità infinita).
 - **Ardenne — Bois Jacques, dicembre 1944**: la Easy Company tiene le buche nel bosco innevato sotto gli sbarramenti d'artiglieria che abbattono gli abeti, recupera i rifornimenti paracadutati dai C-47 nel campo, ferma i Panzer sulla strada e contrattacca fino a Foy. Si sceglie dal menu "Scenario".
-- **Cieli di Normandia — solo aerei**: P-47 su una mappa dedicata di bocage, costa e fiume; intercettare i Fw 190, distruggere una colonna sotto la Flak, fermare il treno delle munizioni, scortare i B-26 sullo scalo ferroviario, bombardare il ponte sulla Douve. Nuvole attraversabili e campagna visibile fino a 6 km. A/D per rollare e mouse per tirare in virata, V per la visuale esterna.
+- **Cieli di Normandia — solo aerei**: P-47 su una mappa dedicata di bocage, costa e fiume; intercettare i Fw 190, distruggere una colonna sotto la Flak, fermare il treno delle munizioni, scortare i B-26 sullo scalo ferroviario, bombardare il ponte sulla Douve. Nuvole attraversabili e campagna visibile fino a 6 km. Si decolla dalla portaerei al largo (W per il motore, a 150 km/h si stacca; G ritrae ed estrae il carrello) e si può appontare col carrello giù e il motore al minimo: i cavi d'arresto fermano l'aereo e il rientro ripara e riarma. A/D per rollare e mouse per tirare in virata, V per la visuale esterna.
 
 - **Tunisia — Medjez el-Bab, aprile 1943**: città araba imbiancata con vicoli, piazza, minareto, mercato e palme, circondata da mura e dune. Deathmatch (tutti contro tutti, 11 bot, primo a 25) o deathmatch a squadre (USA contro Afrika Korps, 8 contro 8, prima squadra a 50), partite da 10 minuti.
 

@@ -7,6 +7,40 @@
 //  fermare il treno delle munizioni, scortare i B-26 sullo scalo,
 //  bombardare il ponte. Abbattuto, si riparte con un nuovo aereo.
 // ============================================================
+// portaerei al largo della costa: ponte di volo lungo l'asse z, prua verso terra
+const CARRIER = { x: -150, z: 1450, len: 250, w: 34, deckY: 18 };
+const carrierDeckAt = (x, z) => SCEN === 'air' && Math.abs(x - CARRIER.x) < CARRIER.w / 2 && Math.abs(z - CARRIER.z) < CARRIER.len / 2 ? CARRIER.deckY : -99;
+function buildCarrier() {
+  const C = CARRIER, mb = new MB(), L = C.len, Y = C.deckY, gray = 0x5d6670, dark = 0x474f57;
+  mb.mat = 'paint';
+  // scafo: corpo centrale, prua rastremata a gradini, poppa
+  mb.add(U.box, gray, C.x, 6, C.z + 10, 0, 0, 0, 28, 16, L - 40);
+  for (let k = 0; k < 5; k++) mb.add(U.box, gray, C.x, 6.5 + k * .6, C.z - L / 2 + 26 - k * 6, 0, 0, 0, 26 - k * 5, 15 - k, 8);
+  mb.add(U.box, dark, C.x, 1.2, C.z + 10, 0, 0, 0, 28.5, 2.4, L - 38);
+  // ponte dell'hangar e fiancate aperte sotto il ponte di volo
+  mb.add(U.box, gray, C.x, 15, C.z, 0, 0, 0, 30, 5, L - 20);
+  for (let k = 0; k < 12; k++) for (const sx of [-1, 1]) mb.add(U.box, 0x22272c, C.x + sx * 15.05, 15.3, C.z - L / 2 + 25 + k * 18, 0, 0, 0, .1, 3, 10);
+  // ponte di volo in legno con strisce
+  mb.mat = 'wood';
+  mb.add(U.box, 0x5a4e40, C.x, Y - .4, C.z, 0, 0, 0, C.w, .8, L);
+  mb.mat = 'vc';
+  for (let k = 0; k < 24; k++) mb.add(U.box, 0xe8e4d8, C.x, Y + .02, C.z - L / 2 + 8 + k * 10, 0, 0, 0, .5, .02, 5);
+  for (const sx of [-1, 1]) mb.add(U.box, 0xe8e4d8, C.x + sx * (C.w / 2 - .6), Y + .02, C.z, 0, 0, 0, .35, .02, L - 4);
+  for (let k = 0; k < 5; k++) mb.add(U.box, 0x1a1a1a, C.x, Y + .05, C.z + L / 2 - 30 - k * 9, 0, 0, 0, C.w - 4, .04, .12); // cavi d'arresto
+  mb.add(U.box, 0xd8c23a, C.x, Y + .03, C.z + L / 2 - 36, 0, 0, 0, 2.5, .02, 2.5);
+  // isola: plancia, fumaiolo, albero e radar
+  mb.mat = 'paint';
+  const ix = C.x + C.w / 2 - 3.5, iz = C.z + 10;
+  mb.add(U.box, gray, ix, Y + 5, iz, 0, 0, 0, 6, 10, 30); mb.add(U.box, dark, ix, Y + 11, iz - 6, 0, 0, 0, 7, 3, 12);
+  mb.add(U.box, 0x2a3036, ix, Y + 11, iz - 11.9, 0, 0, 0, 6.6, 1.2, .1);
+  mb.add(U.box, gray, ix + .5, Y + 13, iz + 6, -.12, 0, 0, 5, 7, 8); mb.add(U.box, 0x1c1c1c, ix + .5, Y + 16.6, iz + 6.4, 0, 0, 0, 4.4, .4, 7);
+  mb.add(U.cyl12, dark, ix, Y + 19, iz - 3, 0, 0, 0, .35, 14, .35); mb.add(U.box, dark, ix, Y + 24, iz - 3, 0, 0, 0, 5, .3, .3); mb.add(U.box, dark, ix, Y + 21, iz - 3, 0, 0, 0, 3, 2, .2);
+  // contraeree lungo i bordi
+  for (let k = 0; k < 8; k++) for (const sx of [-1, 1]) { const z = C.z - L / 2 + 30 + k * 26; mb.add(U.cyl12, dark, C.x + sx * (C.w / 2 + 1), Y - 1.2, z, 0, 0, 0, 1.4, .8, 1.4); mb.add(U.cyl12, 0x1c1c1c, C.x + sx * (C.w / 2 + 1), Y - .4, z - 1, PI / 2 - .5, 0, 0, .09, 2.2, .09); }
+  const g = groupMesh(mb.buildGroups()); scene.add(g); C.mesh = g;
+  // scia della nave e aerei parcheggiati in coda
+  for (let k = 0; k < 3; k++) { const pg = makePlaneModel('p47'); pg.position.set(C.x - 10 + k * 7.5, Y + 2.25, C.z + L / 2 - 8); pg.rotation.set(.19, 0, 0); scene.add(pg); buildGear({ g: pg }); }
+}
 const AIRM = { bridge: null, convoy: [], hunters: [], kills: 0, aa: [] };
 const airRiverX = z => -320 + 110 * Math.sin(z * .0028) + 40 * Math.sin(z * .009);
 const airRoadX = z => 260 + 45 * Math.sin(z * .0042);
@@ -88,7 +122,7 @@ function buildAirMap() {
   });
   buildRailway();
   buildTrees();
-  buildClouds(); buildAirFar();
+  buildClouds(); buildAirFar(); buildCarrier(); buildCarrier();
 }
 function buildRailway() {
   const mb = new MB(); mb.mat = 'paint';
@@ -341,4 +375,7 @@ function airSpawn() {
   const d = new V3(t.x - pos.x, 0, t.z - pos.z).normalize().multiplyScalar(130); d.y = -4;
   return { pos, vel: d };
 }
-const airDeployPoints = () => [{ label: 'P-47 Thunderbolt', sub: 'decollo dalla costa', kind: 'plane', pos: new V3(-30, 0, 1100) }];
+const airDeployPoints = () => [
+  { label: 'Portaerei', sub: 'decollo dal ponte di volo', kind: 'plane', carrier: true, pos: new V3(CARRIER.x, 0, CARRIER.z) },
+  { label: 'In volo', sub: 'vicino all\'obiettivo', kind: 'plane', carrier: false, pos: new V3(-30, 0, 1100) },
+];

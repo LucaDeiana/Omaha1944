@@ -65,7 +65,7 @@ function initInput() {
     if (c === 'KeyX' && P.mode === 'foot' && PT === 'A') { cycleOrder(); return; }
     if (c === 'KeyH' && P.mode === 'foot' && !P.dead) { if (P.bandages <= 0) showMsg('Nessuna benda rimasta', 1.5); else if (P.hp >= 95) showMsg('Non sei ferito', 1.5); else if (P.bandT <= 0) { P.bandT = 3; P.bandages--; sfxMech('pick'); showMsg('Ti stai bendando…', 3); } return; }
     if (c === 'KeyB') { openSpawnMenu(); return; }
-    if (P.mode === 'plane') { if (c === 'KeyF' || c === 'Space') planeDropBomb(); if (c === 'KeyV') togglePlaneView(); if (c === 'KeyM') togglePlaneAssist(); if (c === 'KeyR' && PL.me && PL.me.crash) { exitPlane(); P.mode = 'foot'; P.die(); } return; }
+    if (P.mode === 'plane') { if (c === 'KeyF' || c === 'Space') planeDropBomb(); if (c === 'KeyV') togglePlaneView(); if (c === 'KeyM') togglePlaneAssist(); if (c === 'KeyG') togglePlaneGear(); if (c === 'KeyR' && PL.me && PL.me.crash) { exitPlane(); P.mode = 'foot'; P.die(); } return; }
     if (P.mode === 'naval') return;
     if (c === 'KeyR') startReload();
     else if (c === 'KeyC' || c === 'ControlLeft') { if (!P.swim) P.stance = P.stance === 1 ? 0 : 1; }

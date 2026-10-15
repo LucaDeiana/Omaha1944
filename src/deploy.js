@@ -42,6 +42,8 @@ function deployKey(c) {
   else if (c === 'KeyB' && !P.dead) closeSpawnMenu();
 }
 function deploy(p) {
+  if (p.kind === 'plane') PL.spawnCarrier = p.carrier !== false;
+  if (p.kind === 'plane') PL.spawnCarrier = p.carrier !== false;
   if (p.kind === 'point') { closeSpawnMenu(); leaveMode(); resetPlayerState(); P.inBoat = false; const x = p.pos.x + rnd(-3, 3), z = p.pos.z + rnd(-2, 2); P.pos.set(x, Hf(x, z), z); P.yaw = p.yaw || 0; showMsg('Schierato: ' + p.label, 2.5); return; }
   if (p.kind === 'tank') { closeSpawnMenu(); leaveMode(); resetPlayerState(); P.inBoat = false; const t = p.tank; if (!t.alive) { respawn(); return; } P.pos.set(t.pos.x + 3, Hf(t.pos.x + 3, t.pos.z), t.pos.z); if (!t.player) enterTank(t); return; }
   chooseSpawn(p.kind);
