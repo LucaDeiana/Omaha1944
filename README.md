@@ -1,9 +1,11 @@
-# Omaha 1944
+# Fronte Occidentale 1944
 
-FPS nel browser che simula lo sbarco a Omaha Beach (6 giugno 1944): dall'avvicinamento sul mezzo da sbarco Higgins, sotto il fuoco delle corazzate, fino alla liberazione di Colleville-sur-Mer e alla difesa dal contrattacco tedesco.
+![icona](assets/icon.png)
+
+FPS nel browser ambientato sul fronte occidentale nel 1944. Lo scenario principale simula lo sbarco a Omaha Beach (6 giugno 1944): dall'avvicinamento sul mezzo da sbarco Higgins, sotto il fuoco delle corazzate, fino alla liberazione di Colleville-sur-Mer e alla difesa dal contrattacco tedesco.
 
 ## Come giocare
-Fai doppio clic su `Avvia Omaha.bat` (oppure apri `index.html` in Chrome o Edge). Serve internet per caricare Three.js e i font da CDN. Nel menu scegli fazione (Alleati o Asse) e, per l'Asse, la modalità (campagna o infinita).
+Fai doppio clic su `Avvia Fronte Occidentale 1944.bat` (oppure apri `index.html` in Chrome o Edge). Serve internet per caricare Three.js e i font da CDN. Nel menu scegli fazione (Alleati o Asse) e, per l'Asse, la modalità (campagna o infinita).
 
 | Tasto | Azione |
 |---|---|

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="70%">
+      <stop offset="0" stop-color="#5a5f3f"/>
+      <stop offset="1" stop-color="#23261a"/>
+    </radialGradient>
+    <linearGradient id="helm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7d8456"/>
+      <stop offset=".55" stop-color="#5b6140"/>
+      <stop offset="1" stop-color="#3c4029"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="44" fill="url(#bg)"/>
+  <rect x="10" y="10" width="236" height="236" rx="36" fill="none" stroke="#c9b98a" stroke-width="5" opacity=".55"/>
+  <!-- stella a stampino dietro l'elmetto -->
+  <path d="M128 30 L150 92 L216 92 L162 130 L182 194 L128 156 L74 194 L94 130 L40 92 L106 92 Z" fill="#d8ccA2" opacity=".9"/>
+  <!-- elmetto M1 -->
+  <path d="M52 168 C52 110 86 80 128 80 C170 80 204 110 204 168 Z" fill="url(#helm)" stroke="#1c1f14" stroke-width="5"/>
+  <path d="M34 168 C34 160 46 158 60 158 L196 158 C210 158 222 160 222 168 C222 178 210 182 196 182 L60 182 C46 182 34 178 34 168 Z" fill="#4c5236" stroke="#1c1f14" stroke-width="5"/>
+  <path d="M72 120 C86 98 106 90 128 90" fill="none" stroke="#a3aa76" stroke-width="7" stroke-linecap="round" opacity=".7"/>
+  <!-- rete mimetica -->
+  <path d="M70 150 L186 104 M68 124 L176 160 M100 90 L150 160 M150 88 L104 160" stroke="#2c3020" stroke-width="3" opacity=".55"/>
+  <!-- data -->
+  <text x="128" y="230" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="34" letter-spacing="4" fill="#d8cca2">1944</text>
+</svg>

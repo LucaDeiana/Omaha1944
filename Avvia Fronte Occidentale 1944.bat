@@ -1,5 +1,5 @@
 @echo off
-title Omaha 1944 - server
+title Fronte Occidentale 1944 - server
 cd /d "%~dp0"
 where node >nul 2>nul
 if errorlevel 1 (
