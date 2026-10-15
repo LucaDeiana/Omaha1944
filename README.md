@@ -105,6 +105,7 @@ Nella modalità aerea si sceglie l'aereo e la mappa:
 - **Aerei**: P-47D, P-51D Mustang, F4U Corsair, Spitfire Mk IX, Hawker Typhoon (4×20 mm esplosivi), Hurricane IID (2×40 mm anticarro), Bf 109G, Ju 87G Stuka (2×37 mm), Me 262 (4×30 mm, a reazione). I cannoni pesanti sparano lenti ma i proiettili esplodono e distruggono mezzi, navi e ponti; ogni aereo ha massa, spinta, agilità e robustezza proprie.
 - **Normandia**: decollo dalla portaerei (cavi d'arresto all'appontaggio).
 - **La Manica**: aeroporto RAF di Hawkinge sulle scogliere; intercettare i Ju 88, affondare il convoglio, atterrare.
+- **Caccia libera**: su ogni mappa, ondate di caccia sempre più numerose con record salvato.
 - **Il Reno**: pista avanzata in lamiera; spegnere la Flak, abbattere i Me 262, distruggere il ponte d'acciaio, atterrare.
 
 ## Crediti texture

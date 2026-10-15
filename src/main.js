@@ -53,7 +53,7 @@ function bindSettings() {
 }
 
 async function startGame() {
-  SETTINGS.plane = $('optPlane') ? $('optPlane').value : 'p47'; AIRMAP = $('optAirMap') ? $('optAirMap').value : 'norm';
+  SETTINGS.plane = $('optPlane') ? $('optPlane').value : 'p47'; AIRMAP = $('optAirMap') ? $('optAirMap').value : 'norm'; AIRFREE = !!$('optAirFree') && $('optAirFree').value === '1';
   SCEN = $('optMap').value; TUN.mode = $('optTunMode') ? $('optTunMode').value : 'dm'; SETTINGS.map = SCEN; SETTINGS.side = $('optSide').value; if (SCEN !== 'omaha') SETTINGS.side = 'A'; PT = SETTINGS.side; MISSION.endless = PT === 'E' && $('optMode').value === 'e'; try { localStorage.setItem('omahaName', $('optName').value); } catch (e) { }
   SETTINGS.quality = $('optQuality').value; SETTINGS.diff = $('optDiff').value; saveSettings();
   Q = QUALITY[SETTINGS.quality]; D = DIFF[SETTINGS.diff];

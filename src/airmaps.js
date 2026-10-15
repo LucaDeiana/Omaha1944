@@ -251,7 +251,36 @@ function airLandingStage(title) {
     },
   };
 }
-function airStageList() { return AIRMAP === 'norm' ? AIR_STAGES : AIR_STAGES2[AIRMAP]; }
+let AIRFREE = false;
+// caccia libera: ondate sempre più numerose, record salvato; atterrando alla base si ripara e riarma
+const AIR_FREE = [{
+  title: 'Caccia libera',
+  start() {
+    AIRM.kills = 0; AIRM.wave = 0; AIRM.waveT = 4; AIRM.waveLeft = 0;
+    try { AIRM.best = +localStorage.getItem('fo44_airfree_' + AIRMAP) || 0; } catch (e) { AIRM.best = 0; }
+    say('Radio', 'Caccia libera: ondate di caccia nemici senza fine. Atterra alla base per riparare e riarmare.');
+  },
+  update(dt) {
+    airCountKills();
+    const alive = AIRM.hunters.filter(p => !p.crash);
+    if (AIRM.waveT > 0) {
+      AIRM.waveT -= dt;
+      if (AIRM.waveT <= 0 && PL.me) {
+        AIRM.wave++; const n = Math.min(1 + AIRM.wave, 6);
+        for (let i = 0; i < n; i++) spawnHunter(AIRMAP === 'reno' && AIRM.wave >= 3 && R() < .3 ? 'me262' : undefined);
+        banner('ONDATA ' + AIRM.wave, n + ' caccia nemici');
+      } else if (AIRM.waveT <= 0) AIRM.waveT = 1;
+    } else if (!alive.length) {
+      addScore(150 * AIRM.wave, 'Ondata ' + AIRM.wave + ' respinta', '#9fe08a');
+      if (AIRM.wave > AIRM.best) { AIRM.best = AIRM.wave; try { localStorage.setItem('fo44_airfree_' + AIRMAP, AIRM.wave); } catch (e) {} }
+      AIRM.waveT = 8;
+    }
+    MISSION.markers = alive.map(p => ({ pos: p.pos.clone(), label: p.type === 'me262' ? 'Me 262' : p.type === 'bf109' ? 'Bf 109' : 'Fw 190' }));
+    MISSION.objText = AIRM.waveT > 0 && AIRM.wave ? `Ondata ${AIRM.wave} respinta — la prossima tra ${Math.ceil(AIRM.waveT)} s · abbattuti ${AIRM.kills} · record ${AIRM.best}`
+      : `Ondata ${AIRM.wave}: ${alive.length} nemici · abbattuti ${AIRM.kills} · record ondata ${AIRM.best}`;
+  },
+}];
+function airStageList() { return AIRFREE ? AIR_FREE : AIRMAP === 'norm' ? AIR_STAGES : AIR_STAGES2[AIRMAP]; }
 function airSpawn2() {
   let t = new V3(0, 0, 0);
   if (AIRMAP === 'manica') { if (MISSION.stage === 0 && AIRM.bombers) { const b = AIRM.bombers.find(p => p.alive && !p.crash); if (b) t = b.pos.clone(); } else if (AIRM.ships) { const s = AIRM.ships.find(v => v.alive); if (s) t = s.pos.clone(); } }
