@@ -620,7 +620,7 @@ function updatePlane(dt) {
   // contatto col suolo fuori dall'atterraggio: niente morte istantanea, l'aereo si schianta con la sua fisica
   if (!PL.wreck && !PL.onDeck && me.pos.y < gy + (dkY > -99 && PL.gearK > .9 && !me.crash ? .5 : 1.5)) startWreck(me, gy);
   if (me.crash && !PL.wreck && !PL.crashMsg) { PL.crashMsg = true; showMsg((me.wingLost ? 'Hai perso un\'ala! ' : 'Colpito! ') + 'Premi R per rientrare subito', 4); }
-  if (Math.abs(me.pos.x) > 2400 || Math.abs(me.pos.z) > 2400 || me.pos.y > 2500) { const back = _a2.set(-me.pos.x, 300 - me.pos.y, -me.pos.z).normalize(); v.lerp(back.multiplyScalar(V), dt * .3); }
+  const LIM = SCEN === 'air' ? 11500 : 2400; if (Math.abs(me.pos.x) > LIM || Math.abs(me.pos.z) > LIM || me.pos.y > 4000) { const back = _a2.set(-me.pos.x, 300 - me.pos.y, -me.pos.z).normalize(); v.lerp(back.multiplyScalar(V), dt * .3); }
   // testa del pilota: si inclina con un ritardo verso le virate, viene schiacciata dalle G e oscilla con le raffiche
   const hr = PL.head || (PL.head = { r: 0, p: 0, y: 0, dy: 0 }), k = Math.min(1, dt * 3);
   hr.r = lerp(hr.r, clamp(-PL.av.z * .09, -.22, .22), k); hr.p = lerp(hr.p, clamp(-PL.av.x * .05 - (PL.G - 1) * .012, -.12, .1), k);

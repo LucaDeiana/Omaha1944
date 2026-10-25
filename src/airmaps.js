@@ -111,9 +111,9 @@ function buildRhine() {
   const mb = new MB(), bx = -250, bz = renoRiverZ(bx), by = 14;
   // nastro del fiume
   const rp = [], ri = [];
-  for (let x = -6000, k = 0; x <= 6000; x += 15, k++) { const z = renoRiverZ(x); rp.push(x, WATER_Y, z - 70, x, WATER_Y, z + 70); if (k) { const o = (k - 1) * 2; ri.push(o, o + 1, o + 2, o + 2, o + 1, o + 3); } }
+  for (let x = -12500, k = 0; x <= 12500; x += 15, k++) { const z = renoRiverZ(x); rp.push(x, WATER_Y, z - 70, x, WATER_Y, z + 70); if (k) { const o = (k - 1) * 2; ri.push(o, o + 1, o + 2, o + 2, o + 1, o + 3); } }
   const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(rp, 3)); rg.setIndex(ri); rg.computeVertexNormals();
-  scene.add(new THREE.Mesh(rg, new THREE.MeshStandardMaterial({ color: col(0x3f5458), roughness: .15, metalness: .3 })));
+  rg.dispose();  // l'acqua del fiume è il piano d'acqua generale: un nastro alla stessa quota sfarfallava
   // ponte: impalcato lungo z, archi e torri alle estremità
   mb.mat = 'paint';
   mb.add(U.box, 0x3d4247, bx, by, bz, 0, 0, 0, 10, 1.4, 190);

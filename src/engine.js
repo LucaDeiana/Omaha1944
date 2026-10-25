@@ -246,7 +246,7 @@ function fogCullAdd(obj) { const b = new THREE.Box3().setFromObject(obj); if (b.
 function renderFrame(time) {
   skyMesh.position.copy(camera.position);
   // oltre questa distanza la nebbia copre tutto: inutile disegnare
-  const far = clamp(3 / scene.fog.density, 500, 6000); if (Math.abs(camera.far - far) > 5) { camera.far = far; camera.updateProjectionMatrix(); }
+  const far = clamp(3 / scene.fog.density, 500, SCEN === 'air' ? 14000 : 6000); if (Math.abs(camera.far - far) > 5) { camera.far = far; camera.updateProjectionMatrix(); }
   const lim = 2.05 / scene.fog.density, cp = camera.position;
   if (typeof cityLodUpdate === 'function') cityLodUpdate();
   for (const f of FOGCULL) f.obj.visible = f.s.center.distanceTo(cp) - f.s.radius < lim * (f.k || 1);

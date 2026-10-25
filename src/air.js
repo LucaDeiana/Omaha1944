@@ -61,6 +61,7 @@ const AIR_YARD_X = 620;
 function airBase(x, z) {
   if (AIRMAP !== 'norm') return AIRMAPS[AIRMAP].base(x, z);
   let y = 28 + (fbm(x * .0016 + 7, z * .0016, 4) - .5) * 95 + (fbm(x * .009, z * .009, 2) - .5) * 7;
+  if (y < 5) y = 5 + (y - 5) * .08;  // pianure basse invece di laghi: in Normandia l'entroterra resta asciutto
   if (z > 120) y = lerp(y, -7, smooth((z - 120) / 260)); // la costa scende verso il mare
   return y;
 }
@@ -69,8 +70,10 @@ function airH(x, z) {
   let y = airBase(x, z);
   // valle del fiume e alveo
   const d = Math.abs(x - airRiverX(z));
-  if (d < 160) y = lerp(y, 4 + d * .02, smooth((160 - d) / 120));
-  if (d < 22) y = lerp(y, -1.6, smooth((22 - d) / 9));
+  // la valle del fiume si spegne verso la costa: in mare niente argini
+  const rk = 1 - smooth((z - 60) / 90);
+  if (d < 160) y = lerp(y, 4 + d * .02, smooth((160 - d) / 120) * rk);
+  if (d < 22) y = lerp(y, -1.6, smooth((22 - d) / 9) * rk);
   // strada della colonna, appiattita
   const rd = Math.abs(x - airRoadX(z));
   if (rd < 7 && z < 120) y = lerp(y, airBase(airRoadX(z), z) * .5 + y * .5, smooth((7 - rd) / 3));
@@ -189,12 +192,13 @@ function buildAirFar() {
     const a = j * nx + i, b = a + nx; idx.push(a, b, a + 1, a + 1, b, b + 1);
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(cl, 3)); g.setIndex(idx); g.computeVertexNormals();
-  const far = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); far.frustumCulled = false; scene.add(far);
+  // il terreno lontano ora è fatto di tasselli generati attorno al giocatore (airworld.js)
+  g.dispose(); initAirWorld();
   // mare calmo unico: l'acqua a onde di Omaha (fondale e schiuma della spiaggia) qui darebbe chiazze e bande
   scene.traverse(o => { if (o.material === waterMat) o.visible = false; });
-  const nt = TEX.water.normal.clone(); nt.wrapS = nt.wrapT = THREE.RepeatWrapping; nt.repeat.set(350, 225); nt.needsUpdate = true;
-  const sea = new THREE.Mesh(new THREE.PlaneGeometry(14000, 9000), new THREE.MeshStandardMaterial({ color: 0x2f474c, roughness: .32, metalness: .15, normalMap: nt, normalScale: new THREE.Vector2(.35, .35) }));
-  sea.rotation.x = -PI / 2; sea.position.set(0, WATER_Y, -1200); sea.frustumCulled = false; sea.receiveShadow = true; scene.add(sea); AIRM.sea = sea;
+  const nt = TEX.water.normal.clone(); nt.wrapS = nt.wrapT = THREE.RepeatWrapping; nt.repeat.set(1000, 1000); nt.needsUpdate = true;
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(40000, 40000), new THREE.MeshStandardMaterial({ color: 0x2f474c, roughness: .32, metalness: .15, normalMap: nt, normalScale: new THREE.Vector2(.35, .35) }));
+  sea.rotation.x = -PI / 2; sea.position.set(0, WATER_Y, 0); sea.frustumCulled = false; sea.receiveShadow = true; scene.add(sea); AIRM.sea = sea;
 }
 // siepi del bocage lungo i bordi dei campi e boschetti
 function airTreeSpot(x, z) {
@@ -370,12 +374,13 @@ const AIR_STAGES = [
   },
 ];
 function initAirMode() {
-  if (AIRMAP !== 'norm') { MISSION.checkpoint = { pos: new V3(CARRIER.x, 0, CARRIER.z), yaw: 0 }; P.inBoat = false; P.boat = null; P.mode = 'foot'; P.pos.set(CARRIER.x, CARRIER.deckY + 2, CARRIER.z); setStage(0); return; }
+  if (AIRMAP !== 'norm') { MISSION.checkpoint = { pos: new V3(CARRIER.x, 0, CARRIER.z), yaw: 0 }; P.inBoat = false; P.boat = null; P.mode = 'foot'; P.pos.set(CARRIER.x, CARRIER.deckY + 2, CARRIER.z); awPreload(); setStage(0); return; }
   P.inBoat = false; P.boat = null; P.mode = 'foot'; P.pos.set(0, 500, 1100);
   MISSION.checkpoint = { pos: new V3(-30, 0, 1100), yaw: 0 };
-  setStage(0);
+  awPreload(); setStage(0);
 }
 function updateAirMode(dt) {
+  updateAirChunks(dt, !AW.first && (AW.first = true));
   MISSION.stageT += dt;
   airStageList()[MISSION.stage].update(dt);
   updateSubs(dt);

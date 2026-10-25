@@ -273,7 +273,7 @@ function buildTerrain() {
   const pos = new Float32Array(N * 3), cl = new Float32Array(N * 3), uv = new Float32Array(N * 2), sp = new Float32Array(N * 4), ax = new Float32Array(N * 2);
   for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
     const k = j * nx + i, x = xs[i], z = zs[j], y = (Math.abs(x) < 240 && z > -470) || (z < -78 && z > -99 && inBunkerZone(x, z, 1)) ? H(x, z) : Hc(x, z);
-    pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z; uv[k * 2] = x / 3; uv[k * 2 + 1] = z / 3;
+    pos[k * 3] = x; pos[k * 3 + 1] = SCEN === 'air' && y < WATER_Y - .2 ? Math.min(y, WATER_Y - 45) : y; pos[k * 3 + 2] = z; uv[k * 2] = x / 3; uv[k * 2 + 1] = z / 3;  // in volo: fondale lontano dal pelo dell'acqua (niente trasparenze da lontano)
     const n2 = fbm(x * .03, z * .03, 3);
     if (SCEN === 'tun') { const s = tunSplat(x, z, n2); sp.set(s.sp, k * 4); ax[k * 2] = 0; ax[k * 2 + 1] = 0; cl.set(s.cl, k * 3); continue; }
     if (SCEN === 'air') { const s = airSplat(x, z, n2); sp.set(s.sp, k * 4); ax[k * 2] = 0; ax[k * 2 + 1] = 0; cl.set(s.cl, k * 3); continue; }

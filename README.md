@@ -106,6 +106,7 @@ Nella modalità aerea si sceglie l'aereo e la mappa:
 - **Tiro**: i colpi hanno una velocità alla bocca per calibro, tempo di volo, caduta e rallentamento; con **T** si aggancia il nemico più vicino al mirino e un cerchio d'anticipo indica dove mirare perché i proiettili lo incontrino (rosso a tiro utile).
 - **Atterraggio ovunque**: su prati e campi asciutti e poco inclinati (sotto ~14°) si può atterrare e ripartire; riparazione e riarmo solo alla base.
 - **Bombe**: un mirino giallo mostra dove cadrà la bomba; le bombe distruggono i mezzi leggeri fino a ~25 m.
+- **Mappe immense**: ogni mappa aerea si estende per 24 x 24 km (orizzonte a 16 km), con terreno generato attorno all'aereo, boschi, fattorie e villaggi.
 - **Normandia**: decollo dalla portaerei (cavi d'arresto all'appontaggio).
 - **La Manica**: aeroporto RAF di Hawkinge sulle scogliere; intercettare i Ju 88, affondare il convoglio, atterrare.
 - **Caccia libera**: su ogni mappa, ondate di caccia sempre più numerose con record salvato.
