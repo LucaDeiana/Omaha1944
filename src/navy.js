@@ -76,11 +76,13 @@ function firingTable(key, elevMax) {
   const id = key + ':' + elevMax.toFixed(3); if (NV.tables[id]) return NV.tables[id];
   const S = SHELL[key], T = [], p = new V3(), v = new V3();
   for (let e = 0; e <= elevMax + 1e-6; e += .0025) {
-    p.set(0, 12, 0); v.set(0, Math.sin(e) * S.v, Math.cos(e) * S.v); let t = 0;
-    const dt = S.cal > 100 ? .05 : .02;
-    while (p.y > 0 && t < 120) { shellStep(S, p, v, dt); t += dt; }
-    T.push({ e, r: p.z, t, vi: v.length(), fall: Math.atan2(-v.y, v.z) });
-    if (T.length > 2 && p.z < T[T.length - 2].r) break;  // oltre la gittata massima
+    // bocca a ~10 m sull'acqua, stesso passo d'integrazione dei proiettili in gioco; il punto di caduta è interpolato all'attraversamento del pelo dell'acqua
+    p.set(0, 10, 0); v.set(0, Math.sin(e) * S.v, Math.cos(e) * S.v); let t = 0, py = 10, pz = 0;
+    const dt = .0167;
+    while (p.y > WATER_Y && t < 150) { py = p.y; pz = p.z; shellStep(S, p, v, dt); t += dt; }
+    const u = (py - WATER_Y) / Math.max(1e-6, py - p.y), rz = lerp(pz, p.z, u), tt = t - dt * (1 - u);
+    T.push({ e, r: rz, t: tt, vi: v.length(), fall: Math.atan2(-v.y, v.z) });
+    if (T.length > 2 && rz < T[T.length - 2].r) break;  // oltre la gittata massima
   }
   return (NV.tables[id] = T);
 }
@@ -604,7 +606,20 @@ function updateNavyPlayer(dt) {
   const f = new V3(); camera.getWorldDirection(f); const maxR = me.main.length ? tableMax(me.main[0].T) : 3000;
   if (f.y < -1e-4) { const t = (camera.position.y - WATER_Y) / -f.y; NV.aim.copy(camera.position).addScaledVector(f, Math.min(t, maxR * 1.3 / Math.max(.05, Math.hypot(f.x, f.z)))); }
   else NV.aim.copy(me.pos).add(new V3(f.x, 0, f.z).normalize().multiplyScalar(maxR));
-  NV.aim.y = WATER_Y; NV.aimR = Math.hypot(NV.aim.x - me.pos.x, NV.aim.z - me.pos.z);
+  NV.aim.y = WATER_Y;
+  // telemetro: col bersaglio agganciato, o con una nave nemica vicina al mirino, la distanza la dà la centrale di tiro
+  // (distanza futura del bersaglio dopo il tempo di volo); il giocatore corregge solo l'anticipo laterale
+  NV.rf = null;
+  if (me.main.length) {
+    const bx = NV.aim.x - me.pos.x, bz = NV.aim.z - me.pos.z, bl = Math.hypot(bx, bz) || 1, brg = Math.atan2(-bx, -bz);
+    let T = NV.lock && !NV.lock.sinking ? NV.lock : null;
+    if (!T) { let ba = .045; for (const o of NV.ships) { if (o.team === me.team || o.sinking) continue; const a = Math.abs(wrapA(Math.atan2(-(o.pos.x - me.pos.x), -(o.pos.z - me.pos.z)) - brg)) * Math.max(1, o.pos.distanceTo(me.pos) / 6000); if (a < ba) { ba = a; T = o; } } }
+    if (T) {
+      let tof = 0, P2 = T.pos; for (let i = 0; i < 3; i++) { const sol = solveElev(me.main[0].T, Math.hypot(P2.x - me.pos.x, P2.z - me.pos.z)); tof = sol ? sol.t : 0; P2 = T.pos.clone().addScaledVector(T.vel, tof); }
+      const r = Math.hypot(P2.x - me.pos.x, P2.z - me.pos.z); NV.aim.set(me.pos.x + bx / bl * r, WATER_Y, me.pos.z + bz / bl * r); NV.rf = T;
+    }
+  }
+  NV.aimR = Math.hypot(NV.aim.x - me.pos.x, NV.aim.z - me.pos.z);
   if (!me.sinking) {
     me.aimAt(NV.aim, dt, me.main);
     for (const tu of me.turrets) tu.reload = Math.max(0, tu.reload - dt);
@@ -686,7 +701,7 @@ function updateNavyHud(dt) {
   const st = me.secs.find(t => t.ok && t.sol && t.inArc);
   if (st && (NV.secMan || NV.secAuto)) { const T = st.T; let r = 0; for (let i = 1; i < T.length; i++) if (T[i].e >= st.el) { r = lerp(T[i - 1].r, T[i].r, (st.el - T[i - 1].e) / (T[i].e - T[i - 1].e)); break; } const gp = me.toWorld(st.x, 0, st.z), a = me.yaw + st.rel; place(E.sec, new V3(gp.x - Math.sin(a) * r, WATER_Y, gp.z - Math.cos(a) * r)); } else E.sec.style.display = 'none';
   // bersaglio agganciato: anticipo (dove sarà quando arrivano i colpi) e, coi siluri, punto d'intercettazione
-  const L = NV.lock && !NV.lock.sinking ? NV.lock : (NV.lock = null);
+  if (NV.lock && NV.lock.sinking) NV.lock = null; const L = NV.lock || NV.rf;
   if (L) {
     place(E.lockB, L.pos.clone().add(new V3(0, L.C.F, 0)));
     const d = L.pos.distanceTo(me.pos), sol = tu && solveElev(tu.T, d), tof = sol ? sol.t : 0;
@@ -694,14 +709,14 @@ function updateNavyHud(dt) {
     if (me.C.torps && me.torpN > 0) { const vt = me.C.torps.kn * KN; let tt = d / vt; for (let i = 0; i < 3; i++) tt = L.pos.clone().addScaledVector(L.vel, tt).distanceTo(me.pos) / vt; place(E.torp, L.pos.clone().addScaledVector(L.vel, tt).setY(WATER_Y)); } else E.torp.style.display = 'none';
   } else { E.lockB.style.display = E.lead.style.display = E.torp.style.display = 'none'; }
   const sol = tu && solveElev(tu.T, NV.aimR);
-  E.range.innerHTML = Math.round(NV.aimR) + ' m' + (sol ? ' · volo ' + sol.t.toFixed(1) + ' s' : ' · <span style="color:#ff8a6a">fuori portata</span>') + (L ? '<br><span style="color:#ffb43a">' + L.name + ' · ' + Math.round(L.pos.distanceTo(me.pos)) + ' m · ' + Math.round(Math.abs(L.spd) / KN) + ' nodi</span>' : '');
+  E.range.innerHTML = (NV.rf ? '<span style="color:#7fe06a">telemetro</span> ' : '') + Math.round(NV.aimR) + ' m' + (sol ? ' · volo ' + sol.t.toFixed(1) + ' s' : ' · <span style="color:#ff8a6a">fuori portata</span>') + (L ? '<br><span style="color:#ffb43a">' + L.name + ' · ' + Math.round(L.pos.distanceTo(me.pos)) + ' m · ' + Math.round(Math.abs(L.spd) / KN) + ' nodi</span>' : '');
   NV.hudT = (NV.hudT || 0) - dt; if (NV.hudT > 0) return; NV.hudT = .15;
   const bar = (v, c) => `<div style="height:6px;background:#222;margin:2px 0 5px"><div style="height:100%;width:${Math.max(0, v * 100)}%;background:${c}"></div></div>`;
   const tn = ['Indietro', 'Stop', '1/4', '1/2', '3/4', 'Tutta'];
   E.left.innerHTML = `<b style="font-size:14px">${me.C.name}</b><br>Scafo ${Math.max(0, Math.round(me.hp / me.hpMax * 100))}%${bar(me.hp / me.hpMax, me.hp / me.hpMax > .4 ? '#7fc06a' : '#e0604a')}` +
     `Velocità <b>${(Math.abs(me.spd) / KN).toFixed(1)} nodi</b> · telegrafo <b>${tn[me.tele + 1]}</b><br>Timone ${me.rud < -.05 ? '◀ ' : me.rud > .05 ? '▶ ' : ''}${Math.round(Math.abs(me.rud) * 35)}°${me.mod.steer < .5 ? ' <span style="color:#ff8a6a">BLOCCATO</span>' : ''}` +
     `<br>Allagamento ${Math.round(me.flood * 100)}%${me.leak > 0 ? ' <span style="color:#7fd3ff">falla</span>' : ''} · incendi ${me.fires.length}${me.mod.eng < .5 ? '<br><span style="color:#ff8a6a">Macchine danneggiate</span>' : ''}` +
-    `<br>Soccorso (R): ${me.dcT > 0 ? 'al lavoro ' + Math.ceil(me.dcT) + ' s' : me.dcCool > 0 ? 'tra ' + Math.ceil(me.dcCool) + ' s' : 'pronto'}<br><small>W/S telegrafo · A/D timone · C centra · mouse mira · tasto sx fuoco · Shift binocolo on/off (o tieni il tasto dx) · F secondarie · Z segui il colpo (mouse per girargli attorno) · Q aggancia · 1/2 munizioni${me.C.torps ? ' · T siluri' : ''} · rotella distanza</small>`;
+    `<br>Soccorso (R): ${me.dcT > 0 ? 'al lavoro ' + Math.ceil(me.dcT) + ' s' : me.dcCool > 0 ? 'tra ' + Math.ceil(me.dcCool) + ' s' : 'pronto'}<br><small>W/S telegrafo · A/D timone · C centra · mouse mira (vicino a una nave la distanza la dà il telemetro: porta il mirino sul rombo d'anticipo) · tasto sx fuoco · Shift binocolo on/off (o tieni il tasto dx) · F secondarie · Z segui il colpo (mouse per girargli attorno) · Q aggancia · 1/2 munizioni${me.C.torps ? ' · T siluri' : ''} · rotella distanza</small>`;
   const S = tu ? tu.S : null;
   E.right.innerHTML = (S ? `<b>${S.name}</b> · ${S.cal >= 100 ? (NV.ammo === 'AP' ? 'perforante' : 'esplosivo') : 'mitragliere'}<br><small>${Math.round(S.v)} m/s · ${S.m >= 1 ? S.m + ' kg' : Math.round(S.m * 1000) + ' g'} · perfora ${Math.round(penDeMarre(S, S.v))} mm alla bocca</small><br>` : '') +
     me.main.map((t, i) => `<span style="display:inline-block;width:46px">${t.G.mounts.length > 3 ? 'T' + (i + 1) : 'A' + (i + 1)}</span><span style="display:inline-block;width:150px;height:6px;background:#222;vertical-align:middle"><span style="display:block;height:100%;width:${t.ok ? (1 - t.reload / t.G.reload) * 100 : 0}%;background:${!t.ok ? '#e0604a' : t.reload <= 0 ? (t.aligned ? '#7fc06a' : '#c9b25a') : '#6a8aa0'}"></span></span>`).slice(0, 8).join('<br>') +
