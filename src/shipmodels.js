@@ -14,12 +14,12 @@ const SHIP_PAL = {
 // scafo: sezioni lungo la nave con prua slanciata (lancio) e svasata, cavallino, poppa a specchio; colori per vertice
 function hullGeo2(C) {
   const pal = SHIP_PAL[C.nat] || SHIP_PAL.x, L = C.L, B = C.B, D = C.D, F = C.F, N = 44;
-  const pt = C.type === 'pt', rake = pt ? L * .05 : L * .045, flare = pt ? .05 : .16;
+  const pt = C.type === 'pt', atl = C.bow === 'atlantic', rake = pt ? L * .05 : atl ? L * .07 : L * .045, flare = pt ? .05 : atl ? .22 : .16;
   const cruiser = !pt && C.type !== 'cargo';
   const hw = t => B / 2 * (t < .32 ? Math.pow(Math.max(t, .003) / .32, pt ? .45 : .62) : t > .84 ? (cruiser ? Math.max(.14, Math.sqrt(Math.max(0, 1 - ((t - .84) / .16) ** 2))) : 1 - ((t - .84) / .16) ** 2 * (pt ? .1 : .32)) : 1);   // poppa da incrociatore: pianta ellittica
   // profondità della carena lungo la nave: piede di ruota arrotondato a prua, fondo che risale verso la poppa (volta di poppa)
   const df = t => pt ? 1 : t < .07 ? .3 + .7 * Math.sqrt(t / .07) : t > .78 ? 1 - Math.pow((t - .78) / .22, 1.3) * (cruiser ? .8 : .7) : 1;
-  const sheer = t => F + (t < .3 ? (1 - t / .3) ** 2 * F * (pt ? .25 : .45) : 0) + (t > .9 ? (t - .9) / .1 * F * .08 : 0);
+  const sheer = t => F + (t < .3 ? (1 - t / .3) ** 2 * F * (pt ? .25 : atl ? .62 : .45) : 0) + (t > .9 ? (t - .9) / .1 * F * .08 : 0);
   // profilo di una sezione: [mezza larghezza, quota, colore]
   const sec = t => { const w = hw(t), fl = t < .3 ? 1 + flare * (1 - t / .3) : 1, k = df(t); return [[w * fl, sheer(t), 'hs'], [w * (1 + (fl - 1) * .5), F * .45, 'h'], [w, .5, 'h'], [w * .995, .5, 'b'], [w * .99, -.45, 'b'], [w * .985, -.45, 'r'], [w * .86, -D * .72 * k, 'r'], [w * .35, -D * .97 * k, 'r'], [0, -D * k, 'r']]; };
   const col = { h: new THREE.Color(pal.hull), hs: new THREE.Color(pal.hull).lerp(new THREE.Color(0xffffff), .06), b: new THREE.Color(0x15171a), r: new THREE.Color(0x5b2622), d: new THREE.Color(pal.deck) };
@@ -140,6 +140,15 @@ function shBofors(mb, x, y, z, c, n = 4, ry = 0) {
     [px, pz] = P(dx, -2.55); mb.add(U.cone, 0x222426, px, y + 2.33, pz, -PI / 2 + .32, ry, 0, .1, .35, .1);
   }
   for (const e of [-1, 1]) { [px, pz] = P(e * (.25 * n + .6), .5); mb.add(U.box, 0x2c3034, px, y + 1.3, pz, 0, ry, 0, .35, .12, .5); }   // seggiolini dei puntatori
+}
+// impianto binato da 10,5 cm SK C/33: piedistallo, scudo a guscio aperto dietro, due canne
+function shFlak105(mb, x, y, z, c, sd) {
+  clut(mb, () => {
+    const ry = -sd * PI / 2, s = Math.sin(ry), co = Math.cos(ry), P = (dx, dz) => [x + dx * co + dz * s, z - dx * s + dz * co];
+    mb.add(U.cyl12, c, x, y + .5, z, 0, 0, 0, 1.6, 1, 1.6);
+    let [px, pz] = P(0, 0); mb.add(slabGeo([[-1.5, -1.6], [1.5, -1.6], [1.7, 1.4], [-1.7, 1.4]], [[-1.2, -.9], [1.2, -.9], [1.45, 1.3], [-1.45, 1.3]], 2.2), c, px, y + 1, pz, 0, ry, 0);
+    for (const e of [-1, 1]) { [px, pz] = P(e * .45, -3.4); mb.add(U.cyl, 0x2b2e30, px, y + 2.1, pz, -PI / 2 + .25, ry, 0, .07, 5, .07); }
+  });
 }
 // mitragliera da 20 mm Oerlikon: colonnina, scudo curvo, canna col caricatore a tamburo
 function shOerlikon(mb, x, y, z, ry = 0) {
@@ -379,17 +388,52 @@ function shipSuper(mb, C, hg) {
   }
   // corazzate
   if (de) {
-    // Scharnhorst: torre di comando con grande telemetro, fumaiolo unico col cappello, albero a palo, hangar e catapulta
-    const zb = -L * .17;
-    mb.add(U.box, u, 0, F + 4, zb, 0, 0, 0, B * .45, 8, L * .1);
-    mb.add(U.cyl12, u, 0, F + 13, zb, 0, 0, 0, 3.6, 12, 3.6);
-    mb.add(U.box, u, 0, F + 19.5, zb, 0, 0, 0, 5.5, 3, 5); mb.add(U.cyl, 0x2a2e31, 0, F + 21.5, zb, 0, 0, PI / 2, .6, 12, .6); mb.add(U.box, 0x2c3034, 0, F + 23, zb, 0, 0, 0, 4.5, 1.5, 4);
-    mb.add(U.box, u, 0, F + 3, -L * .06, 0, 0, 0, B * .55, 6, L * .1);
-    shFunnel(mb, 0, F + 5, -L * .03, B * .26, B * .38, 12, u, dk, -.05);
-    shMast(mb, 0, F + 6, L * .03, 22, mt, 12, 3.5);
-    mb.add(U.box, u, 0, F + 3, L * .1, 0, 0, 0, B * .5, 6, L * .1); shDirector(mb, 0, F + 6, L * .14, 2.6, u);
-    mb.add(U.box, 0x55595c, 0, F + 6.5, L * .1, 0, 0, 0, 2, .6, 16);
-    for (const sd of [-1, 1]) { shBoat(mb, sd * B * .2, F + 6, -L * .05, 9, F); shBoat(mb, sd * B * .2, F + 6, L * .02, 9, F); shAA(mb, sd * B * .36, F + 6, L * .07, u); }
+    // Scharnhorst (1943): torrione corazzato e plancia a gradoni, torre-albero con la cupola del telemetro da 10,5 m e il radar
+    // Seetakt, fumaiolo unico col cappello «atlantico» inclinato e le piattaforme dei proiettori, albero di maestra a poppavia del
+    // fumaiolo, hangar con catapulta sul tetto e gru, posto di comando poppiero con telemetro, impianti binati da 10,5 cm
+    const dkH = (z0, z1, w, h, y = F, wt = w) => mb.add(slabGeo(_sc([[-w / 2, z0], [w / 2, z0], [w / 2, z1], [-w / 2, z1]], 1), _sc([[-wt / 2, z0 + .6], [wt / 2, z0 + .6], [wt / 2, z1 - .3], [-wt / 2, z1 - .3]], 1), h), u, 0, y, 0);
+    // tuga centrale che corre dalla plancia al posto poppiero (ponte delle sovrastrutture)
+    dkH(-48, 26, B * .5, 3);
+    // torrione corazzato davanti alla plancia, con le feritoie e il telemetro
+    mb.add(U.cyl12, u, 0, F + 4.5, -50, 0, 0, 0, 3.3, 9, 3.6); mb.add(U.cyl12, 0x1a1c1e, 0, F + 7.6, -50, 0, 0, 0, 3.35, .5, 3.65);
+    mb.add(U.cyl12, u, 0, F + 9.6, -50, 0, 0, 0, 1.8, 1.2, 1.8); mb.add(U.cyl, 0x2a2e31, 0, F + 10.1, -50, 0, 0, PI / 2, .35, 7, .35);
+    // plancia a gradoni con la timoneria e le alette
+    dkH(-47, -30, B * .42, 5, F + 3, B * .38);
+    dkH(-45, -32, B * .36, 3.4, F + 8, B * .33);
+    dkH(-44, -36, B * .3, 2.8, F + 11.4, B * .3); mb.add(U.box, 0x1a2430, 0, F + 12.9, -43.98, 0, 0, 0, B * .27, .9, .1);
+    mb.add(U.box, u, 0, F + 11.6, -41, 0, 0, 0, B * .62, .4, 3.4);   // alette di plancia
+    for (const sd of [-1, 1]) { mb.add(U.hemi, 0x8e9396, sd * B * .27, F + 11.8, -41, 0, 0, 0, 1.5, 1.5, 1.5); mb.add(U.cyl12, u, sd * B * .27, F + 11.5, -41, 0, 0, 0, 1.6, .6, 1.6); }   // direttori antiaerei stabilizzati
+    // torre-albero: fusto cilindrico con piattaforme, cupola girevole del telemetro, radar a materasso e albero a palo
+    mb.add(U_TAPER, u, 0, F + 19, -37.5, 0, 0, 0, 3.9, 14, 4.3); mb.add(U.box, u, 0, F + 16, -40.5, 0, 0, 0, 4.4, 9, 3);   // fusto tronco-conico e posto di comando avanzato
+    for (const [y, r] of [[F + 16.5, 4.8], [F + 22, 4.1]]) { mb.add(U.cyl12, dk, 0, y, -37.5, 0, 0, 0, r, .25, r * 1.1); mb.add(U.cyl12, u, 0, y - .5, -37.5, 0, 0, 0, r * .7, .8, r * .75); }
+    mb.add(U.cyl12, u, 0, F + 27.5, -37.5, 0, 0, 0, 3.2, 3, 3.4); mb.add(U.hemi, u, 0, F + 29, -37.5, 0, 0, 0, 3.2, 1.3, 3.4);
+    mb.add(U.cyl, u, 0, F + 27.9, -37.2, 0, 0, PI / 2, .55, 10.5, .55); for (const sd of [-1, 1]) mb.add(U.cyl12, u, sd * 5.25, F + 27.9, -37.2, 0, 0, PI / 2, .8, .7, .8);
+    mb.add(U.box, 0x2c3034, 0, F + 31.2, -38.9, 0, 0, 0, 4, 2, .25); for (let i = 0; i < 5; i++) mb.add(U.box, 0x1b1d1f, -1.6 + i * .8, F + 31.2, -39.08, 0, 0, 0, .06, 1.9, .06);   // Seetakt
+    shMast(mb, 0, F + 30.2, -36.4, 8, mt, 5);
+    // fumaiolo ovale col cappello inclinato a poppavia, proiettori sulla piattaforma attorno
+    const zf = -12, fw = B * .24, fl2 = B * .42, fh = 15;
+    mb.add(U.cyl12, u, 0, F + 3 + fh / 2, zf, 0, 0, 0, fw / 2, fh, fl2 / 2);
+    mb.add(U.box, dk, 0, F + 3 + fh + .35, zf + .5, -.16, 0, 0, fw * 1.04, .5, fl2 * 1.06); mb.add(U.box, dk, 0, F + 3 + fh - .2, zf + fl2 / 2 + .1, 0, 0, 0, fw * .95, 1.2, .3);   // cappello «atlantico» inclinato a poppavia
+    mb.add(U.cyl12, 0x1b1d1f, 0, F + 3 + fh - .05, zf, 0, 0, 0, fw / 2 * .85, .2, fl2 / 2 * .85);
+    mb.add(U.cyl12, dk, 0, F + 12, zf, 0, 0, 0, fw * 1.15, .25, fl2 * .75);
+    for (const [x, z] of [[-fw * .9, zf - 2], [fw * .9, zf - 2], [-fw * .9, zf + 3], [fw * .9, zf + 3]]) { mb.add(U.cyl12, 0x3a3e42, x, F + 12.8, z, PI / 2, 0, 0, .65, .9, .65); mb.add(U.cyl12, 0xd8dccf, x, F + 12.8, z - .46, PI / 2, 0, 0, .5, .05, .5); }
+    // albero di maestra dietro il fumaiolo
+    shMast(mb, 0, F + 3, 0, 26, mt, 12, 0); mb.between(new V3(0, F + 3, 4), new V3(0, F + 18, .3), .22, mt);
+    // hangar con catapulta sul tetto, gru ai lati, idrovolante Arado
+    dkH(4, 22, B * .38, 6.5, F + 3);
+    mb.add(U.box, 0x55595c, 0, F + 9.9, 13, 0, 0, 0, 1.4, .6, 20); mb.add(U.box, 0x3a3e42, 0, F + 10.5, 6, 0, 0, 0, 1, .6, 3);
+    mb.add(U.box, 0x7b8a80, 0, F + 11, 7, 0, 0, 0, 10.8, .2, 1.6); mb.add(U.box, 0x7b8a80, 0, F + 11.1, 6.5, 0, 0, 0, .9, .8, 7.5);   // Arado Ar 196 sulla catapulta
+    for (const sd of [-1, 1]) { mb.add(U.cyl, mt, sd * B * .2, F + 7, 20, 0, 0, 0, .5, 8, .5); mb.between(new V3(sd * B * .2, F + 10, 20), new V3(sd * B * .32, F + 16, 12), .3, mt); }
+    // lance sulle selle ai lati del fumaiolo
+    for (const sd of [-1, 1]) { shBoat(mb, sd * B * .22, F + 3, -22, 10, F + 3); shBoat(mb, sd * B * .22, F + 3, -3, 8, F + 3); }
+    // posto di comando poppiero con telemetro e albero a palo
+    dkH(34, 60, B * .42, 5);
+    dkH(38, 54, B * .3, 3.5, F + 5);
+    mb.add(U.cyl12, u, 0, F + 10, 46, 0, 0, 0, 2.2, 3, 2.3); mb.add(U.hemi, u, 0, F + 11.5, 46, 0, 0, 0, 2.2, .9, 2.3);
+    mb.add(U.cyl, u, 0, F + 10.5, 46.2, 0, 0, PI / 2, .45, 7.5, .45); for (const sd of [-1, 1]) mb.add(U.cyl12, u, sd * 3.75, F + 10.5, 46.2, 0, 0, PI / 2, .65, .6, .65);
+    for (const sd of [-1, 1]) { mb.add(U.hemi, 0x8e9396, sd * B * .17, F + 8.6, 40, 0, 0, 0, 1.3, 1.3, 1.3); mb.add(U.cyl12, u, sd * B * .17, F + 8.8, 40, 0, 0, 0, 1.4, .5, 1.4); }
+    // impianti binati da 10,5 cm sul ponte delle sovrastrutture
+    for (const sd of [-1, 1]) for (const z of [-19, -5, 10]) shFlak105(mb, sd * B * .37, F, z, u, sd);
     return;
   }
   // USS Texas: due alberi a tripode con coffa, torre corazzata, fumaiolo unico, ponti delle lance, casematte, antiaeree

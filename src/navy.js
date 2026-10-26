@@ -74,7 +74,7 @@ const NCLS = {
 };
 
 // ---------- balistica esterna ----------
-NCLS.texas.screws = 2; NCLS.scharnhorst.screws = 3;
+NCLS.texas.screws = 2; NCLS.scharnhorst.screws = 3; NCLS.scharnhorst.bow = 'atlantic';
 // classe Kongo dopo la ricostruzione del 1936: 222 m, quattro torri binate da 356 mm, casematte da 152 mm, pagoda, due fumaioli
 NCLS.kirishima = Object.assign({}, NCLS.texas, { name: 'Corazzata Kirishima', nat: 'jp', style: 'kongo', L: 222, B: 31, D: 9.7, F: 9, screws: 4, vmax: 30, hp: 10500, belt: 203, deck: 70,
   guns: [Object.assign({}, NCLS.texas.guns[0], { mounts: [[0, 12, -80, 'fore', 2], [0, 15, -63, 'fore', 2], [0, 12.5, 36, 'aft', 2], [0, 12, 80, 'aft', 2]] }),
