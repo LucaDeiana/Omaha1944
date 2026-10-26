@@ -351,7 +351,8 @@ class NavShip {
       // dispersione: angolare (mrad) e di velocità iniziale (±0,4 %)
       const sg = tu.G.disp / 1000; d.x += gauss() * sg; d.y += gauss() * sg * .6; d.z += gauss() * sg; d.normalize();
       const v = d.multiplyScalar(S.v * (1 + gauss() * .004)).add(this.vel);
-      NV.shells.push({ S, p: o.clone(), v, t: 0, by: this, ammo: ammo || 'AP', key: tu.key });
+      const sh = { S, p: o.clone(), v, t: 0, by: this, ammo: ammo || 'AP', key: tu.key }; NV.shells.push(sh);
+      if (this === NV.me && !tu.sec) NV.lastShell = sh;
       if (big) { PS_FIRE.emit(o.x, o.y, o.z, d.x * .02, 1, d.z * .02, .25, S.cal / 25, S.cal / 12, 1, 4, 2.6, 1.2); for (let i = 0; i < 4; i++) PS_SMOKE.emit(o.x, o.y, o.z, d.x * rnd(.01, .03), rnd(1, 3), d.z * rnd(.01, .03), rnd(4, 9), S.cal / 30, S.cal / 6, .6, .7, .7, .7, .5, -.05); }
     }
     if (big) { if (this === NV.me) { sfxShipNear(); P.shake += S.cal / 300; } else sfxShip(tu.pv.getWorldPosition(_nvc)); }
@@ -400,7 +401,7 @@ function updateShells(dt) {
     }
     // fischio dei colpi in arrivo vicino al giocatore
     if (!done && NV.me && s.by !== NV.me && !s.wh && s.v.y < 0 && s.S.cal >= 100 && s.p.distanceTo(camera.position) < 250) { s.wh = true; sfxWhistle(s.p, s.S.cal > 200); }
-    if (done) L.splice(i, 1);
+    if (done) { s.end = s.p.clone(); L.splice(i, 1); }
   }
   // scia luminosa dei proiettili (i grossi calibri sono puntini caldi)
   drawShells();
@@ -566,6 +567,7 @@ function navyKey(c) {
   else if (c === 'KeyC') { me.rudCmd = 0; showMsg('Timone al centro', 1); }
   else if (c === 'KeyT') me.launchTorps(NV.aim);
   else if (c === 'KeyQ') navyLock();
+  else if (c === 'KeyZ') { if (NV.follow) { NV.follow = null; return; } const sh = NV.lastShell; if (sh && NV.shells.includes(sh)) { NV.follow = sh; NV.followT = 0; NV.fcam = null; showMsg('Segui il colpo · Z per tornare alla nave', 1.5); } else showMsg('Nessun colpo in volo: spara e premi Z', 1.5); }
   else if (c === 'Digit1') { NV.ammo = 'AP'; showMsg('Granate perforanti (AP)', 1.2); }
   else if (c === 'Digit2') { NV.ammo = 'HE'; showMsg('Granate esplosive (HE)', 1.2); }
   else if (c === 'KeyG') { NV.secAuto = !NV.secAuto; showMsg('Armi secondarie: ' + (NV.secAuto ? 'fuoco automatico sul nemico più vicino' : 'solo a comando (F)'), 1.8); }
@@ -585,6 +587,7 @@ function updateNavyPlayer(dt) {
   P.pos.copy(me.pos);
   // A/D: muovono il timone e lo lasciano dov'è
   if (!me.sinking) { if (KEYS.KeyA) me.rudCmd = clamp(me.rudCmd - dt * .8, -1, 1); if (KEYS.KeyD) me.rudCmd = clamp(me.rudCmd + dt * .8, -1, 1); }
+  if (navyShellCam(dt)) { if (!me.sinking) { me.aimAt(NV.aim, dt, me.main); for (const tu of me.turrets) tu.reload = Math.max(0, tu.reload - dt); } me.torpT = Math.max(0, me.torpT - dt); return; }
   // camera: in terza persona attorno alla nave o col binocolo (tasto destro) dalla plancia
   const zoom = P.adsHeld || KEYS.ShiftLeft || KEYS.ShiftRight, C = me.C, cy = NV.cam.yaw, cpch = NV.cam.pitch;
   const dir = new V3(-Math.sin(cy) * Math.cos(cpch), Math.sin(cpch), -Math.cos(cy) * Math.cos(cpch));
@@ -619,6 +622,21 @@ function navyWhyNot(list, sec) {
   else if (!sol.length) m = 'Bersaglio fuori portata';
   else m = (sec ? 'Secondarie' : 'Torri') + ' non ancora in punteria: ' + sol.filter(t => t.aligned).length + '/' + sol.length;
   navyHitText(m, '#ff9a6a');
+}
+// camera sul proiettile: dietro e un po' sopra, guarda dove sta andando; all'impatto resta sul punto qualche istante
+function navyShellCam(dt) {
+  const S = NV.follow; if (!S) return false;
+  const inFlight = NV.shells.includes(S);
+  if (!inFlight) { NV.followT += dt; if (NV.followT > 2.2 || !S.end) { NV.follow = null; return false; } }
+  const p = inFlight ? S.p : S.end, d = _nvw.copy(S.v).normalize(), back = 24 + Math.min(40, S.S.cal / 12);
+  const want = _nvb.copy(p).addScaledVector(d, -back); want.y += 5 + S.S.cal / 60;
+  if (!inFlight) { want.copy(S.end).addScaledVector(d.setY(0).normalize(), -60 - S.S.cal / 4); want.y = S.end.y + 25 + S.S.cal / 12; }
+  want.y = Math.max(want.y, seaH(want.x, want.z, GAME.time) + 2);
+  if (NV.followT === 0 && inFlight && !NV.fcam) NV.fcam = want.clone();
+  NV.fcam = NV.fcam || want.clone(); NV.fcam.lerp(want, Math.min(1, dt * (inFlight ? 12 : 3)));
+  camera.position.copy(NV.fcam); camera.fov = lerp(camera.fov, 45, .2); camera.updateProjectionMatrix();
+  camera.lookAt(inFlight ? _nva.copy(p).addScaledVector(d, 60) : S.end);
+  return true;
 }
 function navyPlayerLost() {
   after(7, () => {
@@ -679,7 +697,7 @@ function updateNavyHud(dt) {
   E.left.innerHTML = `<b style="font-size:14px">${me.C.name}</b><br>Scafo ${Math.max(0, Math.round(me.hp / me.hpMax * 100))}%${bar(me.hp / me.hpMax, me.hp / me.hpMax > .4 ? '#7fc06a' : '#e0604a')}` +
     `Velocità <b>${(Math.abs(me.spd) / KN).toFixed(1)} nodi</b> · telegrafo <b>${tn[me.tele + 1]}</b><br>Timone ${me.rud < -.05 ? '◀ ' : me.rud > .05 ? '▶ ' : ''}${Math.round(Math.abs(me.rud) * 35)}°${me.mod.steer < .5 ? ' <span style="color:#ff8a6a">BLOCCATO</span>' : ''}` +
     `<br>Allagamento ${Math.round(me.flood * 100)}%${me.leak > 0 ? ' <span style="color:#7fd3ff">falla</span>' : ''} · incendi ${me.fires.length}${me.mod.eng < .5 ? '<br><span style="color:#ff8a6a">Macchine danneggiate</span>' : ''}` +
-    `<br>Soccorso (R): ${me.dcT > 0 ? 'al lavoro ' + Math.ceil(me.dcT) + ' s' : me.dcCool > 0 ? 'tra ' + Math.ceil(me.dcCool) + ' s' : 'pronto'}<br><small>W/S telegrafo · A/D timone · C centra · mouse mira · tasto sx fuoco · tasto dx o Shift mira col binocolo · F secondarie · Q aggancia · 1/2 munizioni${me.C.torps ? ' · T siluri' : ''} · rotella distanza</small>`;
+    `<br>Soccorso (R): ${me.dcT > 0 ? 'al lavoro ' + Math.ceil(me.dcT) + ' s' : me.dcCool > 0 ? 'tra ' + Math.ceil(me.dcCool) + ' s' : 'pronto'}<br><small>W/S telegrafo · A/D timone · C centra · mouse mira · tasto sx fuoco · tasto dx o Shift mira col binocolo · F secondarie · Z segui il colpo · Q aggancia · 1/2 munizioni${me.C.torps ? ' · T siluri' : ''} · rotella distanza</small>`;
   const S = tu ? tu.S : null;
   E.right.innerHTML = (S ? `<b>${S.name}</b> · ${S.cal >= 100 ? (NV.ammo === 'AP' ? 'perforante' : 'esplosivo') : 'mitragliere'}<br><small>${Math.round(S.v)} m/s · ${S.m >= 1 ? S.m + ' kg' : Math.round(S.m * 1000) + ' g'} · perfora ${Math.round(penDeMarre(S, S.v))} mm alla bocca</small><br>` : '') +
     me.main.map((t, i) => `<span style="display:inline-block;width:46px">${t.G.mounts.length > 3 ? 'T' + (i + 1) : 'A' + (i + 1)}</span><span style="display:inline-block;width:150px;height:6px;background:#222;vertical-align:middle"><span style="display:block;height:100%;width:${t.ok ? (1 - t.reload / t.G.reload) * 100 : 0}%;background:${!t.ok ? '#e0604a' : t.reload <= 0 ? (t.aligned ? '#7fc06a' : '#c9b25a') : '#6a8aa0'}"></span></span>`).slice(0, 8).join('<br>') +
