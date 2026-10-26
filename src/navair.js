@@ -261,7 +261,7 @@ function updateNavBullets(dt) {
       if (a.addScaledVector(sg, -k).lengthSq() < 4.5 * 4.5) { hit = p; break; }
     }
     b.p.add(sg);
-    if (hit) { hit.damage(rnd(9, 22), false); if (hit.player) { P.shake = Math.min(.6, P.shake + .06); play('imp_metal', null, { vol: .5, rate: 1 + R() * .3 }); } }
+    if (hit) { hit.damage(rnd(9, 22), false); if (hit.player) { P.shake = Math.min(.6, P.shake + .06); if (GAME.time - (NAIR.hitSndT || 0) > .12) { NAIR.hitSndT = GAME.time; play('imp_metal', null, { vol: .45, rate: .7 + R() * .1 }); } } }
     if (hit || b.life <= 0) NAIR.bul.splice(i, 1);
   }
 }

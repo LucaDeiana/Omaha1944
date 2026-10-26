@@ -189,7 +189,7 @@ async function buildBank() {
   for (const n in AU.buf) for (const b of AU.buf[n]) { const d = b.getChannelData(0); let mx = 0; for (let i = 0; i < d.length; i += 4) mx = Math.max(mx, Math.abs(d[i])); if (mx > .98) { const k = .98 / mx; for (let i = 0; i < d.length; i++) d[i] *= k; } }
   if (window.SFX_DATA) for (const k in SFX_DATA) { const arr = []; for (const b64 of SFX_DATA[k]) { try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); arr.push(await c.decodeAudioData(u.buffer)); } catch (e) { } } if (arr.length) AU.buf[k] = arr; }
   // suoni reali di guerra (CC0): sostituiscono quelli sintetici con lo stesso nome; picco portato a 0,9
-  if (window.SFX_WAR) for (const k in SFX_WAR) { const arr = []; for (const b64 of SFX_WAR[k]) { try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); const b = await c.decodeAudioData(u.buffer); const d = b.getChannelData(0); let mx = 0; for (let i = 0; i < d.length; i += 2) mx = Math.max(mx, Math.abs(d[i])); if (mx > 0) { const g = .9 / mx; for (let i = 0; i < d.length; i++) d[i] *= g; } arr.push(b); } catch (e) { } } if (arr.length) AU.buf[k] = arr; }
+  if (window.SFX_WAR) for (const k in SFX_WAR) { const arr = []; for (const b64 of SFX_WAR[k]) { try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); const b = await c.decodeAudioData(u.buffer); const d = b.getChannelData(0); let mx = 0; for (let i = 0; i < d.length; i += 2) mx = Math.max(mx, Math.abs(d[i])); if (mx > 0) { const g = .9 / mx; for (let i = 0; i < d.length; i++) d[i] *= g; } arr.push(k === 'imp_metal' ? trimBuf(c, b, .09) : b); } catch (e) { } } if (arr.length) AU.buf[k] = arr; }
   AU.ready = true;
   startAmbience();
 }
@@ -309,7 +309,7 @@ const MECH = { out: 'mag_out', in: 'mag_in', bolt: 'bolt_open', boltc: 'bolt_clo
 function sfxMech(kind, delay = 0) { play(MECH[kind] || kind, null, { vol: .55, delay }); }
 function sfxWhiz(from) { const sp = spatial(from, 1e9); sp.vol = 1; sp.delay = 0; sp.rev = .04; sp.lp = 20000; play('whiz', null, { sp, vol: .55 }); if (R() < .7) play('crack', null, { sp, vol: .9 }); }
 function sfxCrack() { play('crack', null, { vol: .8 }); }
-function sfxRicochet(pos) { if (R() < .5) play('ricochet', pos, { ref: 12, vol: .5 }); }
+function sfxRicochet(pos) { }   // il fischio di rimbalzo sintetico è stato tolto: restano solo i colpi sordi
 function sfxImpact(pos, kind) { const n = 'imp_' + kind; if (AU.buf[n]) play(n, pos, { ref: 7, vol: .8 }); }
 function sfxStep(kind, run) { play('step_' + kind, null, { vol: run ? .5 : .32 }); }
 function sfxRocket(pos) { play('rocket', pos, { ref: 25 }); }
@@ -432,3 +432,10 @@ function shout(lang, cat, pos, o = {}) {
 
 // la sintesi vocale del browser sopravvive a pause e ricaricamenti: si svuota la coda
 try { speechSynthesis.cancel(); addEventListener('beforeunload', () => speechSynthesis.cancel()); addEventListener('pagehide', () => speechSynthesis.cancel()); } catch (e) {}
+
+// tiene solo l'attacco di un campione (il colpo sordo), togliendo la coda che risuona e fischia
+function trimBuf(c, b, sec) {
+  const n = Math.min(b.length, Math.floor(sec * b.sampleRate)), o = c.createBuffer(b.numberOfChannels, n, b.sampleRate), f = Math.floor(n * .5);
+  for (let ch = 0; ch < b.numberOfChannels; ch++) { const src = b.getChannelData(ch), dst = o.getChannelData(ch); for (let i = 0; i < n; i++) dst[i] = src[i] * (i < n - f ? 1 : Math.pow((n - i) / f, 2)); }
+  return o;
+}
