@@ -40,7 +40,7 @@ class NavPlane {
     if (this.crash) {
       // caduta: avvitamento con fumo, poi colonna d'acqua o esplosione sull'isola
       this.vel.y -= 9.8 * dt; this.roll += dt * 2.5; this.pos.addScaledVector(this.vel, dt); this.orient();
-      if (this.pos.y < Math.max(WATER_Y, navyH(this.pos.x, this.pos.z))) { const p = this.pos.clone(); if (p.y < WATER_Y + 1) { for (let i = 0; i < 10; i++) PS_SMOKE.emit(p.x, WATER_Y, p.z, rnd(-3, 3), rnd(6, 16), rnd(-3, 3), rnd(1.5, 3), 1.5, 7, .7, .93, .96, .98, .2, 9.81); play('imp_water', p, { ref: 60 }); } else { fxExplosion(p, 2, false); sfxBoom(p, 2); } this.remove(); }
+      if (this.pos.y < Math.max(WATER_Y, navyH(this.pos.x, this.pos.z))) { const p = this.pos.clone(); if (p.y < WATER_Y + 1) { waterDrop(p.x, p.z, 7, -2, 1); for (let i = 0; i < 10; i++) PS_SMOKE.emit(p.x, WATER_Y, p.z, rnd(-3, 3), rnd(6, 16), rnd(-3, 3), rnd(1.5, 3), 1.5, 7, .7, .93, .96, .98, .2, 9.81); play('imp_water', p, { ref: 60 }); } else { fxExplosion(p, 2, false); sfxBoom(p, 2); } this.remove(); }
       return;
     }
     let want = null, alt = this.cruise;
@@ -285,7 +285,7 @@ function updateNavBullets(dt) {
       if (a.addScaledVector(sg, -k).lengthSq() < 4.5 * 4.5) { hit = p; break; }
     }
     b.p.add(sg);
-    if (!hit) { const sh = navShipAt(b.p, b.team); if (sh) { navStrafeHit(sh, b.p, b.cal || 12.7, false); NAIR.bul.splice(i, 1); continue; } if (b.p.y < WATER_Y) { if (R() < .3 && dist2Cam(b.p) < 900 * 900) PS_SMOKE.emit(b.p.x, WATER_Y, b.p.z, 0, 3, 0, .8, .6, 1.5, .5, .9, .95, .97, .3, 9.8); NAIR.bul.splice(i, 1); continue; } }
+    if (!hit) { const sh = navShipAt(b.p, b.team); if (sh) { navStrafeHit(sh, b.p, b.cal || 12.7, false); NAIR.bul.splice(i, 1); continue; } if (b.p.y < WATER_Y) { if (R() < .5) waterDrop(b.p.x, b.p.z, 1.6, -.12, .25); if (R() < .3 && dist2Cam(b.p) < 900 * 900) PS_SMOKE.emit(b.p.x, WATER_Y, b.p.z, 0, 3, 0, .8, .6, 1.5, .5, .9, .95, .97, .3, 9.8); NAIR.bul.splice(i, 1); continue; } }
     if (hit) { hit.damage(rnd(9, 22), false); if (hit.player) { P.shake = Math.min(.6, P.shake + .06); if (GAME.time - (NAIR.hitSndT || 0) > .12) { NAIR.hitSndT = GAME.time; play('imp_metal', null, { vol: .45, rate: .7 + R() * .1 }); } } }
     if (hit || b.life <= 0) NAIR.bul.splice(i, 1);
   }

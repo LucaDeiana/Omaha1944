@@ -125,13 +125,15 @@ function buildOcean() {
   const nt = TEX.water.normal; nt.wrapS = nt.wrapT = THREE.RepeatWrapping;
   const W = WAVES.map(w => new THREE.Vector4(w[0], w[1], w[2], w[3]));
   const m = new THREE.ShaderMaterial({
-    uniforms: { uZoom: { value: 1 }, uT: { value: 0 }, uN: { value: nt }, uW: { value: W }, uSun: { value: new V3(.4, .6, -.6).normalize() }, uFog: { value: FOG_COL }, uFogD: { value: .0001 }, uSky: { value: new THREE.Color(0x8c99a2) }, uDeep: { value: new THREE.Color(0x0f1d23) } },
-    vertexShader: `uniform float uT; uniform vec4 uW[3]; varying vec3 vW; varying vec3 vN; varying float vF; varying float vH;
+    uniforms: { uSim: { value: null }, uSimC: { value: new V3(0, 0, WSIM.span) }, uHA: { value: [...Array(8)].map(() => new THREE.Vector4()) }, uHB: { value: [...Array(8)].map(() => new THREE.Vector4()) }, uNH: { value: 0 }, uSimOn: { value: 0 },
+      uZoom: { value: 1 }, uT: { value: 0 }, uN: { value: nt }, uW: { value: W }, uSun: { value: new V3(.4, .6, -.6).normalize() }, uFog: { value: FOG_COL }, uFogD: { value: .0001 }, uSky: { value: new THREE.Color(0x8c99a2) }, uDeep: { value: new THREE.Color(0x0f1d23) } },
+    vertexShader: WATER_GLSL.vert + `uniform float uSimOn; uniform float uT; uniform vec4 uW[3]; varying vec3 vW; varying vec3 vN; varying float vF; varying float vH;
       void main(){ vec4 w = modelMatrix * vec4(position,1.); float d = length(w.xz - cameraPosition.xz); float f = 1. - smoothstep(500., 2600., d); vF = f;
         float h = 0.; vec2 g = vec2(0.);
         for (int i=0;i<3;i++){ float k = 6.2831853/uW[i].w; float ph = k*dot(uW[i].xy, w.xz) - sqrt(9.81*k)*uT; h += uW[i].z*sin(ph); g += uW[i].z*k*cos(ph)*uW[i].xy; }
-        w.y += h*f; vH = h; vN = normalize(vec3(-g.x*f, 1., -g.y*f)); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
-    fragmentShader: `uniform float uT, uFogD, uZoom; uniform sampler2D uN; uniform vec3 uSun, uFog, uSky, uDeep; varying vec3 vW; varying vec3 vN; varying float vF; varying float vH;
+        float hs = uSimOn > .5 ? simH(w.xz) : 0.; h += hs;
+        w.y += h*f + hs*(1.-f); vH = h; vN = normalize(vec3(-g.x*f, 1., -g.y*f)); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: WATER_GLSL.frag + `uniform float uSimOn; uniform float uT, uFogD, uZoom; uniform sampler2D uN; uniform vec3 uSun, uFog, uSky, uDeep; varying vec3 vW; varying vec3 vN; varying float vF; varying float vH;
       void main(){ vec3 V = normalize(cameraPosition - vW); float dist = length(cameraPosition - vW);
         // il dettaglio dipende da quanto è grande un pixel (distanza diviso ingrandimento): col binocolo le increspature lontane restano
         float pd = dist / uZoom, df = 1. - smoothstep(250., 3500., pd), dn = 1. - smoothstep(60., 600., pd);
@@ -139,7 +141,9 @@ function buildOcean() {
         vec2 b = texture2D(uN, vW.xz/11. - vec2(uT*.02, -uT*.013)).xy*2.-1.;
         vec2 c3 = texture2D(uN, vW.xz/3.7 + vec2(-uT*.035, uT*.028)).xy*2.-1.;          // increspature fini, solo vicino o al binocolo
         vec2 big = texture2D(uN, vW.xz/260. + vec2(uT*.002, -uT*.0015)).xy*2.-1.;       // onda lunga di fondo: rompe l'uniformità anche da lontano
-        vec3 N = normalize(vN + vec3(a.x + b.x*.6 + c3.x*.4*dn + big.x*.5, 0., a.y + b.y*.6 + c3.y*.4*dn + big.y*.5) * (.22 + .4*df));
+        if (uSimOn > .5 && cameraPosition.y > vW.y && inHull(vW.xz)) discard;
+        vec3 sm = uSimOn > .5 ? simS(vW.xz) : vec3(0.);
+        vec3 N = normalize(vN + vec3(-sm.x * .35, 0., -sm.y * .35) + vec3(a.x + b.x*.6 + c3.x*.4*dn + big.x*.5, 0., a.y + b.y*.6 + c3.y*.4*dn + big.y*.5) * (.22 + .4*df));
         float fr = .02 + .98*pow(1. - max(dot(N, V), 0.), 5.);
         vec3 R = reflect(-V, N); vec3 sky = mix(uFog, uSky, clamp(R.y*2.5, 0., 1.));
         // colore dell'acqua che varia a chiazze (correnti, profondità) e si schiarisce sulle creste
@@ -150,8 +154,10 @@ function buildOcean() {
         float sd = max(dot(R, uSun), 0.);
         c += vec3(1., .95, .85) * (pow(sd, 420.) * 1.6 + pow(sd, 40.) * .08) * (.35 + .65*df);
         // creste di schiuma sparse dove le increspature si sommano
-        float fm = smoothstep(.62, .95, (a.x*.5+.5)*.55 + (b.y*.5+.5)*.45 + clamp(vH*.25, 0., .2)) * (.25 + .75*df);
+        float fm = smoothstep(.66, .97, (a.x*.5+.5)*.55 + (b.y*.5+.5)*.45 + clamp(vH*.25, 0., .2)) * (.25 + .75*df) * smoothstep(.25, .75, patchy + big.x * .3);
         c = mix(c, vec3(.82, .86, .88), fm * .55);
+        // schiuma della simulazione: scie, colpi, schianti (spezzata dalle increspature)
+        float sf = sm.z * (.65 + .35 * (b.x * .5 + .5)); c = mix(c, vec3(.9, .93, .94), clamp(sf * 1.4, 0., .92));
         float fh = mix(1., .32, smoothstep(8., 320., .5*(cameraPosition.y + vW.y))); float fd = uFogD*fh;
         c = mix(c, uFog, 1. - exp(-fd*fd*dist*dist));
         gl_FragColor = vec4(c, 1.);
@@ -164,6 +170,8 @@ function buildOcean() {
 function updateOcean(t) {
   const o = NV.ocean; if (!o) return;
   o.position.set(Math.round(camera.position.x / 8) * 8, WATER_Y, Math.round(camera.position.z / 8) * 8);
+  const U = o.material.uniforms; const fx = (typeof P !== 'undefined' && P.mode === 'ship' && NV.me) ? NV.me.pos : camera.position;
+  const dtw = Math.min(.1, Math.max(0, t - (WSIM.lt ?? t))); WSIM.lt = t; updateWaterSim(dtw, fx); U.uSimOn.value = WSIM.on ? 1 : 0; if (WSIM.on) { U.uSim.value = WSIM.a.texture; U.uSimC.value.set(WSIM.cx, WSIM.cz, WSIM.span); waterHullUniforms(U); }
   o.material.uniforms.uT.value = t; o.material.uniforms.uFogD.value = scene.fog.density; o.material.uniforms.uZoom.value = Math.max(1, SETTINGS.fov / camera.fov);
   if (typeof sun !== 'undefined' && sun) o.material.uniforms.uSun.value.copy(sun.position).normalize();
 }
@@ -328,7 +336,7 @@ class NavShip {
   }
   sink(kind) {
     if (this.sinking) return; this.sinking = .01; this.hp = 0; this.tele = 0; this.listS = R() < .5 ? -1 : 1; this.trimS = R() < .5 ? -1 : 1;
-    this.slick = navySlick(this.pos, this.C.L); play('boom_big', this.pos, { ref: 300, vol: 1 });
+    this.slick = navySlick(this.pos, this.C.L); waterDrop(this.pos.x, this.pos.z, this.C.L * .35, -2, 1); play('boom_big', this.pos, { ref: 300, vol: 1 });
     if (kind === 'magazine') { this.breakK = 1; play('boom_big', this.pos, { ref: 500, vol: 1.3 }); }
     if (kind === 'magazine') { this.blown = true; const p = this.pos.clone().add(new V3(0, this.C.F + 5, 0)); fxExplosion(p, 8, false); for (let i = 0; i < 40; i++) PS_SMOKE.emit(p.x + rnd(-15, 15), p.y + rnd(0, 30), p.z + rnd(-15, 15), rnd(-6, 6), rnd(15, 45), rnd(-6, 6), rnd(10, 18), 15, 60, .8, .15, .14, .13, .2, -.3); sfxBoom(p, 6); }
     feed((this.team === 'A' ? '🇺🇸 ' : '') + this.name + (kind === 'magazine' ? ' esplode: santabarbara colpita!' : ' affonda'));
@@ -342,6 +350,7 @@ class NavShip {
     if (!this.sinking && k < .4 && !this.bigSmoke) { this.bigSmoke = addEmitter(this.pos, 'smoke', C.L > 150 ? 2.6 : 1.6); this.bigSmoke.follow = q => this.toWorld(0, C.F + 6, -C.L * .05, q); this.bigSmoke.life = 1e9; }
     if (!this.sinking && k < .25 && R() < .04) { const p = this.toWorld(rnd(-C.B * .3, C.B * .3), C.F + 2, rnd(-C.L * .4, C.L * .4)); fxExplosion(p, 1.2 + C.L / 150, false); if (dist2Cam(p) < 4000 * 4000) sfxBoom(p, 1.5); }
     if (this.sinking > 0) {
+      if (R() < .4) { const q = this.toWorld(rnd(-C.B, C.B), 0, rnd(-C.L * .5, C.L * .5)); waterDrop(q.x, q.z, rnd(3, 6), rnd(.2, .5), .8); }   // l'aria che esce ribolle in superficie
       for (let i = 0; i < 2; i++) { const p = this.toWorld(rnd(-C.B * .5, C.B * .5), 0, rnd(-C.L * .45, C.L * .45)); PS_WAKE.emit(p.x, WATER_Y + .2, p.z, rnd(-1, 1), .3, rnd(-1, 1), rnd(3, 6), 2, 9, .6, .95, .97, .98, .3, 0); }
       if (R() < .25) { const p = this.toWorld(rnd(-C.B, C.B), 0, rnd(-C.L * .5, C.L * .5)); PS_FIRE.emit(p.x, WATER_Y + 1, p.z, rnd(-.5, .5), rnd(2, 4), rnd(-.5, .5), rnd(.8, 1.4), 3, 6, 1, 4, 2, .7); PS_SMOKE.emit(p.x, WATER_Y + 3, p.z, rnd(-1, 1), rnd(3, 6), rnd(-1, 1), rnd(8, 14), 4, 18, .7, .12, .11, .1, .1, -.1); }
       if (!this.bigSmoke) { this.bigSmoke = addEmitter(this.pos, 'smoke', C.L > 150 ? 3 : 1.8); this.bigSmoke.follow = q => q.copy(this.pos).setY(Math.max(WATER_Y + 4, this.pos.y + C.F)); this.bigSmoke.life = 1e9; }
@@ -526,6 +535,7 @@ function drawShells() {
 }
 // colonne d'acqua alte secondo il calibro; le schegge dell'esplosivo colpiscono le navi vicinissime
 function splash(s, p) {
+  waterDrop(p.x, p.z, Math.max(2, s.S.cal / 70), -Math.min(2.5, s.S.cal / 220), Math.min(1, .25 + s.S.cal / 400));
   const c = s.S.cal, hgt = c >= 1000 ? 260 : c >= 500 ? 110 : c >= 300 ? 60 : c >= 150 ? 30 : c >= 100 ? 18 : c >= 20 ? 4 : 1.5;
   if (dist2Cam(p) < (NV.zoomOn || P.adsHeld ? 30000 : 12000) ** 2) {
     const n = c >= 100 ? 14 : 3;
@@ -620,7 +630,7 @@ function updateTorps(dt) {
         const p = T.p.clone().setY(WATER_Y);
         for (let k = 0; k < 24; k++) PS_SMOKE.emit(p.x + rnd(-3, 3), p.y, p.z + rnd(-3, 3), rnd(-3, 3), rnd(18, 34), rnd(-3, 3), rnd(3, 5), 4, 18, .85, .93, .96, .98, .2, 9.81);
         fxExplosion(p, 4, true); sfxBoom(p, 5, true);
-        hit.damage(T.dmg * (hit.C.type === 'bb' ? .55 : 1), T.by, 'torpedo'); hit.leak += .006; hit.listS = Math.sign(hit.toLocal(p, _nvc).x) || 1;
+        hit.damage(T.dmg * (hit.C.type === 'bb' ? .55 : 1), T.by, 'torpedo'); waterDrop(p.x, p.z, 14, -3, 1); hit.leak += .006; hit.listS = Math.sign(hit.toLocal(p, _nvc).x) || 1;
         if (hit === NV.me) { showMsg('Colpiti da un siluro!', 2.5); P.shake = Math.max(P.shake, .5); }
         if (T.by === NV.me) { navyHitText('Siluro a segno! · ' + Math.round(T.dmg), '#ffcf5a'); navyRibbon('torp'); }
       }

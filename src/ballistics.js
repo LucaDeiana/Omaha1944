@@ -48,6 +48,7 @@ function updateAirBullets(dt) {
     }
     if (t < 0 && SCEN === 'sea' && typeof navShipAt === 'function') { const sh = navShipAt(_bn, b.team); if (sh) { if (b.byPlayer || b.team === 'E') navStrafeHit(sh, _bn, b.G.cal, b.byPlayer); L.splice(i, 1); continue; } }
     if (t >= 0) {
+      if (water && SCEN === 'sea' && typeof waterDrop === 'function') waterDrop(b.p.x + _bd.x * t, b.p.z + _bd.z * t, 1.6, -.12, .25);
       if (b.byPlayer) airBulletImpact(b.p.clone(), _bd.clone(), t, hitPlane, hitVeh, water, b.G, b.dmg);
       else aiBulletImpact(b, b.p.clone().addScaledVector(_bd, t), hitPlane, water);
       L.splice(i, 1); continue;

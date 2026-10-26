@@ -719,7 +719,7 @@ function startWreck(me, gy) {
   for (const p of me.props) p.rotation.x = rnd(-.4, .4);  // eliche piegate
   me.pos.y = gy + 1;
   v.y = vy * (water ? .1 : .3); v.multiplyScalar(water ? .55 : .8 - Math.min(.35, sev * .25));
-  P.shake += .8 + sev; play('imp_metal', null, { vol: 1, rate: .45 }); sfxBoom(me.pos, 1 + sev * 2.5, water);
+  P.shake += .8 + sev; play('imp_metal', null, { vol: 1, rate: .45 }); sfxBoom(me.pos, 1 + sev * 2.5, water); if (water && typeof waterDrop === 'function') waterDrop(me.pos.x, me.pos.z, 9, -2.5, 1);
   if (water) { for (let i = 0; i < 25; i++) PS_SMOKE.emit(me.pos.x + rnd(-3, 3), WATER_Y, me.pos.z + rnd(-3, 3), rnd(-3, 3), rnd(4, 10), rnd(-3, 3), rnd(1, 2), .8, 3, .55, .85, .9, .95, .2, 0); }
   else fxDebris(me.pos, 12 + Math.round(sev * 20), 1 + sev);
   // impatto forte: si staccano pezzi, il motore prende fuoco
