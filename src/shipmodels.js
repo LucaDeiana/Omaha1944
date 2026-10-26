@@ -118,6 +118,32 @@ function shipSuper(mb, C, hg) {
     for (const sd of [-1, 1]) shAA(mb, sd * B * .33, F, L * .09, u, 2);
     return;
   }
+  if (C.style === 'pagoda') {
+    // stile giapponese: torre a pagoda alta a ripiani sporgenti con telemetri enormi in cima, fumaiolo unico inclinato a poppavia,
+    // albero a tripode di poppa, hangar con catapulte e gru; antiaeree in vasche sui ripiani
+    const zb = -L * .14, H0 = F + 2;
+    mb.add(U.box, u, 0, H0 + 4, zb + L * .04, 0, 0, 0, B * .6, 8, L * .18);
+    const lv = [[B * .5, L * .1, 8], [B * .44, L * .085, 8], [B * .38, L * .07, 7], [B * .32, L * .06, 7], [B * .27, L * .052, 6.5], [B * .23, L * .046, 6], [B * .2, L * .04, 5.5]];
+    let y = H0 + 8;
+    lv.forEach(([w, l, h], k) => {
+      mb.add(U.box, u, 0, y + h / 2, zb + k * .6, 0, 0, 0, w, h, l);
+      if (k % 2 === 0) { mb.add(U.box, dk, 0, y + h + .15, zb + k * .6, 0, 0, 0, w * 1.35, .3, l * 1.15); for (const sd of [-1, 1]) shAA(mb, sd * w * .62, y + h, zb + k * .6, u, 3); }   // ripiani sporgenti
+      if (k === 3) mb.add(U.box, 0x223040, 0, y + h * .6, zb + k * .6 - l / 2, 0, 0, 0, w * .95, 1, .1);   // finestre di plancia
+      y += h;
+    });
+    mb.add(U.cyl, 0x2a2e31, 0, y + 1.5, zb + 3, 0, 0, PI / 2, 1.1, B * .55, 1.1); mb.add(U.box, u, 0, y + 1.5, zb + 3, 0, 0, 0, B * .16, 3.4, B * .14);   // telemetro principale
+    mb.add(U.cyl, 0x2a2e31, 0, y + 4.5, zb + 3, 0, 0, PI / 2, .8, B * .35, .8); mb.add(U.box, u, 0, y + 4.5, zb + 3, 0, 0, 0, B * .11, 2.4, B * .1);
+    shMast(mb, 0, y + 6, zb + 4, 10, mt, 8, 4);
+    // fumaiolo unico, grande e inclinato verso poppa
+    shFunnel(mb, 0, F + 4, L * .06, B * .34, B * .5, 34, u, dk, .32);
+    mb.add(U.box, u, 0, F + 5, L * .17, 0, 0, 0, B * .36, 10, L * .07); shDirector(mb, 0, F + 10, L * .17, 4, u);
+    shTripod(mb, 0, F + 10, L * .2, 16, mt, u);
+    for (const sd of [-1, 1]) { shBoat(mb, sd * B * .2, F + 9, L * .1, 12, F); for (const z of [-L * .02, L * .26]) shAA(mb, sd * B * .4, F, z, u, 3); }
+    mb.add(U.box, u, 0, F + 2.5, L * .4, 0, 0, 0, B * .5, 5, L * .07);   // hangar
+    for (const sd of [-1, 1]) mb.add(U.box, 0x55595c, sd * B * .3, F + 5.4, L * .43, 0, sd * .4, 0, 2, .8, 24);   // catapulte
+    mb.add(U.cyl, mt, 0, F + 5, L * .46, 0, 0, 0, .8, 4, .8); mb.between(new V3(0, F + 7, L * .46), new V3(-B * .3, F + 18, L * .44), .4, mt);
+    return;
+  }
   if (C.style === 'modern') {
     // super corazzata: torre di plancia alta a gradoni (stile Iowa), torre corazzata, due fumaioli alti, albero a tripode con radar
     const zb = -L * .2;
@@ -204,7 +230,7 @@ function buildShipModel2(C) {
   for (const G of C.guns) for (const [x, y, z, arc, n] of G.mounts) {
     const S = SHELL[G.s], tg = new THREE.Group(), deckY = hg.userData.sheer((z + L / 2) / L);
     tg.position.set(x, Math.max(y, deckY + (S.cal >= 140 ? 2 : 1.2)), z); body.add(tg);
-    const sz = S.cal >= 300 ? S.cal / 356 : S.cal >= 200 ? .9 : S.cal >= 140 ? .72 : .5, tm = new MB();
+    const sz = S.cal >= 300 ? Math.min(3.2, S.cal / 356) * (n >= 4 ? 1.15 : 1) : S.cal >= 200 ? .9 : S.cal >= 140 ? .72 : .5, tm = new MB();
     shTurret(tm, S, sz, pal.upper, C.nat, Math.abs(x) < C.B * .3 ? tg.position.y - deckY + .3 : 0);
     tg.add(groupMesh(tm.buildGroups(), true));
     const pv = new THREE.Group(); pv.position.set(0, S.cal >= 140 ? .4 * sz : S.cal >= 100 ? .6 : .2, S.cal >= 140 ? -2.8 * sz : S.cal >= 100 ? -2.2 : 0); tg.add(pv);
