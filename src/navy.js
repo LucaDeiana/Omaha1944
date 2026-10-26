@@ -366,7 +366,7 @@ class NavShip {
       if (this === NV.me && !tu.sec) NV.lastShell = sh;
       if (big) { PS_FIRE.emit(o.x, o.y, o.z, d.x * .02, 1, d.z * .02, .25, S.cal / 25, S.cal / 12, 1, 4, 2.6, 1.2); for (let i = 0; i < 4; i++) PS_SMOKE.emit(o.x, o.y, o.z, d.x * rnd(.01, .03), rnd(1, 3), d.z * rnd(.01, .03), rnd(4, 9), S.cal / 30, S.cal / 6, .6, .7, .7, .7, .5, -.05); }
     }
-    if (big) { if (this === NV.me) { sfxShipNear(); P.shake += S.cal / 300; } else sfxShip(tu.pv.getWorldPosition(_nvc)); }
+    if (big) { if (this === NV.me) { sfxShipNear(); P.shake = Math.max(P.shake, Math.min(.35, .08 + S.cal / 2500)); } else sfxShip(tu.pv.getWorldPosition(_nvc)); }
     else if (dist2Cam(this.pos) < 1500 * 1500) sfxShot(S.cal >= 20 ? 'flak' : 'm2', this === NV.me ? null : this.pos, this === NV.me);
     if (this === NV.me) STATS.shots++;
     return true;
@@ -550,7 +550,7 @@ function updateTorps(dt) {
         for (let k = 0; k < 24; k++) PS_SMOKE.emit(p.x + rnd(-3, 3), p.y, p.z + rnd(-3, 3), rnd(-3, 3), rnd(18, 34), rnd(-3, 3), rnd(3, 5), 4, 18, .85, .93, .96, .98, .2, 9.81);
         fxExplosion(p, 4, true); sfxBoom(p, 5, true);
         hit.damage(T.dmg * (hit.C.type === 'bb' ? .55 : 1), T.by, 'torpedo'); hit.leak += .006; hit.listS = Math.sign(hit.toLocal(p, _nvc).x) || 1;
-        if (hit === NV.me) { showMsg('Colpiti da un siluro!', 2.5); P.shake += 1.2; }
+        if (hit === NV.me) { showMsg('Colpiti da un siluro!', 2.5); P.shake = Math.max(P.shake, .5); }
         if (T.by === NV.me) navyHitText('Siluro a segno! · ' + Math.round(T.dmg), '#ffcf5a');
       }
       scene.remove(T.mesh); NV.torps.splice(i, 1);
@@ -646,7 +646,8 @@ function updateNavyPlayer(dt) {
   else { const d = (C.L * 1.1 + 25) * NV.cam.dist; camera.position.copy(me.pos).addScaledVector(dir, -d); camera.position.y = Math.max(camera.position.y + C.F + C.L * .18, seaH(camera.position.x, camera.position.z, GAME.time) + 3); camera.fov = lerp(camera.fov, SETTINGS.fov, .2); }
   camera.updateProjectionMatrix();
   camera.lookAt(_nva.copy(camera.position).addScaledVector(dir, 1000).add(new V3(0, zoom ? 0 : C.L * .1, 0)));
-  if (P.shake > 0) { camera.rotation.x += rnd(-1, 1) * P.shake * .01; camera.rotation.y += rnd(-1, 1) * P.shake * .01; }
+  // scossone: oscillazione morbida e contenuta (più piccola col binocolo, dove sarebbe ingrandita)
+  if (P.shake > 0) { const a = Math.min(P.shake, .6) * .0035 * (camera.fov / 60), t = GAME.time; camera.rotation.x += Math.sin(t * 21) * a; camera.rotation.y += Math.sin(t * 17 + 1.3) * a * .7; }
   // punto mirato: dove il raggio del mirino tocca il mare (oltre l'orizzonte: gittata massima)
   const f = new V3(); camera.getWorldDirection(f); const maxR = me.main.length ? tableMax(me.main[0].T) : 3000;
   if (f.y < -1e-4) { const t = (camera.position.y - WATER_Y) / -f.y; NV.aim.copy(camera.position).addScaledVector(f, Math.min(t, maxR * 1.3 / Math.max(.05, Math.hypot(f.x, f.z)))); }
