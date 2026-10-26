@@ -97,6 +97,7 @@ document.addEventListener('pointerlockchange', () => {
   GAME.running = locked && GAME.started && !GAME.over;
   if (!locked && GAME.started && !GAME.over) {
     if (SCEN === 'air') { const ps = $('pPlane'); if (!ps.options.length) ps.innerHTML = $('optPlane').innerHTML; ps.value = SETTINGS.plane; $('pPlaneL').style.display = ''; }
+    try { speechSynthesis.cancel(); } catch (e) {}
     $('pause').classList.remove('hidden'); mouseL = false; P.trigger = false; P.adsHeld = false; for (const k in KEYS) KEYS[k] = false;
     if (window.speechSynthesis) speechSynthesis.cancel();
     if (AU.ctx) AU.ctx.suspend();

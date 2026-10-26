@@ -414,9 +414,14 @@ function shout(lang, cat, pos, o = {}) {
   if (o.sub && d < 40) subLine(lang === 'en' ? 'Soldato USA' : 'Soldato tedesco', text, IT[text]);
   if (!SETTINGS.voices || !window.speechSynthesis) return;
   if (!SPEECH.good[lang]) { if (pos && !o.priority) sfxVoice(pos, lang === 'en' ? 'yell' : 'yell'); return; }
+  // niente code: una voce alla volta, mai la stessa frase ripetuta a breve, niente voci a gioco fermo o in mare/cielo
   const now = performance.now();
-  if (!o.priority && (SPEECH.pending > 1 || now - SPEECH.last < 700)) return;
-  if (o.priority && SPEECH.pending > 1) speechSynthesis.cancel();
+  if (typeof GAME !== 'undefined' && !GAME.running && !o.priority) return;
+  if (typeof SCEN !== 'undefined' && SCEN === 'sea') return;
+  SPEECH.said = SPEECH.said || {}; if (now - (SPEECH.said[text] || -1e9) < 9000) return;
+  if (now - SPEECH.last < (o.priority ? 1200 : 2500)) return;
+  if (speechSynthesis.speaking || speechSynthesis.pending) { if (!o.priority) return; speechSynthesis.cancel(); }
+  SPEECH.said[text] = now;
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang === 'en' ? 'en-US' : 'de-DE'; u.voice = pick(SPEECH[lang]);
   u.rate = o.rate || rnd(1.08, 1.22); u.pitch = o.pitch || rnd(.92, 1.04); u.volume = Math.min(1, vol * SETTINGS.volume * 1.1);
@@ -424,3 +429,6 @@ function shout(lang, cat, pos, o = {}) {
   u.onend = u.onerror = () => { SPEECH.pending = Math.max(0, SPEECH.pending - 1); };
   speechSynthesis.speak(u);
 }
+
+// la sintesi vocale del browser sopravvive a pause e ricaricamenti: si svuota la coda
+try { speechSynthesis.cancel(); addEventListener('beforeunload', () => speechSynthesis.cancel()); addEventListener('pagehide', () => speechSynthesis.cancel()); } catch (e) {}
