@@ -39,7 +39,7 @@ function bindSettings() {
   const modeVis = () => { $('modeL').style.display = $('optSide').value === 'E' ? '' : 'none'; }; $('optSide').addEventListener('change', modeVis); setTimeout(modeVis, 0); try { $('optName').value = localStorage.getItem('omahaName') || ''; } catch (e) { }
   $('optNet').addEventListener('change', () => $('netNote').classList.toggle('hidden', !$('optNet').checked || netAvailable())); $('optSide').value = SETTINGS.side || 'A'; $('optMap').value = SETTINGS.map || 'omaha';
   const ps = $('optPlane'); ps.innerHTML = PLAYER_PLANES.map(k => { const s = PLANE_SPECS[k], g = s.guns; return `<option value="${k}">${s.name} — ${g.pos.length}× ${g.cal} mm${g.he ? ' esplosivi' : ''}${s.guns2 ? ' + ' + s.guns2.pos.length + '× ' + s.guns2.cal + ' mm' : ''}</option>`; }).join(''); ps.value = SETTINGS.plane || 'p47';
-  const mapVis = () => { const a = $('optMap').value !== 'omaha'; $('optSide').parentNode.style.display = a ? 'none' : ''; $('tunModeL').style.display = $('optMap').value === 'tun' ? '' : 'none'; $('planeL').style.display = $('airMapL').style.display = $('optMap').value === 'air' ? '' : 'none'; if (a) $('modeL').style.display = 'none'; else modeVis(); }; $('optMap').addEventListener('change', mapVis); setTimeout(mapVis, 0);
+  const mapVis = () => { $('navL').style.display = $('optMap').value === 'sea' ? '' : 'none'; const a = $('optMap').value !== 'omaha'; $('optSide').parentNode.style.display = a ? 'none' : ''; $('tunModeL').style.display = $('optMap').value === 'tun' ? '' : 'none'; $('planeL').style.display = $('airMapL').style.display = $('optMap').value === 'air' ? '' : 'none'; if (a) $('modeL').style.display = 'none'; else modeVis(); }; $('optMap').addEventListener('change', mapVis); setTimeout(mapVis, 0);
   const sync = () => {
     for (const [a, b] of [['optSens', 'pSens'], ['optFov', 'pFov'], ['optVol', 'pVol']]) { $(a).value = $(b).value = SETTINGS[{ optSens: 'sens', optFov: 'fov', optVol: 'volume' }[a]]; }
     for (const [a, b, k] of [['optGore', 'pGore', 'gore'], ['optVoices', 'pVoices', 'voices'], ['optDyn', 'pDyn', 'dynres'], ['optFps', 'pFps', 'fps']]) $(a).checked = $(b).checked = SETTINGS[k];
@@ -54,7 +54,7 @@ function bindSettings() {
 
 async function startGame() {
   SETTINGS.plane = $('optPlane') ? $('optPlane').value : 'p47'; AIRMAP = $('optAirMap') ? $('optAirMap').value : 'norm'; AIRFREE = !!$('optAirFree') && $('optAirFree').value === '1';
-  SCEN = $('optMap').value; TUN.mode = $('optTunMode') ? $('optTunMode').value : 'dm'; SETTINGS.map = SCEN; SETTINGS.side = $('optSide').value; if (SCEN !== 'omaha') SETTINGS.side = 'A'; PT = SETTINGS.side; MISSION.endless = PT === 'E' && $('optMode').value === 'e'; try { localStorage.setItem('omahaName', $('optName').value); } catch (e) { }
+  SCEN = $('optMap').value; NV.misKey = $('optNavMis').value; NV.freeShip = $('optNavShip').value; TUN.mode = $('optTunMode') ? $('optTunMode').value : 'dm'; SETTINGS.map = SCEN; SETTINGS.side = $('optSide').value; if (SCEN !== 'omaha') SETTINGS.side = 'A'; PT = SETTINGS.side; MISSION.endless = PT === 'E' && $('optMode').value === 'e'; try { localStorage.setItem('omahaName', $('optName').value); } catch (e) { }
   SETTINGS.quality = $('optQuality').value; SETTINGS.diff = $('optDiff').value; saveSettings();
   Q = QUALITY[SETTINGS.quality]; D = DIFF[SETTINGS.diff];
   const audioP = initAudio();

@@ -8,6 +8,7 @@ function deployPoints() {
   if (SCEN === 'ard') return ardDeployPoints();
   if (SCEN === 'air') return airDeployPoints();
   if (SCEN === 'tun') return tunDeployPoints();
+  if (SCEN === 'sea') return navyDeployPoints();
   const st = MISSION.stage, pts = [];
   if (PT === 'E') {
     pts.push({ label: 'Ultimo punto', sub: 'con i camerati', kind: 'checkpoint', pos: MISSION.checkpoint.pos });
@@ -42,6 +43,7 @@ function deployKey(c) {
   else if (c === 'KeyB' && !P.dead) closeSpawnMenu();
 }
 function deploy(p) {
+  if (p.kind === 'navy') { closeSpawnMenu(); return; }
   if (p.kind === 'plane') PL.spawnCarrier = p.carrier !== false;
   if (p.kind === 'plane') PL.spawnCarrier = p.carrier !== false;
   if (p.kind === 'point') { closeSpawnMenu(); leaveMode(); resetPlayerState(); P.inBoat = false; const x = p.pos.x + rnd(-3, 3), z = p.pos.z + rnd(-2, 2); P.pos.set(x, Hf(x, z), z); P.yaw = p.yaw || 0; showMsg('Schierato: ' + p.label, 2.5); return; }

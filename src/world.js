@@ -103,6 +103,7 @@ function H(x, z) {
   if (SCEN === 'ard') return ardH(x, z);
   if (SCEN === 'air') return airH(x, z);
   if (SCEN === 'tun') return tunH(x, z);
+  if (SCEN === 'sea') return navyH(x, z);
   let y = H0(x, z);
   if (z > 100) return y;
   if (z < -84 && z > -97 && x > -165 && x < 165) { const d = Math.abs(z - trenchZ(x)); if (d < 1.7) y -= 1.8 * smooth((1.7 - d) / .6); }
@@ -1036,6 +1037,7 @@ function buildWorld(step) {
   if (SCEN === 'ard') { buildArdennes(); return; }
   if (SCEN === 'air') { buildAirMap(); return; }
   if (SCEN === 'tun') { buildTunisia(); return; }
+  if (SCEN === 'sea') { buildNavyWorld(); return; }
   genCraters();
   WORLD.villageY = H0(10, -283); CITY.y = H0(0, -575);
   buildHF(); buildHC();

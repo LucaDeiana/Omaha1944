@@ -112,6 +112,16 @@ Nella modalità aerea si sceglie l'aereo e la mappa:
 - **Caccia libera**: su ogni mappa, ondate di caccia sempre più numerose con record salvato.
 - **Il Reno**: pista avanzata in lamiera; spegnere la Flak, abbattere i Me 262, distruggere il ponte d'acciaio, atterrare.
 
+## Battaglie navali
+Scenario a sé con navi divise per classi: PT boat Elco, cacciatorpediniere Fletcher, incrociatore leggero Cleveland, corazzata Texas; nemici Schnellboot, Zerstörer 1934, incrociatore Nürnberg, corazzata Scharnhorst e mercantili.
+- **Balistica**: ogni proiettile ha calibro, massa e velocità alla bocca reali; in volo subisce gravità e resistenza dell'aria variabile col numero di Mach e con la quota; il fattore di forma è tarato perché le gittate massime coincidano con quelle storiche (5"/38: 15,9 km; 14"/45: 21 km; 28 cm: 40,9 km). Dispersione angolare e di velocità iniziale per ogni cannone; il proiettile eredita la velocità della nave.
+- **Corazze**: perforazione De Marre con angolo d'impatto, rimbalzi, sovrapperforazione, cintura e ponte distinti; perforante (1) ed esplosivo (2).
+- **Danni**: torri fuori uso, macchine, timone, falle e allagamenti, incendi, santabarbara; squadre di soccorso con R.
+- **Navi**: telegrafo (W/S), timone (A/D, C al centro), accelerazione e raggio di virata per classe, perdita di velocità in virata, beccheggio e rollio dalle onde, torri stabilizzate.
+- **Tiro**: la mira indica il punto sul mare, la centrale di tiro calcola l'alzo; Q aggancia un bersaglio e mostra il punto d'anticipo (e quello dei siluri, T); tasto destro: binocolo.
+- **Missioni**: Caccia nella Manica, Siluri sul convoglio, Scorta al convoglio, Battaglia di linea, Battaglia libera a ondate.
+- **Mare**: una sola griglia polare che segue la camera, onde nel vertex shader solo vicino, dettaglio da texture lontano.
+
 ## Crediti texture
 
 Texture fotografiche da [ambientCG](https://ambientcg.com) (licenza CC0): Ground054, Ground109, Grass004, Concrete034, Bricks100, Bricks097, RoofingTiles013A, PavingStones138, Planks037A, PaintedMetal004, Fabric084, Plaster001. Ridotte a 512 px e incluse in `assets/tex_photo.js`.

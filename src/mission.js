@@ -71,6 +71,7 @@ function initMission() {
   if (SCEN === 'ard') { initArdennes(); return; }
   if (SCEN === 'air') { initAirMode(); return; }
   if (SCEN === 'tun') { initTunisia(); return; }
+  if (SCEN === 'sea') { initNavy(); return; }
   if (PT === 'E') { initAxis(); return; }
   const xs = [-97, -72, -47, -22, 3, 28, 53];
   const per = clamp(Math.floor((Q.allyAlive * .55 - 9) / 6), 4, 10);
@@ -667,6 +668,7 @@ function updateMission(dt) {
   if (SCEN === 'ard') { updateArdennes(dt); return; }
   if (SCEN === 'air') { updateAirMode(dt); return; }
   if (SCEN === 'tun') { updateTunisia(dt); return; }
+  if (SCEN === 'sea') { updateNavy(dt); return; }
   if (ARD.snow) updateSnowfall(dt);
   MISSION.suppT = Math.max(0, (MISSION.suppT || 0) - dt);
   for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || []), ...(WORLD.tobruks || [])]) b.supT = Math.max(0, (b.supT || 0) - dt);

@@ -10,6 +10,7 @@ const CUT_SHOTS = [
 ];
 function startCutscene() {
   if (SCEN === 'air') { airIntro(); return; }
+  if (SCEN === 'sea') { showMsg('1944 — La Manica', 4); return; }
   if (SCEN === 'tun') { showMsg('Aprile 1943 — Medjez el-Bab, Tunisia', 4); return; }
   if (SCEN === 'ard') CUT_SHOTS.splice(0, CUT_SHOTS.length, ...ARD_SHOTS);
   if (PT === 'E') {

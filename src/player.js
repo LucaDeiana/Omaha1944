@@ -64,6 +64,7 @@ function initInput() {
     if (c === 'KeyT' && P.mode === 'foot') { openAirMark(); return; }
     if (c === 'KeyX' && P.mode === 'foot' && PT === 'A') { cycleOrder(); return; }
     if (c === 'KeyH' && P.mode === 'foot' && !P.dead) { if (P.bandages <= 0) showMsg('Nessuna benda rimasta', 1.5); else if (P.hp >= 95) showMsg('Non sei ferito', 1.5); else if (P.bandT <= 0) { P.bandT = 3; P.bandages--; sfxMech('pick'); showMsg('Ti stai bendando…', 3); } return; }
+    if (P.mode === 'ship') { navyKey(c); return; }
     if (c === 'KeyB') { openSpawnMenu(); return; }
     if (P.mode === 'plane') { if (c === 'KeyF' || c === 'Space') planeDropBomb(); if (c === 'KeyV') togglePlaneView(); if (c === 'KeyM') togglePlaneAssist(); if (c === 'KeyG') togglePlaneGear(); if (c === 'KeyT') planeLockToggle(); if (c === 'KeyR' && PL.me && PL.me.crash) { const alive = PL.wreck && PL.wreck.done && !PL.wreck.lethal; exitPlane(); P.mode = 'foot'; if (alive) openSpawnMenu(); else P.die(); } return; }
     if (P.mode === 'naval') return;
@@ -83,6 +84,7 @@ function initInput() {
   addEventListener('mousemove', e => {
     if (!GAME.running) return;
     if (P.mode === 'mg' || P.mode === 'mortar' || P.mode === 'flak') { stationMouse(e.movementX, e.movementY); return; }
+    if (P.mode === 'ship') { navyMouse(e.movementX, e.movementY); return; }
     if (P.mode === 'tank') { tankMouse(e.movementX, e.movementY); return; }
     if (P.mode === 'airmark') { airMouse(e.movementX, e.movementY); return; }
     if (P.mode === 'plane' && PL.assist) { const s = .0013 * SETTINGS.sens; PL.aimYaw -= e.movementX * s; PL.aimPitch = clamp(PL.aimPitch - e.movementY * s, -1.35, 1.35); return; }
@@ -104,6 +106,7 @@ function initInput() {
   addEventListener('wheel', e => {
     // in volo la rotella regola la manetta (su = più motore), a passi del 5%
     if (GAME.running && P.mode === 'plane' && PL.me) { PL.throttle = clamp(Math.round((PL.throttle + (e.deltaY < 0 ? .05 : -.05)) * 20) / 20, 0, 1); showMsg('Manetta ' + Math.round(PL.throttle * 100) + '%', .8); return; }
+    if (GAME.running && P.mode === 'ship') { navyWheel(e.deltaY); return; }
     if (!GAME.running || P.mode !== 'foot') return;
     const dir = e.deltaY > 0 ? 1 : -1;
     for (let k = 1; k <= 3; k++) { const i = (P.cur + dir * k + 3) % 3; if (P.inv[i]) { selectSlot(i); break; } }
@@ -140,6 +143,7 @@ function updatePlayer(dt) {
   if (P.bandT > 0) { P.bandT -= dt; P.trigger = false; mouseL = false; if (P.bandT <= 0) { P.hp = Math.min(100, P.hp + 45); P.hurt = 0; showMsg('Ferita medicata', 1.5); } }
   P.hurt = Math.max(0, P.hurt - dt * .55); P.supp = Math.max(0, P.supp - dt * .3); P.shake = Math.max(0, P.shake - dt * 1.8);
   P.shockT = Math.max(0, P.shockT - dt); if (P.shockT <= 0) P.shock = Math.max(0, P.shock - dt * .8);
+  if (P.mode === 'ship') { updateNavyPlayer(dt); return; }
   if (P.mode === 'naval') { updateNaval(dt); updateViewmodel(dt); return; }
   if (P.mode === 'plane') { updatePlane(dt); updateViewmodel(dt); return; }
   if (P.mode === 'tank') { updateTankMode(dt); updateViewmodel(dt); return; }
