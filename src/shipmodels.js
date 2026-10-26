@@ -8,6 +8,7 @@
 const SHIP_PAL = {
   us: { hull: 0x3c4a5c, upper: 0x737b81, deck: 0x46525e, dark: 0x2c3238, metal: 0x6d757b },   // Measure 22: blu marina sotto, grigio nebbia sopra
   de: { hull: 0x8f969b, upper: 0x878d91, deck: 0x8a7a5e, dark: 0x3e4448, metal: 0x737a7f },   // grigio chiaro Kriegsmarine, ponte in teak
+  jp: { hull: 0x6f7377, upper: 0x80858a, deck: 0x7a6a52, dark: 0x2b2f33, metal: 0x6a7075 },   // grigio Kure, ponte in legno
   x: { hull: 0x3e3a35, upper: 0x8c8274, deck: 0x6b5a46, dark: 0x2a2724, metal: 0x5f5850 },    // mercantile: scafo nero, sovrastrutture color legno
 };
 // scafo: sezioni lungo la nave con prua slanciata (lancio) e svasata, cavallino, poppa a specchio; colori per vertice
@@ -207,7 +208,7 @@ function buildShipModel2(C) {
     shTurret(tm, S, sz, pal.upper, C.nat, Math.abs(x) < C.B * .3 ? tg.position.y - deckY + .3 : 0);
     tg.add(groupMesh(tm.buildGroups(), true));
     const pv = new THREE.Group(); pv.position.set(0, S.cal >= 140 ? .4 * sz : S.cal >= 100 ? .6 : .2, S.cal >= 140 ? -2.8 * sz : S.cal >= 100 ? -2.2 : 0); tg.add(pv);
-    const bl = new MB(), len = S.cal >= 100 ? S.cal / 1000 * (S.cal >= 300 ? 45 : 40) : S.cal > 15 ? 2.4 : 1.5, muzzles = [], rad = Math.max(.05, S.cal / 2000 * 1.5);
+    const bl = new MB(), len = S.cal >= 100 ? Math.min(62, S.cal / 1000 * (S.cal >= 300 ? 45 : 40)) : S.cal > 15 ? 2.4 : 1.5, muzzles = [], rad = Math.max(.05, S.cal / 2000 * 1.5);
     for (let i = 0; i < n; i++) {
       const xo = (i - (n - 1) / 2) * Math.max(.3, S.cal / 1000 * (S.cal >= 140 ? 5.2 : 3.5));
       bl.add(U.cyl, 0x2b2e30, xo, 0, -len / 2, PI / 2, 0, 0, rad, len, rad);

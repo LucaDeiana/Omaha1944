@@ -120,6 +120,8 @@ Scenario a sé con navi divise per classi: PT boat Elco, cacciatorpediniere Flet
 - **Navi**: telegrafo (W/S), timone (A/D, C al centro), accelerazione e raggio di virata per classe, perdita di velocità in virata, beccheggio e rollio dalle onde, torri stabilizzate.
 - **Tiro**: la mira indica il punto sul mare, la centrale di tiro calcola l'alzo; Q aggancia un bersaglio e mostra il punto d'anticipo (e quello dei siluri, T); tasto destro: binocolo.
 - **Super corazzata Maine** (immaginaria): 8 cannoni da 600 mm (3950 kg a 760 m/s, gittata 44,7 km, perfora 1 m alla bocca) e 20 da 127 mm.
+- **Super corazzata Satsuma** (immaginaria): 6 cannoni da 2000 mm (146 t a 700 m/s, gittata 43 km), ricarica 10 s, dispersione quasi nulla, 18 cannoni da 152 mm.
+- **Qualsiasi nave in qualsiasi missione**: nel menu si sceglie la nave (o quella prevista dalla missione).
 - **Missioni**: Il mostro d'acciaio, Caccia nella Manica, Siluri sul convoglio, Scorta al convoglio, Battaglia di linea, Battaglia libera a ondate.
 - **Mare**: una sola griglia polare che segue la camera, onde nel vertex shader solo vicino, dettaglio da texture lontano.
 
