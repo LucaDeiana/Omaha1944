@@ -223,7 +223,7 @@ function buildShipModel(C) {
 class NavShip {
   constructor(cls, team, x, z, yaw, o = {}) {
     const C = NCLS[cls]; this.C = C; this.cls = cls; this.team = team; this.name = o.name || C.name;
-    const M = buildShipModel(C); this.g = M.g; this.body = M.body; this.turrets = M.turrets; scene.add(this.g);
+    const M = (typeof buildShipModel2 === 'function' ? buildShipModel2 : buildShipModel)(C); this.g = M.g; this.body = M.body; this.turrets = M.turrets; scene.add(this.g);
     this.pos = new V3(x, WATER_Y, z); this.yaw = yaw; this.spd = (o.spd ?? (o.ai === false ? .9 : .6)) * C.vmax * KN; this.vel = new V3(); this.yawRate = 0;
     this.tele = o.tele ?? (o.ai === false ? 4 : 3); this.rud = 0; this.rudCmd = 0; this.hp = C.hp; this.hpMax = C.hp; this.alive = true; this.sinking = 0;
     this.flood = 0; this.leak = 0; this.fires = []; this.mod = { eng: 1, steer: 1 }; this.dcT = 0; this.dcCool = 0;
@@ -410,43 +410,48 @@ function updateShells(dt) {
   drawShells();
 }
 const NVQ = { mesh: null };
-// proiettili: nucleo incandescente (punto luminoso che resta visibile anche lontano) e scia che sfuma alle spalle
-const NVG = { pts: null, trail: null, NP: 700, NS: 700 * 9 };
+// proiettili come in World of Warships: strisce luminose allungate lungo la velocità, testa bianco-calda e coda che sfuma;
+// larghezza minima in proporzione alla distanza, così una salva resta leggibile anche a 15 km
+const NVG = { mesh: null, N: 1500 };
 function initShellFx() {
-  const P = new THREE.BufferGeometry(); P.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NVG.NP * 3), 3)); P.setAttribute('aSize', new THREE.BufferAttribute(new Float32Array(NVG.NP), 1)); P.setAttribute('aCol', new THREE.BufferAttribute(new Float32Array(NVG.NP * 3), 3));
-  const pm = new THREE.ShaderMaterial({
-    uniforms: { uScale: { value: 600 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    vertexShader: `attribute float aSize; attribute vec3 aCol; varying vec3 vC; uniform float uScale;
-      void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.); vC = aCol; gl_PointSize = max(2.5, aSize * uScale / -mv.z); gl_Position = projectionMatrix * mv; }`,
-    fragmentShader: `varying vec3 vC; void main(){ vec2 d = gl_PointCoord - .5; float r = length(d) * 2.; float core = smoothstep(.35, 0., r), glow = smoothstep(1., 0., r); gl_FragColor = vec4(vC * (glow * .55 + core * 1.6) + vec3(core * .6), 1.); }`,
+  const base = new THREE.InstancedBufferGeometry();
+  base.setAttribute('position', new THREE.Float32BufferAttribute([0, -1, 0, 0, 1, 0, 1, -1, 0, 1, 1, 0], 3)); base.setIndex([0, 2, 1, 1, 2, 3]);
+  const N = NVG.N;
+  base.setAttribute('iPos', new THREE.InstancedBufferAttribute(new Float32Array(N * 3), 3));
+  base.setAttribute('iDir', new THREE.InstancedBufferAttribute(new Float32Array(N * 3), 3));
+  base.setAttribute('iLW', new THREE.InstancedBufferAttribute(new Float32Array(N * 2), 2));
+  base.setAttribute('iCol', new THREE.InstancedBufferAttribute(new Float32Array(N * 3), 3));
+  const m = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `attribute vec3 iPos; attribute vec3 iDir; attribute vec2 iLW; attribute vec3 iCol; varying vec2 vUV; varying vec3 vC;
+      void main(){
+        vec3 toCam = normalize(cameraPosition - iPos); vec3 side = normalize(cross(iDir, toCam));
+        float d = length(cameraPosition - iPos); float w = max(iLW.y, d * .0022);           // mai più sottile di ~1,3 px
+        float l = max(iLW.x, w * 6.);
+        vec3 p = iPos - iDir * l * position.x + side * w * position.y;
+        vUV = position.xy; vC = iCol; gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.); }`,
+    fragmentShader: `varying vec2 vUV; varying vec3 vC;
+      void main(){ float u = vUV.x, v = abs(vUV.y);
+        float body = pow(1. - u, 2.4) * pow(1. - v, 1.5);                 // coda che sfuma
+        float head = smoothstep(.12, 0., u) * pow(1. - v, 2.);            // testa incandescente
+        vec3 c = vC * body * 1.25 + vec3(1., .96, .88) * head * 2.2;
+        gl_FragColor = vec4(c, 1.); }`,
   });
-  NVG.pts = new THREE.Points(P, pm); NVG.pts.frustumCulled = false; NVG.pts.renderOrder = 6; scene.add(NVG.pts);
-  const T = new THREE.BufferGeometry(); T.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NVG.NS * 6), 3)); T.setAttribute('color', new THREE.BufferAttribute(new Float32Array(NVG.NS * 6), 3));
-  NVG.trail = new THREE.LineSegments(T, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-  NVG.trail.frustumCulled = false; NVG.trail.renderOrder = 5; scene.add(NVG.trail);
+  NVG.mesh = new THREE.Mesh(base, m); NVG.mesh.frustumCulled = false; NVG.mesh.renderOrder = 6; scene.add(NVG.mesh);
 }
 function drawShells() {
-  if (!NVG.pts) initShellFx();
-  const L = NV.shells, pp = NVG.pts.geometry.attributes, NP = NVG.NP * 12;
-  if (pp.position.count < NP) { const P = NVG.pts.geometry; P.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NP * 3), 3)); P.setAttribute('aSize', new THREE.BufferAttribute(new Float32Array(NP), 1)); P.setAttribute('aCol', new THREE.BufferAttribute(new Float32Array(NP * 3), 3)); NVG.trail.visible = false; return; }
-  NVG.pts.material.uniforms.uScale.value = innerHeight / (2 * Math.tan(camera.fov * PI / 360));
-  let k = 0; const q = new V3();
-  for (const s of L) {
-    if (k >= NP - 30) break;
-    const c = s.S.cal, big = c >= 100, cr = 1, cg = big ? .55 : c >= 20 ? .72 : .38, cb = big ? .2 : c >= 20 ? .28 : .14;
-    const sz = big ? .9 + c / 300 : c >= 20 ? .5 : .3;
-    pp.position.setXYZ(k, s.p.x, s.p.y, s.p.z); pp.aSize.setX(k, sz); pp.aCol.setXYZ(k, cr, cg, cb); k++;
-    // coda: punti sempre più piccoli e spenti lungo il tratto percorso di recente (lunga circa 0,35 s di volo per i grossi calibri)
-    s.tr = s.tr || []; s.tr.unshift(s.p.clone()); if (s.tr.length > (big ? 12 : 5)) s.tr.pop();
-    const n = big ? 26 : 8;
-    for (let j = 1; j <= n && s.tr.length > 1; j++) {
-      const u = j / n * (s.tr.length - 1), a = Math.floor(u), b = Math.min(s.tr.length - 1, a + 1); q.copy(s.tr[a]).lerp(s.tr[b], u - a);
-      const f = 1 - j / (n + 1);
-      pp.position.setXYZ(k, q.x, q.y, q.z); pp.aSize.setX(k, sz * (.25 + .55 * f)); pp.aCol.setXYZ(k, cr * f * .7, cg * f * .6, cb * f * .5); k++;
-    }
+  if (!NVG.mesh) initShellFx();
+  const L = NV.shells, n = Math.min(NVG.N, L.length), A = NVG.mesh.geometry.attributes;
+  for (let i = 0; i < n; i++) {
+    const s = L[i], c = s.S.cal, sp = s.v.length(), big = c >= 100;
+    A.iPos.setXYZ(i, s.p.x, s.p.y, s.p.z); A.iDir.setXYZ(i, s.v.x / sp, s.v.y / sp, s.v.z / sp);
+    // lunghezza come il tratto percorso in ~1/12 di secondo; larghezza dal calibro
+    A.iLW.setXY(i, big ? sp * .07 + c / 25 : sp * .045, big ? .12 + c / 1800 : c >= 20 ? .09 : .06);
+    const hot = s.ammo === 'HE' ? [1, .5, .16] : [1, .66, .3];
+    A.iCol.setXYZ(i, ...(big ? hot : c >= 20 ? [1, .55, .2] : [1, .35, .15]));
   }
-  NVG.pts.geometry.setDrawRange(0, k);
-  pp.position.needsUpdate = pp.aSize.needsUpdate = pp.aCol.needsUpdate = true;
+  NVG.mesh.geometry.instanceCount = n;
+  A.iPos.needsUpdate = A.iDir.needsUpdate = A.iLW.needsUpdate = A.iCol.needsUpdate = true;
 }
 // colonne d'acqua alte secondo il calibro; le schegge dell'esplosivo colpiscono le navi vicinissime
 function splash(s, p) {
