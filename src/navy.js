@@ -392,7 +392,7 @@ class NavShip {
       const o = tu.pv.localToWorld(mz.clone()), d = tu.pv.localToWorld(mz.clone().add(new V3(0, 0, -1))).sub(o).normalize();
       // dispersione: angolare (mrad) e di velocità iniziale (±0,4 %)
       const sg = tu.G.disp / 1000 * (this === NV.me ? (NV.arcade ? .3 : .6) : 1); d.x += gauss() * sg; d.y += gauss() * sg * .6; d.z += gauss() * sg; d.normalize();
-      const v = d.multiplyScalar(S.v * (1 + gauss() * .004)).add(this.vel);
+      const v = d.multiplyScalar(S.v * (1 + gauss() * (this === NV.me ? (NV.arcade ? .0006 : .0013) : .004))).add(this.vel);
       const sh = { S, p: o.clone(), v, t: 0, by: this, ammo: ammo || 'AP', key: tu.key, sec: tu.sec }; NV.shells.push(sh);
       if (this === NV.me && !tu.sec) NV.lastShell = sh;
       if (big) { PS_FIRE.emit(o.x, o.y, o.z, d.x * .02, 1, d.z * .02, .25, S.cal / 25, S.cal / 12, 1, 4, 2.6, 1.2); for (let i = 0; i < 4; i++) PS_SMOKE.emit(o.x, o.y, o.z, d.x * rnd(.01, .03), rnd(1, 3), d.z * rnd(.01, .03), rnd(4, 9), S.cal / 30, S.cal / 6, .6, .7, .7, .7, .5, -.05); }
@@ -702,7 +702,12 @@ function updateNavyPlayer(dt) {
     if (!T) { let ba = .045; for (const o of NV.ships) { if (o.team === me.team || o.sinking) continue; const a = Math.abs(wrapA(Math.atan2(-(o.pos.x - me.pos.x), -(o.pos.z - me.pos.z)) - brg)) * Math.max(1, o.pos.distanceTo(me.pos) / 6000); if (a < ba) { ba = a; T = o; } } }
     if (T) {
       let tof = 0, P2 = T.pos; for (let i = 0; i < 3; i++) { const sol = solveElev(me.main[0].T, Math.hypot(P2.x - me.pos.x, P2.z - me.pos.z)); tof = sol ? sol.t : 0; P2 = T.pos.clone().addScaledVector(T.vel, tof); }
-      const r = Math.hypot(P2.x - me.pos.x, P2.z - me.pos.z); NV.aim.set(me.pos.x + bx / bl * r, WATER_Y, me.pos.z + bz / bl * r); NV.rf = T;
+      // distanza dal telemetro, corretta con l'altezza del mirino: sulla linea di galleggiamento del bersaglio è esattamente la sua,
+      // più in basso è più corta, più in alto più lunga (stessa sensibilità del mirare sull'acqua)
+      const rT = Math.hypot(P2.x - me.pos.x, P2.z - me.pos.z), hc = camera.position.y - WATER_Y;
+      const aT = Math.atan2(hc, Math.hypot(T.pos.x - camera.position.x, T.pos.z - camera.position.z)), aC = -Math.asin(clamp(f.y, -1, 1));
+      const r = aC > 1e-4 ? clamp(rT * Math.tan(aT) / Math.tan(aC), 50, maxR * 1.2) : maxR * 1.2;
+      NV.aim.set(me.pos.x + bx / bl * r, WATER_Y, me.pos.z + bz / bl * r); NV.rf = T;
     }
   }
   NV.aimR = Math.hypot(NV.aim.x - me.pos.x, NV.aim.z - me.pos.z);
