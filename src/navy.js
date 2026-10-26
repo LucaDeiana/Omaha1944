@@ -650,6 +650,8 @@ function navyKey(c) {
   else if (c === 'KeyC') { me.rudCmd = 0; showMsg('Timone al centro', 1); }
   else if (c === 'KeyT') me.launchTorps(NV.aim);
   else if (c === 'KeyQ') navyLock();
+  else if (c === 'KeyY') navyCallStrike();
+  else if (c === 'KeyP') navyTakePlane();
   else if (c === 'ShiftLeft' || c === 'ShiftRight') { NV.zoomOn = !NV.zoomOn; }
   else if (c === 'KeyZ') { if (NV.follow) { NV.follow = null; return; } const sh = NV.lastShell; if (sh && NV.shells.includes(sh)) { NV.follow = sh; NV.followT = 0; NV.fcam = null; NV.forb = { yaw: 0, pitch: .18 }; showMsg('Segui il colpo · Z per tornare alla nave', 1.5); } else showMsg('Nessun colpo in volo: spara e premi Z', 1.5); }
   else if (c === 'Digit1') { NV.ammo = 'AP'; showMsg('Granate perforanti (AP)', 1.2); }
@@ -792,7 +794,7 @@ const _nvsp = new V3();
 function scr(p) { _nvsp.copy(p).project(camera); if (_nvsp.z > 1 || _nvsp.z < -1) return null; return [(_nvsp.x + 1) / 2 * innerWidth, (1 - _nvsp.y) / 2 * innerHeight]; }
 function place(el, p) { const s = p && scr(p); if (s) { el.style.display = 'block'; el.style.left = s[0] + 'px'; el.style.top = s[1] + 'px'; } else el.style.display = 'none'; return s; }
 function updateNavyHud(dt) {
-  const E = navyHud(), me = NV.me; E.box.style.display = me && GAME.running !== undefined ? 'block' : 'none'; if (!me) return;
+  const E = navyHud(), me = NV.me; E.box.style.display = me && P.mode === 'ship' ? 'block' : 'none'; if (!me || P.mode !== 'ship') return;
   // dove cadrebbero ora i colpi delle torri (in ritardo rispetto al mirino finché le torri ruotano)
   const tu = me.main.find(t => t.ok) || me.main[0];
   if (tu) { const T = tu.T; let r = 0; for (let i = 1; i < T.length; i++) if (T[i].e >= tu.el) { r = lerp(T[i - 1].r, T[i].r, (tu.el - T[i - 1].e) / (T[i].e - T[i - 1].e)); break; } if (tu.el >= T[T.length - 1].e) r = tableMax(T); const gp = me.toWorld(tu.x, 0, tu.z), a = me.yaw + tu.rel; place(E.gun, new V3(gp.x - Math.sin(a) * r, WATER_Y, gp.z - Math.cos(a) * r));
@@ -827,7 +829,7 @@ function updateNavyHud(dt) {
   E.left.innerHTML = `<b style="font-size:14px">${me.C.name}</b><br>Scafo ${Math.max(0, Math.round(me.hp / me.hpMax * 100))}%${bar(me.hp / me.hpMax, me.hp / me.hpMax > .4 ? '#7fc06a' : '#e0604a')}` +
     `Velocità <b>${(Math.abs(me.spd) / KN).toFixed(1)} nodi</b> · telegrafo <b>${tn[me.tele + 1]}</b><br>Timone ${me.rud < -.05 ? '◀ ' : me.rud > .05 ? '▶ ' : ''}${Math.round(Math.abs(me.rud) * 35)}°${me.mod.steer < .5 ? ' <span style="color:#ff8a6a">BLOCCATO</span>' : ''}` +
     `<br>Allagamento ${Math.round(me.flood * 100)}%${me.leak > 0 ? ' <span style="color:#7fd3ff">falla</span>' : ''} · incendi ${me.fires.length}${me.mod.eng < .5 ? '<br><span style="color:#ff8a6a">Macchine danneggiate</span>' : ''}` +
-    `<br>Soccorso (R): ${me.dcT > 0 ? 'al lavoro ' + Math.ceil(me.dcT) + ' s' : me.dcCool > 0 ? 'tra ' + Math.ceil(me.dcCool) + ' s' : 'pronto'}<br><small>W/S telegrafo · A/D timone · C centra · mouse mira (vicino a una nave la distanza la dà il telemetro: porta il mirino sul rombo d'anticipo) · tasto sx fuoco · Shift binocolo on/off (o tieni il tasto dx), rotella ingrandisce · F secondarie · Z segui il colpo (mouse per girargli attorno) · Q aggancia · 1/2 munizioni${me.C.torps ? ' · T siluri' : ''} · rotella distanza</small>`;
+    `<br>Soccorso (R): ${me.dcT > 0 ? 'al lavoro ' + Math.ceil(me.dcT) + ' s' : me.dcCool > 0 ? 'tra ' + Math.ceil(me.dcCool) + ' s' : 'pronto'}<br><small>W/S telegrafo · A/D timone · C centra · mouse mira (vicino a una nave la distanza la dà il telemetro: porta il mirino sul rombo d'anticipo) · tasto sx fuoco · Shift binocolo on/off (o tieni il tasto dx), rotella ingrandisce · F secondarie · Z segui il colpo (mouse per girargli attorno) · Q aggancia · Y squadriglia · P pilota un aereo · 1/2 munizioni${me.C.torps ? ' · T siluri' : ''} · rotella distanza</small>`;
   const S = tu ? tu.S : null;
   E.right.innerHTML = (S ? `<b>${S.name}</b> · ${S.cal >= 100 ? (NV.ammo === 'AP' ? 'perforante' : 'esplosivo') : 'mitragliere'}<br><small>${Math.round(S.v)} m/s · ${S.m >= 1 ? S.m + ' kg' : Math.round(S.m * 1000) + ' g'} · perfora ${Math.round(penDeMarre(S, S.v))} mm alla bocca</small><br>` : '') +
     me.main.map((t, i) => `<span style="display:inline-block;width:46px">${t.G.mounts.length > 3 ? 'T' + (i + 1) : 'A' + (i + 1)}</span><span style="display:inline-block;width:150px;height:6px;background:#222;vertical-align:middle"><span style="display:block;height:100%;width:${t.ok ? (1 - t.reload / t.G.reload) * 100 : 0}%;background:${!t.ok ? '#e0604a' : t.reload <= 0 ? (t.aligned ? '#7fc06a' : '#c9b25a') : '#6a8aa0'}"></span></span>`).slice(0, 8).join('<br>') +
@@ -907,7 +909,8 @@ function initNavy() {
 function updateNavy(dt) {
   const t = GAME.time;
   updateOcean(t);
-  for (const s of NV.ships.slice()) { if (s !== NV.me && s.ai) { for (const tu of s.turrets) tu.reload = Math.max(0, tu.reload - dt); s.torpT = Math.max(0, s.torpT - dt); aiShip(s, dt, t); } s.update(dt, t); }
+  updateNavAir(dt);
+  for (const s of NV.ships.slice()) { if ((s !== NV.me && s.ai) || (s === NV.me && P.mode !== 'ship' && !s.sinking)) { for (const tu of s.turrets) tu.reload = Math.max(0, tu.reload - dt); s.torpT = Math.max(0, s.torpT - dt); aiShip(s, dt, t); } s.update(dt, t); }
   // navi che si toccano: si spingono e si danneggiano
   for (let i = 0; i < NV.ships.length; i++) for (let j = i + 1; j < NV.ships.length; j++) {
     const a = NV.ships[i], b = NV.ships[j], d = a.pos.distanceTo(b.pos), r = (a.C.L + b.C.L) * .3; if (d > r || d < 1) continue;
@@ -994,7 +997,7 @@ function navyMark(sh, lp, ax, pen, cal, part) {
   add(pen ? NVM.hole : NVM.dent, Math.max(.2, cal / (pen ? 450 : 1000)), .01);
 }
 // ---------- nastri dei risultati (stile World of Warships) ----------
-const RIB = { cit: ['CITTADELLA', '#ffd23a'], pen: ['Perforazione', '#ffb04a'], over: ['Sovrapperforazione', '#c9d2d8'], nopen: ['Non perforato', '#9aa3a8'], rico: ['Rimbalzo', '#9aa3a8'], hit: ['Colpo', '#c9d2d8'], fire: ['Incendio', '#ff8a3a'], flood: ['Allagamento', '#6fb8ff'], torp: ['Siluro', '#7fd3ff'] };
+const RIB = { plane: ['Aereo abbattuto', '#9fe08a'], cit: ['CITTADELLA', '#ffd23a'], pen: ['Perforazione', '#ffb04a'], over: ['Sovrapperforazione', '#c9d2d8'], nopen: ['Non perforato', '#9aa3a8'], rico: ['Rimbalzo', '#9aa3a8'], hit: ['Colpo', '#c9d2d8'], fire: ['Incendio', '#ff8a3a'], flood: ['Allagamento', '#6fb8ff'], torp: ['Siluro', '#7fd3ff'] };
 function navyRibbon(k) {
   if (!RIB[k]) return;
   let box = $('nvRib');

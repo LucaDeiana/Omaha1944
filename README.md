@@ -124,8 +124,14 @@ Scenario a sé con navi divise per classi: PT boat Elco, cacciatorpediniere Flet
 - **Super corazzata Maine** (immaginaria): 4 torri quadrinate da 600 mm (16 cannoni) (3950 kg a 760 m/s, gittata 44,7 km, perfora 1 m alla bocca) e 6 torri binate secondarie da 305 mm.
 - **Super corazzata Satsuma** (immaginaria, stile giapponese con torre a pagoda): 4 torri binate da 2000 mm (146 t a 700 m/s, gittata 43 km), ricarica 10 s, dispersione quasi nulla, 6 torri binate secondarie da 305 mm.
 - **Qualsiasi nave in qualsiasi missione**: nel menu si sceglie la nave (o quella prevista dalla missione).
+- **Aerei sul mare**: caccia, bombardieri in picchiata e aerosiluranti (Zero, Val, Kate, Dauntless, Avenger, Corsair, Stuka, Bf 109) con contraerea delle navi; Y chiama una squadriglia sul bersaglio, P passa ai comandi di un aereo in volo (siluro con Spazio sotto 90 m e 330 km/h).
 - **Missioni**: Il mostro d'acciaio, Caccia nella Manica, Siluri sul convoglio, Scorta al convoglio, Battaglia di linea, Battaglia libera a ondate.
 - **Mare**: una sola griglia polare che segue la camera, onde nel vertex shader solo vicino, dettaglio da texture lontano.
+
+## Crediti audio
+- Spari delle armi leggere: The Free Firearm Sound Library (CC0, OpenGameArt).
+- Cannoni, artiglieria, esplosioni, sirene, caccia della Seconda guerra mondiale (P-51, Stuka, Avenger), risacca, incendi, siluro, sirena di posto di combattimento: Internet Archive "Red Library", "GOLD TAPE" e "SSE Library" (CC0).
+- Colpo in acqua ed esplosione lontana: OpenGameArt "Battle at sea" e "Explosion somewhere far" (CC0).
 
 ## Crediti texture
 

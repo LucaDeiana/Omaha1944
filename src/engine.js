@@ -61,7 +61,7 @@ const GradeShader = {
 
 // nebbia esponenziale con attenuazione in quota: la quota del tratto osservato è la media tra camera e punto
 function installHeightFog() {
-  const C = THREE.ShaderChunk;
+  const C = THREE.ShaderChunk; if (C.__heightFog) return; C.__heightFog = true;  // una sola volta anche se il gioco riparte nella stessa pagina
   C.fog_pars_vertex = '#ifdef USE_FOG\nvarying float fogDepth;\nvarying float vFogY;\n#endif';
   C.fog_vertex = '#ifdef USE_FOG\nfogDepth = - mvPosition.z;\nvFogY = cameraPosition.y + dot( viewMatrix[ 1 ].xyz, mvPosition.xyz );\n#endif';
   C.fog_pars_fragment = C.fog_pars_fragment.replace('varying float fogDepth;', 'varying float fogDepth;\n\tvarying float vFogY;');

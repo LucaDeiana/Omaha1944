@@ -188,6 +188,8 @@ async function buildBank() {
   // normalizzazione dei campioni (nessun campione oltre 0 dB)
   for (const n in AU.buf) for (const b of AU.buf[n]) { const d = b.getChannelData(0); let mx = 0; for (let i = 0; i < d.length; i += 4) mx = Math.max(mx, Math.abs(d[i])); if (mx > .98) { const k = .98 / mx; for (let i = 0; i < d.length; i++) d[i] *= k; } }
   if (window.SFX_DATA) for (const k in SFX_DATA) { const arr = []; for (const b64 of SFX_DATA[k]) { try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); arr.push(await c.decodeAudioData(u.buffer)); } catch (e) { } } if (arr.length) AU.buf[k] = arr; }
+  // suoni reali di guerra (CC0): sostituiscono quelli sintetici con lo stesso nome; picco portato a 0,9
+  if (window.SFX_WAR) for (const k in SFX_WAR) { const arr = []; for (const b64 of SFX_WAR[k]) { try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); const b = await c.decodeAudioData(u.buffer); const d = b.getChannelData(0); let mx = 0; for (let i = 0; i < d.length; i += 2) mx = Math.max(mx, Math.abs(d[i])); if (mx > 0) { const g = .9 / mx; for (let i = 0; i < d.length; i++) d[i] *= g; } arr.push(b); } catch (e) { } } if (arr.length) AU.buf[k] = arr; }
   AU.ready = true;
   startAmbience();
 }

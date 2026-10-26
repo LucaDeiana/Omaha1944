@@ -91,6 +91,51 @@ PLANE_SPECS.mosquito = {
   guns2: { pos: [[-.3, .35, -5.7], [-.1, .4, -5.8], [.1, .4, -5.8], [.3, .35, -5.7]], dmg: 10, int: .05, cal: 7.7, snd: 'm2', spread: .009 },
   mass: 8800, S: 42.2, thrust: 1.05, agile: .75, hp: 1500, bombs: 4,
 };
+// Pacifico: caccia, bombardieri in picchiata e aerosiluranti giapponesi e americani (Pearl Harbor e battaglie navali)
+Object.assign(PLANE_SPECS, {
+  zero: { name: 'Mitsubishi A6M2 Zero', nation: 'jp', engine: 'radial', len: 9.1, w: 1.15, h: 1.35, nose: .5,
+    wing: { span: 12, root: 2.5, tip: .9, le: -1.3, dihedral: .1, y0: -.5 }, tail: { span: 4.6, root: 1.2, z: 3.6 }, fin: { h: 1.5, root: 1.4, z: 3.4, round: true },
+    canopy: { z0: -.6, z1: .9, w: .66, h: .5, y: .55, framed: true, long: true }, stripes: false,
+    colors: { top: 0xb8b59a, bottom: 0xb8b59a, nose: 0x1c1c1c },
+    prop: { R: 1.45, n: 3, chord: .26, tip: 0x1a1a1a }, eye: [0, .95, .1],
+    guns: { pos: [[-2.6, -.4, -1.2], [2.6, -.4, -1.2], [-.25, .45, -2.8], [.25, .45, -2.8]], dmg: 30, int: .09, cal: 20, snd: 'flak', spread: .008 },
+    mass: 2410, S: 22.4, thrust: .92, agile: 1.35, hp: 600, bombs: 0 },
+  val: { name: 'Aichi D3A1 Val', nation: 'jp', engine: 'radial', len: 10.2, w: 1.2, h: 1.5, nose: .5,
+    wing: { span: 14.4, root: 2.9, tip: 1.2, le: -1.4, ellip: true, dihedral: .1, y0: -.55 }, tail: { span: 4.8, root: 1.3, z: 4.1 }, fin: { h: 1.7, root: 1.6, z: 3.9, round: true },
+    canopy: { z0: -.9, z1: 1.6, w: .7, h: .5, y: .6, framed: true, long: true }, stripes: false, spats: true,
+    colors: { top: 0xc4c1a6, bottom: 0xc4c1a6, nose: 0x1c1c1c },
+    prop: { R: 1.6, n: 3, chord: .28, tip: 0x1a1a1a }, eye: [0, 1, -.2],
+    guns: { pos: [[-.3, .5, -2.6], [.3, .5, -2.6]], dmg: 9, int: .08, cal: 7.7, snd: 'm2', spread: .009 },
+    mass: 3650, S: 34.9, thrust: .8, agile: .9, hp: 700, bombs: 1 },
+  kate: { name: 'Nakajima B5N2 Kate', nation: 'jp', engine: 'radial', len: 10.3, w: 1.25, h: 1.5, nose: .5,
+    wing: { span: 15.5, root: 3, tip: 1.2, le: -1.4, dihedral: .09, y0: -.55 }, tail: { span: 5, root: 1.3, z: 4.2 }, fin: { h: 1.8, root: 1.7, z: 4, round: true },
+    canopy: { z0: -1, z1: 2.4, w: .75, h: .55, y: .62, framed: true, long: true }, stripes: false,
+    colors: { top: 0x4c5a3c, camo: 0x3e4a31, bottom: 0xb8b59a, nose: 0x1c1c1c },
+    prop: { R: 1.7, n: 3, chord: .28, tip: 0x1a1a1a }, eye: [0, 1, -.3],
+    guns: { pos: [[0, .6, 2.4]], dmg: 9, int: .1, cal: 7.7, snd: 'm2', spread: .01 },
+    mass: 3800, S: 37.7, thrust: .8, agile: .8, hp: 750, bombs: 1 },
+  sbd: { name: 'Douglas SBD Dauntless', nation: 'us', engine: 'radial', len: 10.1, w: 1.2, h: 1.5, nose: .55,
+    wing: { span: 12.7, root: 3, tip: 1.2, le: -1.5, dihedral: .1, y0: -.55 }, tail: { span: 4.5, root: 1.3, z: 4 }, fin: { h: 1.7, root: 1.6, z: 3.8 },
+    canopy: { z0: -.9, z1: 1.5, w: .7, h: .5, y: .6, framed: true, long: true }, stripes: false,
+    colors: { top: 0x5f7590, bottom: 0xc9cfd3 },
+    prop: { R: 1.65, n: 3, chord: .28, tip: 0xd8c040 }, eye: [0, 1, -.2],
+    guns: { pos: [[-.3, .5, -2.6], [.3, .5, -2.6]], dmg: 22, int: .08, cal: 12.7, snd: 'm2', spread: .007 },
+    mass: 4300, S: 30.2, thrust: .85, agile: .9, hp: 950, bombs: 1 },
+  tbf: { name: 'Grumman TBF Avenger', nation: 'us', engine: 'radial', len: 12.5, w: 1.6, h: 1.9, nose: .6,
+    wing: { span: 16.5, root: 3.4, tip: 1.4, le: -1.6, dihedral: .08, y0: -.5 }, tail: { span: 6.4, root: 1.6, z: 4.9 }, fin: { h: 2.4, root: 2.1, z: 4.7 },
+    canopy: { z0: -1.2, z1: 2.4, w: .85, h: .7, y: .8, framed: true, long: true }, stripes: false,
+    colors: { top: 0x5f7590, bottom: 0xc9cfd3 },
+    prop: { R: 2, n: 3, chord: .3, tip: 0xd8c040 }, eye: [0, 1.2, -.5],
+    guns: { pos: [[-2.4, -.4, -1.5], [2.4, -.4, -1.5]], dmg: 22, int: .07, cal: 12.7, snd: 'm2', spread: .007 },
+    mass: 7200, S: 45.5, thrust: .9, agile: .75, hp: 1300, bombs: 1 },
+  p40: { name: 'Curtiss P-40B Warhawk', nation: 'us', engine: 'inline', len: 9.7, w: 1.05, h: 1.45, nose: .35, chin: true,
+    wing: { span: 11.4, root: 2.6, tip: 1.2, le: -1.2, dihedral: .1, y0: -.45 }, tail: { span: 4, root: 1.2, z: 3.7 }, fin: { h: 1.7, root: 1.5, z: 3.5, round: true },
+    canopy: { z0: -.7, z1: .5, w: .62, h: .45, y: .55 }, stripes: false,
+    colors: { top: 0x5b5a43, camo: 0x6b5a3e, bottom: 0xb7b9ad },
+    prop: { R: 1.7, n: 3, chord: .26, tip: 0xd8c040 }, eye: [0, .95, -.2],
+    guns: { pos: [[-2.4, -.35, -1.4], [-2.7, -.35, -1.4], [2.4, -.35, -1.4], [2.7, -.35, -1.4]], dmg: 22, int: .065, cal: 12.7, snd: 'm2', spread: .006 },
+    mass: 3400, S: 21.9, thrust: .95, agile: 1.0, hp: 950, bombs: 1 },
+});
 // bombardiere bimotore nemico (solo IA)
 PLANE_SPECS.ju88 = {
   name: 'Ju 88A-4', nation: 'de', engine: 'inline', len: 14.4, w: 1.6, h: 1.9, nose: .5, twin: 3.3, glassNose: true, ai: true,
@@ -104,6 +149,13 @@ PLANE_SPECS.p47 = { name: 'P-47D Thunderbolt', nation: 'us', builtin: true, guns
 const PLAYER_PLANES = ['p47', 'p51', 'f4u', 'spit', 'typhoon', 'hurri', 'bf109', 'stuka', 'me262', 'mosquito'];
 
 // tondo britannico
+// hinomaru: disco rosso con bordo bianco sottile
+function jpRoundel() {
+  const I = insignia(); if (I.jp) return I.jp;
+  const t = canvasTex(128, (g, s) => { g.clearRect(0, 0, s, s); const c = s / 2; g.fillStyle = '#e8e4d8'; g.beginPath(); g.arc(c, c, s * .49, 0, Math.PI * 2); g.fill(); g.fillStyle = '#b3241f'; g.beginPath(); g.arc(c, c, s * .44, 0, Math.PI * 2); g.fill(); });
+  I.jp = new THREE.MeshStandardMaterial({ map: t, transparent: true, roughness: .7, polygonOffset: true, polygonOffsetFactor: -2, depthWrite: false, side: THREE.DoubleSide });
+  return I.jp;
+}
 function ukRoundel() {
   const I = insignia(); if (I.uk) return I.uk;
   const t = canvasTex(128, (g, s) => { g.clearRect(0, 0, s, s); const c = s / 2; for (const [r, col] of [[.48, '#d8c23a'], [.42, '#1f2b5a'], [.26, '#e8e6df'], [.14, '#9a2a24']]) { g.fillStyle = col; g.beginPath(); g.arc(c, c, s * r, 0, TAU); g.fill(); } });
@@ -198,7 +250,7 @@ function buildSpecPlane(type) {
 }
 
 // velocità massime storiche in volo livellato (km/h): la spinta di ogni aereo è tarata per raggiungerle a manetta piena col carrello retratto
-const PLANE_VMAX = { p47: 690, p51: 703, f4u: 671, spit: 657, typhoon: 652, hurri: 518, bf109: 640, stuka: 400, me262: 870, mosquito: 610, ju88: 470, fw190: 655, b26: 460 };
+const PLANE_VMAX = { p47: 690, p51: 703, f4u: 671, spit: 657, typhoon: 652, hurri: 518, bf109: 640, stuka: 400, me262: 870, mosquito: 610, ju88: 470, fw190: 655, b26: 460, zero: 533, val: 389, kate: 378, sbd: 410, tbf: 442, p40: 566 };
 function planeThrustK(SP, type) {
   if (SP._tk) return SP._tk;
   const V = (PLANE_VMAX[type] || 560) / 3.6, m = SP.mass, S = SP.S, q = .6 * V * V, Cl = m * 9.8 / (q * S), drag = q * S * (.024 + .065 * Cl * Cl);

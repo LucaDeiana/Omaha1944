@@ -453,18 +453,19 @@ function carrierRoll(me, dt, thrust, m) {
   if (sp > 41 && (pull || sp > 50)) { PL.onDeck = false; PL.liftT = 2; me.vel.y = 4; showMsg('Decollo! G per ritrarre il carrello', 2); spawnWingmen(); return; }
   if (landSurfY(me.pos.x, me.pos.z, .6) < -90) { PL.onDeck = false; PL.liftT = 2; me.vel.y = 0; if (sp < 36) showMsg('Velocità insufficiente!', 2); else spawnWingmen(); }
 }
-function enterPlane() {
+function enterPlane(o = {}) {
   if (!PGEO.ready) return;
   if (!PL.cockpit) buildCockpit();
   const jetT = PLANE_SPECS[PLAYER_PLANES.includes(SETTINGS.plane) ? SETTINGS.plane : 'p47'].jet;
-  const deck = SCEN === 'air' && PL.spawnCarrier !== false && !(jetT && CARRIER.type !== 'field');
-  const sp = deck ? { pos: new V3(CARRIER.x, CARRIER.deckY + 2.3, CARRIER.z + CARRIER.len / 2 - 36), vel: new V3(0, 0, -.01) } : SCEN === 'air' && MISSION.stage >= 0 ? airSpawn() : { pos: new V3(rnd(-80, 40), 380, 1100), vel: new V3(0, -5, -120) };
-  PL.type = PLAYER_PLANES.includes(SETTINGS.plane) ? SETTINGS.plane : 'p47'; PL.spec = PLANE_SPECS[PL.type];
+  const deck = !o.pos && SCEN === 'air' && PL.spawnCarrier !== false && !(jetT && CARRIER.type !== 'field');
+  const sp = o.pos ? { pos: o.pos, vel: o.vel } : deck ? { pos: new V3(CARRIER.x, CARRIER.deckY + 2.3, CARRIER.z + CARRIER.len / 2 - 36), vel: new V3(0, 0, -.01) } : SCEN === 'air' && MISSION.stage >= 0 ? airSpawn() : { pos: new V3(rnd(-80, 40), 380, 1100), vel: new V3(0, -5, -120) };
+  PL.type = o.type && PLANE_SPECS[o.type] ? o.type : PLAYER_PLANES.includes(SETTINGS.plane) ? SETTINGS.plane : 'p47'; PL.spec = PLANE_SPECS[PL.type]; PL.torpedo = false;
   const me = new Plane(PL.type, 'A', sp.pos, sp.vel, []); me.player = true; me.hpMax = PL.spec.hp; me.hp = me.hpMax;
   me.parts = { eng: 1, wl: 1, wr: 1, tail: 1 }; me.damage = (a, byPlayer) => playerPlaneHit(me, a, byPlayer);
   buildGear(me);
   PL.onDeck = deck; PL.atBase = true; PL.deckV = 0; PL.deckYaw = 0; PL.gearUp = !deck; PL.gearK = deck ? 1 : 0;
   if (deck) { me.q.setFromEuler(new THREE.Euler(.19, 0, 0, 'YXZ')); me.vel.set(0, 0, 0); }
+  if (o.q) me.q.copy(o.q);
   PL.me = me; PL.throttle = .85; PL.stickX = PL.stickY = PL.rudder = 0; PL.bombs = PL.spec.bombs; PL.rearm = 0; PL.av = new V3();
   me.g.add(PL.cockpit); PL.cockpit.visible = true; if (me.g.userData.pilot) me.g.userData.pilot.visible = false;
   P.mode = 'plane'; P.dead = false;
@@ -605,7 +606,7 @@ function updatePlane(dt) {
   PL.rearm -= dt; if (PL.bombs < PL.spec.bombs && PL.rearm <= 0) { PL.bombs = PL.spec.bombs; feed('Bombe riarmate'); }
   // contraerea e collisione
   if (me.exploded) { showMsg('Il tuo aereo è esploso in volo!', 3); exitPlane(); P.mode = 'foot'; P.die(); return; }
-  const dkY = landSurfY(me.pos.x, me.pos.z), gy = Math.max(Hf(me.pos.x, me.pos.z), me.pos.z > -9 ? WATER_Y : -99, dkY);
+  const dkY = landSurfY(me.pos.x, me.pos.z), gy = Math.max(Hf(me.pos.x, me.pos.z), me.pos.z > -9 || SCEN === 'sea' ? WATER_Y : -99, dkY);
   PL.liftT = Math.max(0, (PL.liftT || 0) - dt);
   // ruote a contatto col ponte (carrello giù, assetto e discesa ragionevoli): niente schianto, l'aereo rulla
   if (!PL.wreck && !PL.onDeck && dkY > -99 && me.pos.y < dkY + (PL.gearH || 2.25) && me.pos.y > dkY - 1 && PL.gearK > .9 && !me.crash && -v.y < 6) { me.pos.y = dkY + (PL.gearH || 2.25); if (v.y < 0) v.y = 0; }
@@ -620,7 +621,7 @@ function updatePlane(dt) {
   // contatto col suolo fuori dall'atterraggio: niente morte istantanea, l'aereo si schianta con la sua fisica
   if (!PL.wreck && !PL.onDeck && me.pos.y < gy + (dkY > -99 && PL.gearK > .9 && !me.crash ? .5 : 1.5)) startWreck(me, gy);
   if (me.crash && !PL.wreck && !PL.crashMsg) { PL.crashMsg = true; showMsg((me.wingLost ? 'Hai perso un\'ala! ' : 'Colpito! ') + 'Premi R per rientrare subito', 4); }
-  const LIM = SCEN === 'air' ? 11500 : 2400; if (Math.abs(me.pos.x) > LIM || Math.abs(me.pos.z) > LIM || me.pos.y > 4000) { const back = _a2.set(-me.pos.x, 300 - me.pos.y, -me.pos.z).normalize(); v.lerp(back.multiplyScalar(V), dt * .3); }
+  const LIM = SCEN === 'air' ? 11500 : SCEN === 'sea' ? 30000 : 2400; if (Math.abs(me.pos.x) > LIM || Math.abs(me.pos.z) > LIM || me.pos.y > 4000) { const back = _a2.set(-me.pos.x, 300 - me.pos.y, -me.pos.z).normalize(); v.lerp(back.multiplyScalar(V), dt * .3); }
   // testa del pilota: si inclina con un ritardo verso le virate, viene schiacciata dalle G e oscilla con le raffiche
   const hr = PL.head || (PL.head = { r: 0, p: 0, y: 0, dy: 0 }), k = Math.min(1, dt * 3);
   hr.r = lerp(hr.r, clamp(-PL.av.z * .09, -.22, .22), k); hr.p = lerp(hr.p, clamp(-PL.av.x * .05 - (PL.G - 1) * .012, -.12, .1), k);
@@ -691,6 +692,7 @@ function airBulletImpact(o, d, t, hitPlane, hitVeh, water, G, dmg) {
 }
 function planeDropBomb() {
   const me = PL.me; if (!me || PL.bombs <= 0 || me.crash) return;
+  if (SCEN === 'sea' && PL.torpedo && navyPlayerTorpedo()) return;
   PL.bombs--; if (PL.rearm <= 0) PL.rearm = 40;
   const m = new THREE.Mesh(BOMB_G(), MAT.paint), r = _a2.set(1, 0, 0).applyQuaternion(me.q);
   m.position.copy(me.pos).add(new V3(0, -1.2, 0)).addScaledVector(r, PL.bombs ? -1.2 : 1.2); scene.add(m);
