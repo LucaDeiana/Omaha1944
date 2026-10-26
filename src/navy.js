@@ -222,8 +222,8 @@ class NavShip {
   constructor(cls, team, x, z, yaw, o = {}) {
     const C = NCLS[cls]; this.C = C; this.cls = cls; this.team = team; this.name = o.name || C.name;
     const M = buildShipModel(C); this.g = M.g; this.body = M.body; this.turrets = M.turrets; scene.add(this.g);
-    this.pos = new V3(x, WATER_Y, z); this.yaw = yaw; this.spd = (o.spd ?? .6) * C.vmax * KN; this.vel = new V3(); this.yawRate = 0;
-    this.tele = o.tele ?? 3; this.rud = 0; this.rudCmd = 0; this.hp = C.hp; this.hpMax = C.hp; this.alive = true; this.sinking = 0;
+    this.pos = new V3(x, WATER_Y, z); this.yaw = yaw; this.spd = (o.spd ?? (o.ai === false ? .9 : .6)) * C.vmax * KN; this.vel = new V3(); this.yawRate = 0;
+    this.tele = o.tele ?? (o.ai === false ? 4 : 3); this.rud = 0; this.rudCmd = 0; this.hp = C.hp; this.hpMax = C.hp; this.alive = true; this.sinking = 0;
     this.flood = 0; this.leak = 0; this.fires = []; this.mod = { eng: 1, steer: 1 }; this.dcT = 0; this.dcCool = 0;
     this.torpN = C.torps ? C.torps.n : 0; this.torpT = 0; this.roll = 0; this.pitch = 0; this.list = 0; this.ai = o.ai !== false; this.role = o.role || C.type;
     this.fc = { tgt: null, err: new V3(), sal: 0 }; this.zig = rnd(0, 30); this.zigS = R() < .5 ? -1 : 1; this.route = o.route || null; this.wake = 0; this.tag = o.tag || '';
@@ -567,14 +567,18 @@ function navyKey(c) {
   else if (c === 'KeyC') { me.rudCmd = 0; showMsg('Timone al centro', 1); }
   else if (c === 'KeyT') me.launchTorps(NV.aim);
   else if (c === 'KeyQ') navyLock();
-  else if (c === 'KeyZ') { if (NV.follow) { NV.follow = null; return; } const sh = NV.lastShell; if (sh && NV.shells.includes(sh)) { NV.follow = sh; NV.followT = 0; NV.fcam = null; showMsg('Segui il colpo · Z per tornare alla nave', 1.5); } else showMsg('Nessun colpo in volo: spara e premi Z', 1.5); }
+  else if (c === 'ShiftLeft' || c === 'ShiftRight') { NV.zoomOn = !NV.zoomOn; }
+  else if (c === 'KeyZ') { if (NV.follow) { NV.follow = null; return; } const sh = NV.lastShell; if (sh && NV.shells.includes(sh)) { NV.follow = sh; NV.followT = 0; NV.fcam = null; NV.forb = { yaw: 0, pitch: .18 }; showMsg('Segui il colpo · Z per tornare alla nave', 1.5); } else showMsg('Nessun colpo in volo: spara e premi Z', 1.5); }
   else if (c === 'Digit1') { NV.ammo = 'AP'; showMsg('Granate perforanti (AP)', 1.2); }
   else if (c === 'Digit2') { NV.ammo = 'HE'; showMsg('Granate esplosive (HE)', 1.2); }
   else if (c === 'KeyG') { NV.secAuto = !NV.secAuto; showMsg('Armi secondarie: ' + (NV.secAuto ? 'fuoco automatico sul nemico più vicino' : 'solo a comando (F)'), 1.8); }
   else if (c === 'KeyR') { if (me.dcCool > 0) showMsg('Squadre di soccorso pronte tra ' + Math.ceil(me.dcCool) + ' s', 1.5); else { me.dcT = 18; me.dcCool = 75; showMsg('Squadre di soccorso al lavoro (18 s)', 2); } }
 }
 function teleMsg() { const n = ['Indietro', 'Stop', '1/4 avanti', '1/2 avanti', '3/4 avanti', 'Avanti tutta']; showMsg('Telegrafo: ' + n[NV.me.tele + 1], 1.2); }
-function navyMouse(dx, dy) { const s = .0018 * SETTINGS.sens * (camera.fov / 60); NV.cam.yaw -= dx * s; NV.cam.pitch = clamp(NV.cam.pitch - dy * s, -.6, .25); }
+function navyMouse(dx, dy) {
+  // col colpo seguito il mouse gira attorno al proiettile
+  if (NV.follow) { const o = NV.forb, k = .003 * SETTINGS.sens; o.yaw -= dx * k; o.pitch = clamp(o.pitch - dy * k, -.15, 1.4); return; }
+ const s = .0018 * SETTINGS.sens * (camera.fov / 60); NV.cam.yaw -= dx * s; NV.cam.pitch = clamp(NV.cam.pitch - dy * s, -.6, .25); }
 function navyWheel(dy) { NV.cam.dist = clamp(NV.cam.dist * (dy > 0 ? 1.12 : .89), .35, 4); }
 function navyLock() {
   let best = null, ba = .2;
@@ -589,7 +593,7 @@ function updateNavyPlayer(dt) {
   if (!me.sinking) { if (KEYS.KeyA) me.rudCmd = clamp(me.rudCmd - dt * .8, -1, 1); if (KEYS.KeyD) me.rudCmd = clamp(me.rudCmd + dt * .8, -1, 1); }
   if (navyShellCam(dt)) { if (!me.sinking) { me.aimAt(NV.aim, dt, me.main); for (const tu of me.turrets) tu.reload = Math.max(0, tu.reload - dt); } me.torpT = Math.max(0, me.torpT - dt); return; }
   // camera: in terza persona attorno alla nave o col binocolo (tasto destro) dalla plancia
-  const zoom = P.adsHeld || KEYS.ShiftLeft || KEYS.ShiftRight, C = me.C, cy = NV.cam.yaw, cpch = NV.cam.pitch;
+  const zoom = P.adsHeld || NV.zoomOn, C = me.C, cy = NV.cam.yaw, cpch = NV.cam.pitch;
   const dir = new V3(-Math.sin(cy) * Math.cos(cpch), Math.sin(cpch), -Math.cos(cy) * Math.cos(cpch));
   if (zoom) { me.toWorld(0, C.F + (C.type === 'pt' ? 4 : 14), -C.L * .15, camera.position); camera.fov = lerp(camera.fov, 9, .25); }
   else { const d = (C.L * 1.1 + 25) * NV.cam.dist; camera.position.copy(me.pos).addScaledVector(dir, -d); camera.position.y = Math.max(camera.position.y + C.F + C.L * .18, seaH(camera.position.x, camera.position.z, GAME.time) + 3); camera.fov = lerp(camera.fov, SETTINGS.fov, .2); }
@@ -628,14 +632,14 @@ function navyShellCam(dt) {
   const S = NV.follow; if (!S) return false;
   const inFlight = NV.shells.includes(S);
   if (!inFlight) { NV.followT += dt; if (NV.followT > 2.2 || !S.end) { NV.follow = null; return false; } }
-  const p = inFlight ? S.p : S.end, d = _nvw.copy(S.v).normalize(), back = 24 + Math.min(40, S.S.cal / 12);
-  const want = _nvb.copy(p).addScaledVector(d, -back); want.y += 5 + S.S.cal / 60;
-  if (!inFlight) { want.copy(S.end).addScaledVector(d.setY(0).normalize(), -60 - S.S.cal / 4); want.y = S.end.y + 25 + S.S.cal / 12; }
-  want.y = Math.max(want.y, seaH(want.x, want.z, GAME.time) + 2);
-  if (NV.followT === 0 && inFlight && !NV.fcam) NV.fcam = want.clone();
-  NV.fcam = NV.fcam || want.clone(); NV.fcam.lerp(want, Math.min(1, dt * (inFlight ? 12 : 3)));
-  camera.position.copy(NV.fcam); camera.fov = lerp(camera.fov, 45, .2); camera.updateProjectionMatrix();
-  camera.lookAt(inFlight ? _nva.copy(p).addScaledVector(d, 60) : S.end);
+  const p = inFlight ? S.p : S.end, d = _nvw.copy(S.v).normalize(), back = (inFlight ? 26 + Math.min(40, S.S.cal / 12) : 70 + S.S.cal / 4) * NV.cam.dist;
+  // orbita: di base dietro al proiettile, il mouse la ruota attorno (rotella: distanza)
+  const o = NV.forb, h = Math.atan2(-d.x, -d.z) + o.yaw, pc = o.pitch + (inFlight ? 0 : .25);
+  const want = _nvb.set(p.x + Math.sin(h) * Math.cos(pc) * back, p.y + Math.sin(pc) * back, p.z + Math.cos(h) * Math.cos(pc) * back);
+  // si ammorbidisce solo lo scostamento dal proiettile: la camera non resta indietro anche a 800 m/s
+  const off = want.clone().sub(p); NV.fcam = NV.fcam || off.clone(); NV.fcam.lerp(off, Math.min(1, dt * 8));
+  camera.position.copy(p).add(NV.fcam); camera.position.y = Math.max(camera.position.y, seaH(camera.position.x, camera.position.z, GAME.time) + 2); camera.fov = lerp(camera.fov, 45, .2); camera.updateProjectionMatrix();
+  camera.lookAt(inFlight && Math.abs(o.yaw) < .05 && Math.abs(o.pitch - .18) < .05 ? _nva.copy(p).addScaledVector(d, 30) : p);
   return true;
 }
 function navyPlayerLost() {
@@ -697,7 +701,7 @@ function updateNavyHud(dt) {
   E.left.innerHTML = `<b style="font-size:14px">${me.C.name}</b><br>Scafo ${Math.max(0, Math.round(me.hp / me.hpMax * 100))}%${bar(me.hp / me.hpMax, me.hp / me.hpMax > .4 ? '#7fc06a' : '#e0604a')}` +
     `Velocità <b>${(Math.abs(me.spd) / KN).toFixed(1)} nodi</b> · telegrafo <b>${tn[me.tele + 1]}</b><br>Timone ${me.rud < -.05 ? '◀ ' : me.rud > .05 ? '▶ ' : ''}${Math.round(Math.abs(me.rud) * 35)}°${me.mod.steer < .5 ? ' <span style="color:#ff8a6a">BLOCCATO</span>' : ''}` +
     `<br>Allagamento ${Math.round(me.flood * 100)}%${me.leak > 0 ? ' <span style="color:#7fd3ff">falla</span>' : ''} · incendi ${me.fires.length}${me.mod.eng < .5 ? '<br><span style="color:#ff8a6a">Macchine danneggiate</span>' : ''}` +
-    `<br>Soccorso (R): ${me.dcT > 0 ? 'al lavoro ' + Math.ceil(me.dcT) + ' s' : me.dcCool > 0 ? 'tra ' + Math.ceil(me.dcCool) + ' s' : 'pronto'}<br><small>W/S telegrafo · A/D timone · C centra · mouse mira · tasto sx fuoco · tasto dx o Shift mira col binocolo · F secondarie · Z segui il colpo · Q aggancia · 1/2 munizioni${me.C.torps ? ' · T siluri' : ''} · rotella distanza</small>`;
+    `<br>Soccorso (R): ${me.dcT > 0 ? 'al lavoro ' + Math.ceil(me.dcT) + ' s' : me.dcCool > 0 ? 'tra ' + Math.ceil(me.dcCool) + ' s' : 'pronto'}<br><small>W/S telegrafo · A/D timone · C centra · mouse mira · tasto sx fuoco · Shift binocolo on/off (o tieni il tasto dx) · F secondarie · Z segui il colpo (mouse per girargli attorno) · Q aggancia · 1/2 munizioni${me.C.torps ? ' · T siluri' : ''} · rotella distanza</small>`;
   const S = tu ? tu.S : null;
   E.right.innerHTML = (S ? `<b>${S.name}</b> · ${S.cal >= 100 ? (NV.ammo === 'AP' ? 'perforante' : 'esplosivo') : 'mitragliere'}<br><small>${Math.round(S.v)} m/s · ${S.m >= 1 ? S.m + ' kg' : Math.round(S.m * 1000) + ' g'} · perfora ${Math.round(penDeMarre(S, S.v))} mm alla bocca</small><br>` : '') +
     me.main.map((t, i) => `<span style="display:inline-block;width:46px">${t.G.mounts.length > 3 ? 'T' + (i + 1) : 'A' + (i + 1)}</span><span style="display:inline-block;width:150px;height:6px;background:#222;vertical-align:middle"><span style="display:block;height:100%;width:${t.ok ? (1 - t.reload / t.G.reload) * 100 : 0}%;background:${!t.ok ? '#e0604a' : t.reload <= 0 ? (t.aligned ? '#7fc06a' : '#c9b25a') : '#6a8aa0'}"></span></span>`).slice(0, 8).join('<br>') +
@@ -734,7 +738,7 @@ const NAVY_MIS = {
     tick(dt) { NV.escT -= dt; const w = NV.waveT; for (let i = 0; i < w.length; i++) if (w[i] > 0 && (w[i] -= dt) <= 0) { const mp = NV.me.pos; const sets = [[['sboot', 1], ['sboot', -1], ['sboot', 0]], [['z1934', 1], ['z1934', .5]], [['nurnberg', 0], ['sboot', 1], ['sboot', -1]]][i]; for (const [k, o] of sets) new NavShip(k, 'E', mp.x + 6000 + o * 900, mp.z - 11000 - Math.abs(o) * 600, PI * .85, { spd: .8 }); feed('Radar: navi nemiche in avvicinamento da nord!'); } },
     obj() { const lost = NV.ships.filter(s => s.tag === 'liberty' && s.sinking).length + (NV.libLost || 0); if (lost > 2) return [false, 'Convoglio perduto', true]; return [NV.escT <= 0, 'Scorta il convoglio — ' + Math.ceil(NV.escT) + ' s · trasporti persi ' + lost + '/2']; } },
   line: { name: 'Battaglia di linea', ship: 'texas', brief: 'La Scharnhorst è uscita con due cacciatorpediniere. Affondala.',
-    setup() { navyIslands(2); NV.me = new NavShip('texas', 'A', 0, 0, 0, { ai: false, spd: .6 }); new NavShip('fletcher', 'A', -500, 700, 0, { name: 'USS Nelson' }); new NavShip('fletcher', 'A', 600, 900, 0, { name: 'USS Glennon' });
+    setup() { navyIslands(2); NV.me = new NavShip('texas', 'A', 0, 0, 0, { ai: false }); new NavShip('fletcher', 'A', -500, 700, 0, { name: 'USS Nelson' }); new NavShip('fletcher', 'A', 600, 900, 0, { name: 'USS Glennon' });
       new NavShip('scharnhorst', 'E', 4000, -19000, PI * .9, { spd: .8, tag: 'flag', name: 'Scharnhorst' }); new NavShip('z1934', 'E', 3000, -17500, PI * .9, { spd: .8 }); new NavShip('z1934', 'E', 5200, -18000, PI * .9, { spd: .8 }); },
     obj() { const s = NV.ships.find(s => s.tag === 'flag'); return [!s || s.sinking, s ? 'Affonda la Scharnhorst — ' + Math.round(s.pos.distanceTo(NV.me.pos) / 100) / 10 + ' km · scafo ' + Math.max(0, Math.round(s.hp / s.hpMax * 100)) + '%' : '']; } },
   free: { name: 'Battaglia libera', free: true, brief: 'Ondate di navi nemiche sempre più forti.',

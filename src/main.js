@@ -112,7 +112,7 @@ function frame(now) {
   if (!GAME.started) return;
   if (GAME.running) {
     GAME.timeScale = 1;
-    const dt = Math.min(.05, raw) * GAME.timeScale;
+    const dt = Math.min(SCEN === 'sea' ? .1 : .05, raw) * GAME.timeScale;  // in mare navi e proiettili vanno a sottopassi: anche a pochi fotogrammi il tempo resta reale
     GAME.time += dt;
     updateTimers(dt);
     updateMission(dt);
