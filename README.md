@@ -125,7 +125,8 @@ Scenario a sé con navi divise per classi: PT boat Elco, cacciatorpediniere Flet
 - **Super corazzata Satsuma** (immaginaria, stile giapponese con torre a pagoda): 4 torri binate da 2000 mm (146 t a 700 m/s, gittata 43 km), ricarica 10 s, dispersione quasi nulla, 6 torri binate secondarie da 305 mm.
 - **Qualsiasi nave in qualsiasi missione**: nel menu si sceglie la nave (o quella prevista dalla missione).
 - **Aerei sul mare**: caccia, bombardieri in picchiata e aerosiluranti (Zero, Val, Kate, Dauntless, Avenger, Corsair, Stuka, Bf 109) con contraerea delle navi; Y chiama una squadriglia sul bersaglio, P passa ai comandi di un aereo in volo (siluro con Spazio sotto 90 m e 330 km/h).
-- **Missioni**: Il mostro d'acciaio, Caccia nella Manica, Siluri sul convoglio, Scorta al convoglio, Battaglia di linea, Battaglia libera a ondate.
+- **Pearl Harbor (7 dicembre 1941)**: rada con Ford Island (hangar, pista, serbatoi) e colline di Oahu, Battleship Row con sette corazzate ormeggiate, tre ondate di Kate, Val e Zero, contraerea che si arma dopo la sorpresa, P-40 di Welch e Taylor da pilotare; resistere 8 minuti con almeno tre corazzate a galla.
+- **Missioni**: Pearl Harbor, Il mostro d'acciaio, Caccia nella Manica, Siluri sul convoglio, Scorta al convoglio, Battaglia di linea, Battaglia libera a ondate.
 - **Mare**: una sola griglia polare che segue la camera, onde nel vertex shader solo vicino, dettaglio da texture lontano.
 
 ## Crediti audio

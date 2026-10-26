@@ -4,7 +4,7 @@
 //  e aerosiluranti guidati dall'IA, contraerea delle navi, squadriglie
 //  chiamate dal giocatore (Y) e passaggio ai comandi di un aereo (P).
 // ============================================================
-const NAIR = { bombs: [], strikeT: 0, aaT: 0, flyT: 0 };
+const NAIR = { aaRamp: 1, bombs: [], strikeT: 0, aaT: 0, flyT: 0 };
 const NA_ROLE = { zero: 'fighter', p40: 'fighter', f4u: 'fighter', bf109: 'fighter', fw190: 'fighter', val: 'dive', sbd: 'dive', stuka: 'dive', kate: 'torpedo', tbf: 'torpedo', ju88: 'dive' };
 const _na1 = new V3(), _na2 = new V3(), _naUp = new V3(0, 1, 0);
 
@@ -51,7 +51,9 @@ class NavPlane {
       const c = this.home(); want = _na1.set(c.x - this.pos.x, 0, c.z - this.pos.z); if (want.length() < 1500) want.set(-this.vel.z, 0, this.vel.x); want.normalize();
     }
     // quota: si porta alla quota voluta se la manovra non la impone già
-    if (this.hold !== false) { const dy = clamp((alt - this.pos.y) * .004, -.35, .35); want.y = dy; want.normalize(); }
+    const ah = this.pos.clone().addScaledVector(this.vel, 3), gy = Math.max(navyH(ah.x, ah.z), navyH(this.pos.x, this.pos.z), WATER_Y);
+    if (gy > WATER_Y + 2) { alt = Math.max(alt, gy + 90); if (this.pos.y < gy + 70) { this.hold = true; } }
+    if (this.hold !== false) { const dy = clamp((alt - this.pos.y) * .004, -.35, .45); want.y = dy; want.normalize(); }
     this.hold = true;
     this.spd = lerp(this.spd, this.vmax * (this.state === 'dive' ? 1.05 : .82), dt * .5);
     this.steer(want, dt); this.pos.addScaledVector(this.vel, dt); this.orient();
@@ -109,17 +111,17 @@ class NavPlane {
     const fs = this.foes(); if (!fs.length) return null;
     const s = fs.reduce((a, b) => a.pos.distanceTo(this.pos) < b.pos.distanceTo(this.pos) ? a : b), d = s.pos.distanceTo(this.pos);
     this.cruise = d < 2500 ? 60 : 600;
-    if (d < 900 && this.fireT <= 0) { this.fireT = .15; const o = this.pos.clone(); fxTracer(o, s.pos.clone().add(new V3(rnd(-6, 6), s.C.F, rnd(-20, 20))), 1.2); if (R() < .2) s.damage(rnd(4, 9), null, 'strafe'); if (dist2Cam(o) < 1500 * 1500) sfxShot('m2', o); }
+    if (d < 900 && this.fireT <= 0) { this.fireT = .15; const o = this.pos.clone(); fxTracer(o, s.pos.clone().add(new V3(rnd(-6, 6), s.C.F, rnd(-20, 20))), 1.2); if (R() < .08) s.damage(rnd(3, 6), null, 'strafe'); if (dist2Cam(o) < 1500 * 1500) sfxShot('m2', o); }
     if (d < 250) this.cruise = 400;
     return s.pos.clone().sub(this.pos).normalize();
   }
   dropBomb(T) {
-    if (!this.armed) return; this.armed = false; this.ammo = 0;
+    if (!this.armed) return; this.armed = false; this.ammo = 0; NAIR.nBombs = (NAIR.nBombs || 0) + 1;
     const m = new THREE.Mesh(BOMB_G(), MAT.paint); m.position.copy(this.pos).add(new V3(0, -1.5, 0)); scene.add(m);
     NAIR.bombs.push({ p: m.position, v: this.vel.clone(), m, by: this, kg: this.type === 'sbd' ? 454 : this.type === 'stuka' ? 500 : 250, life: 40 });
   }
   dropTorp(P) {
-    if (!this.armed) return; this.armed = false;
+    if (!this.armed) return; this.armed = false; NAIR.nTorps = (NAIR.nTorps || 0) + 1;
     const o = this.pos.clone(); o.y = WATER_Y - 2; const d = P.clone().sub(o).setY(0).normalize(), a = Math.atan2(-d.x, -d.z);
     const mesh = new THREE.Mesh(U.cyl, MAT.vc); mesh.scale.set(.27, 5.5, .27); mesh.rotation.set(PI / 2, a, 0, 'YXZ'); scene.add(mesh);
     NV.torps.push({ p: o, d, v: (this.type === 'kate' ? 42 : 33) * KN, left: 4500, dmg: 1300, by: this, mesh, arm: 0, w: 0 });
@@ -171,12 +173,13 @@ function updateNavBombs(dt) {
 // ---------- contraerea delle navi ----------
 const AA_POWER = { bb: 34, cl: 26, dd: 12, pt: 4, cargo: 2 };
 function updateNavAA(dt) {
+  NAIR.aaRamp = Math.min(1, NAIR.aaRamp + dt / 90);
   NAIR.aaT -= dt; if (NAIR.aaT > 0) return; NAIR.aaT = .1;
   const pl = PLANES.filter(p => p.alive && !p.crash);
   if (!pl.length) return;
   for (const sh of NV.ships) {
     if (sh.sinking) continue;
-    const pow = (AA_POWER[sh.C.type] || 8) * (sh.C.L > 250 ? 1.6 : 1) * (sh.hp / sh.hpMax * .6 + .4);
+    const pow = (AA_POWER[sh.C.type] || 8) * (sh.C.L > 250 ? 1.6 : 1) * (sh.hp / sh.hpMax * .6 + .4) * (.15 + .85 * NAIR.aaRamp);
     let best = null, bd = 4200;
     for (const p of pl) if (p.team !== sh.team) { const d = p.pos.distanceTo(sh.pos); if (d < bd) { bd = d; best = p; } }
     if (!best) continue;
@@ -185,7 +188,7 @@ function updateNavAA(dt) {
     if (R() < pow * .02) { const o = sh.toWorld(rnd(-sh.C.B * .4, sh.C.B * .4), sh.C.F + 4, rnd(-sh.C.L * .3, sh.C.L * .3)); const aim = best.pos.clone().addScaledVector(best.vel, bd / 900).add(new V3(rnd(-25, 25), rnd(-15, 15), rnd(-25, 25))); fxTracer(o, aim, 1.2); if (near && R() < .3) sfxShot('flak', o); }
     if (R() < pow * .012 && bd > 600) { const b = best.pos.clone().addScaledVector(best.vel, rnd(.2, 1.2)).add(new V3(rnd(-60, 60), rnd(-40, 40), rnd(-60, 60))); for (let k = 0; k < 3; k++) PS_SMOKE.emit(b.x + rnd(-3, 3), b.y + rnd(-3, 3), b.z + rnd(-3, 3), rnd(-1, 1), rnd(-.5, .5), rnd(-1, 1), rnd(5, 9), 3, 9, .85, .08, .08, .08, .05, -.02); PS_FIRE.emit(b.x, b.y, b.z, 0, 0, 0, .15, 3, 5, 1, 4, 2.4, 1); if (dist2Cam(b) < 2500 * 2500) play('flak_far', b, { ref: 150, vol: .7 }); }
     // probabilità di colpire: cala con la distanza e con la velocità del bersaglio
-    const pk = pow * .0016 * (1 - bd / 4200) ** 1.5 * clamp(1.4 - best.vel.length() / 200, .4, 1);
+    const pk = pow * .00045 * (1 - bd / 4200) ** 1.5 * clamp(1.4 - best.vel.length() / 200, .4, 1);
     if (R() < pk) best.damage(rnd(25, 70), sh === NV.me);
   }
 }

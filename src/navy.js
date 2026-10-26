@@ -163,14 +163,18 @@ function updateOcean(t) {
 // ---------- isole ----------
 function navyH(x, z) {
   let h = -80;
-  for (const I of NV.islands) { const d = Math.hypot(x - I.x, z - I.z) / I.r; if (d < 1.3) { const n = fbm(x * .006 + I.x, z * .006, 3); h = Math.max(h, I.h * (1 - d * d) + (n - .5) * I.h * .5 - 6 * smooth((d - .8) / .5)); } }
+  for (const I of NV.islands) { const d = Math.hypot(x - I.x, z - I.z) / I.r; if (d < 1.3) { if (I.flat) { h = Math.max(h, d < .92 ? I.h : I.h - (d - .92) * 60); continue; } const n = fbm(x * .006 + I.x, z * .006, 3); h = Math.max(h, I.h * (1 - d * d) + (n - .5) * I.h * .5 - 6 * smooth((d - .8) / .5)); } }
   return h;
 }
 function buildIsland(I) {
   const n = 70, S = I.r * 2.7, pos = [], col = [], idx = [], c = new THREE.Color();
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
     const x = I.x - S / 2 + i / (n - 1) * S, z = I.z - S / 2 + j / (n - 1) * S, y = Math.max(navyH(x, z), -20);
-    pos.push(x, y, z); c.set(y < 2.5 ? 0xb8a77f : y < I.h * .45 ? 0x5d6e3d : y < I.h * .75 ? 0x6f6a58 : 0x8a877c); col.push(c.r, c.g, c.b);
+    pos.push(x, y, z);
+    // colori per quota vera: battigia, prati, macchia in collina, roccia in cima; variazioni a chiazze
+    const v = fbm(x * .004 + 3, z * .004, 3), e = fbm(x * .02, z * .02, 2);
+    c.set(y < 1.6 ? 0xc2b48a : I.flat ? (e > .55 ? 0x6b7d4c : 0x5e7a44) : y < 45 ? (v > .55 ? 0x4c6a32 : 0x5a7a3a) : y < 130 ? (v > .5 ? 0x3a5428 : 0x45602e) : (e > .5 ? 0x6f6656 : 0x5d5848));
+    c.convertSRGBToLinear(); col.push(c.r, c.g, c.b);
   }
   for (let j = 0; j < n - 1; j++) for (let i = 0; i < n - 1; i++) { const a = j * n + i, b = a + n; idx.push(a, b, a + 1, a + 1, b, b + 1); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
@@ -258,6 +262,7 @@ class NavShip {
   toLocal(p, out = new V3()) { const c = Math.cos(this.yaw), s = Math.sin(this.yaw), dx = p.x - this.pos.x, dz = p.z - this.pos.z; return out.set(dx * c - dz * s, p.y - this.pos.y, dx * s + dz * c); }
   update(dt, t) {
     const C = this.C;
+    if (this.moored && !this.sinking) { this.spd = 0; this.tele = 0; this.rud = this.rudCmd = 0; }
     if (this.sinking > 0) { this.sinking += dt; this.spd *= Math.exp(-.3 * dt); this.list = Math.min(this.list + dt * .025 * (this.listS || 1), .9); this.pitch += dt * .004 * (this.trimS || 1); this.pos.y -= dt * (this.blown ? 1.6 : .45); this.pos.addScaledVector(this.fwd, this.spd * dt); this.pose(t); if (this.pos.y < -C.F - C.L * .15 - 30) this.remove(); return; }
     // macchine: velocità verso quella del telegrafo con la costante di tempo della classe; in virata stretta si perde velocità
     const vmax = C.vmax * KN * (this.mod.eng < .5 ? .35 : 1) * (1 - this.flood * .45);
@@ -272,7 +277,7 @@ class NavShip {
     this.vel.copy(this.fwd).multiplyScalar(this.spd); this.pos.addScaledVector(this.vel, dt);
     // fondali delle isole: incaglio
     const ahead = this.toWorld(0, 0, -C.L / 2, _nvt);
-    if (navyH(ahead.x, ahead.z) > -C.D) { this.spd *= -.2; this.pos.addScaledVector(this.fwd, -2); if (!this.grT || t - this.grT > 2) { this.grT = t; this.damage(C.hp * .04, null, 'grounding'); if (this === NV.me) showMsg('Incaglio! Macchine indietro', 2); } }
+    if (!this.moored && navyH(ahead.x, ahead.z) > -C.D) { this.spd *= -.2; this.pos.addScaledVector(this.fwd, -2); if ((!this.grT || t - this.grT > 2) && Math.abs(this.spd) > 3) { this.grT = t; this.damage(C.hp * .015 * Math.min(2, Math.abs(this.spd) / 8), null, 'grounding'); if (this === NV.me) showMsg('Incaglio! Macchine indietro', 2); } }
     // allagamento e incendi
     if (this.leak > 0) { this.flood = Math.min(1, this.flood + this.leak * dt); if (this.flood >= 1) this.sink('allagata'); }
     for (const f of this.fires) { f.t -= dt; this.damage(this.hpMax * .0007 * dt, null, 'fire'); if (f.t <= 0) f.e.life = f.s.life = 0; }
@@ -875,6 +880,32 @@ const NAVY_MIS = {
       new NavShip('scharnhorst', 'E', 5000, -26000, PI * .9, { spd: .8, tag: 'flag', name: 'Scharnhorst' }); new NavShip('nurnberg', 'E', 2500, -24000, PI * .9, { spd: .8 });
       for (const [x, z] of [[3000, -22000], [6500, -23000], [1000, -21500], [8000, -24500]]) new NavShip('z1934', 'E', x, z, PI * .9, { spd: .8 }); },
     obj() { const n = NV.ships.filter(s => s.team === 'E' && !s.sinking).length; return [n === 0, 'Affonda la squadra tedesca — restano ' + n]; } },
+  pearl: { name: 'Pearl Harbor — 7 dicembre 1941', ship: 'fletcher', brief: 'Domenica mattina, 7:55. Aerei giapponesi su Pearl Harbor! Posti di combattimento: difendi la flotta in rada.',
+    setup() {
+      // rada: Ford Island al centro, colline di Oahu tutt'attorno con l'ingresso del canale a sud
+      NV.islands.push({ x: 0, z: 0, r: 720, h: 5, flat: true });
+      for (const [x, z, r, h] of [[-3300, -200, 2000, 120], [200, -3400, 2100, 160], [3500, -600, 1900, 110], [-2900, 2900, 1500, 70], [2900, 2900, 1500, 80], [-5200, -4200, 2600, 260], [4800, -4800, 2600, 220]]) NV.islands.push({ x, z, r, h });
+      for (const I of NV.islands) buildIsland(I);
+      pearlFordIsland();
+      NV.me = new NavShip(navyPick('fletcher'), 'A', 350, 1500, PI, { ai: false, spd: .2, tele: 2, name: 'USS Helm' });
+      if (NV.me.C === NCLS.fletcher) NV.me.name = 'USS Helm';
+      // Battleship Row: corazzate ormeggiate a coppie lungo Ford Island
+      const row = [['Nevada', -560, 0], ['Arizona', -350, 0], ['Tennessee', -130, 0], ['West Virginia', -130, 1], ['Maryland', 90, 0], ['Oklahoma', 90, 1], ['California', 320, 0]];
+      for (const [n, z, out] of row) { const s = new NavShip('texas', 'A', 770 + out * 31, z, 0, { spd: 0, tele: 0, name: 'USS ' + n, tag: 'bb' }); s.ai = false; s.moored = true; s.spd = 0; }
+      NV.waveT = [6, 160, 300]; NV.pT = 60; NV.escT = 480; NAIR.kills = 0; NAIR.aaRamp = 0;  // sorpresa: la contraerea si arma in ~90 s
+      play('air_raid', null, { vol: .6 }); after(2.5, () => play('gq_siren', null, { vol: .5 }));
+    },
+    tick(dt) {
+      NV.escT -= dt; const w = NV.waveT;
+      const raids = [['kate', 'kate', 'kate', 'kate', 'kate', 'kate', 'val', 'val', 'val', 'val', 'zero', 'zero', 'zero', 'zero'], ['val', 'val', 'val', 'val', 'val', 'val', 'zero', 'zero', 'zero', 'zero'], ['kate', 'kate', 'kate', 'kate', 'val', 'val', 'val', 'val', 'zero', 'zero']];
+      for (let i = 0; i < 3; i++) if (w[i] > 0 && (w[i] -= dt) <= 0) { navyAirRaid(raids[i], [0, 1.2, -1][i] + PI, 9000); banner(['PRIMA ONDATA', 'SECONDA ONDATA', 'TERZA ONDATA'][i], raids[i].length + ' aerei giapponesi'); play('air_raid', null, { vol: .35 }); }
+      if (NV.pT > 0 && (NV.pT -= dt) <= 0) { for (let i = 0; i < 4; i++) new NavPlane('p40', 'A', new V3(-6000 + i * 60, 900 + i * 20, 1500), PI / 2); say('Radio', 'Welch e Taylor sono decollati da Haleiwa coi P-40! P per pilotarne uno.'); }
+    },
+    obj() {
+      const bb = NV.ships.filter(s => s.tag === 'bb'), afloat = bb.filter(s => !s.sinking).length;
+      if (afloat < 3) return [false, 'La flotta da battaglia è perduta', true];
+      return [NV.escT <= 0, 'Resisti all\u2019attacco — ' + Math.max(0, Math.ceil(NV.escT)) + ' s · aerei abbattuti ' + (NAIR.kills || 0) + ' · corazzate a galla ' + afloat + '/7'];
+    } },
   free: { name: 'Battaglia libera', free: true, brief: 'Ondate di navi nemiche sempre più forti.',
     setup() { navyIslands(4); NV.me = new NavShip(navyPick('fletcher'), 'A', 0, 0, 0, { ai: false }); NV.free = { wave: 0, t: 5 }; },
     tick(dt) { const left = NV.ships.filter(s => s.team === 'E' && !s.sinking).length; if (left === 0) { NV.free.t -= dt; if (NV.free.t <= 0) { const w = ++NV.free.wave, mp = NV.me.pos, a = R() * TAU, d = { pt: 6000, dd: 11000, cl: 14000, bb: 18000 }[NV.me.C.type];
@@ -884,6 +915,15 @@ const NAVY_MIS = {
 };
 // nave del giocatore: quella scelta nel menu, oppure quella prevista dalla missione
 function navyPick(def) { return NV.freeShip && NV.freeShip !== 'mission' && NCLS[NV.freeShip] ? NV.freeShip : def; }
+function pearlFordIsland() {
+  const mb = new MB(), y = 5;
+  mb.add(U.box, 0x6d6a60, 0, y + .05, -100, 0, .3, 0, 60, .1, 900);   // pista
+  for (const [x, z] of [[-300, -200], [-300, -60], [-300, 80], [-200, 260]]) { mb.add(U.box, 0x8a8e8a, x, y + 9, z, 0, 0, 0, 70, 18, 50); mb.add(U.box, 0x5c605c, x, y + 18.5, z, 0, 0, 0, 72, 1, 52); }
+  mb.add(U.box, 0xb9b4a2, 150, y + 14, -350, 0, 0, 0, 10, 28, 10); mb.add(U.box, 0x3a3f42, 150, y + 29, -350, 0, 0, 0, 13, 3, 13);   // torre di controllo
+  for (let i = 0; i < 8; i++) { const x = -150 + (i % 4) * 40, z = 380 + Math.floor(i / 4) * 40; mb.add(U.cyl12, 0xa8a69c, x, y + 7, z, 0, 0, 0, 15, 14, 15); }   // serbatoi
+  for (let i = 0; i < 30; i++) { const a = R() * TAU, d = rnd(100, 600); mb.add(U.cyl, 0x6a5a40, Math.cos(a) * d * .7, y + 4, Math.sin(a) * d, 0, 0, 0, .3, 8, .3); mb.add(U.sph, 0x3f5a2a, Math.cos(a) * d * .7, y + 9, Math.sin(a) * d, 0, 0, 0, 3, 1.5, 3); }   // palme
+  scene.add(groupMesh(mb.buildGroups(), true));
+}
 function navyIslands(n) {
   let s = 1;
   for (let i = 0; i < n; i++) { const a = i * 2.4 + 1, d = 4000 + i * 2600; NV.islands.push({ x: Math.cos(a) * d, z: -Math.abs(Math.sin(a)) * d - 2000, r: rnd(500, 1300), h: rnd(40, 110) }); s++; }
@@ -913,7 +953,7 @@ function updateNavy(dt) {
   for (const s of NV.ships.slice()) { if ((s !== NV.me && s.ai) || (s === NV.me && P.mode !== 'ship' && !s.sinking)) { for (const tu of s.turrets) tu.reload = Math.max(0, tu.reload - dt); s.torpT = Math.max(0, s.torpT - dt); aiShip(s, dt, t); } s.update(dt, t); }
   // navi che si toccano: si spingono e si danneggiano
   for (let i = 0; i < NV.ships.length; i++) for (let j = i + 1; j < NV.ships.length; j++) {
-    const a = NV.ships[i], b = NV.ships[j], d = a.pos.distanceTo(b.pos), r = (a.C.L + b.C.L) * .3; if (d > r || d < 1) continue;
+    const a = NV.ships[i], b = NV.ships[j], d = a.pos.distanceTo(b.pos), r = (a.C.L + b.C.L) * .3; if (d > r || d < 1 || (a.moored && b.moored)) continue;
     const l = b.toLocal(a.pos, _nvc); if (Math.abs(l.x) > b.C.B / 2 + a.C.B / 2 || Math.abs(l.z) > b.C.L / 2 + a.C.B / 2) continue;
     const n = _nvd.subVectors(a.pos, b.pos).setY(0).normalize(), rv = a.vel.clone().sub(b.vel).dot(n);
     a.pos.addScaledVector(n, 1); b.pos.addScaledVector(n, -1);
