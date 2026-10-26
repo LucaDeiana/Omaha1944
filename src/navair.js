@@ -101,8 +101,8 @@ class NavPlane {
       const lead = best.pos.clone().addScaledVector(best.vel, bd / 800), want = lead.sub(this.pos).normalize(), cur = _na2.copy(this.vel).normalize();
       this.hold = false; this.cruise = best.pos.y;
       if (bd < 600 && cur.dot(want) > .993 && this.fireT <= 0) {
-        this.fireT = .12; const o = this.pos.clone().addScaledVector(cur, 6); fxTracer(o, best.pos.clone().add(new V3(rnd(-5, 5), rnd(-4, 4), rnd(-5, 5))), 1.3);
-        if (dist2Cam(o) < 1500 * 1500) sfxShot(this.team === 'E' ? 'mg42' : 'm2', o);
+        this.fireT = .12; const o = this.pos.clone().addScaledVector(cur, 6); const hit = R() < .3, miss = hit ? 2 : 14; fxTracer(o, best.pos.clone().add(new V3(rnd(-miss, miss), rnd(-miss, miss), rnd(-miss, miss))).addScaledVector(cur, 150), 3);
+        sfxAirGun(o, this.type);
         if (R() < .12 * (1 - bd / 700)) best.damage(rnd(18, 40), false);
       }
       return want;
@@ -113,7 +113,7 @@ class NavPlane {
     const fs = this.foes(); if (!fs.length) return null;
     const s = fs.reduce((a, b) => a.pos.distanceTo(this.pos) < b.pos.distanceTo(this.pos) ? a : b), d = s.pos.distanceTo(this.pos);
     this.cruise = d < 2500 ? 60 : 600;
-    if (d < 900 && this.fireT <= 0) { this.fireT = .15; const o = this.pos.clone(); fxTracer(o, s.pos.clone().add(new V3(rnd(-6, 6), s.C.F, rnd(-20, 20))), 1.2); if (R() < .08) s.damage(rnd(3, 6), null, 'strafe'); if (dist2Cam(o) < 1500 * 1500) sfxShot('m2', o); }
+    if (d < 900 && this.fireT <= 0) { this.fireT = .15; const o = this.pos.clone(); fxTracer(o, s.pos.clone().add(new V3(rnd(-6, 6), s.C.F, rnd(-20, 20))), 1.2); if (R() < .08) s.damage(rnd(3, 6), null, 'strafe'); sfxAirGun(o, this.type); }
     if (d < 250) this.cruise = 400;
     return s.pos.clone().sub(this.pos).normalize();
   }
@@ -239,4 +239,13 @@ function navyAirRaid(types, from, dist, alt = 0) {
   const c = NV.me ? NV.me.pos : new V3(), a = from ?? R() * TAU, team = 'E';
   const base = new V3(c.x + Math.sin(a) * dist, 0, c.z + Math.cos(a) * dist);
   types.forEach((t, i) => { const r = NA_ROLE[t]; new NavPlane(t, team, base.clone().add(new V3((i % 4 - 1.5) * 80, (r === 'dive' ? 3000 : r === 'torpedo' ? 300 : 1800) + alt + i * 12, Math.floor(i / 4) * 90)), a + PI); });
+}
+
+// raffica di mitragliatrici d'aereo: un solo suono per aereo ogni tanto, senza eco di campagna, con un tetto globale
+function sfxAirGun(o, type) {
+  const d = Math.sqrt(dist2Cam(o)); if (d > 1800) return;
+  const now = GAME.time; if (now - (NAIR.gunT || 0) < .09) return; NAIR.gunT = now;
+  const light = type === 'zero' || type === 'val' || type === 'kate';
+  play('m2', o, { ref: 70, vol: .55, rate: light ? 1.3 + R() * .06 : .95 + R() * .05 });
+  if (d < 400 && R() < .5) play('m2', o, { ref: 70, vol: .35, rate: light ? .9 : .7, delay: .045 });
 }

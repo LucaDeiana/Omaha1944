@@ -98,7 +98,7 @@ class Plane {
     this.fireT -= dt; if (this.fireT > 0) return; this.fireT = .06;
     const f = _a1.set(0, 0, -1).applyQuaternion(this.q), right = _a2.set(1, 0, 0).applyQuaternion(this.q);
     if (f.y > -.05) return;
-    sfxShot(this.team === 'A' ? 'm2' : 'mg42', this.pos);
+    sfxAirGun(this.pos, this.team === 'A' ? 'p47' : 'fw190');
     for (const sx of [-1, 1]) {
       const o = this.pos.clone().addScaledVector(right, sx * 2.6);
       const d = f.clone().add(new V3(rnd(-.012, .012), rnd(-.012, .012), rnd(-.012, .012))).normalize();
