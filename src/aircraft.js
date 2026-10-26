@@ -679,7 +679,10 @@ function playerPlaneGuns(me, G = (PL.spec || PLANE_SPECS.p47).guns) {
     const dmg = heavy ? G.dmg : G.dmg * (gp[3] || 1) / 4;
     const o = me.g.localToWorld(new V3(gp[0], gp[1], gp[2])).addScaledVector(f, .5);
     // proiettile vero: parte dalla bocca dell'arma con la velocità dell'aereo più quella iniziale del calibro
-    const sd = G.spread, d = f.clone().add(new V3(rnd(-sd, sd), rnd(-sd, sd), rnd(-sd, sd))).normalize();
+    // armonizzazione: le armi alari convergono sul mirino a ~300 m e sono alzate quanto basta a compensare la caduta del proiettile
+    const conv = G.conv || 300, mv = muzzleV(G.cal), up = _a3.set(0, 1, 0).applyQuaternion(me.q);
+    const aim = me.pos.clone().addScaledVector(f, conv).addScaledVector(up, 9.8 * conv * conv / (2 * mv * mv));
+    const sd = G.spread, d = aim.sub(o).normalize().add(new V3(rnd(-sd, sd), rnd(-sd, sd), rnd(-sd, sd))).normalize();
     fireAirBullet(o, d, me.vel, G, dmg, true);
   }
 }

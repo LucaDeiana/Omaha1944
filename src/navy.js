@@ -325,9 +325,13 @@ class NavShip {
     const rx = Math.cos(this.yaw) * B * .5, rz = -Math.sin(this.yaw) * B * .5, hl = seaH(this.pos.x - rx, this.pos.z - rz, t), hr = seaH(this.pos.x + rx, this.pos.z + rz, t);
     const wy = (hb + hs + hl + hr) / 4, heel = this.yawRate * this.spd * .012;
     if (!this.sinking) this.pos.y = lerp(this.pos.y, wy - this.flood * C.D * .5, .2);
-    const pitch = Math.atan2(hb - hs, L * .8) * .8 + this.pitch, roll = Math.atan2(hr - hl, B) * .5 + heel + this.list;
+    // scossone da colpi vicini o siluri: oscillazione che si smorza
+    let kr = 0, kp = 0; if (this.kick) { const e = t - this.kick.t0; if (e > 8) this.kick = null; else { const w = Math.exp(-e * .55); kr = this.kick.r * w * Math.sin(e * (2.6 - Math.min(1.6, L / 150))); kp = this.kick.p * w * Math.sin(e * 3.1); } }
+    const pitch = Math.atan2(hb - hs, L * .8) * .8 + this.pitch + kp, roll = Math.atan2(hr - hl, B) * .5 + heel + this.list + kr;
     this.g.position.copy(this.pos); this.g.rotation.set(0, this.yaw, 0); this.body.rotation.set(pitch, 0, roll, 'YXZ');
   }
+  // spinta dell'acqua o dell'esplosione: lato (+1 / -1) e intensità in radianti, ridotta per le navi grandi
+  shove(side, mag) { const m = mag / Math.max(.6, this.C.L / 110); const k = this.kick; this.kick = { t0: GAME.time, r: clamp((k ? k.r * .5 : 0) + side * m, -.25, .25), p: clamp(rnd(-.3, .3) * m, -.08, .08) }; }
   damage(a, by, kind) {
     if (this.sinking || !this.alive) return;
     this.hp -= a; if (by && by.team !== this.team && by === NV.me) NV.dmgDone = (NV.dmgDone || 0) + a;
@@ -472,13 +476,30 @@ function updateShells(dt) {
   for (let i = L.length - 1; i >= 0; i--) {
     const s = L[i], p0 = _nva.copy(s.p); let n = Math.max(1, Math.ceil(dt / .02)), h = dt / n, done = false;
     for (let k = 0; k < n && !done; k++) {
-      const a = _nvb.copy(s.p); shellStep(s.S, s.p, s.v, h); s.t += h;
+      const a = _nvb.copy(s.p); s.t += h;
+      if (s.wet) {
+        // corsa sott'acqua: l'acqua frena moltissimo (~800 volte l'aria), la traiettoria resta quasi diritta
+        s.v.multiplyScalar(Math.exp(-h * (2.2 - Math.min(1.6, s.S.cal / 400)))); s.v.y -= 2 * h; s.p.addScaledVector(s.v, h); s.wetT += h;
+        if (s.v.length() < 70 || s.p.y < WATER_Y - 14 || s.wetT > .35) { done = true; break; }
+      } else shellStep(s.S, s.p, s.v, h);
       // navi: segmento contro lo scafo e la sovrastruttura (scatole nel sistema della nave)
       for (const sh of NV.ships) { if (sh.sinking || (sh === s.by && s.t < 1)) continue; if (a.distanceToSquared(sh.pos) > (sh.C.L * .6 + 120) ** 2) continue; const hit = hullHit(sh, a, s.p); if (hit) { shellOnShip(s, sh, hit); done = true; break; } }
       if (done) break;
       if (s.p.y < WATER_Y + 1 && navyH(s.p.x, s.p.z) > s.p.y) { fxExplosion(s.p.clone(), Math.min(4, s.S.cal / 60), false); sfxBoom(s.p, s.S.cal / 100); done = true; break; }
       const sy = seaH(s.p.x, s.p.z, GAME.time);
-      if (s.p.y < sy) { splash(s, s.p.clone().setY(sy)); done = true; break; }
+      if (s.p.y < sy && !s.wet) {
+        const hz = Math.hypot(s.v.x, s.v.z), fall = Math.atan2(-s.v.y, hz);
+        // rimbalzo sull'acqua ad angoli radenti (sotto ~8°), più facile per i calibri piccoli
+        if (fall < .14 && !s.rico && R() < (s.S.cal < 200 ? .75 : .45)) {
+          s.rico = true; s.p.y = sy + .1; s.v.y = -s.v.y * .45; s.v.x *= .6; s.v.z *= .6;
+          waterDrop(s.p.x, s.p.z, Math.max(2, s.S.cal / 90), -Math.min(1.2, s.S.cal / 400), .6);
+          if (dist2Cam(s.p) < 9000 * 9000) for (let j = 0; j < 6; j++) PS_SMOKE.emit(s.p.x, sy, s.p.z, s.v.x * .02 + rnd(-1, 1), rnd(3, 9) * Math.sqrt(s.S.cal / 100), s.v.z * .02 + rnd(-1, 1), rnd(1.5, 2.5), s.S.cal / 80 + .3, s.S.cal / 25 + 1, .7, .93, .96, .98, .2, 9.81);
+          continue;
+        }
+        // entra in acqua: colonna d'acqua, poi prosegue sotto la superficie (può colpire lo scafo sotto la linea di galleggiamento)
+        splash(s, s.p.clone().setY(sy)); s.wet = true; s.wetT = 0; s.v.multiplyScalar(.55); s.v.y = -s.v.length() * Math.sin(Math.max(fall, .05)) * .3;   // sott'acqua la traiettoria si appiattisce
+        if (s.S.cal < 100) { done = true; break; }
+      }
       if (s.t > 120) { done = true; break; }
     }
     // fischio dei colpi in arrivo vicino al giocatore
@@ -527,6 +548,7 @@ function drawShells() {
     A.iPos.setXYZ(i, s.p.x, s.p.y, s.p.z); A.iDir.setXYZ(i, s.v.x / sp, s.v.y / sp, s.v.z / sp);
     // lunghezza come il tratto percorso in ~1/12 di secondo; larghezza dal calibro
     A.iLW.setXY(i, big ? sp * .07 + c / 25 : sp * .045, big ? .12 + c / 1800 : c >= 20 ? .09 : .06);
+    if (s.wet) A.iLW.setXY(i, 0, 0);   // sott'acqua non si vede
     const hot = s.ammo === 'HE' ? [1, .5, .16] : [1, .66, .3];
     A.iCol.setXYZ(i, ...(big ? hot : c >= 20 ? [1, .55, .2] : [1, .35, .15]));
   }
@@ -536,6 +558,8 @@ function drawShells() {
 // colonne d'acqua alte secondo il calibro; le schegge dell'esplosivo colpiscono le navi vicinissime
 function splash(s, p) {
   waterDrop(p.x, p.z, Math.max(2, s.S.cal / 70), -Math.min(2.5, s.S.cal / 220), Math.min(1, .25 + s.S.cal / 400));
+  // colpo vicino: l'onda d'urto e la colonna d'acqua scuotono le navi accanto
+  if (s.S.cal >= 150) for (const sh of NV.ships) { if (sh.sinking) continue; const l = sh.toLocal(p, _nvc), d = Math.hypot(Math.max(0, Math.abs(l.x) - sh.C.B / 2), Math.max(0, Math.abs(l.z) - sh.C.L / 2)), R0 = s.S.cal / 8; if (d < R0) sh.shove(-Math.sign(l.x) || 1, .05 * Math.pow(s.S.cal / 400, 1.2) * (1 - d / R0)); }
   const c = s.S.cal, hgt = c >= 1000 ? 260 : c >= 500 ? 110 : c >= 300 ? 60 : c >= 150 ? 30 : c >= 100 ? 18 : c >= 20 ? 4 : 1.5;
   if (dist2Cam(p) < (NV.zoomOn || P.adsHeld ? 30000 : 12000) ** 2) {
     const n = c >= 100 ? 14 : 3;
@@ -570,6 +594,8 @@ function hullHit(sh, a, b) {
 // perforazione, danni ai moduli, allagamenti, incendi
 function shellOnShip(s, sh, H) {
   const C = sh.C, S = s.S, v = s.v.length(), lp = H.lp, me = s.by === NV.me;
+  // colpo arrivato sott'acqua: sotto la cintura corazzata, apre una falla
+  if (s.wet) { sh.leak = (sh.leak || 0) + .0005 * Math.min(3, S.cal / 150); if (me) navyHitText('Colpo sotto la linea di galleggiamento: falla!', '#7fd3ff'); }
   const cit = Math.abs(lp.z) < C.L * .27 && H.part === 'hull';
   const face = H.ax === 1 ? 'deck' : 'side';
   let armor = H.part === 'sup' ? 10 : face === 'deck' ? (cit ? C.deck : C.deck * .3) : (cit ? C.belt : C.ends);
@@ -630,7 +656,7 @@ function updateTorps(dt) {
         const p = T.p.clone().setY(WATER_Y);
         for (let k = 0; k < 24; k++) PS_SMOKE.emit(p.x + rnd(-3, 3), p.y, p.z + rnd(-3, 3), rnd(-3, 3), rnd(18, 34), rnd(-3, 3), rnd(3, 5), 4, 18, .85, .93, .96, .98, .2, 9.81);
         fxExplosion(p, 4, true); sfxBoom(p, 5, true);
-        hit.damage(T.dmg * (hit.C.type === 'bb' ? .55 : 1), T.by, 'torpedo'); waterDrop(p.x, p.z, 14, -3, 1); hit.leak += .006; hit.listS = Math.sign(hit.toLocal(p, _nvc).x) || 1;
+        hit.damage(T.dmg * (hit.C.type === 'bb' ? .55 : 1), T.by, 'torpedo'); waterDrop(p.x, p.z, 14, -3, 1); hit.shove(-Math.sign(hit.toLocal(p, _nvc).x) || 1, .09); hit.leak += .006; hit.listS = Math.sign(hit.toLocal(p, _nvc).x) || 1;
         if (hit === NV.me) { showMsg('Colpiti da un siluro!', 2.5); P.shake = Math.max(P.shake, .5); }
         if (T.by === NV.me) { navyHitText('Siluro a segno! · ' + Math.round(T.dmg), '#ffcf5a'); navyRibbon('torp'); }
       }
