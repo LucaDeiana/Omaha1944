@@ -249,12 +249,14 @@ class NavShip {
     if (this.sinking > 0) { this.sinking += dt; this.spd *= Math.exp(-.3 * dt); this.list = Math.min(this.list + dt * .025 * (this.listS || 1), .9); this.pitch += dt * .004 * (this.trimS || 1); this.pos.y -= dt * (this.blown ? 1.6 : .45); this.pos.addScaledVector(this.fwd, this.spd * dt); this.pose(t); if (this.pos.y < -C.F - C.L * .15 - 30) this.remove(); return; }
     // macchine: velocità verso quella del telegrafo con la costante di tempo della classe; in virata stretta si perde velocità
     const vmax = C.vmax * KN * (this.mod.eng < .5 ? .35 : 1) * (1 - this.flood * .45);
-    const want = this.tele >= 0 ? vmax * this.tele / 4 : -vmax * .3 * -this.tele;
+    // in virata la resistenza dello scafo di traverso abbassa la velocità di regime: fino al 30% col timone tutto alla banda (12% per le motosiluranti)
+    const turnLoss = 1 - Math.abs(this.rud) * (C.type === 'pt' ? .12 : .3);
+    const want = (this.tele >= 0 ? vmax * this.tele / 4 : -vmax * .3 * -this.tele) * turnLoss;
     this.spd += (want - this.spd) * dt / (want < this.spd ? C.tau * .6 : C.tau);
     // timone: si muove alla sua velocità; bloccato se l'agghiaccio è danneggiato
     if (this.mod.steer > .5) this.rud += clamp(this.rudCmd - this.rud, -C.rud * dt, C.rud * dt);
     const yr = this.rud * this.spd / C.R; this.yawRate += (yr - this.yawRate) * Math.min(1, dt / (1 + C.L / 60));
-    this.yaw -= this.yawRate * dt; this.spd *= 1 - Math.abs(this.rud) * Math.min(1, Math.abs(this.spd) / (C.vmax * KN)) * .07 * dt;
+    this.yaw -= this.yawRate * dt;
     this.vel.copy(this.fwd).multiplyScalar(this.spd); this.pos.addScaledVector(this.vel, dt);
     // fondali delle isole: incaglio
     const ahead = this.toWorld(0, 0, -C.L / 2, _nvt);
