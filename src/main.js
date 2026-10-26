@@ -145,7 +145,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // cambio d'aereo in partita: subito se si è fermi alla base, altrimenti al prossimo decollo
   $('pPlane').addEventListener('change', e => swapPlane(e.target.value));
   $('roleBtn').addEventListener('click', () => { lockPointer(); setTimeout(openSpawnMenu, 100); });
-  $('restartBtn').addEventListener('click', () => location.reload());
+  $('restartBtn').addEventListener('click', () => { try { sessionStorage.setItem('skipIntro', '1'); } catch (e) {} location.reload(); });
   $('againBtn').addEventListener('click', () => location.reload());
   requestAnimationFrame(frame);
 });

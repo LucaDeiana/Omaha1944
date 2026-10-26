@@ -234,7 +234,8 @@
     mmRaf = requestAnimationFrame(loop);
   }
   function openSetup(map) {
-    mm.style.display = 'none'; cancelAnimationFrame(mmRaf); const m = $('menu'); m.classList.remove('hidden');
+    mm.style.display = 'none'; cancelAnimationFrame(mmRaf);
+    if (window.MENUS) return map === 'opts' ? MENUS.openSettings('main') : MENUS.open(map); const m = $('menu'); m.classList.remove('hidden');
     if (map && map !== 'opts') { const sel = $('optMap'); if (sel && sel.value !== map) { sel.value = map; sel.dispatchEvent(new Event('change')); } }
     if (map === 'opts') { const q = $('optQuality'); if (q) q.scrollIntoView({ block: 'center' }); } else m.scrollTop = 0;
   }
@@ -251,6 +252,8 @@
     b.addEventListener('click', () => { $('menu').classList.add('hidden'); mm.style.display = 'block'; menuBg(); }); panel.prepend(b);
     $('menu').classList.add('hidden');
   });
-  raf = requestAnimationFrame(tick);
+  // tornando dalla pausa si salta l'introduzione
+  let skipNow = false; try { skipNow = sessionStorage.getItem('skipIntro') === '1'; sessionStorage.removeItem('skipIntro'); } catch (e) {}
+  if (skipNow) document.addEventListener('DOMContentLoaded', () => setTimeout(showMain, 0)); else raf = requestAnimationFrame(tick);
   window.INTRO = { skip, playIntro, showMain };
 })();
