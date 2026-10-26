@@ -263,6 +263,7 @@ class NavShip {
   update(dt, t) {
     const C = this.C;
     if (this.moored && !this.sinking) { this.spd = 0; this.tele = 0; this.rud = this.rudCmd = 0; }
+    this.fxDamage(dt);
     if (this.sinking > 0) { this.sinking += dt; this.spd *= Math.exp(-.3 * dt); this.list = Math.min(this.list + dt * .025 * (this.listS || 1), .9); this.pitch += dt * .004 * (this.trimS || 1); this.pos.y -= dt * (this.blown ? 1.6 : .45); this.pos.addScaledVector(this.fwd, this.spd * dt); this.pose(t); if (this.pos.y < -C.F - C.L * .15 - 30) this.remove(); return; }
     // macchine: velocità verso quella del telegrafo con la costante di tempo della classe; in virata stretta si perde velocità
     const vmax = C.vmax * KN * (this.mod.eng < .5 ? .35 : 1) * (1 - this.flood * .45);
@@ -319,11 +320,28 @@ class NavShip {
   }
   sink(kind) {
     if (this.sinking) return; this.sinking = .01; this.hp = 0; this.tele = 0; this.listS = R() < .5 ? -1 : 1; this.trimS = R() < .5 ? -1 : 1;
+    this.slick = navySlick(this.pos, this.C.L); play('boom_big', this.pos, { ref: 300, vol: 1 });
+    if (kind === 'magazine') { this.breakK = 1; play('boom_big', this.pos, { ref: 500, vol: 1.3 }); }
     if (kind === 'magazine') { this.blown = true; const p = this.pos.clone().add(new V3(0, this.C.F + 5, 0)); fxExplosion(p, 8, false); for (let i = 0; i < 40; i++) PS_SMOKE.emit(p.x + rnd(-15, 15), p.y + rnd(0, 30), p.z + rnd(-15, 15), rnd(-6, 6), rnd(15, 45), rnd(-6, 6), rnd(10, 18), 15, 60, .8, .15, .14, .13, .2, -.3); sfxBoom(p, 6); }
     feed((this.team === 'A' ? '🇺🇸 ' : '') + this.name + (kind === 'magazine' ? ' esplode: santabarbara colpita!' : ' affonda'));
     if (this === NV.me) { showMsg(kind === 'magazine' ? 'La santabarbara è esplosa!' : 'La nave affonda! Abbandonare la nave!', 5); navyPlayerLost(); }
   }
-  remove() { this.alive = false; scene.remove(this.g); for (const f of this.fires) f.e.life = f.s.life = 0; const i = NV.ships.indexOf(this); if (i >= 0) NV.ships.splice(i, 1); }
+  // fumo, esplosioni secondarie, bolle e chiazza di nafta in fiamme
+  fxDamage(dt) {
+    const k = this.hp / this.hpMax, far = dist2Cam(this.pos) > 9000 * 9000;
+    this.fxT = (this.fxT || 0) - dt; if (this.fxT > 0 || far) return; this.fxT = .12;
+    const C = this.C;
+    if (!this.sinking && k < .4 && !this.bigSmoke) { this.bigSmoke = addEmitter(this.pos, 'smoke', C.L > 150 ? 2.6 : 1.6); this.bigSmoke.follow = q => this.toWorld(0, C.F + 6, -C.L * .05, q); this.bigSmoke.life = 1e9; }
+    if (!this.sinking && k < .25 && R() < .04) { const p = this.toWorld(rnd(-C.B * .3, C.B * .3), C.F + 2, rnd(-C.L * .4, C.L * .4)); fxExplosion(p, 1.2 + C.L / 150, false); if (dist2Cam(p) < 4000 * 4000) sfxBoom(p, 1.5); }
+    if (this.sinking > 0) {
+      for (let i = 0; i < 2; i++) { const p = this.toWorld(rnd(-C.B * .5, C.B * .5), 0, rnd(-C.L * .45, C.L * .45)); PS_WAKE.emit(p.x, WATER_Y + .2, p.z, rnd(-1, 1), .3, rnd(-1, 1), rnd(3, 6), 2, 9, .6, .95, .97, .98, .3, 0); }
+      if (R() < .25) { const p = this.toWorld(rnd(-C.B, C.B), 0, rnd(-C.L * .5, C.L * .5)); PS_FIRE.emit(p.x, WATER_Y + 1, p.z, rnd(-.5, .5), rnd(2, 4), rnd(-.5, .5), rnd(.8, 1.4), 3, 6, 1, 4, 2, .7); PS_SMOKE.emit(p.x, WATER_Y + 3, p.z, rnd(-1, 1), rnd(3, 6), rnd(-1, 1), rnd(8, 14), 4, 18, .7, .12, .11, .1, .1, -.1); }
+      if (!this.bigSmoke) { this.bigSmoke = addEmitter(this.pos, 'smoke', C.L > 150 ? 3 : 1.8); this.bigSmoke.follow = q => q.copy(this.pos).setY(Math.max(WATER_Y + 4, this.pos.y + C.F)); this.bigSmoke.life = 1e9; }
+      // spezzata dalla santabarbara: prua e poppa si alzano mentre il centro affonda
+      if (this.breakK) { this.body.rotation.x += Math.sin(this.sinking * .7) * .0008; this.pitch = Math.min(.35, this.pitch + dt * .02); }
+    }
+  }
+  remove() { this.alive = false; scene.remove(this.g); if (this.bigSmoke) this.bigSmoke.life = 0; if (this.slick) navySlickFade(this.slick); for (const f of this.fires) f.e.life = f.s.life = 0; const i = NV.ships.indexOf(this); if (i >= 0) NV.ships.splice(i, 1); }
   addFire(lp, by) {
     if (this.fires.length >= 4) return;
     if (by === NV.me && this !== NV.me) navyRibbon('fire');
@@ -996,7 +1014,7 @@ function updateNavy(dt) {
     a.pos.addScaledVector(n, 1); b.pos.addScaledVector(n, -1);
     if (rv < -1) { const imp = -rv; a.damage(imp * b.C.L * .8, b, 'ram'); b.damage(imp * a.C.L * .8, a, 'ram'); a.spd *= .5; b.spd *= .5; if (a === NV.me || b === NV.me) { P.shake += 1; play('imp_metal', null, { vol: 1, rate: .4 }); showMsg('Collisione!', 1.5); } }
   }
-  updateShells(dt); updateTorps(dt);
+  updateShells(dt); updateTorps(dt); updateSlicks(dt);
   // mercantili che escono dalla mappa: contano come fuggiti
   for (const s of NV.ships) if (s.tag && s.route && s.route.length === 0 && !s.sinking && s.tag === 'cargo') { NV.cargoGone = NV.cargoGone || 0; }
   const M = NV.mis; if (M.tick) M.tick(dt);
@@ -1085,4 +1103,22 @@ function navyRibbon(k) {
   el.textContent = RIB[k][0] + ' ×' + NV.ribs[k];
   el.style.transform = 'scale(1.25)'; setTimeout(() => el.style.transform = 'scale(1)', 160);
   if (k === 'cit') play('ping', null, { vol: .5, rate: .8 });
+}
+
+// chiazza di nafta: disco scuro iridescente che si allarga sull'acqua, con fiamme sparse
+const _slickTex = { t: null };
+function navySlick(p, L) {
+  if (!_slickTex.t) { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const g = cv.getContext('2d'); const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(14,12,10,.85)'); gr.addColorStop(.6, 'rgba(24,20,16,.55)'); gr.addColorStop(1, 'rgba(30,26,22,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(60,40,70,.08)'; g.beginPath(); g.arc(64 + rnd(-40, 40), 64 + rnd(-40, 40), rnd(4, 14), 0, 7); g.fill(); } _slickTex.t = new THREE.CanvasTexture(cv); }
+  const m = new THREE.Mesh(new THREE.CircleGeometry(1, 24), new THREE.MeshBasicMaterial({ map: _slickTex.t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }));
+  m.rotation.x = -PI / 2; m.position.set(p.x, WATER_Y + .08, p.z); m.scale.setScalar(L * .3); m.renderOrder = 1; scene.add(m);
+  const o = { m, r: L * .3, max: L * 1.4, t: 0 }; NV.slicks = NV.slicks || []; NV.slicks.push(o); return o;
+}
+function navySlickFade(o) { o.fade = true; }
+function updateSlicks(dt) {
+  if (!NV.slicks) return;
+  for (let i = NV.slicks.length - 1; i >= 0; i--) {
+    const o = NV.slicks[i]; o.t += dt; o.r = Math.min(o.max, o.r + dt * 1.6); o.m.scale.setScalar(o.r);
+    if (o.t > 120) { o.m.material.opacity -= dt * .02; if (o.m.material.opacity <= 0) { scene.remove(o.m); NV.slicks.splice(i, 1); continue; } }
+    if (o.t < 90 && R() < dt * 3 && dist2Cam(o.m.position) < 8000 * 8000) { const a = R() * TAU, d = Math.sqrt(R()) * o.r * .8, x = o.m.position.x + Math.cos(a) * d, z = o.m.position.z + Math.sin(a) * d; PS_FIRE.emit(x, WATER_Y + .6, z, 0, rnd(1.5, 3), 0, rnd(.7, 1.3), 2.5, 5, 1, 4, 2, .7); if (R() < .5) PS_SMOKE.emit(x, WATER_Y + 3, z, rnd(-.5, .5), rnd(3, 5), rnd(-.5, .5), rnd(8, 14), 4, 16, .65, .1, .1, .09, .1, -.1); }
+  }
 }
