@@ -292,6 +292,31 @@ function shipSuper(mb, C, hg) {
     return;
   }
   const F = deckY(0), big = C.type === 'bb' || C.type === 'cl', de = C.nat === 'de';
+  if (C.type === 'dd' && C.nat !== 'us') {
+    // Zerstörer 1934: plancia a due piani col telemetro, fumaioli tondi col cappello (il prodiero più alto), albero a tripode leggero,
+    // due impianti quadrupli di tubi fra e dietro i fumaioli, piattaforma delle mitragliere da 3,7 cm, tuga poppiera con proiettore
+    const dkH = (z0, z1, w, h, y = F, wt = w) => mb.add(slabGeo(_sc([[-w / 2, z0], [w / 2, z0], [w / 2, z1], [-w / 2, z1]], 1), _sc([[-wt / 2, z0 + .4], [wt / 2, z0 + .4], [wt / 2, z1 - .2], [-wt / 2, z1 - .2]], 1), h), u, 0, y, 0);
+    dkH(-30, -18, B * .56, 2.6);   // tuga della plancia
+    dkH(-29.5, -22, B * .5, 2.4, F + 2.6, B * .46); mb.add(U.box, 0x1a2430, 0, F + 4.2, -29.12, 0, 0, 0, B * .42, .7, .08);
+    mb.add(U.box, u, 0, F + 5.1, -26, 0, 0, 0, B * .7, .3, 2.6);   // alette
+    mb.add(U.cyl12, u, 0, F + 5.8, -25, 0, 0, 0, 1.2, 1.4, 1.2); mb.add(U.cyl, 0x2a2e31, 0, F + 6.3, -25, 0, 0, PI / 2, .3, 4, .3);   // telemetro da 4 m
+    // tripode leggero dietro la plancia
+    const mz = -20; _MT.push(new V3(0, F + 18, mz));
+    mb.between(new V3(0, F + 2.6, mz - .6), new V3(0, F + 18, mz), .22, mt); for (const sd of [-1, 1]) mb.between(new V3(sd * 1.6, F + 2.6, mz + 1.4), new V3(0, F + 13, mz), .15, mt);
+    mb.add(U.cyl, mt, 0, F + 13.5, mz, 0, 0, PI / 2, .1, 6, .1); mb.add(U.cyl12, u, 0, F + 10, mz + .3, 0, 0, 0, 1, .2, 1);
+    // fumaioli tondi con cappello e fascia
+    shFunnel(mb, 0, F, -12, B * .3, B * .36, 9.5, u, dk); shFunnel(mb, 0, F, 4.5, B * .28, B * .34, 8.5, u, dk);
+    dkH(-15, -8, B * .4, 1.2); dkH(1.5, 7.5, B * .38, 1.2);   // basamenti dei fumaioli
+    // tubi lanciasiluri quadrupli
+    shTubes(mb, 0, F, -2, 4, mt); shTubes(mb, 0, F, 12, 4, mt);
+    // piattaforma delle mitragliere da 3,7 cm e tuga di poppa con proiettore
+    mb.add(U.box, u, 0, F + 1.6, 10, 0, 0, 0, B * .72, .3, 3.2); for (const sd of [-1, 1]) mb.add(U.box, u, sd * B * .3, F + .8, 10, 0, 0, 0, .3, 1.6, .3);
+    dkH(17, 33, B * .46, 2.6);
+    mb.add(U.cyl, mt, 0, F + 4.5, 19, 0, 0, 0, .12, 4, .12); mb.add(U.cyl12, 0x3a3e42, 0, F + 6.6, 19, PI / 2, 0, 0, .55, .7, .55); mb.add(U.cyl12, 0xd8dccf, 0, F + 6.6, 18.6, PI / 2, 0, 0, .45, .05, .45);
+    shMast(mb, 0, F + 2.6, 22, 8, mt, 4);
+    for (const sd of [-1, 1]) { shBoat(mb, sd * B * .3, F + 1.2, -6, 6, F); mb.add(U.box, 0x2a2e30, sd * B * .3, F + .6, L * .46, 0, 0, 0, .9, 1.2, 4); }   // lance e scivoli delle bombe di profondità
+    return;
+  }
   if (C.type === 'dd') {
     // cacciatorpediniere: plancia a due livelli col direttore, due fumaioli, albero col radar, tubi, bombe di profondità
     const zb = -L * .17;
@@ -369,6 +394,39 @@ function shipSuper(mb, C, hg) {
     mb.add(U.box, u, 0, F + 5, L * .14, 0, 0, 0, B * .4, 10, L * .07); shDirector(mb, 0, F + 10, L * .14, 3, u); shMast(mb, 0, F + 10, L * .17, 16, mt, 9, 3);
     for (const sd of [-1, 1]) { shBoat(mb, sd * B * .18, F + 9, -L * .01, 10, F); shAA(mb, sd * B * .38, F, -L * .25, u); shAA(mb, sd * B * .4, F, L * .22, u); shAA(mb, sd * B * .3, F + 10, L * .1, u); }
     mb.add(U.cyl, mt, 0, F + 1, L * .45, 0, 0, 0, .7, 2.5, .7); mb.between(new V3(0, F + 2.5, L * .45), new V3(B * .3, F + 12, L * .42), .35, mt);
+    return;
+  }
+  if (C.type === 'cl' && C.nat === 'de') {
+    // Nürnberg (classe Leipzig): torrione e plancia, torre-albero col telemetro, fumaiolo unico ovale col cappello, catapulta
+    // e gru a centro nave, albero di maestra a palo, sovrastruttura poppiera con telemetro, tubi trinati sui fianchi
+    const dkH = (z0, z1, w, h, y = F, wt = w) => mb.add(slabGeo(_sc([[-w / 2, z0], [w / 2, z0], [w / 2, z1], [-w / 2, z1]], 1), _sc([[-wt / 2, z0 + .5], [wt / 2, z0 + .5], [wt / 2, z1 - .3], [-wt / 2, z1 - .3]], 1), h), u, 0, y, 0);
+    dkH(-46, -20, B * .52, 2.8);
+    mb.add(U.cyl12, u, 0, F + 3.5, -47, 0, 0, 0, 2.4, 7, 2.6); mb.add(U.cyl12, 0x1a1c1e, 0, F + 6.2, -47, 0, 0, 0, 2.45, .4, 2.65);   // torrione
+    dkH(-45, -33, B * .46, 3.4, F + 2.8, B * .42); dkH(-44, -36, B * .4, 2.6, F + 6.2, B * .38); mb.add(U.box, 0x1a2430, 0, F + 7.7, -43.6, 0, 0, 0, B * .34, .8, .08);
+    mb.add(U.box, u, 0, F + 8.9, -40, 0, 0, 0, B * .78, .3, 3);   // alette
+    mb.add(U_TAPER, u, 0, F + 14, -37, 0, 0, 0, 2.2, 10, 2.5);   // torre-albero
+    mb.add(U.cyl12, dk, 0, F + 15.5, -37, 0, 0, 0, 3.2, .25, 3.4);
+    mb.add(U.cyl12, u, 0, F + 20, -37, 0, 0, 0, 2.2, 2.4, 2.3); mb.add(U.hemi, u, 0, F + 21.2, -37, 0, 0, 0, 2.2, .9, 2.3);
+    mb.add(U.cyl, u, 0, F + 20.3, -36.8, 0, 0, PI / 2, .45, 7, .45); for (const sd of [-1, 1]) mb.add(U.cyl12, u, sd * 3.5, F + 20.3, -36.8, 0, 0, PI / 2, .6, .5, .6);
+    shMast(mb, 0, F + 22, -36.5, 10, mt, 7, 2.5);
+    for (const sd of [-1, 1]) { mb.add(U.hemi, 0x8e9396, sd * B * .3, F + 9.2, -40, 0, 0, 0, 1.1, 1.1, 1.1); }
+    // fumaiolo
+    const zf = -14, fw = B * .3, fl = B * .55;
+    mb.add(U.cyl12, u, 0, F + 2.8 + 6.5, zf, 0, 0, 0, fw / 2, 13, fl / 2);
+    mb.add(U.box, dk, 0, F + 16.2, zf + .4, -.12, 0, 0, fw * 1.04, .5, fl * 1.05); mb.add(U.cyl12, 0x1b1d1f, 0, F + 15.75, zf, 0, 0, 0, fw / 2 * .85, .2, fl / 2 * .85);
+    mb.add(U.cyl12, dk, 0, F + 10, zf, 0, 0, 0, fw * 1.1, .25, fl * .7);
+    for (const [x, z] of [[-fw * .85, zf - 2], [fw * .85, zf - 2]]) { mb.add(U.cyl12, 0x3a3e42, x, F + 10.7, z, PI / 2, 0, 0, .55, .8, .55); mb.add(U.cyl12, 0xd8dccf, x, F + 10.7, z - .41, PI / 2, 0, 0, .43, .05, .43); }
+    // catapulta e gru
+    mb.add(U.cyl12, 0x55595c, 0, F + .6, 9, 0, 0, 0, 1.2, 1.2, 1.2); mb.add(U.box, 0x55595c, 0, F + 1.5, 9, 0, .3, 0, 1.3, .6, 16);
+    mb.add(U.box, 0x7b8a80, 0, F + 2.1, 5, 0, .3, 0, 10.8, .2, 1.6); mb.add(U.box, 0x7b8a80, 0, F + 2.2, 4.6, 0, .3, 0, .9, .8, 7.5);   // Arado
+    for (const sd of [-1, 1]) { mb.add(U.cyl, mt, sd * B * .22, F + 3, 0, 0, 0, 0, .4, 6, .4); mb.between(new V3(sd * B * .22, F + 5, 0), new V3(sd * B * .38, F + 11, 6), .25, mt); }
+    // albero di maestra e sovrastruttura poppiera
+    shMast(mb, 0, F, 22, 24, mt, 9, 0);
+    dkH(26, 39, B * .44, 3); dkH(28, 37, B * .34, 2.6, F + 3);
+    mb.add(U.cyl12, u, 0, F + 6.8, 33, 0, 0, 0, 1.7, 2, 1.8); mb.add(U.cyl, u, 0, F + 7, 33.2, 0, 0, PI / 2, .35, 5, .35);
+    // tubi lanciasiluri trinati sui fianchi e lance
+    for (const sd of [-1, 1]) { const x = sd * B * .32; mb.add(U.cyl12, mt, x, F + .35, 28, 0, 0, 0, 1.1, .7, 1.1); for (let i = 0; i < 3; i++) mb.add(U.cyl, 0x4a5056, x + (i - 1) * .55, F + 1.1, 28, PI / 2, sd * .5, 0, .27, 7, .27); }
+    for (const sd of [-1, 1]) { shBoat(mb, sd * B * .24, F + 2.8, -26, 8, F); shBoat(mb, sd * B * .24, F + 2.8, -6, 7, F); }
     return;
   }
   if (C.type === 'cl') {
