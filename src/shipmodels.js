@@ -373,12 +373,138 @@ function shTurret(tm, S, sz, c, nat, drop = 0, n = 2, casemate = false) {
     for (const e of [-1, 1]) tm.add(U.box, 0x2c3034, e * (.22 * n + .6), -.1, .6, 0, 0, 0, .35, .1, .45);
   } else { tm.add(U.cyl, 0x3e4245, 0, -.4, 0, 0, 0, 0, .12, .8, .12); tm.add(U.box, 0x6d757b, 0, .1, -.25, -.15, 0, 0, .8 * Math.max(1, n * .7), .7, .05); tm.add(U.cyl12, 0x2a2c2e, 0, .25, .15, 0, 0, 0, .18, .12, .18); }
 }
+// ---------- texture generate dal codice: lamiera navale invecchiata ----------
+// mappa colore quasi bianca (si moltiplica per i colori della mimetica) con giunti delle lamiere, saldature, file di rivetti,
+// colature di ruggine e sporco; nel canale alfa la ruvidezza; normal map ricavata dai rilievi
+let _PLATE = null;
+function shipPlateTex() {
+  if (_PLATE) return _PLATE;
+  const N = 512, col = new Float32Array(N * N * 3).fill(1), hgt = new Float32Array(N * N).fill(.5), rough = new Float32Array(N * N).fill(.72);
+  let seed = 7; const rr = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const id = (x, y) => ((y + N) % N) * N + ((x + N) % N);
+  // rumore a bassa frequenza (lamiere leggermente ondulate e tinte non uniformi)
+  const G = 16, grid = []; for (let i = 0; i < G * G; i++) grid.push(rr());
+  const vn = (x, y, s) => { const fx = x / N * s, fy = y / N * s, ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy, g = (a, b) => grid[((b % s + s) % s) * G + ((a % s + s) % s)], sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
+    return (g(ix, iy) * (1 - sx) + g(ix + 1, iy) * sx) * (1 - sy) + (g(ix, iy + 1) * (1 - sx) + g(ix + 1, iy + 1) * sx) * sy; };
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = id(x, y), n = vn(x, y, 4) * .6 + vn(x, y, 16) * .4, f = .93 + n * .1 + (rr() - .5) * .025;
+    col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = f; hgt[i] = .5 + (vn(x, y, 8) - .5) * .25; rough[i] = .62 + n * .2;
+  }
+  // corsi di lamiera: giunti orizzontali ogni 128 px (~1,5 m), giunti verticali sfalsati ogni 256 px
+  const seam = (x, y) => { const i = id(x, y); hgt[i] = .15; col[i * 3] *= .72; col[i * 3 + 1] *= .72; col[i * 3 + 2] *= .72; };
+  for (let r = 0; r < 4; r++) {
+    const y0 = r * 128;
+    for (let x = 0; x < N; x++) { seam(x, y0); hgt[id(x, y0 + 1)] = .62; hgt[id(x, y0 - 1)] = .4; }   // giunto con bordo sovrapposto
+    const off = (r % 2) * 128; for (const xs of [off, off + 256]) for (let y = y0; y < y0 + 128; y++) { seam(xs, y); hgt[id(xs + 1, y)] = .6; }
+    for (let x = 4; x < N; x += 10) for (const yy of [y0 + 5, y0 - 5]) { const i = id(x, yy); hgt[i] = .9; hgt[id(x + 1, yy)] = .8; hgt[id(x, yy + 1)] = .8; }   // rivetti
+  }
+  // colature di ruggine dai giunti e dai rivetti verso il basso (la v cresce verso l'alto)
+  for (let k = 0; k < 34; k++) {
+    let x = rr() * N | 0; const y0 = (rr() * 4 | 0) * 128 + (rr() < .5 ? -3 : 3), len = 12 + rr() * 110 * rr(), w = .5 + rr() * 2, a0 = .1 + rr() * .3;
+    for (let d = 0; d < len; d++) { const a = a0 * Math.pow(1 - d / len, 1.6); if (rr() < .08) x += rr() < .5 ? -1 : 1;
+      for (let o = -w; o <= w; o++) { const i = id(x + Math.round(o), y0 - d), e = a * (1 - Math.abs(o) / (w + 1)); col[i * 3] *= 1 - e * .25; col[i * 3 + 1] *= 1 - e * .5; col[i * 3 + 2] *= 1 - e * .68; rough[i] = Math.min(1, rough[i] + e * .5); } }
+  }
+  // macchie di ruggine e vernice scrostata
+  for (let k = 0; k < 16; k++) { const cx = rr() * N, cy = rr() * N, r = 1.5 + rr() * 4, rust = rr() < .5;
+    for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) { const d = Math.hypot(x, y) / r; if (d > 1 || rr() < d * .6) continue; const i = id(Math.round(cx + x), Math.round(cy + y));
+      if (rust) { col[i * 3] *= .9; col[i * 3 + 1] *= .76; col[i * 3 + 2] *= .64; rough[i] = 1; hgt[i] -= .08; } else { col[i * 3] *= 1.05; col[i * 3 + 1] *= 1.05; col[i * 3 + 2] *= 1.06; hgt[i] -= .05; } } }
+  // ritocchi di vernice più freschi (rettangoli leggermente diversi)
+  for (let k = 0; k < 10; k++) { const x0 = rr() * N | 0, y0 = rr() * N | 0, w = 20 + rr() * 60 | 0, h = 10 + rr() * 40 | 0, t = .96 + rr() * .08;
+    for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) { const i = id(x, y); col[i * 3] *= t; col[i * 3 + 1] *= t; col[i * 3 + 2] *= t * 1.01; } }
+  const cv = document.createElement('canvas'); cv.width = cv.height = N; const cx = cv.getContext('2d'), im = cx.createImageData(N, N);
+  const cn = document.createElement('canvas'); cn.width = cn.height = N; const nx = cn.getContext('2d'), nm = nx.createImageData(N, N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = id(x, y), o = ((N - 1 - y) * N + x) * 4;
+    for (let c = 0; c < 3; c++) im.data[o + c] = Math.max(0, Math.min(255, col[i * 3 + c] * 255));
+    im.data[o + 3] = 255;
+    const dx = (hgt[id(x + 1, y)] - hgt[id(x - 1, y)]) * 3, dy = (hgt[id(x, y + 1)] - hgt[id(x, y - 1)]) * 3, l = Math.hypot(dx, dy, 1);
+    nm.data[o] = (-dx / l * .5 + .5) * 255; nm.data[o + 1] = (dy / l * .5 + .5) * 255; nm.data[o + 2] = (1 / l * .5 + .5) * 255; nm.data[o + 3] = Math.max(150, rough[i] * 255);
+  }
+  // ruvidezza nel canale alfa della mappa colore (letta dal materiale triplanare)
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const o = ((N - 1 - y) * N + x) * 4; im.data[o + 3] = Math.max(150, Math.min(255, rough[id(x, y)] * 255)); }
+  cx.putImageData(im, 0, 0); nx.putImageData(nm, 0, 0);
+  const mk = (c, srgb) => { const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; t.premultiplyAlpha = false; if (srgb) t.encoding = THREE.sRGBEncoding; t.generateMipmaps = true; return t; };
+  return _PLATE = { map: mk(cv, true), normal: mk(cn, false) };
+}
+let _SHIPMAT = null;
+function shipPlateMat() {
+  if (!_SHIPMAT) _SHIPMAT = triMaterial(shipPlateTex(), 1 / 6, { metal: .3, rough: 1, nStr: .55 });
+  const m = _SHIPMAT.clone(); m.onBeforeCompile = _SHIPMAT.onBeforeCompile; m.customProgramCacheKey = () => 'shipPlate'; return m;
+}
+// scritte e insegne disegnate su una tela: numeri di scafo, marche di pescaggio, bandiere
+const _DTEX = {};
+function canvasTex(key, w, h, draw) {
+  if (_DTEX[key]) return _DTEX[key];
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; return _DTEX[key] = t;
+}
+function flagTex(nat) {
+  return canvasTex('flag_' + nat, 192, 128, (x, w, h) => {
+    if (nat === 'us') { for (let i = 0; i < 13; i++) { x.fillStyle = i % 2 ? '#f2efe6' : '#b22234'; x.fillRect(0, i * h / 13, w, h / 13 + 1); } x.fillStyle = '#3c3b6e'; x.fillRect(0, 0, w * .4, h * 7 / 13); x.fillStyle = '#f2efe6'; for (let r = 0; r < 9; r++) for (let c = 0; c < (r % 2 ? 5 : 6); c++) { x.beginPath(); x.arc(6 + c * 12.5 + (r % 2) * 6, 5 + r * 7.4, 1.8, 0, TAU); x.fill(); } }
+    else if (nat === 'jp') { x.fillStyle = '#f2efe6'; x.fillRect(0, 0, w, h); const cx = w * .42, cy = h / 2; x.fillStyle = '#bc002d'; for (let i = 0; i < 16; i++) { const a = i * TAU / 16; x.beginPath(); x.moveTo(cx, cy); x.arc(cx, cy, w * 1.2, a - TAU / 64, a + TAU / 64); x.closePath(); x.fill(); } x.beginPath(); x.arc(cx, cy, h * .3, 0, TAU); x.fill(); }
+    else if (nat === 'de') { x.fillStyle = '#d8d6cc'; x.fillRect(0, 0, w, h); x.fillStyle = '#1b1b1b'; x.fillRect(0, h * .42, w, h * .16); x.fillRect(w * .26, 0, w * .1, h); x.fillStyle = '#9e1b1b'; x.fillRect(0, 0, w * .2, h * .3); }
+    else { x.fillStyle = '#a3262a'; x.fillRect(0, 0, w, h); }
+  });
+}
+function textTex(key, txt, color, w = 256, h = 128, font = 'bold 96px Arial') {
+  return canvasTex(key, w, h, (x) => { x.clearRect(0, 0, w, h); x.fillStyle = color; x.font = font; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt, w / 2, h / 2 + 4); });
+}
+function draftTex(nat) {
+  return canvasTex('draft_' + nat, 64, 512, (x, w, h) => { x.clearRect(0, 0, w, h); x.fillStyle = '#e8e4d8'; x.font = 'bold 30px Arial'; x.textAlign = 'center'; for (let i = 0; i < 8; i++) { const v = nat === 'us' ? 30 - i * 2 : 9 - i; x.fillText(String(v), w / 2, 28 + i * 64); x.fillRect(w * .3, 40 + i * 64, w * .4, 3); } });
+}
+// decalcomania piana accostata al fianco dello scafo alla posizione t (0 = prua), lato sd, quota y
+function hullDecal(body, C, hd, tex, t, sd, y, w, h, opaque) {
+  const L = C.L, z = -L / 2 + t * L, d = .004, slope = (hd.hw(t + d) - hd.hw(t - d)) / (2 * d * L);
+  const fl = t < .3 ? .16 * (1 - t / .3) : 0, F = C.F;   // stessa svasatura delle sezioni dello scafo
+  const flare = 1 + (y > F * .45 ? fl * (.5 + .5 * (y - F * .45) / (F * .55)) : y > .5 ? fl * .5 * (y - .5) / (F * .45 - .5) : 0);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tex, transparent: !opaque, roughness: .8, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4, depthWrite: false }));
+  m.position.set(sd * (hd.hw(t) * flare + .06), y, z); m.rotation.y = sd * (PI / 2 + Math.atan(slope));   // la normale segue il fianco che si allarga verso il centro nave
+  body.add(m); return m;
+}
+// dettagli realistici aggiuntivi: asta di bompresso e bandiere, radar a materasso, cavo di smagnetizzazione,
+// scalandroni, lanciabombe di profondità, paramine, numeri di scafo e marche di pescaggio
+function shipExtras(mb, body, C, hd) {
+  const L = C.L, B = C.B, F = C.F, pal = SHIP_PAL[C.nat] || SHIP_PAL.x, pt = C.type === 'pt', mt = pal.metal, dY = z => hd.sheer((z + L / 2) / L);
+  // asta di prua (con il jack) e asta di poppa con la bandiera di guerra
+  const fs = pt ? .5 : Math.max(1, L / 120);
+  const zb = -L / 2 + L * .012, zs = L / 2 - L * .01;
+  mb.add(U.cyl, mt, 0, dY(zb) + 2.5 * fs, zb, 0, 0, 0, .06 * fs, 5 * fs, .06 * fs);
+  mb.add(U.cyl, mt, 0, dY(zs) + 3 * fs, zs, 0, 0, 0, .07 * fs, 6 * fs, .07 * fs);
+  const flag = (x, y, z, s) => { const f = new THREE.Mesh(new THREE.PlaneGeometry(1.5 * s, s, 6, 1), new THREE.MeshStandardMaterial({ map: flagTex(C.nat), side: THREE.DoubleSide, roughness: .9 }));
+    const p = f.geometry.attributes.position; for (let i = 0; i < p.count; i++) { const u = p.getX(i) / (1.5 * s) + .5; p.setZ(i, Math.sin(u * 5) * .08 * s * u); p.setX(i, p.getX(i)); } f.geometry.computeVertexNormals();
+    f.rotation.y = -PI / 2; f.position.set(x, y, z + .75 * s); body.add(f); };
+  flag(0, dY(zs) + 6 * fs - .8 * fs, zs + .07 * fs, 1.6 * fs);
+  if (C.nat === 'us' && !pt) { const j = new THREE.Mesh(new THREE.PlaneGeometry(1.2 * fs, .8 * fs), new THREE.MeshStandardMaterial({ map: canvasTex('jack', 96, 64, (x, w, h) => { x.fillStyle = '#3c3b6e'; x.fillRect(0, 0, w, h); x.fillStyle = '#f2efe6'; for (let r = 0; r < 5; r++) for (let c = 0; c < 7; c++) { x.beginPath(); x.arc(8 + c * 13, 7 + r * 12.5, 2.4, 0, TAU); x.fill(); } }), side: THREE.DoubleSide, roughness: .9 })); j.rotation.y = -PI / 2; j.position.set(0, dY(zb) + 4.6 * fs, zb + .6 * fs); body.add(j); }
+  if (pt) return;
+  // cavo di smagnetizzazione lungo il fianco poco sotto la coperta
+  if (C.type !== 'cargo') for (const sd of [-1, 1]) for (let k = 0; k < 30; k++) { const t0 = .06 + k * .88 / 30, t = t0 + .44 / 30, z = -L / 2 + t * L, y = hd.sheer(t) - .9, fl = t < .3 ? 1 + .16 * (1 - t / .3) * .9 : 1; mb.add(U.box, 0x2a2e31, sd * (hd.hw(t) * fl + .05), y, z, 0, 0, 0, .14, .18, L * .88 / 30 + .1); }
+  // scalandroni ripiegati sul fianco (corazzate, incrociatori, portaerei)
+  if (C.type === 'bb' || C.type === 'cl' || C.type === 'cv') for (const sd of [-1, 1]) for (const t of [.42, .62]) { const z = -L / 2 + t * L, y = hd.sheer(t) - 2.4; mb.add(U.box, 0x5a6066, sd * (hd.hw(t) + .3), y, z, sd * 0, 0, 0, .25, .5, 7); for (let s = 0; s < 6; s++) mb.add(U.box, 0x3a3e42, sd * (hd.hw(t) + .45), y + .3, z - 3 + s * 1.2, 0, 0, 0, .1, .1, .6); }
+  // radar: SK "a materasso" sull'albero più alto delle navi americane grandi, SC sui cacciatorpediniere
+  const top = _MT.slice().sort((a, b) => b.y - a.y)[0];
+  if (top && C.nat === 'us') { const s = C.type === 'dd' ? .7 : 1.2, y = top.y + 1.6 * s;
+    mb.add(U.cyl, mt, top.x, top.y + .8 * s, top.z, 0, 0, 0, .12, 1.6 * s, .12);
+    for (let i = 0; i <= 5; i++) { mb.add(U.box, 0x2c3034, top.x - 2.5 * s + i * s, y, top.z, 0, 0, 0, .06, 3.6 * s, .06); }
+    for (let j = 0; j <= 4; j++) mb.add(U.box, 0x2c3034, top.x, y - 1.8 * s + j * .9 * s, top.z, 0, 0, 0, 5 * s, .06, .06);
+    mb.add(U.box, 0x3a3e42, top.x, y, top.z + .25 * s, 0, 0, 0, 5 * s, 3.6 * s, .04); }
+  if (top && C.nat === 'jp' && C.type !== 'dd') mb.add(U.box, 0x2c3034, top.x, top.y + 1.2, top.z, 0, 0, 0, 3.2, 1.8, .08);   // radar Type 21
+  // cacciatorpediniere: lanciabombe K-gun ai lati e paramine a prua
+  if (C.type === 'dd') { for (const sd of [-1, 1]) for (const t of [.78, .84]) { const z = -L / 2 + t * L; mb.add(U.cyl, 0x2a2e30, sd * (hd.hw(t) - 1.4), dY(z) + .5, z, 0, 0, sd * .7, .18, 1.1, .18); mb.add(U.cyl12, 0x2a2e30, sd * (hd.hw(t) - 1.05), dY(z) + .95, z, 0, 0, sd * .7, .35, .5, .35); }
+    for (const sd of [-1, 1]) { const z = -L * .28; mb.add(U.cone, 0xb0aa9a, sd * (hd.hw(.22) - .8), dY(z) + .6, z, PI / 2, 0, 0, .3, 1.6, .3); } }
+  // ancore vere: fuso e marre nelle cubie
+  for (const sd of [-1, 1]) { const t = .045, z = -L / 2 + t * L, y = hd.sheer(t) - F * .3, x = sd * (hd.hw(t) * 1.1 + .25), s = Math.max(.6, L / 200);
+    mb.add(U.box, 0x1b1d1f, x, y, z, 0, 0, 0, .3 * s, 2.4 * s, .4 * s); mb.add(U.box, 0x1b1d1f, x, y - 1.1 * s, z, 0, 0, 0, .35 * s, .45 * s, 1.8 * s);
+    for (const e of [-1, 1]) mb.add(U.box, 0x1b1d1f, x, y - .8 * s, z + e * .8 * s, e * .7, 0, 0, .3 * s, .9 * s, .25 * s); }
+  // decalcomanie: marche di pescaggio a prua e a poppa, numero di scafo sui cacciatorpediniere americani
+  for (const sd of [-1, 1]) for (const t of [.035, .93]) hullDecal(body, C, hd, draftTex(C.nat), t, sd, -C.D * .25, .5 * Math.max(1, C.D / 6), 4 * Math.max(1, C.D / 6));
+  if (C.nat === 'us' && C.type === 'dd') for (const sd of [-1, 1]) hullDecal(body, C, hd, textTex('hull557', '557', '#e8e4d8'), .1, sd, F * .55, 6, 3);
+}
 function buildShipModel2(C) {
   const pal = SHIP_PAL[C.nat] || SHIP_PAL.x, g = new THREE.Group(), body = new THREE.Group(); g.add(body);
   const mats = [], own = m => { const c = m.clone(); mats.push(c); return c; };
   const hg = hullGeo2(C); body.add(new THREE.Mesh(hg, own(MAT.vcMetal || MAT.vc)));
   const mb = new MB(); _MT.length = 0; shipSuper(mb, C, hg.userData);
-  const extra = []; shipDetails(mb, C, hg.userData, extra); shipUnderwater(mb, C, hg.userData);
+  const extra = []; shipDetails(mb, C, hg.userData, extra); shipUnderwater(mb, C, hg.userData); shipExtras(mb, body, C, hg.userData);
   { const dm = deckMesh(C, hg.userData); mats.push(dm.material); body.add(dm); }
   if (mb.parts.length) { const sg = groupMesh(mb.buildGroups(), true); const mm = new Map(); sg.traverse(o => { if (o.isMesh) { if (!mm.has(o.material)) mm.set(o.material, own(o.material)); o.material = mm.get(o.material); } }); body.add(sg); }
   // ringhiere lungo il bordo del ponte
@@ -408,6 +534,9 @@ function buildShipModel2(C) {
     pv.add(groupMesh(bl.buildGroups(), false));
     turrets.push({ sec: !!G.sec, G, S, key: G.s, g: tg, pv, muzzles, arc, x, y: tg.position.y, z, rel: arc === 'aft' ? PI : arc === 'port' ? PI / 2 : arc === 'stbd' ? -PI / 2 : 0, el: 0, reload: rnd(0, G.reload), ok: true, fixT: 0, T: firingTable(G.s, G.elev) });
   }
+  // lamiera invecchiata su scafo, sovrastrutture e torri (un materiale per nave: il danno lo scurisce)
+  const plate = shipPlateMat(); plate.userData.base = new THREE.Color(1, 1, 1); mats.push(plate);
+  g.traverse(o => { if (o.isMesh && o.material && o.material.vertexColors && !o.material.map) { const old = o.material; o.material = plate; const k = mats.indexOf(old); if (k >= 0) mats.splice(k, 1); } });
   return { g, body, turrets, hd: hg.userData, mats };
 }
 
@@ -424,7 +553,7 @@ function shipDetails(mb, C, hd, lines) {
       mb.add(U.box, 0x101214, sd * (sideX(t, yp) + .02), yp, z, 0, 0, 0, .08, .45, .45);
       if (L > 150 && Math.abs(z) > L * .3) mb.add(U.box, 0x101214, sd * (sideX(t, yp - 2) + .02), yp - 2, z + step / 2, 0, 0, 0, .08, .4, .4);
     }
-    for (let k = 0; k < 2; k++) { const y = C.F * (.3 + k * .32); for (let z = -L * .4; z < L * .45; z += L / 12) { const t = (z + L / 2) / L; mb.add(U.box, 0x2c3238, sd * (sideX(t, y) + .015), y, z + L / 24, 0, 0, 0, .04, .12, L / 12 * .96); } }
+    // i corsi di lamiera ora sono nella texture della lamiera
   }
   const dY = z => hd.sheer((z + L / 2) / L);
   // bitte, prese d'aria a fungo e boccaporti in coperta; frangionde e verricello a prua
