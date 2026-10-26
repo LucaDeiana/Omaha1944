@@ -21,6 +21,7 @@ const SHELL = {
   us40: { cal: 40, i: 1.09, v: 881, m: .9, he: .068, name: '40 mm Bofors' },
   de88: { cal: 88, i: 1.2, v: 950, m: 9, he: .9, name: '8,8 cm SK C/32' },
   de37: { cal: 37, i: 1.46, v: 1000, m: .745, he: .04, name: '3,7 cm SK C/30' },
+  us600: { cal: 600, i: 1.0, v: 760, m: 3950, he: 160, name: '600 mm Mk 1 (sperimentale)' },
   de20: { cal: 20, i: 1.56, v: 900, m: .12, he: .015, name: '2 cm Flak 38' },
   de127: { cal: 127, i: 1.19, v: 830, m: 28, he: 3.4, name: '12,7 cm SK C/34' },
   de150: { cal: 150, i: 1.17, v: 960, m: 45.5, he: 3.9, name: '15 cm SK C/25' },
@@ -42,6 +43,9 @@ const NCLS = {
   texas: { name: 'Corazzata USS Texas (classe New York)', nat: 'us', type: 'bb', L: 174, B: 29, D: 8.7, F: 8.5, vmax: 21, tau: 70, R: 560, rud: .2, hp: 11000, belt: 305, deck: 76, ends: 64, hull: 0x6a7176,
     guns: [{ s: 'us356', reload: 35, trav: .07, elev: .26, disp: .8, mounts: [[0, 11, -60, 'fore', 2], [0, 14, -47, 'fore', 2], [0, 11.5, 2, 'side', 2], [0, 14, 42, 'aft', 2], [0, 11, 55, 'aft', 2]] },
       { s: 'us127b', sec: true, reload: 6, trav: .3, elev: .35, disp: 1.6, mounts: [[-13.6, 6.5, -26, 'port', 1], [13.6, 6.5, -26, 'stbd', 1], [-13.6, 6.5, -14, 'port', 1], [13.6, 6.5, -14, 'stbd', 1], [-13.6, 6.5, 16, 'port', 1], [13.6, 6.5, 16, 'stbd', 1]] }] },
+  maine: { name: 'Super corazzata USS Maine', nat: 'us', type: 'bb', style: 'modern', L: 300, B: 40, D: 11, F: 12, vmax: 30, tau: 85, R: 750, rud: .16, hp: 24000, belt: 460, deck: 210, ends: 120, hull: 0x6a7176,
+    guns: [{ s: 'us600', reload: 55, trav: .05, elev: .7, disp: .85, mounts: [[0, 15, -95, 'fore', 2], [0, 20.5, -76, 'fore', 2], [0, 20.5, 72, 'aft', 2], [0, 15, 91, 'aft', 2]] },
+      { s: 'us127', sec: true, reload: 4, trav: .44, elev: 1.48, disp: 1.4, mounts: [[-14, 18, -42, 'port', 2], [14, 18, -42, 'stbd', 2], [-15, 18, -24, 'port', 2], [15, 18, -24, 'stbd', 2], [-15, 18, -6, 'port', 2], [15, 18, -6, 'stbd', 2], [-15, 18, 14, 'port', 2], [15, 18, 14, 'stbd', 2], [-14, 18, 32, 'port', 2], [14, 18, 32, 'stbd', 2]] }] },
   z1934: { name: 'Zerstörer 1934', nat: 'de', type: 'dd', L: 119, B: 11.3, D: 4, F: 7, vmax: 36, tau: 24, R: 340, rud: .4, hp: 1900, belt: 0, deck: 0, ends: 0, hull: 0x7b8086,
     guns: [{ s: 'de127', reload: 4.5, trav: .4, elev: .52, disp: 1.4, mounts: [[0, 9, -42, 'fore', 1], [0, 11.5, -33, 'fore', 1], [0, 11.5, 28, 'aft', 1], [0, 9, 37, 'aft', 1], [0, 9, 46, 'aft', 1]] },
       { s: 'de37', sec: true, reload: .8, trav: 1, elev: 1.4, disp: 2.5, mounts: [[-4, 10, 10, 'port', 2], [4, 10, 10, 'stbd', 2]] }],
@@ -354,7 +358,7 @@ class NavShip {
       // dispersione: angolare (mrad) e di velocità iniziale (±0,4 %)
       const sg = tu.G.disp / 1000 * (this === NV.me ? (NV.arcade ? .3 : .6) : 1); d.x += gauss() * sg; d.y += gauss() * sg * .6; d.z += gauss() * sg; d.normalize();
       const v = d.multiplyScalar(S.v * (1 + gauss() * .004)).add(this.vel);
-      const sh = { S, p: o.clone(), v, t: 0, by: this, ammo: ammo || 'AP', key: tu.key }; NV.shells.push(sh);
+      const sh = { S, p: o.clone(), v, t: 0, by: this, ammo: ammo || 'AP', key: tu.key, sec: tu.sec }; NV.shells.push(sh);
       if (this === NV.me && !tu.sec) NV.lastShell = sh;
       if (big) { PS_FIRE.emit(o.x, o.y, o.z, d.x * .02, 1, d.z * .02, .25, S.cal / 25, S.cal / 12, 1, 4, 2.6, 1.2); for (let i = 0; i < 4; i++) PS_SMOKE.emit(o.x, o.y, o.z, d.x * rnd(.01, .03), rnd(1, 3), d.z * rnd(.01, .03), rnd(4, 9), S.cal / 30, S.cal / 6, .6, .7, .7, .7, .5, -.05); }
     }
@@ -455,7 +459,7 @@ function drawShells() {
 }
 // colonne d'acqua alte secondo il calibro; le schegge dell'esplosivo colpiscono le navi vicinissime
 function splash(s, p) {
-  const c = s.S.cal, hgt = c >= 300 ? 60 : c >= 150 ? 30 : c >= 100 ? 18 : c >= 20 ? 4 : 1.5;
+  const c = s.S.cal, hgt = c >= 500 ? 110 : c >= 300 ? 60 : c >= 150 ? 30 : c >= 100 ? 18 : c >= 20 ? 4 : 1.5;
   if (dist2Cam(p) < 9000 * 9000) {
     const n = c >= 100 ? 14 : 3;
     for (let i = 0; i < n; i++) PS_SMOKE.emit(p.x + rnd(-1, 1) * c / 60, p.y, p.z + rnd(-1, 1) * c / 60, rnd(-1, 1) * c / 80, Math.sqrt(2 * 9.81 * hgt) * rnd(.6, 1), rnd(-1, 1) * c / 80, rnd(2.5, 4.5), c / 50 + .4, c / 12 + 1.5, .75, .93, .96, .98, .2, 9.81);
@@ -521,12 +525,12 @@ function shellOnShip(s, sh, H) {
     if (lp.y < .6 && face === 'side') { sh.leak += .0015 * Math.sqrt(S.m) / Math.sqrt(C.L / 100); sh.listS = Math.sign(lp.x) || 1; if (sh === NV.me) showMsg('Falla sotto la linea di galleggiamento!', 1.8); }
     if (R() < .25) sh.addFire(lp);
   }
-  if (me) { (sh.hitLog = sh.hitLog || []).push({ x: lp.x, z: lp.z, pen, t: GAME.time, big: S.cal >= 100 }); if (sh.hitLog.length > 80) sh.hitLog.shift(); }
+  if (me) { (sh.hitLog = sh.hitLog || []).push({ x: lp.x, z: lp.z, pen, t: GAME.time, big: S.cal >= 100 && !s.sec, sec: s.sec }); if (sh.hitLog.length > 80) sh.hitLog.shift(); }
   sh.damage(dmg, s.by, 'shell');
   const p = H.p;
   if (S.cal >= 100) { fxExplosion(p.clone(), Math.min(5, S.cal / (pen ? 70 : 120)), false); if (dist2Cam(p) < 3000 * 3000) sfxBoom(p, S.cal / (pen ? 80 : 140)); }
   else { fxImpact(p, 'metal'); if (S.he && R() < .3) fxExplosion(p.clone(), .3, false); }
-  if (me) { STATS.hits++; hitMarker(sh.sinking > 0, false); if (txt && S.cal >= 100) navyHitText(txt + (dmg > 0 ? ' · ' + Math.round(dmg) : ''), pen ? '#ffcf5a' : '#c9d2d8'); }
+  if (me) { STATS.hits++; hitMarker(sh.sinking > 0, false); if (s.sec) navySecHit(sh, dmg, pen); else if (txt && S.cal >= 100) navyHitText(txt + (dmg > 0 ? ' · ' + Math.round(dmg) : ''), pen ? '#ffcf5a' : '#c9d2d8'); }
 }
 // siluri: corrono a pochi metri di profondità con la scia di bolle; esplodono contro lo scafo
 function updateTorps(dt) {
@@ -694,6 +698,15 @@ function navyShellCam(dt) {
   camera.lookAt(inFlight && Math.abs(o.yaw) < .05 && Math.abs(o.pitch - .18) < .05 ? _nva.copy(p).addScaledVector(d, 30) : p);
   return true;
 }
+// colpi delle secondarie: contatore che si somma finché continuano ad arrivare
+function navySecHit(sh, dmg, pen) {
+  const E = navyHud(), now = GAME.time, H = NV.secH || (NV.secH = { n: 0, d: 0, p: 0, t: 0, ship: null });
+  if (now - H.t > 2.5 || H.ship !== sh) { H.n = 0; H.d = 0; H.p = 0; H.ship = sh; }
+  H.n++; H.d += dmg; if (pen) H.p++; H.t = now;
+  E.secHit.textContent = 'Secondarie a segno ×' + H.n + (H.p ? ' (' + H.p + ' perforanti)' : '') + ' · ' + Math.round(H.d) + ' danni su ' + sh.name;
+  E.secHit.style.opacity = 1; clearTimeout(NV.secTO); NV.secTO = setTimeout(() => E.secHit.style.opacity = 0, 2200);
+  play('ping', null, { vol: .25, rate: 1.6 });
+}
 function navyPlayerLost() {
   after(7, () => {
     if (NV.over && !(NV.mis && NV.mis.free)) return;  // missione già vinta: la nave affonda da eroina
@@ -715,12 +728,13 @@ function navyHud() {
   <div id="nvLockB" style="position:fixed;width:46px;height:30px;margin:-15px 0 0 -23px;border:2px solid #ffb43a;pointer-events:none;display:none"></div>
   <div id="nvRange" style="position:fixed;left:50%;top:calc(50% + 22px);transform:translateX(-50%);font:12px Oswald,sans-serif;color:#fff;text-shadow:0 0 3px #000;pointer-events:none;white-space:nowrap"></div>
   <div id="nvHit" style="position:fixed;left:50%;top:calc(50% - 48px);transform:translateX(-50%);font:600 15px Oswald,sans-serif;text-shadow:0 0 4px #000;pointer-events:none;opacity:0;transition:opacity .4s"></div>
+  <div id="nvSecHit" style="position:fixed;left:50%;top:calc(50% + 58px);transform:translateX(-50%);font:600 13px Oswald,sans-serif;color:#7fd3ff;text-shadow:0 0 4px #000;pointer-events:none;opacity:0;transition:opacity .4s;white-space:nowrap"></div>
   <div id="nvLeft" style="position:fixed;left:14px;bottom:14px;width:250px;font:12px Oswald,sans-serif;color:#e8e2d0;background:rgba(10,14,16,.55);padding:8px 10px;border-radius:4px;pointer-events:none"></div>
   <div id="nvRight" style="position:fixed;right:14px;bottom:14px;width:230px;font:12px Oswald,sans-serif;color:#e8e2d0;background:rgba(10,14,16,.55);padding:8px 10px;border-radius:4px;pointer-events:none"></div>
   <div id="nvTgt" style="position:fixed;left:14px;top:96px;width:300px;background:rgba(10,14,16,.68);border:1px solid rgba(255,180,60,.5);border-radius:4px;padding:7px 9px;font:12px Oswald,sans-serif;color:#e8e2d0;pointer-events:none;display:none"><div id="nvTgtH"></div><canvas id="nvTgtC" width="282" height="96" style="display:block;margin:4px 0"></canvas><div id="nvTgtS"></div></div>
   <canvas id="nvRadar" width="170" height="170" style="position:fixed;right:14px;top:70px;border-radius:50%;background:rgba(8,20,24,.55);pointer-events:none"></canvas>`;
   document.body.appendChild(box);
-  NV.el = { box, line: $('nvLine'), cross: $('nvCross'), gun: $('nvGun'), gunC: $('nvGunC'), gunT: $('nvGunT'), sec: $('nvSec'), lead: $('nvLead'), torp: $('nvTorp'), lockB: $('nvLockB'), range: $('nvRange'), hit: $('nvHit'), left: $('nvLeft'), right: $('nvRight'), radar: $('nvRadar'), tgt: $('nvTgt'), tgtH: $('nvTgtH'), tgtC: $('nvTgtC'), tgtS: $('nvTgtS') };
+  NV.el = { secHit: $('nvSecHit'), box, line: $('nvLine'), cross: $('nvCross'), gun: $('nvGun'), gunC: $('nvGunC'), gunT: $('nvGunT'), sec: $('nvSec'), lead: $('nvLead'), torp: $('nvTorp'), lockB: $('nvLockB'), range: $('nvRange'), hit: $('nvHit'), left: $('nvLeft'), right: $('nvRight'), radar: $('nvRadar'), tgt: $('nvTgt'), tgtH: $('nvTgtH'), tgtC: $('nvTgtC'), tgtS: $('nvTgtS') };
   return NV.el;
 }
 function navyHitText(t, c) { const E = navyHud(); E.hit.textContent = t; E.hit.style.color = c; E.hit.style.opacity = 1; clearTimeout(NV.hitTO); NV.hitTO = setTimeout(() => E.hit.style.opacity = 0, 1300); }
@@ -804,6 +818,11 @@ const NAVY_MIS = {
     setup() { navyIslands(2); NV.me = new NavShip('texas', 'A', 0, 0, 0, { ai: false }); new NavShip('fletcher', 'A', -500, 700, 0, { name: 'USS Nelson' }); new NavShip('fletcher', 'A', 600, 900, 0, { name: 'USS Glennon' });
       new NavShip('scharnhorst', 'E', 4000, -19000, PI * .9, { spd: .8, tag: 'flag', name: 'Scharnhorst' }); new NavShip('z1934', 'E', 3000, -17500, PI * .9, { spd: .8 }); new NavShip('z1934', 'E', 5200, -18000, PI * .9, { spd: .8 }); },
     obj() { const s = NV.ships.find(s => s.tag === 'flag'); return [!s || s.sinking, s ? 'Affonda la Scharnhorst — ' + Math.round(s.pos.distanceTo(NV.me.pos) / 100) / 10 + ' km · scafo ' + Math.max(0, Math.round(s.hp / s.hpMax * 100)) + '%' : '']; } },
+  maine: { name: 'Il mostro d\u2019acciaio', ship: 'maine', brief: 'La super corazzata Maine contro la squadra tedesca al completo: Scharnhorst, Nürnberg e quattro Zerstörer.',
+    setup() { navyIslands(3); NV.me = new NavShip('maine', 'A', 0, 0, 0, { ai: false }); new NavShip('fletcher', 'A', -600, 900, 0, { name: 'USS Kidd' }); new NavShip('fletcher', 'A', 700, 1100, 0, { name: 'USS Bullard' });
+      new NavShip('scharnhorst', 'E', 5000, -26000, PI * .9, { spd: .8, tag: 'flag', name: 'Scharnhorst' }); new NavShip('nurnberg', 'E', 2500, -24000, PI * .9, { spd: .8 });
+      for (const [x, z] of [[3000, -22000], [6500, -23000], [1000, -21500], [8000, -24500]]) new NavShip('z1934', 'E', x, z, PI * .9, { spd: .8 }); },
+    obj() { const n = NV.ships.filter(s => s.team === 'E' && !s.sinking).length; return [n === 0, 'Affonda la squadra tedesca — restano ' + n]; } },
   free: { name: 'Battaglia libera', free: true, brief: 'Ondate di navi nemiche sempre più forti.',
     setup() { navyIslands(4); NV.me = new NavShip(NV.freeShip || 'fletcher', 'A', 0, 0, 0, { ai: false }); NV.free = { wave: 0, t: 5 }; },
     tick(dt) { const left = NV.ships.filter(s => s.team === 'E' && !s.sinking).length; if (left === 0) { NV.free.t -= dt; if (NV.free.t <= 0) { const w = ++NV.free.wave, mp = NV.me.pos, a = R() * TAU, d = { pt: 6000, dd: 11000, cl: 14000, bb: 18000 }[NV.me.C.type];

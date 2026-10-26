@@ -117,6 +117,19 @@ function shipSuper(mb, C, hg) {
     for (const sd of [-1, 1]) shAA(mb, sd * B * .33, F, L * .09, u, 2);
     return;
   }
+  if (C.style === 'modern') {
+    // super corazzata: torre di plancia alta a gradoni (stile Iowa), torre corazzata, due fumaioli alti, albero a tripode con radar
+    const zb = -L * .2;
+    mb.add(U.cyl12, u, 0, F + 4, zb - 9, 0, 0, 0, 5, 8, 5);
+    for (let k = 0; k < 5; k++) mb.add(U.box, u, 0, F + 3 + k * 5, zb + k * .5, 0, 0, 0, B * (.5 - k * .06), 5, L * (.09 - k * .011));
+    mb.add(U.box, 0x223040, 0, F + 24, zb - L * .03, 0, 0, 0, B * .24, 1, .1);
+    shDirector(mb, 0, F + 28, zb + 2, 3.6, u); shMast(mb, 0, F + 32, zb + 8, 20, mt, 14, 5);
+    shFunnel(mb, 0, F + 4, -L * .06, B * .2, B * .26, 18, u, dk); shFunnel(mb, 0, F + 4, L * .06, B * .2, B * .26, 16, u, dk);
+    mb.add(U.box, u, 0, F + 5, L * .14, 0, 0, 0, B * .4, 10, L * .07); shDirector(mb, 0, F + 10, L * .14, 3, u); shMast(mb, 0, F + 10, L * .17, 16, mt, 9, 3);
+    for (const sd of [-1, 1]) { shBoat(mb, sd * B * .18, F + 9, -L * .01, 10, F); shAA(mb, sd * B * .38, F, -L * .25, u); shAA(mb, sd * B * .4, F, L * .22, u); shAA(mb, sd * B * .3, F + 10, L * .1, u); }
+    mb.add(U.cyl, mt, 0, F + 1, L * .45, 0, 0, 0, .7, 2.5, .7); mb.between(new V3(0, F + 2.5, L * .45), new V3(B * .3, F + 12, L * .42), .35, mt);
+    return;
+  }
   if (C.type === 'cl') {
     // incrociatore: torre di plancia alta con direttori e radar, fumaioli, albero di poppa, gru e catapulte a poppa
     const zb = -L * .19;
@@ -190,7 +203,7 @@ function buildShipModel2(C) {
   for (const G of C.guns) for (const [x, y, z, arc, n] of G.mounts) {
     const S = SHELL[G.s], tg = new THREE.Group(), deckY = hg.userData.sheer((z + L / 2) / L);
     tg.position.set(x, Math.max(y, deckY + (S.cal >= 140 ? 2 : 1.2)), z); body.add(tg);
-    const sz = S.cal >= 300 ? 1 : S.cal >= 200 ? .9 : S.cal >= 140 ? .72 : .5, tm = new MB();
+    const sz = S.cal >= 300 ? S.cal / 356 : S.cal >= 200 ? .9 : S.cal >= 140 ? .72 : .5, tm = new MB();
     shTurret(tm, S, sz, pal.upper, C.nat, Math.abs(x) < C.B * .3 ? tg.position.y - deckY + .3 : 0);
     tg.add(groupMesh(tm.buildGroups(), true));
     const pv = new THREE.Group(); pv.position.set(0, S.cal >= 140 ? .4 * sz : S.cal >= 100 ? .6 : .2, S.cal >= 140 ? -2.8 * sz : S.cal >= 100 ? -2.2 : 0); tg.add(pv);
