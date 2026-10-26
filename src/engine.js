@@ -184,9 +184,9 @@ function updateDynRes(rawDt) {
 
 function buildSky() {
   skyMat = new THREE.ShaderMaterial({
-    uniforms: { uSunDir: { value: SUN_DIR }, uTime: { value: 0 } },
+    uniforms: { uSunDir: { value: SUN_DIR }, uTime: { value: 0 }, uCover: { value: 0 }, uGray: { value: 0 } },
     vertexShader: `varying vec3 vDir;void main(){vDir=position;vec4 p=projectionMatrix*modelViewMatrix*vec4(position,1.);gl_Position=p.xyww;}`,
-    fragmentShader: `uniform vec3 uSunDir;uniform float uTime;varying vec3 vDir;
+    fragmentShader: `uniform vec3 uSunDir;uniform float uTime,uCover,uGray;varying vec3 vDir;
     float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
     float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
     float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<6;i++){s+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return s;}
@@ -199,13 +199,14 @@ function buildSky() {
       if(y>0.){
         vec2 uv=d.xz/(y+.07)*1.1+vec2(uTime*.006,uTime*.003);
         float c=fbm(uv),c2=fbm(uv*.45+3.);
-        float cov=smoothstep(.36,.7,c*.7+c2*.4);
+        float cov=smoothstep(.36-uCover,.7-uCover*.6,c*.7+c2*.4);
         float sh=fbm(uv*1.8+4.+uSunDir.xz*.15);
         float lit=smoothstep(.3,.9,c-sh*.5+.4);
-        vec3 cc=mix(vec3(.42,.45,.48),vec3(.84,.85,.84),lit);
+        vec3 cc=mix(vec3(.42,.45,.48),vec3(.84,.85,.84),lit*(1.-uGray*.6));
         cc+=vec3(1.,.82,.55)*pow(sd,4.)*.4*lit;
         col=mix(col,cc,cov*smoothstep(0.,.12,y)*.96);
       }
+      col=mix(col,vec3(.5,.53,.55)*(1.-uGray*.35),uGray*.55);
       gl_FragColor=vec4(pow(col,vec3(2.2)),1.);
       #include <tonemapping_fragment>
       #include <encodings_fragment>

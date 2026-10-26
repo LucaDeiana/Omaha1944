@@ -45,7 +45,7 @@ const NCLS = {
   texas: { name: 'Corazzata USS Texas (classe New York)', nat: 'us', type: 'bb', L: 174, B: 29, D: 8.7, F: 8.5, vmax: 21, tau: 70, R: 560, rud: .2, hp: 11000, belt: 305, deck: 76, ends: 64, hull: 0x6a7176,
     guns: [{ s: 'us356', reload: 35, trav: .07, elev: .26, disp: .8, mounts: [[0, 11, -60, 'fore', 2], [0, 14, -47, 'fore', 2], [0, 11.5, 2, 'side', 2], [0, 14, 42, 'aft', 2], [0, 11, 55, 'aft', 2]] },
       { s: 'us127b', sec: true, reload: 6, trav: .3, elev: .35, disp: 1.6, mounts: [[-13.6, 6.5, -26, 'port', 1], [13.6, 6.5, -26, 'stbd', 1], [-13.6, 6.5, -14, 'port', 1], [13.6, 6.5, -14, 'stbd', 1], [-13.6, 6.5, 16, 'port', 1], [13.6, 6.5, 16, 'stbd', 1]] }] },
-  maine: { name: 'Super corazzata USS Maine', nat: 'us', type: 'bb', style: 'modern', L: 300, B: 40, D: 11, F: 12, vmax: 30, tau: 85, R: 750, rud: .16, hp: 24000, belt: 460, deck: 210, ends: 120, hull: 0x6a7176,
+  maine: { weather: 'sereno', name: 'Super corazzata USS Maine', nat: 'us', type: 'bb', style: 'modern', L: 300, B: 40, D: 11, F: 12, vmax: 30, tau: 85, R: 750, rud: .16, hp: 24000, belt: 460, deck: 210, ends: 120, hull: 0x6a7176,
     guns: [{ s: 'us600', reload: 55, trav: .05, elev: .7, disp: .85, mounts: [[0, 15, -95, 'fore', 4], [0, 21, -74, 'fore', 4], [0, 21, 70, 'aft', 4], [0, 15, 91, 'aft', 4]] },
       { s: 'us305', sec: true, reload: 20, trav: .12, elev: .6, disp: 1, mounts: [[-15, 19, -36, 'port', 2], [15, 19, -36, 'stbd', 2], [-16, 19, 0, 'port', 2], [16, 19, 0, 'stbd', 2], [-15, 19, 36, 'port', 2], [15, 19, 36, 'stbd', 2]] }] },
   satsuma: { name: 'Super corazzata Satsuma', nat: 'jp', type: 'bb', style: 'pagoda', L: 400, B: 56, D: 14, F: 15, vmax: 27, tau: 100, R: 950, rud: .14, hp: 60000, belt: 650, deck: 300, ends: 200, hull: 0x7a7e82,
@@ -106,7 +106,7 @@ const tableMax = T => T[T.length - 1].r;
 function penDeMarre(S, v) { return 1000 * (Math.pow(v, 1.43) * Math.pow(S.m, .71)) / (Math.pow(2400, 1.43) * Math.pow(S.cal / 100, 1.07)) / 10; }
 
 // ---------- mare ----------
-const WAVES = [[.82, .57, .55, 74], [-.34, .94, .32, 35], [.96, -.28, .16, 16]];
+const WAVES = [[.82, .57, .55, 74, .55], [-.34, .94, .32, 35, .32], [.96, -.28, .16, 16, .16]];   // dx, dz, ampiezza, lunghezza, ampiezza base
 function seaH(x, z, t) { let h = 0; for (const [dx, dz, A, L] of WAVES) { const k = TAU / L; h += A * Math.sin(k * (dx * x + dz * z) - Math.sqrt(9.81 * k) * t); } return WATER_Y + h; }
 function buildOcean() {
   const rs = [0]; let r = 0, st = 2.5; while (r < 26000) { r += st; st *= 1.045; rs.push(r); }
@@ -871,7 +871,7 @@ const NAVY_MIS = {
       for (let i = 0; i < 4; i++) new NavShip('cargo', 'A', -i * 500, 900 + (i % 2) * 350, -PI / 2, { route: [{ x: 30000, z: 900 }], spd: .9, name: 'Liberty ' + ['Ohio', 'Iowa', 'Maine', 'Utah'][i], tag: 'liberty' }); },
     tick(dt) { NV.escT -= dt; const w = NV.waveT; for (let i = 0; i < w.length; i++) if (w[i] > 0 && (w[i] -= dt) <= 0) { const mp = NV.me.pos; const sets = [[['sboot', 1], ['sboot', -1], ['sboot', 0]], [['z1934', 1], ['z1934', .5]], [['nurnberg', 0], ['sboot', 1], ['sboot', -1]]][i]; for (const [k, o] of sets) new NavShip(k, 'E', mp.x + 6000 + o * 900, mp.z - 11000 - Math.abs(o) * 600, PI * .85, { spd: .8 }); feed('Radar: navi nemiche in avvicinamento da nord!'); } },
     obj() { const lost = NV.ships.filter(s => s.tag === 'liberty' && s.sinking).length + (NV.libLost || 0); if (lost > 2) return [false, 'Convoglio perduto', true]; return [NV.escT <= 0, 'Scorta il convoglio — ' + Math.ceil(NV.escT) + ' s · trasporti persi ' + lost + '/2']; } },
-  line: { name: 'Battaglia di linea', ship: 'texas', brief: 'La Scharnhorst è uscita con due cacciatorpediniere. Affondala.',
+  line: { weather: 'burrasca', name: 'Battaglia di linea', ship: 'texas', brief: 'La Scharnhorst è uscita con due cacciatorpediniere. Affondala.',
     setup() { navyIslands(2); NV.me = new NavShip(navyPick('texas'), 'A', 0, 0, 0, { ai: false }); new NavShip('fletcher', 'A', -500, 700, 0, { name: 'USS Nelson' }); new NavShip('fletcher', 'A', 600, 900, 0, { name: 'USS Glennon' });
       new NavShip('scharnhorst', 'E', 4000, -19000, PI * .9, { spd: .8, tag: 'flag', name: 'Scharnhorst' }); new NavShip('z1934', 'E', 3000, -17500, PI * .9, { spd: .8 }); new NavShip('z1934', 'E', 5200, -18000, PI * .9, { spd: .8 }); },
     obj() { const s = NV.ships.find(s => s.tag === 'flag'); return [!s || s.sinking, s ? 'Affonda la Scharnhorst — ' + Math.round(s.pos.distanceTo(NV.me.pos) / 100) / 10 + ' km · scafo ' + Math.max(0, Math.round(s.hp / s.hpMax * 100)) + '%' : '']; } },
@@ -880,7 +880,7 @@ const NAVY_MIS = {
       new NavShip('scharnhorst', 'E', 5000, -26000, PI * .9, { spd: .8, tag: 'flag', name: 'Scharnhorst' }); new NavShip('nurnberg', 'E', 2500, -24000, PI * .9, { spd: .8 });
       for (const [x, z] of [[3000, -22000], [6500, -23000], [1000, -21500], [8000, -24500]]) new NavShip('z1934', 'E', x, z, PI * .9, { spd: .8 }); },
     obj() { const n = NV.ships.filter(s => s.team === 'E' && !s.sinking).length; return [n === 0, 'Affonda la squadra tedesca — restano ' + n]; } },
-  pearl: { name: 'Pearl Harbor — 7 dicembre 1941', ship: 'fletcher', brief: 'Domenica mattina, 7:55. Aerei giapponesi su Pearl Harbor! Posti di combattimento: difendi la flotta in rada.',
+  pearl: { weather: 'sereno', sun: [.85, .2, -.35], name: 'Pearl Harbor — 7 dicembre 1941', ship: 'fletcher', brief: 'Domenica mattina, 7:55. Aerei giapponesi su Pearl Harbor! Posti di combattimento: difendi la flotta in rada.',
     setup() {
       // rada: Ford Island al centro, colline di Oahu tutt'attorno con l'ingresso del canale a sud
       NV.islands.push({ x: 0, z: 0, r: 720, h: 5, flat: true });
@@ -931,6 +931,42 @@ function navyIslands(n) {
 }
 
 // ---------- scenario ----------
+// meteo navale: sereno, coperto o burrasca (onde più alte, pioggia, lampi); ora del giorno dal sole
+const NAVY_WX = {
+  sereno: { cover: -.12, gray: 0, fog: .009, waves: 1, sun: 1.05, fogc: [.68, .75, .8] },
+  coperto: { cover: .22, gray: .45, fog: .015, waves: 1.3, sun: .7, fogc: [.62, .66, .69] },
+  burrasca: { cover: .42, gray: .85, fog: .028, waves: 2.3, sun: .45, fogc: [.47, .5, .53], rain: true },
+};
+function applyNavyWeather(kind, sunDir) {
+  const W = NAVY_WX[kind] || NAVY_WX.coperto; NV.wx = kind; NV.wxW = W;
+  if (sunDir) SUN_DIR.set(...sunDir).normalize();
+  if (skyMat) { skyMat.uniforms.uCover.value = W.cover; skyMat.uniforms.uGray.value = W.gray; }
+  FOG_K = W.fog; FOG_COL.setRGB(...W.fogc); scene.fog.color.copy(FOG_COL); scene.fog.density = FOG_BASE * FOG_K;
+  if (sun) sun.intensity *= W.sun;
+  for (const w of WAVES) w[2] = w[4] * W.waves;
+  if (NV.ocean) NV.ocean.material.uniforms.uW.value.forEach((v, i) => v.z = WAVES[i][2]);
+  if (W.rain && typeof buildSnowfall === 'function') buildSnowfall(true);
+}
+// nuvole vere sopra il mare (gli aerei ci passano attraverso)
+function buildNavyClouds(n) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128; const g = cv.getContext('2d');
+  for (let i = 0; i < 16; i++) { const x = 64 + rnd(-32, 32), y = 64 + rnd(-18, 18), r = rnd(16, 40), gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); }
+  const tex = new THREE.CanvasTexture(cv), shade = 1 - (NV.wxW ? NV.wxW.gray * .62 : 0);
+  const mats = [new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: .92, color: new THREE.Color(shade, shade, shade * 1.01) }), new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: .85, color: new THREE.Color(shade * .82, shade * .84, shade * .87) })];
+  const grp = new THREE.Group();
+  for (let c = 0; c < n; c++) {
+    const cx = rnd(-26000, 26000), cz = rnd(-26000, 26000), cy = rnd(800, 1700);
+    for (let i = 0; i < 8; i++) { const big = 1 + (NV.wxW ? NV.wxW.gray : 0), sp = new THREE.Sprite(mats[i % 3 ? 0 : 1]), sc = rnd(320, 700) * big; sp.scale.set(sc * 1.8, sc * .8, 1); sp.position.set(cx + rnd(-420, 420) * big, cy + rnd(-40, 90) - (i % 3 ? 0 : 60), cz + rnd(-300, 300) * big); grp.add(sp); }
+  }
+  scene.add(grp); NV.clouds = grp;
+}
+function updateNavyWeather(dt) {
+  if (typeof ARD !== 'undefined' && ARD.snow) updateSnowfall(dt);
+  if (NV.wx !== 'burrasca') return;
+  // lampi e tuoni lontani
+  NV.ltT = (NV.ltT ?? rnd(6, 14)) - dt;
+  if (NV.ltT <= 0) { NV.ltT = rnd(8, 20); if (gradePass) gradePass.uniforms.uFlash.value = .55; after(rnd(1.5, 4), () => play('boom_far', null, { vol: .5, rate: .6 })); }
+}
 function buildNavyWorld() {
   WORLD.mortarPits = []; WORLD.aaSites = []; WORLD.tobruks = []; WORLD.bombard = 'off';
   buildWater(); scene.traverse(o => { if (o.material === waterMat) o.visible = false; });
@@ -941,13 +977,14 @@ function initNavy() {
   M.setup();
   P.mode = 'ship'; P.inBoat = false; P.boat = null; P.pos.copy(NV.me.pos);
   NV.cam.yaw = NV.me.yaw; NV.cam.pitch = -.02; camera.near = 2.5; camera.updateProjectionMatrix();
-  FOG_K = .012; scene.fog.density = FOG_BASE * FOG_K; FOG_COL.setRGB(.66, .72, .76); scene.fog.color.copy(FOG_COL);
+  applyNavyWeather(M.weather || (NV.misKey === 'free' ? pick(['sereno', 'coperto', 'coperto', 'burrasca']) : 'coperto'), M.sun);
+  buildNavyClouds(NV.wx === 'burrasca' ? 80 : NV.wx === 'coperto' ? 70 : 40);
   MISSION.stage = 0; MISSION.markers = [];
   GAME.endTitle = null; GAME.endText = null;
   say('Radio', M.brief);
 }
 function updateNavy(dt) {
-  const t = GAME.time;
+  const t = GAME.time; updateNavyWeather(dt);
   updateOcean(t);
   updateNavAir(dt);
   for (const s of NV.ships.slice()) { if ((s !== NV.me && s.ai) || (s === NV.me && P.mode !== 'ship' && !s.sinking)) { for (const tu of s.turrets) tu.reload = Math.max(0, tu.reload - dt); s.torpT = Math.max(0, s.torpT - dt); aiShip(s, dt, t); } s.update(dt, t); }
@@ -965,7 +1002,7 @@ function updateNavy(dt) {
   const M = NV.mis; if (M.tick) M.tick(dt);
   const [win, txt, lose] = M.obj();
   MISSION.objText = txt;
-  MISSION.markers = P.adsHeld || NV.zoomOn ? [] : NV.ships.filter(s => s !== NV.me && !s.sinking && s.pos.distanceTo(NV.me.pos) < 25000).map(s => ({ pos: s.pos.clone().add(new V3(0, s.C.F + 25, 0)), label: (s.team === 'A' ? '' : '') + s.C.name.split(' ').slice(-2).join(' ') + ' · ' + (s.pos.distanceTo(NV.me.pos) / 1000).toFixed(1) + ' km', friend: s.team === 'A' }));
+  MISSION.markers = P.adsHeld || NV.zoomOn ? [] : NV.ships.filter(s => s !== NV.me && !s.sinking && s.pos.distanceTo(NV.me.pos) < (s.team === NV.me.team ? 3000 : 25000)).map(s => ({ pos: s.pos.clone().add(new V3(0, s.C.F + 25, 0)), label: (s.name !== s.C.name ? s.name : s.C.name.replace(/^(Cacciatorpediniere|Incrociatore leggero|Corazzata|Super corazzata) /, '')) + ' · ' + (s.pos.distanceTo(NV.me.pos) / 1000).toFixed(1) + ' km', friend: s.team === NV.me.team }));
   if (!NV.over && win) { NV.over = true; banner('MISSIONE COMPIUTA', M.name); addScore(2000, 'Missione compiuta', '#9fe08a'); GAME.endTitle = 'VITTORIA NAVALE'; GAME.endText = M.name + ': obiettivo raggiunto.'; after(7, () => GAME.end(true)); }
   if (!NV.over && lose) { NV.over = true; banner('MISSIONE FALLITA', txt); GAME.endTitle = 'MISSIONE FALLITA'; GAME.endText = txt; after(5, () => GAME.end(false)); }
   updateNavyHud(dt);
