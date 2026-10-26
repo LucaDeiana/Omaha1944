@@ -4,9 +4,9 @@
 //  e aerosiluranti guidati dall'IA, contraerea delle navi, squadriglie
 //  chiamate dal giocatore (Y) e passaggio ai comandi di un aereo (P).
 // ============================================================
-const NAIR = { aaRamp: 1, bombs: [], strikeT: 0, aaT: 0, flyT: 0 };
+const NAIR = { aaRamp: 1, bombs: [], bul: [], strikeT: 0, aaT: 0, flyT: 0 };
 const NA_ROLE = { zero: 'fighter', p40: 'fighter', f4u: 'fighter', bf109: 'fighter', fw190: 'fighter', val: 'dive', sbd: 'dive', stuka: 'dive', kate: 'torpedo', tbf: 'torpedo', ju88: 'dive' };
-const _na1 = new V3(), _na2 = new V3(), _naUp = new V3(0, 1, 0);
+const _na1 = new V3(), _na2 = new V3(), _na3 = new V3(), _naUp = new V3(0, 1, 0);
 
 class NavPlane {
   constructor(type, team, pos, yaw, o = {}) {
@@ -98,15 +98,18 @@ class NavPlane {
     for (const p of PLANES) if (p.team !== this.team && p.alive && !p.crash) { const d = p.pos.distanceTo(this.pos); if (d < bd) { bd = d; best = p; } }
     this.fireT -= dt;
     if (best) {
-      const lead = best.pos.clone().addScaledVector(best.vel, bd / 800), want = lead.sub(this.pos).normalize(), cur = _na2.copy(this.vel).normalize();
+      if (this.seen !== best) { this.seen = best; this.tv = best.vel.clone(); }
+      this.tv.lerp(best.vel, Math.min(1, dt * 1.2));
+      const lead = best.pos.clone().addScaledVector(this.tv, bd / 820), want = lead.sub(this.pos).normalize(), cur = _na2.copy(this.vel).normalize();
       this.hold = false; this.cruise = best.pos.y;
       // stesse regole del giocatore: spara solo col muso puntato (cono di 3°) e sotto i 500 m;
       // il colpo va dove punta il muso più la dispersione della raffica, e colpisce solo se passa sull'aereo
       if (bd < 500 && cur.dot(want) > .9986 && this.fireT <= 0) {
         this.fireT = .12; const o = this.pos.clone().addScaledVector(cur, 6);
-        const shot = cur.clone().add(new V3(gauss() * .012, gauss() * .012, gauss() * .012)).normalize(), aimP = this.pos.clone().addScaledVector(shot, bd);
-        fxTracer(o, this.pos.clone().addScaledVector(shot, bd + 200), 3); sfxAirGun(o, this.type);
-        if (aimP.distanceTo(best.pos.clone().addScaledVector(best.vel, bd / 800)) < 5.5) best.damage(rnd(18, 40), false);
+        const shot = cur.clone().add(new V3(gauss() * .01, gauss() * .01, gauss() * .01)).normalize();
+        fxTracer(o, this.pos.clone().addScaledVector(shot, 900), 3); sfxAirGun(o, this.type);
+        // proiettile vero: vola a ~820 m/s (più la velocità dell'aereo) e colpisce solo chi si trova lì quando arriva
+        NAIR.bul.push({ p: o, v: shot.multiplyScalar(820).add(this.vel), life: 1.3, team: this.team });
       }
       return want;
     }
@@ -247,8 +250,23 @@ function updateNavMarkers() {
   }
   for (let i = n; i < _nmk.els.length; i++) _nmk.els[i].style.display = 'none';
 }
+function updateNavBullets(dt) {
+  const a = _na1, sg = _na3;
+  for (let i = NAIR.bul.length - 1; i >= 0; i--) {
+    const b = NAIR.bul[i]; b.life -= dt; sg.copy(b.v).multiplyScalar(dt); let hit = null;
+    for (const p of PLANES) {
+      if (p.team === b.team || p.crash || p.alive === false) continue;
+      // distanza minima fra il tratto percorso in questo passo e l'aereo
+      a.subVectors(p.pos, b.p); const L2 = sg.lengthSq(), k = clamp(a.dot(sg) / L2, 0, 1);
+      if (a.addScaledVector(sg, -k).lengthSq() < 4.5 * 4.5) { hit = p; break; }
+    }
+    b.p.add(sg);
+    if (hit) { hit.damage(rnd(9, 22), false); if (hit.player) { P.shake = Math.min(.6, P.shake + .06); play('imp_metal', null, { vol: .5, rate: 1 + R() * .3 }); } }
+    if (hit || b.life <= 0) NAIR.bul.splice(i, 1);
+  }
+}
 function updateNavAir(dt) {
-  updateNavMarkers();
+  updateNavMarkers(); updateNavBullets(dt);
   NAIR.strikeT = Math.max(0, NAIR.strikeT - dt);
   updateNavBombs(dt); updateNavAA(dt);
   // aereo del giocatore abbattuto o ammarato: si torna alla nave
