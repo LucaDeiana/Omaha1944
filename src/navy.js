@@ -117,21 +117,33 @@ function buildOcean() {
   const nt = TEX.water.normal; nt.wrapS = nt.wrapT = THREE.RepeatWrapping;
   const W = WAVES.map(w => new THREE.Vector4(w[0], w[1], w[2], w[3]));
   const m = new THREE.ShaderMaterial({
-    uniforms: { uT: { value: 0 }, uN: { value: nt }, uW: { value: W }, uSun: { value: new V3(.4, .6, -.6).normalize() }, uFog: { value: FOG_COL }, uFogD: { value: .0001 }, uSky: { value: new THREE.Color(0x8c99a2) }, uDeep: { value: new THREE.Color(0x0f1d23) } },
-    vertexShader: `uniform float uT; uniform vec4 uW[3]; varying vec3 vW; varying vec3 vN; varying float vF;
+    uniforms: { uZoom: { value: 1 }, uT: { value: 0 }, uN: { value: nt }, uW: { value: W }, uSun: { value: new V3(.4, .6, -.6).normalize() }, uFog: { value: FOG_COL }, uFogD: { value: .0001 }, uSky: { value: new THREE.Color(0x8c99a2) }, uDeep: { value: new THREE.Color(0x0f1d23) } },
+    vertexShader: `uniform float uT; uniform vec4 uW[3]; varying vec3 vW; varying vec3 vN; varying float vF; varying float vH;
       void main(){ vec4 w = modelMatrix * vec4(position,1.); float d = length(w.xz - cameraPosition.xz); float f = 1. - smoothstep(500., 2600., d); vF = f;
         float h = 0.; vec2 g = vec2(0.);
         for (int i=0;i<3;i++){ float k = 6.2831853/uW[i].w; float ph = k*dot(uW[i].xy, w.xz) - sqrt(9.81*k)*uT; h += uW[i].z*sin(ph); g += uW[i].z*k*cos(ph)*uW[i].xy; }
-        w.y += h*f; vN = normalize(vec3(-g.x*f, 1., -g.y*f)); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
-    fragmentShader: `uniform float uT, uFogD; uniform sampler2D uN; uniform vec3 uSun, uFog, uSky, uDeep; varying vec3 vW; varying vec3 vN; varying float vF;
+        w.y += h*f; vH = h; vN = normalize(vec3(-g.x*f, 1., -g.y*f)); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `uniform float uT, uFogD, uZoom; uniform sampler2D uN; uniform vec3 uSun, uFog, uSky, uDeep; varying vec3 vW; varying vec3 vN; varying float vF; varying float vH;
       void main(){ vec3 V = normalize(cameraPosition - vW); float dist = length(cameraPosition - vW);
-        vec2 a = texture2D(uN, vW.xz/38. + vec2(uT*.012, uT*.007)).xy*2.-1.; vec2 b = texture2D(uN, vW.xz/11. - vec2(uT*.02, -uT*.013)).xy*2.-1.;
-        float df = 1. - smoothstep(300., 4000., dist);
-        vec3 N = normalize(vN + vec3(a.x + b.x*.6, 0., a.y + b.y*.6) * (.25 + .35*df));
+        // il dettaglio dipende da quanto è grande un pixel (distanza diviso ingrandimento): col binocolo le increspature lontane restano
+        float pd = dist / uZoom, df = 1. - smoothstep(250., 3500., pd), dn = 1. - smoothstep(60., 600., pd);
+        vec2 a = texture2D(uN, vW.xz/38. + vec2(uT*.012, uT*.007)).xy*2.-1.;
+        vec2 b = texture2D(uN, vW.xz/11. - vec2(uT*.02, -uT*.013)).xy*2.-1.;
+        vec2 c3 = texture2D(uN, vW.xz/3.7 + vec2(-uT*.035, uT*.028)).xy*2.-1.;          // increspature fini, solo vicino o al binocolo
+        vec2 big = texture2D(uN, vW.xz/260. + vec2(uT*.002, -uT*.0015)).xy*2.-1.;       // onda lunga di fondo: rompe l'uniformità anche da lontano
+        vec3 N = normalize(vN + vec3(a.x + b.x*.6 + c3.x*.4*dn + big.x*.5, 0., a.y + b.y*.6 + c3.y*.4*dn + big.y*.5) * (.22 + .4*df));
         float fr = .02 + .98*pow(1. - max(dot(N, V), 0.), 5.);
         vec3 R = reflect(-V, N); vec3 sky = mix(uFog, uSky, clamp(R.y*2.5, 0., 1.));
-        vec3 c = mix(uDeep, sky, fr * .7);
-        c += vec3(1., .95, .85) * pow(max(dot(R, uSun), 0.), 420.) * 1.3 * (.3 + .7*df);
+        // colore dell'acqua che varia a chiazze (correnti, profondità) e si schiarisce sulle creste
+        float patchy = texture2D(uN, vW.xz/900.).x;
+        vec3 deep = mix(uDeep, uDeep * vec3(1.25, 1.45, 1.4), patchy * .8) + vec3(.02, .05, .05) * clamp(vH * .6, 0., 1.) * vF;
+        vec3 c = mix(deep, sky, fr * .7);
+        // riflesso del sole: lama stretta più un bagliore largo
+        float sd = max(dot(R, uSun), 0.);
+        c += vec3(1., .95, .85) * (pow(sd, 420.) * 1.6 + pow(sd, 40.) * .08) * (.35 + .65*df);
+        // creste di schiuma sparse dove le increspature si sommano
+        float fm = smoothstep(.62, .95, (a.x*.5+.5)*.55 + (b.y*.5+.5)*.45 + clamp(vH*.25, 0., .2)) * (.25 + .75*df);
+        c = mix(c, vec3(.82, .86, .88), fm * .55);
         float fh = mix(1., .32, smoothstep(8., 320., .5*(cameraPosition.y + vW.y))); float fd = uFogD*fh;
         c = mix(c, uFog, 1. - exp(-fd*fd*dist*dist));
         gl_FragColor = vec4(c, 1.);
@@ -144,7 +156,7 @@ function buildOcean() {
 function updateOcean(t) {
   const o = NV.ocean; if (!o) return;
   o.position.set(Math.round(camera.position.x / 8) * 8, WATER_Y, Math.round(camera.position.z / 8) * 8);
-  o.material.uniforms.uT.value = t; o.material.uniforms.uFogD.value = scene.fog.density;
+  o.material.uniforms.uT.value = t; o.material.uniforms.uFogD.value = scene.fog.density; o.material.uniforms.uZoom.value = Math.max(1, SETTINGS.fov / camera.fov);
   if (typeof sun !== 'undefined' && sun) o.material.uniforms.uSun.value.copy(sun.position).normalize();
 }
 
@@ -277,7 +289,7 @@ class NavShip {
     this.pose(t); this.stabilize();
     // scia: schiuma a prua e a poppa proporzionale alla velocità
     this.wake -= dt; const sp = Math.abs(this.spd);
-    if (this.wake <= 0 && sp > 2 && dist2Cam(this.pos) < 5000 * 5000) {
+    if (this.wake <= 0 && sp > 2 && dist2Cam(this.pos) < (NV.zoomOn || P.adsHeld ? 22000 : 6000) ** 2) {
       this.wake = C.type === 'pt' ? .05 : .09; const k = sp / (C.vmax * KN);
       const st = this.toWorld(0, 0, C.L * .48, _nvt), bw = this.toWorld(0, 0, -C.L * .47, _nvu), f = this.fwd;
       PS_WAKE.emit(st.x + rnd(-1, 1), WATER_Y + .2, st.z + rnd(-1, 1), -f.x * 2 + rnd(-1, 1), .05, -f.z * 2 + rnd(-1, 1), rnd(6, 10) * (C.L > 100 ? 1.6 : 1), C.B * .3, C.B * (1 + k), .55 * k + .1, .92, .95, .97, .3, 0);
@@ -317,6 +329,14 @@ class NavShip {
   }
   // ---------- tiro ----------
   turretWorldDir(tu) { return _nvd.set(-Math.sin(this.yaw + tu.rel), 0, -Math.cos(this.yaw + tu.rel)); }
+  arcEdge(tu, rel) {
+    const sg = Math.sign(rel) || 1, a = Math.abs(wrapA(rel));
+    if (tu.arc === 'fore') return sg * 2.58; if (tu.arc === 'aft') return sg * .57;
+    if (tu.arc === 'side') return sg * (a < 1.5 ? .52 : 2.63);
+    if (tu.arc === 'port') return rel > 0 ? (a < 1.5 ? .17 : 2.93) : (a < 1.5 ? .17 : 2.93);
+    if (tu.arc === 'stbd') return rel < 0 ? -(a < 1.5 ? .17 : 2.93) : -(a < 1.5 ? .17 : 2.93);
+    return rel;
+  }
   arcOK(tu, rel) {
     const a = Math.abs(wrapA(rel));
     if (tu.arc === 'fore') return a < 2.6; if (tu.arc === 'aft') return a > .55; if (tu.arc === 'side') return a > .5 && a < 2.65; if (tu.arc === 'port') return rel > .15 && rel < 2.95; if (tu.arc === 'stbd') return rel < -.15 && rel > -2.95; return true;
@@ -331,7 +351,8 @@ class NavShip {
       for (let it = 0; it < 3; it++) { const r = Math.hypot(tgt.x - gp.x, tgt.z - gp.z); sol = solveElev(tu.T, r); if (!sol) break; const fk = Math.pow(clamp(r / Math.max(1, sol.t * tu.S.v), .1, 1), 1.5); tgt.copy(P).addScaledVector(this.vel, -sol.t * fk); }
       const yawW = Math.atan2(-(tgt.x - gp.x), -(tgt.z - gp.z)), rel = wrapA(yawW - this.yaw);
       tu.inArc = this.arcOK(tu, rel); tu.sol = sol;
-      const goal = tu.inArc ? rel : tu.rel;
+      // fuori settore la torre si porta al limite più vicino al bersaglio: è pronta appena il bersaglio entra in arco
+      const goal = tu.inArc ? rel : this.arcEdge(tu, rel);
       const tv = tu.G.trav * (this === NV.me && NV.arcade ? 2.5 : 1);
       tu.rel = wrapA(tu.rel + clamp(wrapA(goal - tu.rel), -tv * dt, tv * dt));
       const eg = sol ? Math.min(sol.e, tu.G.elev) : tu.G.elev * .3; tu.el += clamp(eg - tu.el, -tv * 1.5 * dt, tv * 1.5 * dt);
@@ -440,19 +461,20 @@ function initShellFx() {
   base.setAttribute('iLW', new THREE.InstancedBufferAttribute(new Float32Array(N * 2), 2));
   base.setAttribute('iCol', new THREE.InstancedBufferAttribute(new Float32Array(N * 3), 3));
   const m = new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    vertexShader: `attribute vec3 iPos; attribute vec3 iDir; attribute vec2 iLW; attribute vec3 iCol; varying vec2 vUV; varying vec3 vC;
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: { uPix: { value: .002 } },
+    vertexShader: `attribute vec3 iPos; attribute vec3 iDir; attribute vec2 iLW; attribute vec3 iCol; varying vec2 vUV; varying vec3 vC; uniform float uPix;
       void main(){
         vec3 toCam = normalize(cameraPosition - iPos); vec3 side = normalize(cross(iDir, toCam));
-        float d = length(cameraPosition - iPos); float w = max(iLW.y, d * .0022);           // mai più sottile di ~1,3 px
-        float l = max(iLW.x, w * 6.);
+        float d = length(cameraPosition - iPos); float w = max(iLW.y, d * uPix * 1.6) * 3.;   // nucleo di almeno ~1,6 px più alone
+        float l = max(iLW.x, d * uPix * 14.);
         vec3 p = iPos - iDir * l * position.x + side * w * position.y;
         vUV = position.xy; vC = iCol; gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.); }`,
     fragmentShader: `varying vec2 vUV; varying vec3 vC;
       void main(){ float u = vUV.x, v = abs(vUV.y);
-        float body = pow(1. - u, 2.4) * pow(1. - v, 1.5);                 // coda che sfuma
-        float head = smoothstep(.12, 0., u) * pow(1. - v, 2.);            // testa incandescente
-        vec3 c = vC * body * 1.25 + vec3(1., .96, .88) * head * 2.2;
+        float core = smoothstep(.36, .0, v), halo = pow(1. - v, 2.) * .35;
+        float body = pow(1. - u, 2.2) * (core * 1.2 + halo);
+        float head = smoothstep(.14, 0., u) * (core * 2.4 + halo * 1.5);
+        vec3 c = vC * body * 1.3 + vec3(1., .96, .88) * head;
         gl_FragColor = vec4(c, 1.); }`,
   });
   NVG.mesh = new THREE.Mesh(base, m); NVG.mesh.frustumCulled = false; NVG.mesh.renderOrder = 6; scene.add(NVG.mesh);
@@ -468,13 +490,13 @@ function drawShells() {
     const hot = s.ammo === 'HE' ? [1, .5, .16] : [1, .66, .3];
     A.iCol.setXYZ(i, ...(big ? hot : c >= 20 ? [1, .55, .2] : [1, .35, .15]));
   }
-  NVG.mesh.geometry.instanceCount = n;
+  NVG.mesh.geometry.instanceCount = n; NVG.mesh.material.uniforms.uPix.value = 2 * Math.tan(camera.fov * PI / 360) / Math.max(300, innerHeight);
   A.iPos.needsUpdate = A.iDir.needsUpdate = A.iLW.needsUpdate = A.iCol.needsUpdate = true;
 }
 // colonne d'acqua alte secondo il calibro; le schegge dell'esplosivo colpiscono le navi vicinissime
 function splash(s, p) {
   const c = s.S.cal, hgt = c >= 1000 ? 260 : c >= 500 ? 110 : c >= 300 ? 60 : c >= 150 ? 30 : c >= 100 ? 18 : c >= 20 ? 4 : 1.5;
-  if (dist2Cam(p) < 9000 * 9000) {
+  if (dist2Cam(p) < (NV.zoomOn || P.adsHeld ? 30000 : 12000) ** 2) {
     const n = c >= 100 ? 14 : 3;
     for (let i = 0; i < n; i++) PS_SMOKE.emit(p.x + rnd(-1, 1) * c / 60, p.y, p.z + rnd(-1, 1) * c / 60, rnd(-1, 1) * c / 80, Math.sqrt(2 * 9.81 * hgt) * rnd(.6, 1), rnd(-1, 1) * c / 80, rnd(2.5, 4.5), c / 50 + .4, c / 12 + 1.5, .75, .93, .96, .98, .2, 9.81);
     if (c >= 100) PS_WAKE.emit(p.x, WATER_Y + .2, p.z, 0, 0, 0, 6, c / 30, c / 6, .6, .95, .97, .98, 0, 0);
@@ -872,7 +894,7 @@ function initNavy() {
   M.setup();
   P.mode = 'ship'; P.inBoat = false; P.boat = null; P.pos.copy(NV.me.pos);
   NV.cam.yaw = NV.me.yaw; NV.cam.pitch = -.02; camera.near = 2.5; camera.updateProjectionMatrix();
-  FOG_K = .02; scene.fog.density = FOG_BASE * FOG_K; FOG_COL.setRGB(.66, .72, .76); scene.fog.color.copy(FOG_COL);
+  FOG_K = .012; scene.fog.density = FOG_BASE * FOG_K; FOG_COL.setRGB(.66, .72, .76); scene.fog.color.copy(FOG_COL);
   MISSION.stage = 0; MISSION.markers = [];
   GAME.endTitle = null; GAME.endText = null;
   say('Radio', M.brief);

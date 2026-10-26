@@ -49,13 +49,16 @@ function shFunnel(mb, x, y, z, w, l, h, c, cap, rake = 0) {
   mb.add(U.cyl12, 0x1b1d1f, x, y + h + .55, z + Math.sin(rake) * h / 2, rake, 0, 0, w / 2 * .82, .4, l / 2 * .82);
 }
 // albero a palo con pennone e radar
+const _MT = [];
 function shMast(mb, x, y, z, h, c, yard = 6, radar = 0) {
+  _MT.push(new V3(x, y + h, z));
   mb.add(U.cyl, c, x, y + h / 2, z, 0, 0, 0, .28, h, .28);
   mb.add(U.cyl, c, x, y + h * .78, z, 0, 0, PI / 2, .1, yard, .1);
   if (radar) { mb.add(U.box, 0x2c3034, x, y + h + radar * .3, z, 0, 0, 0, radar, radar * .6, .2); mb.add(U.cyl, c, x, y + h + .2, z, 0, 0, 0, .12, .6, .12); }
 }
 // albero a tripode con coffa (corazzate americane)
 function shTripod(mb, x, y, z, h, c, top) {
+  _MT.push(new V3(x, y + h + 10, z));
   const t = new V3(x, y + h, z);
   mb.between(new V3(x, y, z - 2.2), t, .45, c); mb.between(new V3(x - 2.4, y, z + 1.6), t, .38, c); mb.between(new V3(x + 2.4, y, z + 1.6), t, .38, c);
   mb.add(U.cyl12, top, x, y + h + 1.2, z, 0, 0, 0, 2.8, 2.6, 2.8); mb.add(U.cyl12, top, x, y + h + 3.4, z, 0, 0, 0, 2, 1.8, 2);
@@ -65,7 +68,7 @@ function shTripod(mb, x, y, z, h, c, top) {
 function shDirector(mb, x, y, z, s, c) { mb.add(U.box, c, x, y + s * .5, z, 0, 0, 0, s * 1.6, s, s * 1.4); mb.add(U.cyl, 0x2a2e31, x, y + s * .6, z, 0, 0, PI / 2, s * .16, s * 3.2, s * .16); mb.add(U.box, 0x2c3034, x, y + s * 1.25, z, 0, 0, 0, s * 1.3, s * .5, s * .3); }
 // lancia di salvataggio sulle selle
 function shBoat(mb, x, y, z, l, base) {
-  mb.add(U.sph, 0xd9d4c4, x, y + .6, z, 0, 0, 0, l * .14, .6, l * .5); mb.add(U.box, 0x6a5a48, x, y + 1.05, z, 0, 0, 0, l * .2, .08, l * .82);
+  mb.add(U.sph, 0x8e918c, x, y + .7, z, 0, 0, 0, l * .11, .7, l * .5); mb.add(U.box, 0x6f7068, x, y + 1.15, z, 0, 0, 0, l * .17, .12, l * .78); mb.add(U.box, 0x8e918c, x, y + 1.25, z, 0, 0, 0, l * .04, .14, l * .7);
   for (const e of [-1, 1]) { mb.add(U.box, 0x3a3e40, x, y + .15, z + e * l * .3, 0, 0, 0, l * .26, .3, .25); if (base !== undefined && y - base > .4) mb.add(U.cyl, 0x4a4e52, x, (y + base) / 2, z + e * l * .3, 0, 0, 0, .12, y - base, .12); }
 }
 // impianto antiaereo: vasca con canne
@@ -220,11 +223,13 @@ function buildShipModel2(C) {
   const pal = SHIP_PAL[C.nat] || SHIP_PAL.x, g = new THREE.Group(), body = new THREE.Group(); g.add(body);
   const mats = [], own = m => { const c = m.clone(); mats.push(c); return c; };
   const hg = hullGeo2(C); body.add(new THREE.Mesh(hg, own(MAT.vcMetal || MAT.vc)));
-  const mb = new MB(); shipSuper(mb, C, hg.userData);
+  const mb = new MB(); _MT.length = 0; shipSuper(mb, C, hg.userData);
+  const extra = []; shipDetails(mb, C, hg.userData, extra);
   if (mb.parts.length) { const sg = groupMesh(mb.buildGroups(), true); const mm = new Map(); sg.traverse(o => { if (o.isMesh) { if (!mm.has(o.material)) mm.set(o.material, own(o.material)); o.material = mm.get(o.material); } }); body.add(sg); }
   // ringhiere lungo il bordo del ponte
   const rp = [], L = C.L;
   for (const sd of [-1, 1]) for (let k = 0; k < 40; k++) { const t0 = k / 40, t1 = (k + 1) / 40, y0 = hg.userData.sheer(t0) + .9, y1 = hg.userData.sheer(t1) + .9; rp.push(sd * hg.userData.hw(t0) * .98, y0, hg.userData.zAt(t0, y0), sd * hg.userData.hw(t1) * .98, y1, hg.userData.zAt(t1, y1)); }
+  rp.push(...extra);
   const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(rp, 3));
   body.add(new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color: new THREE.Color(pal.metal).convertSRGBToLinear(), transparent: true, opacity: .6 })));
   const turrets = [];
@@ -247,4 +252,51 @@ function buildShipModel2(C) {
     turrets.push({ sec: !!G.sec, G, S, key: G.s, g: tg, pv, muzzles, arc, x, y: tg.position.y, z, rel: arc === 'aft' ? PI : arc === 'port' ? PI / 2 : arc === 'stbd' ? -PI / 2 : 0, el: 0, reload: rnd(0, G.reload), ok: true, fixT: 0, T: firingTable(G.s, G.elev) });
   }
   return { g, body, turrets, hd: hg.userData, mats };
+}
+
+// ---------- dettagli fini: oblò, corsi di lamiera, attrezzature di coperta, finestre e ringhiere delle sovrastrutture,
+// zattere, mitragliere, proiettori e sartiame (le linee finiscono nello stesso oggetto delle ringhiere) ----------
+function shipDetails(mb, C, hd, lines) {
+  const pal = SHIP_PAL[C.nat] || SHIP_PAL.x, L = C.L, B = C.B, u = pal.upper, dk = pal.dark, mt = pal.metal, pt = C.type === 'pt';
+  const sideX = (t, y) => hd.hw(t) * (t < .3 && y > C.F * .45 ? 1 + .16 * (1 - t / .3) * (y - C.F * .45) / (C.F * .55) : 1);
+  const step = Math.max(2.2, L / 70);
+  // file di oblò e corso di lamiera più scuro lungo lo scafo
+  if (!pt) for (const sd of [-1, 1]) {
+    for (let z = -L * .42; z < L * .44; z += step) {
+      const t = (z + L / 2) / L, yp = C.F * .62; if (C.type !== 'cargo' && Math.abs(z) < L * .25 && (C.type === 'bb' || C.type === 'cl')) continue;   // niente oblò sulla cintura corazzata
+      mb.add(U.box, 0x101214, sd * (sideX(t, yp) + .02), yp, z, 0, 0, 0, .08, .45, .45);
+      if (L > 150 && Math.abs(z) > L * .3) mb.add(U.box, 0x101214, sd * (sideX(t, yp - 2) + .02), yp - 2, z + step / 2, 0, 0, 0, .08, .4, .4);
+    }
+    for (let k = 0; k < 2; k++) { const y = C.F * (.3 + k * .32); for (let z = -L * .4; z < L * .45; z += L / 12) { const t = (z + L / 2) / L; mb.add(U.box, 0x2c3238, sd * (sideX(t, y) + .015), y, z + L / 24, 0, 0, 0, .04, .12, L / 12 * .96); } }
+  }
+  const dY = z => hd.sheer((z + L / 2) / L);
+  // bitte, prese d'aria a fungo e boccaporti in coperta; frangionde e verricello a prua
+  for (let z = -L * .4; z < L * .45; z += Math.max(6, L / 18)) for (const sd of [-1, 1]) { const t = (z + L / 2) / L, x = sd * (hd.hw(t) - (pt ? .4 : 1.2)); mb.add(U.cyl, 0x2a2c2e, x, dY(z) + .35, z, 0, 0, 0, .18, .7, .18); mb.add(U.cyl, 0x2a2c2e, x, dY(z) + .35, z + .8, 0, 0, 0, .18, .7, .18); }
+  for (let i = 0; i < Math.round(L / 20); i++) { const z = -L * .35 + i * L * .7 / Math.max(1, Math.round(L / 20) - 1), x = ((i * 37) % 7 - 3) / 3 * B * .3, y = dY(z); mb.add(U.cyl, u, x, y + .7, z, 0, 0, 0, .3, 1.4, .3); mb.add(U.sph, u, x, y + 1.5, z, 0, 0, 0, .55, .35, .55); }
+  if (!pt) {
+    for (const z of [-L * .3, L * .32, L * .38]) mb.add(U.box, 0x34383c, 0, dY(z) + .12, z, 0, 0, 0, B * .2, .25, B * .14);
+    const zb = -L * .36, w = hd.hw(.14) * .9; for (const sd of [-1, 1]) mb.add(U.box, u, sd * w * .5, dY(zb) + .6, zb, 0, sd * .5, 0, w * 1.1, 1.2, .25);   // frangionde a V
+    mb.add(U.cyl12, 0x2a2c2e, 0, dY(-L * .41) + .4, -L * .41, 0, 0, 0, .9, .8, .9);   // verricello dell'ancora
+  }
+  // sovrastrutture: per ogni blocco del colore delle sovrastrutture, finestre in fila, ringhiera sul tetto, zattere sui fianchi
+  const _p = new V3(), _q = new THREE.Quaternion(), _s = new V3(), blocks = [];
+  for (const P of mb.parts) if (P.g === U.box && P.c && (P.c.getHex ? P.c.getHex() : 0) === new THREE.Color(u).convertSRGBToLinear().getHex()) { P.m.decompose(_p, _q, _s); if (_s.x > 2.5 && _s.y > 1.6 && _s.z > 2.5 && Math.abs(_q.y) < .01) blocks.push([_p.x, _p.y, _p.z, _s.x, _s.y, _s.z]); }
+  if (!blocks.length) for (const P of mb.parts) if (P.g === U.box) { P.m.decompose(_p, _q, _s); if (_s.x > 2.5 && _s.y > 1.6 && _s.z > 2.5 && Math.abs(_q.y) < .01 && _p.y > C.F) blocks.push([_p.x, _p.y, _p.z, _s.x, _s.y, _s.z]); }
+  for (const [x, y, z, sx, sy, sz] of blocks.slice(0, 40)) {
+    const top = y + sy / 2, wy = top - Math.min(1.1, sy * .3), nw = Math.max(1, Math.floor(sz / 2.4));
+    for (const sd of [-1, 1]) for (let i = 0; i < nw; i++) mb.add(U.box, 0x1a2430, x + sd * (sx / 2 + .02), wy, z - sz / 2 + (i + .5) * sz / nw, 0, 0, 0, .06, .55, Math.min(1.2, sz / nw * .55));
+    const nf = Math.max(1, Math.floor(sx / 2.4)); for (let i = 0; i < nf; i++) mb.add(U.box, 0x1a2430, x - sx / 2 + (i + .5) * sx / nf, wy, z - sz / 2 - .02, 0, 0, 0, Math.min(1.2, sx / nf * .55), .55, .06);
+    // ringhiera sul bordo del tetto
+    const ry = top + .9, a = [[x - sx / 2, z - sz / 2], [x + sx / 2, z - sz / 2], [x + sx / 2, z + sz / 2], [x - sx / 2, z + sz / 2]];
+    for (let i = 0; i < 4; i++) { const p0 = a[i], p1 = a[(i + 1) % 4]; lines.push(p0[0], ry, p0[1], p1[0], ry, p1[1]); }
+    if (sz > 6 && sy > 2.5 && !pt) for (const sd of [-1, 1]) mb.add(U.box, 0x8d8a76, x + sd * (sx / 2 + .35), y - sy * .1, z + sz * .2, 0, 0, 0, .6, 1, Math.min(4, sz * .4));   // zattere
+  }
+  // mitragliere da 20 mm lungo i bordi e proiettori
+  const n20 = C.type === 'bb' ? 10 : C.type === 'cl' ? 7 : C.type === 'dd' ? 3 : 0;
+  for (let i = 0; i < n20; i++) for (const sd of [-1, 1]) { const z = -L * .28 + i * L * .56 / Math.max(1, n20 - 1), t = (z + L / 2) / L, x = sd * (hd.hw(t) - 1.6), y = dY(z); mb.add(U.cyl12, u, x, y + .5, z, 0, 0, 0, .5, 1, .5); mb.add(U.cyl, 0x222426, x, y + 1.3, z - .5, PI / 2 - .6, 0, 0, .05, 1.6, .05); mb.add(U.box, u, x, y + 1.1, z - .1, 0, 0, 0, .7, .5, .06); }
+  if (!pt && C.type !== 'cargo') for (const sd of [-1, 1]) { const z = -L * .1, y = dY(z) + (C.type === 'bb' ? 14 : 9); mb.add(U.cyl12, 0x3a3e42, sd * B * .2, y, z, PI / 2, 0, 0, .7, .9, .7); mb.add(U.cyl12, 0xd8dccf, sd * B * .2, y, z - .46, PI / 2, 0, 0, .55, .05, .55); }
+  // sartiame: dalle cime degli alberi verso prua, poppa e fra gli alberi
+  const bow = new V3(0, dY(-L * .48) + 1, -L * .48), stern = new V3(0, dY(L * .48) + 1, L * .48);
+  const tops = _MT.slice().sort((a, b) => a.z - b.z);
+  if (tops.length) { const f0 = tops[0], f1 = tops[tops.length - 1]; lines.push(bow.x, bow.y, bow.z, f0.x, f0.y, f0.z, f1.x, f1.y, f1.z, stern.x, stern.y, stern.z); for (let i = 0; i < tops.length - 1; i++) lines.push(tops[i].x, tops[i].y, tops[i].z, tops[i + 1].x, tops[i + 1].y, tops[i + 1].z); for (const T of tops) for (const sd of [-1, 1]) { const zz = T.z + 4, t = (zz + L / 2) / L; lines.push(T.x, T.y - 1, T.z, sd * hd.hw(t), dY(zz) + .5, zz); } }
 }
