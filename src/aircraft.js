@@ -265,58 +265,7 @@ function updateAircraft(dt) {
 // ============================================================
 //  Modalità pilota: P-47 in prima persona
 // ============================================================
-function buildCockpit() {
-  // interno della cabina in coordinate dell'aereo (il modello esterno resta visibile)
-  const g = new THREE.Group(), mb = new MB(); mb.mat = 'paint';
-  const dk = 0x2c3122, gr = 0x3e4232;
-  for (const sx of [-1, 1]) { mb.add(U.box, dk, sx * .4, .45, -.65, 0, 0, 0, .03, .8, 1.6); mb.add(U.box, gr, sx * .37, .62, -.6, 0, 0, 0, .08, .08, 1.1); mb.add(U.box, 0x222222, sx * .37, .7, -.5, 0, 0, 0, .05, .04, .5); mb.add(U.box, 0x2a2c26, sx * .4, .86, -.65, 0, 0, 0, .06, .04, 1.6); }
-  mb.add(U.box, dk, 0, .05, -.65, 0, 0, 0, .8, .04, 1.6);
-  mb.add(U.box, 0x2a2c26, 0, .8, -1.4, -.35, 0, 0, .8, .05, .18);
-  mb.add(U.box, dk, 0, .38, -1.46, 0, 0, 0, .8, .8, .05); mb.add(U.box, dk, 0, .3, .2, 0, 0, 0, .8, .6, .05);
-  mb.add(cylG2(.025, .03, .55, 8), 0x333333, 0, .08, -.62, -.25, 0, 0); mb.add(U.box, 0x222222, 0, .37, -.68, 0, 0, 0, .06, .1, .05);
-  mb.add(U.box, 0x333333, -.4, .38, -.75, .3, 0, 0, .04, .2, .04); mb.add(U.sph, 0xaa2222, -.4, .48, -.78, 0, 0, 0, .025, .025, .025);
-  mb.add(U.box, 0x6a5a3a, 0, .22, -.15, 0, 0, 0, .55, .08, .5); mb.add(U.box, 0x6a5a3a, 0, .55, .12, -.15, 0, 0, .55, .7, .08);
-  mb.add(U.box, 0x2a2c26, 0, .78, -1.24, 0, 0, 0, .12, .1, .14);
-  g.add(groupMesh(mb.buildGroups(), false));
-  for (const m of g.children) m.traverse(o => { if (o.isMesh) o.material = o.material.clone(), o.material.side = THREE.DoubleSide; });
-  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 192;
-  const tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding;
-  const panel = new THREE.Mesh(new THREE.PlaneGeometry(.84, .315), new THREE.MeshStandardMaterial({ map: tex, roughness: .7 }));
-  panel.position.set(0, .58, -1.4); panel.rotation.x = -.18; g.add(panel);
-  const sc = document.createElement('canvas'); sc.width = sc.height = 128; const sg = sc.getContext('2d');
-  sg.strokeStyle = 'rgba(255,170,70,1)'; sg.lineWidth = 3; sg.beginPath(); sg.arc(64, 64, 50, 0, TAU); sg.stroke();
-  sg.beginPath(); sg.moveTo(64, 20); sg.lineTo(64, 52); sg.moveTo(64, 76); sg.lineTo(64, 108); sg.moveTo(20, 64); sg.lineTo(52, 64); sg.moveTo(76, 64); sg.lineTo(108, 64); sg.stroke();
-  sg.fillStyle = 'rgba(255,170,70,1)'; sg.beginPath(); sg.arc(64, 64, 3, 0, TAU); sg.fill();
-  const sight = new THREE.Mesh(new THREE.PlaneGeometry(.14, .14), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, color: new THREE.Color(2.5, 1.6, .7) }));
-  sight.position.set(0, 1.0, -1.22); g.add(sight);
-  const glass = new THREE.Mesh(new THREE.PlaneGeometry(.16, .13), new THREE.MeshStandardMaterial({ color: 0x334455, transparent: true, opacity: .15, roughness: .05, metalness: .5 }));
-  glass.position.set(0, 1.0, -1.23); g.add(glass);
-  g.traverse(o => { if (o.isMesh) o.frustumCulled = false; });
-  PL.cockpit = g; PL.gctx = cv.getContext('2d'); PL.gtex = tex;
-}
-function drawGauges() {
-  const g = PL.gctx, me = PL.me; if (!g || !me) return;
-  g.fillStyle = '#1c1d1a'; g.fillRect(0, 0, 512, 192);
-  const gauge = (x, y, r, v, max, label, unit) => {
-    g.fillStyle = '#0c0c0c'; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); g.strokeStyle = '#555'; g.lineWidth = 3; g.stroke();
-    g.strokeStyle = '#ddd'; g.lineWidth = 1.5;
-    for (let k = 0; k <= 10; k++) { const a = -PI * 1.25 + k / 10 * PI * 1.5; g.beginPath(); g.moveTo(x + Math.cos(a) * r * .8, y + Math.sin(a) * r * .8); g.lineTo(x + Math.cos(a) * r * .95, y + Math.sin(a) * r * .95); g.stroke(); }
-    const a = -PI * 1.25 + clamp(v / max, 0, 1) * PI * 1.5;
-    g.strokeStyle = '#f2e6c0'; g.lineWidth = 3; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * r * .8, y + Math.sin(a) * r * .8); g.stroke();
-    g.fillStyle = '#ddd'; g.font = '13px monospace'; g.textAlign = 'center'; g.fillText(label, x, y + r * .45); g.fillText(Math.round(v) + unit, x, y + r * .7);
-  };
-  const spd = me.vel.length() * 3.6, alt = me.pos.y;
-  const jetM = PL.spec && PL.spec.mach;
-  gauge(70, 96, 62, spd, jetM ? 2800 : 800, jetM ? 'MACH ' + (PL.mach || 0).toFixed(2) : 'VELOCITÀ', ' km/h'); gauge(200, 96, 62, alt, jetM ? 15000 : 1500, jetM ? 'QUOTA · ' + (PL.G || 1).toFixed(1) + ' G' : 'QUOTA', ' m'); gauge(330, 96, 52, PL.throttle * 100, 100, 'MANETTA', '%');
-  // orizzonte artificiale
-  const f = _a1.set(0, 0, -1).applyQuaternion(me.q), r = _a2.set(1, 0, 0).applyQuaternion(me.q);
-  const pitch = Math.asin(clamp(f.y, -1, 1)), roll = Math.atan2(-r.y, _a3.set(0, 1, 0).applyQuaternion(me.q).y);
-  g.save(); g.beginPath(); g.arc(445, 96, 55, 0, TAU); g.clip(); g.translate(445, 96); g.rotate(roll);
-  g.fillStyle = '#5a7fa0'; g.fillRect(-80, -120 + pitch * 120, 160, 120); g.fillStyle = '#5a4630'; g.fillRect(-80, pitch * 120, 160, 120);
-  g.strokeStyle = '#fff'; g.beginPath(); g.moveTo(-60, pitch * 120); g.lineTo(60, pitch * 120); g.stroke(); g.restore();
-  g.strokeStyle = '#f0c040'; g.lineWidth = 3; g.beginPath(); g.moveTo(415, 96); g.lineTo(475, 96); g.stroke();
-  PL.gtex.needsUpdate = true;
-}
+// la cabina in prima persona e gli strumenti sono in cockpit.js
 // colpo sul P-47: blindatura, poi danno a un componente scelto a caso con effetti in volo
 const PART_NAME = { eng: 'Motore', wl: 'Ala sinistra', wr: 'Ala destra', tail: 'Impennaggi' };
 function playerPlaneHit(me, a, byPlayer) {
@@ -456,7 +405,6 @@ function carrierRoll(me, dt, thrust, m) {
 }
 function enterPlane(o = {}) {
   if (!PGEO.ready) return;
-  if (!PL.cockpit) buildCockpit();
   const jetT = PLANE_SPECS[PLAYER_PLANES.includes(SETTINGS.plane) ? SETTINGS.plane : 'p47'].jet;
   const deck = !o.pos && SCEN === 'air' && PL.spawnCarrier !== false && !(jetT && CARRIER.type !== 'field');
   const sp = o.pos ? { pos: o.pos, vel: o.vel } : deck ? { pos: new V3(CARRIER.x, CARRIER.deckY + 2.3, CARRIER.z + CARRIER.len / 2 - 36), vel: new V3(0, 0, -.01) } : SCEN === 'air' && MISSION.stage >= 0 ? airSpawn() : { pos: new V3(rnd(-80, 40), 380, 1100), vel: new V3(0, -5, -120) };
@@ -468,6 +416,7 @@ function enterPlane(o = {}) {
   if (deck) { me.q.setFromEuler(new THREE.Euler(.19, 0, 0, 'YXZ')); me.vel.set(0, 0, 0); }
   if (o.q) me.q.copy(o.q);
   PL.me = me; PL.throttle = .85; PL.stickX = PL.stickY = PL.rudder = 0; PL.bombs = PL.spec.bombs; PL.rearm = 0; PL.av = new V3();
+  if (!PL.cockpit || PL.cockpitType !== PL.type) { if (PL.cockpit && PL.cockpit.parent) PL.cockpit.parent.remove(PL.cockpit); buildCockpit(PL.type); }
   me.g.add(PL.cockpit); PL.cockpit.visible = true; if (me.g.userData.pilot) me.g.userData.pilot.visible = false;
   P.mode = 'plane'; P.dead = false;
   scene.fog.density = SCEN === 'sea' ? FOG_BASE * FOG_K : FOG_BASE * .3;   // in mare la visibilità è quella del meteo (decine di km)
@@ -667,11 +616,11 @@ function updatePlane(dt) {
   }
   camera.rotateX(rnd(-shake, shake) + Math.sin(GAME.time * 19) * hitS); camera.rotateY(rnd(-shake, shake) + Math.sin(GAME.time * 15 + 1.3) * hitS * .7);
   planeReticle(me); planeDamageHud(me);
-  const fov = (PL.ext ? 70 : 88) * (P.adsHeld ? .45 : 1); if (Math.abs(camera.fov - fov) > .05) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 9)); camera.updateProjectionMatrix(); }
+  const fa = SETTINGS.fovAir || 88, fov = (PL.ext ? Math.max(55, fa - 18) : fa) * (P.adsHeld ? .45 : 1); if (Math.abs(camera.fov - fov) > .05) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 9)); camera.updateProjectionMatrix(); }
   if (PL.eng !== me.eng) PL.eng = me.eng;
   me.eng && me.eng.set(.75 * (.4 + PL.throttle * .6), 0, .75 + PL.throttle * .5);
   P.supp = Math.max(P.supp, clamp((PL.G - 5) / 3, 0, .9));
-  PL.gT -= dt; if (PL.gT <= 0) { PL.gT = .15; drawGauges(); }
+  PL.gT -= dt; if (PL.gT <= 0) { PL.gT = .07; drawGauges(); } updateCockpit(dt);
   P.pos.copy(me.pos);
 }
 const _vbA = new V3(), _vbB = new V3();

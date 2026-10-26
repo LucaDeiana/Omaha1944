@@ -207,7 +207,10 @@ function buildSpecPlane(type) {
   };
   // fusoliera
   const fst = specFuselage(sp);
-  mb.addG(fuselageGeo(fst, 24, 2.2, p => paint(p, false)));
+  // apertura della cabina nel dorso (da fuori la copre il tettuccio; da dentro non si vede più la pelle della fusoliera)
+  const cnO = sp.canopy, eyeO = sp.eye || [0, 1.12, -.5], panZ = eyeO[2] + clamp(cnO ? cnO.z0 - eyeO[2] + .15 : -.8, -1.05, -.62) + .06,
+    hole = cnO ? (x, y, z) => Math.abs(x) < cnO.w * .45 && y > cnO.y - .22 && z > Math.max(panZ - .06, cnO.z0 - .32) && z < cnO.z1 - .02 : null;
+  mb.addG(fuselageGeo(fst, 24, 2.2, p => paint(p, false), hole));
   // ala
   const w = sp.wing, span = [];
   for (let x = -half; x <= half + .01; x += half / 14) span.push(x);

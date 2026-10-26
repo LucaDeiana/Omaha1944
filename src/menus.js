@@ -125,7 +125,7 @@
     const P = k => s.querySelector(`.mxPane[data-p="${k}"]`), lab = id => $(id) && $(id).closest('label');
     for (const id of ['optQuality', 'optDyn', 'optFps', 'optGore']) { const l = lab(id); if (l) P('g').appendChild(l); }
     for (const id of ['optVol', 'optVoices']) { const l = lab(id); if (l) P('a').appendChild(l); }
-    for (const id of ['optSens', 'optFov']) { const l = lab(id); if (l) P('c').appendChild(l); }
+    for (const id of ['optSens', 'optFov', 'optFovAir']) { const l = lab(id); if (l) P('c').appendChild(l); }
     const keys = document.querySelector('#menu .keys'); if (keys) P('k').appendChild(keys);
     for (const c of document.querySelectorAll('#menu .opts > .checks:not(.mp)')) if (!c.children.length) c.remove();
     s.querySelectorAll('.mxTab').forEach(t => t.onclick = () => { s.querySelectorAll('.mxTab').forEach(x => x.classList.toggle('on', x === t)); s.querySelectorAll('.mxPane').forEach(x => x.classList.toggle('on', x.dataset.p === t.dataset.p)); });

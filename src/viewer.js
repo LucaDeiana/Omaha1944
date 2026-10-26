@@ -23,6 +23,12 @@
   const planes = ['p47', 'fw190', 'b26'].concat(Object.keys(PLANE_SPECS).filter(k => !PLANE_SPECS[k].builtin));
   const pname = t => (PLANE_SPECS[t] && PLANE_SPECS[t].name) || { p47: 'P-47 Thunderbolt', fw190: 'Fw 190', b26: 'B-26 Marauder' }[t] || t;
   for (const t of [...new Set(planes)]) add('Aerei', pname(t), 'plane', () => makePlaneModel(t));
+  // cabine: modello dell'aereo con la cabina, visti dal posto del pilota; strumenti animati con un volo simulato
+  for (const t of [...new Set(planes)].filter(t => PLANE_SPECS[t])) add('Cabine', pname(t), 'cockpit', () => {
+    const g = makePlaneModel(t); PL.type = t; PL.cockpit = null; const ck = buildCockpit(t); g.add(ck);
+    if (g.userData.glass) g.userData.glass.visible = false; if (g.userData.pilot) g.userData.pilot.visible = false;
+    PL.me = { vel: new V3(0, 3, -120), pos: new V3(0, 900, 0), q: new THREE.Quaternion(), parts: { eng: 1, wl: 1, wr: 1, tail: 1 } }; PL.throttle = .8; PL.G = 1.2; PL.gearK = 0;
+    g.userData.eye = (PLANE_SPECS[t].eye || [0, 1.12, -.5]); return g; });
   add('Mezzi', 'Panzer IV', 'veh', () => { if (!TANKS.hull) buildPanzerGeo(); const g = groupMesh(TANKS.hull), tg = groupMesh(TANKS.tur), gg = groupMesh(TANKS.gun); tg.position.y = 1.67; gg.position.set(0, .48, -1.4); tg.add(gg); g.add(tg); return g; });
   add('Mezzi', 'M4 Sherman', 'veh', () => { const mb = new MB(); addSherman(mb, 0, 0, 0, 0, false); return groupMesh(mb.buildGroups()); });
   add('Mezzi', 'Mezzo da sbarco LCVP (Higgins)', 'ship', () => { if (!LCVP_G) buildBoatGeos(); const g = groupMesh(LCVP_G); if (RAMP_G) g.add(groupMesh(RAMP_G)); return g; });
@@ -63,6 +69,9 @@
 
   // ---------- visuali ----------
   const view = v => {
+    if (cur && cur.kind === 'cockpit' && curObj) { const e = curObj.userData.eye, d = { side: [1, -.2, 0], front: [0, -.15, -1], back: [0, -.3, -1], top: [0, -1, -.3], iso: [-.35, -.2, -1] }[v] || [0, -.15, -1];
+      camera.position.set(e[0], e[1], e[2] + .001); ctl.target.set(e[0] + d[0] * .3, e[1] + d[1] * .3, e[2] + d[2] * .3); camera.fov = SETTINGS.fovAir || 88; camera.updateProjectionMatrix(); ctl.update(); return; }
+    if (camera.fov !== 45) { camera.fov = 45; camera.updateProjectionMatrix(); }
     const m = Math.max(size.x, size.y, size.z), r = m * 1.3 + (m < 4 ? .1 : 1), c = center;
     const P = { side: [r, size.y * .15, 0], front: [0, size.y * .3, -r], back: [0, size.y * .3, r], top: [0, r, .001], iso: [r * .65, r * .45, -r * .6] }[v];
     camera.position.set(c.x + P[0], c.y + P[1], c.z + P[2]); ctl.target.copy(c); ctl.update();
@@ -149,6 +158,7 @@
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
   (function loop() {
     requestAnimationFrame(loop); ctl.update();
+    if (cur && cur.kind === 'cockpit' && PL.me) { const t = performance.now() / 1000; PL.me.q.setFromEuler(new THREE.Euler(Math.sin(t * .3) * .12, Math.sin(t * .1) * 1.5, Math.sin(t * .4) * .35, 'YXZ')); PL.me.vel.set(0, Math.sin(t * .3) * 15, -130 - Math.sin(t * .2) * 30); PL.me.pos.y = 900 + Math.sin(t * .05) * 600; PL.throttle = .6 + Math.sin(t * .25) * .3; PL.stickX = Math.sin(t * .4) * .5; PL.stickY = Math.sin(t * .3) * .4; PL.rudder = Math.sin(t * .2) * .3; PL.G = 1 + Math.abs(Math.sin(t * .3)) * 2; if (!window.GAME) window.GAME = { time: t }; else GAME.time = t; if (!(PL._vt > t)) { PL._vt = t + .07; drawGauges(); } PL.cockpit.visible = true; updateCockpit(.016); }
     for (const p of pins) { _v.copy(p.p).project(camera); const vis = _v.z < 1; p.el.style.display = vis ? '' : 'none'; p.el.style.left = (_v.x + 1) / 2 * innerWidth + 'px'; p.el.style.top = (1 - _v.y) / 2 * innerHeight + 'px'; }
     renderer.render(scene, camera);
   })();

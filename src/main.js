@@ -41,13 +41,13 @@ function bindSettings() {
   const ps = $('optPlane'); ps.innerHTML = '<option value="mission">Aereo della missione</option>' + PLAYER_PLANES.map(k => { const s = PLANE_SPECS[k], g = s.guns; return `<option value="${k}">${s.name} — ${g.pos.length}× ${g.cal} mm${g.he ? ' esplosivi' : ''}${s.guns2 ? ' + ' + s.guns2.pos.length + '× ' + s.guns2.cal + ' mm' : ''}</option>`; }).join(''); ps.value = SETTINGS.plane || 'p47';
   const mapVis = () => { $('navL').style.display = $('optMap').value === 'sea' ? '' : 'none'; const a = $('optMap').value !== 'omaha'; $('optSide').parentNode.style.display = a ? 'none' : ''; $('tunModeL').style.display = $('optMap').value === 'tun' ? '' : 'none'; $('planeL').style.display = ''; $('airMapL').style.display = $('optMap').value === 'air' ? '' : 'none'; if (a) $('modeL').style.display = 'none'; else modeVis(); }; $('optMap').addEventListener('change', mapVis); setTimeout(mapVis, 0);
   const sync = () => {
-    for (const [a, b] of [['optSens', 'pSens'], ['optFov', 'pFov'], ['optVol', 'pVol']]) { $(a).value = $(b).value = SETTINGS[{ optSens: 'sens', optFov: 'fov', optVol: 'volume' }[a]]; }
+    for (const [a, b] of [['optSens', 'pSens'], ['optFov', 'pFov'], ['optFovAir', 'pFovAir'], ['optVol', 'pVol']]) { $(a).value = $(b).value = SETTINGS[{ optSens: 'sens', optFov: 'fov', optFovAir: 'fovAir', optVol: 'volume' }[a]] ?? 88; }
     for (const [a, b, k] of [['optGore', 'pGore', 'gore'], ['optVoices', 'pVoices', 'voices'], ['optDyn', 'pDyn', 'dynres'], ['optFps', 'pFps', 'fps']]) $(a).checked = $(b).checked = SETTINGS[k];
-    $('sensV').textContent = (+SETTINGS.sens).toFixed(2); $('fovV').textContent = SETTINGS.fov; $('volV').textContent = Math.round(SETTINGS.volume * 100) + '%';
+    $('sensV').textContent = (+SETTINGS.sens).toFixed(2); $('fovV').textContent = SETTINGS.fov; $('fovAirV').textContent = SETTINGS.fovAir ?? 88; $('volV').textContent = Math.round(SETTINGS.volume * 100) + '%';
     $('fps').style.display = SETTINGS.fps ? 'block' : 'none';
   };
   const bind = (ids, key, num) => ids.forEach(id => $(id).addEventListener('input', e => { SETTINGS[key] = num ? +e.target.value : e.target.checked; saveSettings(); sync(); }));
-  bind(['optSens', 'pSens'], 'sens', true); bind(['optFov', 'pFov'], 'fov', true); bind(['optVol', 'pVol'], 'volume', true);
+  bind(['optSens', 'pSens'], 'sens', true); bind(['optFov', 'pFov'], 'fov', true); bind(['optFovAir', 'pFovAir'], 'fovAir', true); bind(['optVol', 'pVol'], 'volume', true);
   bind(['optGore', 'pGore'], 'gore'); bind(['optVoices', 'pVoices'], 'voices'); bind(['optDyn', 'pDyn'], 'dynres'); bind(['optFps', 'pFps'], 'fps');
   sync();
 }
