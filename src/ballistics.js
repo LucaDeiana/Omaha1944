@@ -46,6 +46,7 @@ function updateAirBullets(dt) {
       const tt = rayBox(b.p.x, b.p.y, b.p.z, _bd.x, _bd.y, _bd.z, { min: _vbA.copy(v.box.min).subScalar(.4), max: _vbB.copy(v.box.max).addScalar(.4) }, seg);
       if (tt > 0 && tt <= seg && (t < 0 || tt < t)) { t = tt; hitVeh = v; hitPlane = null; water = false; }
     }
+    if (t < 0 && SCEN === 'sea' && typeof navShipAt === 'function') { const sh = navShipAt(_bn, b.team); if (sh) { if (b.byPlayer || b.team === 'E') navStrafeHit(sh, _bn, b.G.cal, b.byPlayer); L.splice(i, 1); continue; } }
     if (t >= 0) {
       if (b.byPlayer) airBulletImpact(b.p.clone(), _bd.clone(), t, hitPlane, hitVeh, water, b.G, b.dmg);
       else aiBulletImpact(b, b.p.clone().addScaledVector(_bd, t), hitPlane, water);

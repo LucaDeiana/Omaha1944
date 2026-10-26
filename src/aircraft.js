@@ -306,7 +306,8 @@ function drawGauges() {
     g.fillStyle = '#ddd'; g.font = '13px monospace'; g.textAlign = 'center'; g.fillText(label, x, y + r * .45); g.fillText(Math.round(v) + unit, x, y + r * .7);
   };
   const spd = me.vel.length() * 3.6, alt = me.pos.y;
-  gauge(70, 96, 62, spd, 800, 'VELOCITÀ', ' km/h'); gauge(200, 96, 62, alt, 1500, 'QUOTA', ' m'); gauge(330, 96, 52, PL.throttle * 100, 100, 'MANETTA', '%');
+  const jetM = PL.spec && PL.spec.mach;
+  gauge(70, 96, 62, spd, jetM ? 2800 : 800, jetM ? 'MACH ' + (PL.mach || 0).toFixed(2) : 'VELOCITÀ', ' km/h'); gauge(200, 96, 62, alt, jetM ? 15000 : 1500, jetM ? 'QUOTA · ' + (PL.G || 1).toFixed(1) + ' G' : 'QUOTA', ' m'); gauge(330, 96, 52, PL.throttle * 100, 100, 'MANETTA', '%');
   // orizzonte artificiale
   const f = _a1.set(0, 0, -1).applyQuaternion(me.q), r = _a2.set(1, 0, 0).applyQuaternion(me.q);
   const pitch = Math.asin(clamp(f.y, -1, 1)), roll = Math.atan2(-r.y, _a3.set(0, 1, 0).applyQuaternion(me.q).y);
@@ -545,15 +546,20 @@ function updatePlane(dt) {
   if (me.crash) { PL.stickX = PL.stickY = 0; }
   _pfw.set(0, 0, -1).applyQuaternion(me.q); _pup.set(0, 1, 0).applyQuaternion(me.q); _prt.set(1, 0, 0).applyQuaternion(me.q);
   const v = me.vel, V = Math.max(1, v.length()); _vn.copy(v).multiplyScalar(1 / V);
-  const SP = PL.spec || PLANE_SPECS.p47, m = SP.mass, S = SP.S, rho = 1.2, q = .5 * rho * V * V;
+  const SP = PL.spec || PLANE_SPECS.p47, m = SP.mass, S = SP.S;
+  // jet moderni: aria che si rarefà con la quota, velocità del suono, muro del suono
+  const alt = Math.max(0, me.pos.y), rho = SP.mach ? 1.225 * Math.exp(-alt / 8500) : 1.2, q = .5 * rho * V * V;
+  const aSnd = Math.max(295, 340 - alt * .0039), Mach = V / aSnd; PL.mach = Mach; PL.rho = rho;
+  const cdM = SP.mach ? (Mach < .85 ? 1 : Mach < 1.05 ? 1 + (Mach - .85) * 8 : Math.max(1.75, 2.6 - (Mach - 1.05) * 1.2)) : 1;
   const alpha = Math.atan2(-v.dot(_pup), v.dot(_pfw)), beta = v.dot(_prt) / V;
   // ipersostentatori abbassati col carrello a bassa velocità: più portanza per decollo e appontaggio
   const flap = V < 75 ? .55 * smooth((75 - V) / 15) : 0;
   let Cl = (.15 + flap + 4.8 * alpha) * (me.wingLost ? .45 : 1); const st = .3;
   if (Math.abs(alpha) > st) Cl = Math.sign(alpha) * (.15 + flap + 4.8 * st) * Math.max(.25, 1 - (Math.abs(alpha) - st) * 3.5);
-  const lift = q * S * Cl, drag = q * S * (.024 + .065 * Cl * Cl + .012 * (PL.gearK || 0));
+  let lift = q * S * Cl; if (SP.gLim) lift = clamp(lift, -3 * m * 9.8, SP.gLim * m * 9.8);   // limite strutturale e del pilota
+  const drag = q * S * (.024 * cdM + .065 * (lift / Math.max(1, q * S)) ** 2 + .012 * (PL.gearK || 0));
   const pt = me.parts || { eng: 1, wl: 1, wr: 1, tail: 1 };
-  const thrust = me.crash ? 0 : PL.throttle * (SP.jet ? 17000 : Math.min(32000, 1.6e6 / Math.max(V, 35))) * planeThrustK(SP, PL.type) * (m / 6000) * (.3 + .7 * pt.eng);
+  const thrust = me.crash ? 0 : SP.thrustN ? PL.throttle * SP.thrustN * Math.pow(rho / 1.225, .7) * (1 + .35 * Mach) * (.3 + .7 * pt.eng) : PL.throttle * (SP.jet ? 17000 : Math.min(32000, 1.6e6 / Math.max(V, 35))) * planeThrustK(SP, PL.type) * (m / 6000) * (.3 + .7 * pt.eng);
   if (me.engFire && !me.crash) { me.hp -= dt * 14; if (me.hp <= 0) playerPlaneHit(me, 1, false); }
   updateGear(me, dt);
   if (PL.wreck) wreckStep(me, dt); else if (PL.onDeck) carrierRoll(me, dt, thrust, m); else {
@@ -621,7 +627,7 @@ function updatePlane(dt) {
   // contatto col suolo fuori dall'atterraggio: niente morte istantanea, l'aereo si schianta con la sua fisica
   if (!PL.wreck && !PL.onDeck && me.pos.y < gy + (dkY > -99 && PL.gearK > .9 && !me.crash ? .5 : 1.5)) startWreck(me, gy);
   if (me.crash && !PL.wreck && !PL.crashMsg) { PL.crashMsg = true; showMsg((me.wingLost ? 'Hai perso un\'ala! ' : 'Colpito! ') + 'Premi R per rientrare subito', 4); }
-  const LIM = SCEN === 'air' ? 11500 : SCEN === 'sea' ? 30000 : 2400; if (Math.abs(me.pos.x) > LIM || Math.abs(me.pos.z) > LIM || me.pos.y > 4000) { const back = _a2.set(-me.pos.x, 300 - me.pos.y, -me.pos.z).normalize(); v.lerp(back.multiplyScalar(V), dt * .3); }
+  const LIM = SCEN === 'air' ? 11500 : SCEN === 'sea' ? 30000 : 2400; if (Math.abs(me.pos.x) > LIM || Math.abs(me.pos.z) > LIM || me.pos.y > (PL.spec && PL.spec.mach ? 15500 : 4000)) { const back = _a2.set(-me.pos.x, 300 - me.pos.y, -me.pos.z).normalize(); v.lerp(back.multiplyScalar(V), dt * .3); }
   // testa del pilota: si inclina con un ritardo verso le virate, viene schiacciata dalle G e oscilla con le raffiche
   const hr = PL.head || (PL.head = { r: 0, p: 0, y: 0, dy: 0 }), k = Math.min(1, dt * 3);
   hr.r = lerp(hr.r, clamp(-PL.av.z * .09, -.22, .22), k); hr.p = lerp(hr.p, clamp(-PL.av.x * .05 - (PL.G - 1) * .012, -.12, .1), k);
@@ -666,7 +672,7 @@ function updatePlane(dt) {
 const _vbA = new V3(), _vbB = new V3();
 function playerPlaneGuns(me, G = (PL.spec || PLANE_SPECS.p47).guns) {
   const f = _a1.set(0, 0, -1).applyQuaternion(me.q), r = _a2.set(1, 0, 0).applyQuaternion(me.q), heavy = G.cal >= 30;
-  sfxShot(G.snd, null, true); if (heavy) play('boom', null, { vol: .25, rate: 2.2 }); P.shake = Math.min(.8, P.shake + (heavy ? .25 : .05));
+  if (!G.rotary || (PL.rotN = (PL.rotN || 0) + 1) % 3 === 0) sfxShot(G.snd, null, true); if (heavy) play('boom', null, { vol: .25, rate: 2.2 }); P.shake = Math.min(.8, P.shake + (heavy ? .25 : .05));
   // armi leggere: due fasci (ala sinistra e destra) col danno di tutte le armi; cannoni pesanti: un colpo per arma
   const pts = heavy ? G.pos : [-1, 1].map(s => { const l = G.pos.filter(p => Math.sign(p[0] || s) === s); const n = l.length || 1; return [l.reduce((a, p) => a + p[0], 0) / n, l.reduce((a, p) => a + p[1], 0) / n, l.reduce((a, p) => a + p[2], 0) / n, n]; });
   for (const gp of pts) {

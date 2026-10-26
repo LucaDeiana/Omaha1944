@@ -119,7 +119,11 @@ class NavPlane {
     const fs = this.foes(); if (!fs.length) return null;
     const s = fs.reduce((a, b) => a.pos.distanceTo(this.pos) < b.pos.distanceTo(this.pos) ? a : b), d = s.pos.distanceTo(this.pos);
     this.cruise = d < 2500 ? 60 : 600;
-    if (d < 900 && this.fireT <= 0) { this.fireT = .15; const o = this.pos.clone(); fxTracer(o, s.pos.clone().add(new V3(rnd(-6, 6), s.C.F, rnd(-20, 20))), 1.2); if (R() < .08) s.damage(rnd(3, 6), null, 'strafe'); sfxAirGun(o, this.type); }
+    if (d < 900 && this.fireT <= 0) {
+      const cur = _na2.copy(this.vel).normalize(), aim = s.pos.clone().add(new V3(0, s.C.F, 0)).sub(this.pos).normalize();
+      if (cur.dot(aim) > .995) { this.fireT = .12; const o = this.pos.clone().addScaledVector(cur, 6), shot = cur.clone().add(new V3(gauss() * .012, gauss() * .012, gauss() * .012)).normalize();
+        fxTracer(o, o.clone().addScaledVector(shot, 900), 3); sfxAirGun(o, this.type); NAIR.bul.push({ p: o, v: shot.multiplyScalar(820).add(this.vel), life: 1.3, team: this.team, cal: this.type === 'zero' ? 20 : 12.7 }); }
+    }
     if (d < 250) this.cruise = 400;
     return s.pos.clone().sub(this.pos).normalize();
   }
@@ -250,6 +254,26 @@ function updateNavMarkers() {
   }
   for (let i = n; i < _nmk.els.length; i++) _nmk.els[i].style.display = 'none';
 }
+function navShipAt(p, team) {
+  if (typeof NV === 'undefined' || !NV.ships) return null;
+  for (const s of NV.ships) {
+    if (s.team === team || s.sinking > 30) continue; const C = s.C, dx = p.x - s.pos.x, dz = p.z - s.pos.z; if (dx * dx + dz * dz > C.L * C.L * .3) continue;
+    const c = Math.cos(s.yaw), sn = Math.sin(s.yaw), lx = dx * c - dz * sn, lz = dx * sn + dz * c, ly = p.y - s.pos.y;
+    const half = C.B / 2 * (1 - Math.pow(Math.abs(lz) / (C.L / 2), 4) * .85);
+    if (Math.abs(lz) > C.L / 2 || Math.abs(lx) > half || ly < -1) continue;
+    const top = Math.abs(lz) < C.L * .22 && Math.abs(lx) < C.B * .3 ? C.F + (C.type === 'pt' || C.L < 40 ? 3 : 14) : C.F + 1;
+    if (ly <= top) return s;
+  }
+  return null;
+}
+// colpo di mitragliatrice/cannoncino su una nave: poco danno sulle grandi, molto sulle motosiluranti; scintille e fumo
+function navStrafeHit(s, p, cal, byPlayer) {
+  const k = cal >= 30 ? 9 : cal >= 20 ? 3.2 : 1.1, armored = s.C.belt > 60 ? .35 : 1;
+  s.damage(k * armored * rnd(.7, 1.3), byPlayer ? NV.me : null, 'strafe');
+  if (dist2Cam(p) < 1500 * 1500) { fxImpact(p.clone(), 'metal'); if (R() < .15) PS_SMOKE.emit(p.x, p.y, p.z, 0, 1, 0, 1.5, 1, 3, .7, .2, .2, .2, .3, 0); }
+  if (byPlayer) { NAIR.strafeN = (NAIR.strafeN || 0) + 1; if (NAIR.strafeN % 12 === 1) { navyHitText('Colpi a segno su ' + (s.name || s.C.name), '#ffcf5a'); navyRibbon('hit'); } }
+  if (s === NV.me && P.mode === 'ship' && GAME.time - (NAIR.meHitT || 0) > .2) { NAIR.meHitT = GAME.time; play('imp_metal', p, { ref: 40, vol: .5, rate: .8 }); }
+}
 function updateNavBullets(dt) {
   const a = _na1, sg = _na3;
   for (let i = NAIR.bul.length - 1; i >= 0; i--) {
@@ -261,6 +285,7 @@ function updateNavBullets(dt) {
       if (a.addScaledVector(sg, -k).lengthSq() < 4.5 * 4.5) { hit = p; break; }
     }
     b.p.add(sg);
+    if (!hit) { const sh = navShipAt(b.p, b.team); if (sh) { navStrafeHit(sh, b.p, b.cal || 12.7, false); NAIR.bul.splice(i, 1); continue; } if (b.p.y < WATER_Y) { if (R() < .3 && dist2Cam(b.p) < 900 * 900) PS_SMOKE.emit(b.p.x, WATER_Y, b.p.z, 0, 3, 0, .8, .6, 1.5, .5, .9, .95, .97, .3, 9.8); NAIR.bul.splice(i, 1); continue; } }
     if (hit) { hit.damage(rnd(9, 22), false); if (hit.player) { P.shake = Math.min(.6, P.shake + .06); if (GAME.time - (NAIR.hitSndT || 0) > .12) { NAIR.hitSndT = GAME.time; play('imp_metal', null, { vol: .45, rate: .7 + R() * .1 }); } } }
     if (hit || b.life <= 0) NAIR.bul.splice(i, 1);
   }

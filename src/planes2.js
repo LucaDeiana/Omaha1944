@@ -70,6 +70,17 @@ const PLANE_SPECS = {
     guns: { pos: [[-2.6, -1.45, -2.3], [2.6, -1.45, -2.3]], dmg: 135, int: .5, cal: 37, snd: 'flak', spread: .003, he: 3 },
     mass: 5000, S: 33.7, thrust: .72, agile: .78, hp: 1050, bombs: 2,
   },
+  // Boeing F-47 (NGAD, 6ª generazione, annunciato a marzo 2025). Dati pubblici USAF: Mach 2+, raggio d'azione oltre 1000 nmi,
+  // senza coda verticale, alette canard. Dimensioni, masse e spinta non sono pubblici: stime coerenti con un caccia pesante stealth (classe F-22).
+  f47: {
+    name: 'Boeing F-47 (6ª gen.)', nation: 'us', engine: 'jet', sixth: true, len: 21.5, w: 2.6, h: 1.5, nose: .2,
+    wing: { span: 14.2, root: 11.5, tip: 1.6, le: -2.2, sweep: .95, dihedral: -.01, y0: -.15 }, tail: { span: 5.6, root: 2.0, z: -7.2, sweep: .8 }, fin: null,
+    canopy: { z0: -6.6, z1: -4.0, w: .95, h: .62, y: .55, bubble: true }, stripes: false,
+    colors: { top: 0x5d646b, bottom: 0x545b62 },
+    prop: null, eye: [0, 1.05, -5.4],
+    guns: { pos: [[1.1, .35, -6.2]], dmg: 34, int: .02, cal: 20, snd: 'm2', spread: .004, rotary: true },
+    mass: 29000, S: 88, thrustN: 360000, agile: 1.35, hp: 1800, bombs: 2, jet: true, mach: true, gLim: 9,
+  },
   me262: {
     name: 'Me 262 Schwalbe', nation: 'de', engine: 'jet', len: 10.6, w: 1.25, h: 1.35, nose: .35, tri: true,
     wing: { span: 12.5, root: 3.1, tip: 1.3, le: -.9, sweep: .3, dihedral: .07, y0: -.25 }, tail: { span: 5, root: 1.3, z: 4.4, sweep: .3 }, fin: { h: 1.7, root: 1.6, z: 4.1, sweep: .4 },
@@ -146,7 +157,7 @@ PLANE_SPECS.ju88 = {
   guns: { pos: [[0, .6, -2]], dmg: 10, int: .1, cal: 7.9, snd: 'mg42', spread: .01 }, mass: 12000, S: 54.7, thrust: 1, agile: .5, hp: 2200, bombs: 4,
 };
 PLANE_SPECS.p47 = { name: 'P-47D Thunderbolt', nation: 'us', builtin: true, guns: { pos: [[-2.5, -.3, -2.2], [-2.8, -.3, -2.2], [-3.1, -.3, -2.2], [-3.4, -.3, -2.2], [2.5, -.3, -2.2], [2.8, -.3, -2.2], [3.1, -.3, -2.2], [3.4, -.3, -2.2]], dmg: 25, int: .055, cal: 12.7, snd: 'm2', spread: .006 }, mass: 6000, S: 27.9, thrust: 1, agile: 1, hp: 1100, bombs: 2, eye: [0, 1.12, -.5] };
-const PLAYER_PLANES = ['p47', 'p51', 'f4u', 'spit', 'typhoon', 'hurri', 'bf109', 'stuka', 'me262', 'mosquito'];
+const PLAYER_PLANES = ['p47', 'p51', 'f4u', 'spit', 'typhoon', 'hurri', 'bf109', 'stuka', 'me262', 'mosquito', 'f47'];
 
 // tondo britannico
 // hinomaru: disco rosso con bordo bianco sottile
@@ -205,8 +216,8 @@ function buildSpecPlane(type) {
   // impennaggi
   const tl = sp.tail, tsp = tl.span * (tl.span > 4.6 ? .85 : 1), ts = []; for (let x = -tsp / 2; x <= tsp / 2 + .01; x += tsp / 12) ts.push(x);
   mb.addG(wingGeo({ stations: ts, chord: x => (tl.ellip ? Math.max(.35, tl.root * Math.sqrt(Math.max(0, 1 - (2 * x / tl.span) ** 2))) : tl.root - Math.abs(x) * .22) * .82, le: x => tl.z + Math.abs(x) * (tl.sweep || .08), y: () => (sp.tri ? .55 : .22), thick: () => .09, color: p => paint(p, true) }));
-  const fn = sp.fin, fs = []; for (let y = .2; y <= fn.h + .01; y += fn.h / 9) fs.push(y);
-  mb.addG(finGeo({ stations: fs, chord: y => fn.round ? Math.max(.3, fn.root * Math.sqrt(Math.max(0, 1 - (y / fn.h) ** 2)) + .2) : fn.root - (y - .2) * .35, le: y => fn.z + (y - .2) * (fn.sweep || .35), thick: () => .1, color: p => paint(p, false) }));
+  const fn = sp.fin, fs = []; if (fn) for (let y = .2; y <= fn.h + .01; y += fn.h / 9) fs.push(y);
+  if (fn) mb.addG(finGeo({ stations: fs, chord: y => fn.round ? Math.max(.3, fn.root * Math.sqrt(Math.max(0, 1 - (y / fn.h) ** 2)) + .2) : fn.root - (y - .2) * .35, le: y => fn.z + (y - .2) * (fn.sweep || .35), thick: () => .1, color: p => paint(p, false) }));
   if (tl.strut) for (const sx of [-1, 1]) mb.add(cylG2(.025, .025, .9, 6), 0x333333, sx * .5, -.1, tl.z + .3, 0, 0, sx * .7);
   // motore
   let propZ = -L * .46 - .05;
@@ -220,7 +231,17 @@ function buildSpecPlane(type) {
   const twinProps = [];
   if (sp.twin) for (const sx of [-1, 1]) { const x = sx * sp.twin, y = wy(x); const nac = []; for (let k = 0; k <= 8; k++) { const t = k / 8; nac.push(new THREE.Vector2(Math.max(.05, .6 * Math.sin(Math.min(1, t * 1.4 + .25) * PI / 1.15)), t * 4.6)); } const g = new THREE.LatheGeometry(nac, 16); g.rotateX(PI / 2); mb.add(g, C.top, x, y - .05, -3.4); twinProps.push([x, y - .05, -3.5]); }
   // gondole dei reattori (Me 262)
-  if (sp.engine === 'jet') for (const sx of [-1, 1]) { const x = sx * 2.3, y = wy(x) - .45; const nac = []; for (let k = 0; k <= 8; k++) { const t = k / 8; nac.push(new THREE.Vector2(Math.max(.05, .42 * Math.sin(Math.min(1, t * 1.6 + .15) * PI / 1.1)), t * 3.6)); } const g = new THREE.LatheGeometry(nac, 16); g.rotateX(PI / 2); mb.add(g, C.top, x, y, -2.2); mb.add(cylG2(.3, .3, .1, 14), 0x101010, x, y, -2.25, PI / 2, 0, 0); }
+  if (sp.sixth) {
+    // corpo integrato: dorso piatto, spigoli laterali (chine), prese d'aria dorsali seghettate, ugelli piatti 2D
+    for (const sx of [-1, 1]) {
+      mb.add(U.box, C.top, sx * 1.55, -.05, 0, 0, 0, sx * .18, 1.5, .35, 12);
+      mb.add(U.box, 0x2c3136, sx * 1.15, .5, -2.4, -.12, sx * .25, 0, 1.1, .5, 1.6); mb.add(U.box, 0x111417, sx * 1.15, .52, -3.15, -.12, sx * .25, 0, .9, .38, .1);
+      mb.add(U.box, 0x3a3f44, sx * .95, .05, 8.6, 0, 0, 0, 1.3, .45, 1.4); mb.add(U.box, 0x0e0f10, sx * .95, .05, 9.32, 0, 0, 0, 1.15, .32, .06);
+    }
+    mb.add(U.box, C.top, 0, .25, 1.5, 0, 0, 0, 2.6, .5, 10);
+    mb.add(U.box, 0x3a3f44, 0, -.55, 1, 0, 0, 0, 1.6, .06, 5.5);   // portelloni della stiva interna
+  }
+  if (sp.engine === 'jet' && !sp.sixth) for (const sx of [-1, 1]) { const x = sx * 2.3, y = wy(x) - .45; const nac = []; for (let k = 0; k <= 8; k++) { const t = k / 8; nac.push(new THREE.Vector2(Math.max(.05, .42 * Math.sin(Math.min(1, t * 1.6 + .15) * PI / 1.1)), t * 3.6)); } const g = new THREE.LatheGeometry(nac, 16); g.rotateX(PI / 2); mb.add(g, C.top, x, y, -2.2); mb.add(cylG2(.3, .3, .1, 14), 0x101010, x, y, -2.25, PI / 2, 0, 0); }
   // gondole dei cannoni pesanti sotto le ali
   if (sp.pods) for (const sx of [-1, 1]) { const x = sx * (sp.pods === 'cannon37' ? 2.6 : 1.9), y = wy(x) - (sp.pods === 'cannon37' ? .65 : .4); mb.add(U.box, 0x3a3e33, x, y, -1.2, 0, 0, 0, .28, .3, 2.0); mb.add(cylG2(.06, .06, 1.8, 8), 0x1a1a1a, x, y, -2.9, PI / 2, 0, 0); mb.add(cylG2(.09, .09, .2, 8), 0x1a1a1a, x, y, -3.8, PI / 2, 0, 0); }
   // carrello fisso carenato (Stuka)
@@ -245,12 +266,12 @@ function buildSpecPlane(type) {
   d = { prop: sp.prop ? { z: propZ, R: sp.prop.R } : { z: 0, R: .1 }, props: sp.twin ? twinProps : sp.prop ? undefined : [], decals: [], decals2: d2, pilot: [0, cn.y + .3, (cn.z0 + cn.z1) / 2], eye: sp.eye, spec: sp };
   d.paint = mb.buildGroups(); d.glass = glass.build(); d.propG = prop.buildGroups();
   // carrello retrattile: gambe nelle ali, ruotino di coda
-  d.gear = { x: half * .3, y: wy(half * .3) + .05, z: le(half * .3) + chord(half * .3) * .35, len: sp.h * 1.05, tailZ: tl.z + .4, fixed: !!sp.spats };
+  d.gear = { x: half * .3, y: wy(half * .3) + .05, z: le(half * .3) + chord(half * .3) * .35, len: sp.h * 1.05, tailZ: sp.sixth ? 6 : tl.z + .4, fixed: !!sp.spats };
   return d;
 }
 
 // velocità massime storiche in volo livellato (km/h): la spinta di ogni aereo è tarata per raggiungerle a manetta piena col carrello retratto
-const PLANE_VMAX = { p47: 690, p51: 703, f4u: 671, spit: 657, typhoon: 652, hurri: 518, bf109: 640, stuka: 400, me262: 870, mosquito: 610, ju88: 470, fw190: 655, b26: 460, zero: 533, val: 389, kate: 378, sbd: 410, tbf: 442, p40: 566 };
+const PLANE_VMAX = { p47: 690, p51: 703, f4u: 671, spit: 657, typhoon: 652, hurri: 518, bf109: 640, stuka: 400, me262: 870, mosquito: 610, f47: 1450, ju88: 470, fw190: 655, b26: 460, zero: 533, val: 389, kate: 378, sbd: 410, tbf: 442, p40: 566 };
 function planeThrustK(SP, type) {
   if (SP._tk) return SP._tk;
   const V = (PLANE_VMAX[type] || 560) / 3.6, m = SP.mass, S = SP.S, q = .6 * V * V, Cl = m * 9.8 / (q * S), drag = q * S * (.024 + .065 * Cl * Cl);
