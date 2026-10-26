@@ -1,0 +1,8 @@
+Cartella per musiche e loghi personali (NON viene caricata su GitHub).
+
+Metti qui i tuoi file con questi nomi e il gioco li userà al posto di quelli predefiniti:
+  intro.mp3   musica del filmato introduttivo
+  menu.mp3    musica del menù principale e delle schermate di scelta
+  logo.png    logo mostrato nel menù principale (sfondo trasparente consigliato)
+
+Senza questi file suonano i brani CC0 "War Theme" e "Some Militaristic Tune" di Spring Spring (OpenGameArt).

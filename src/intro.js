@@ -65,6 +65,7 @@
     <div id="introSkip"><kbd>Spazio</kbd> salta</div>`;
   const mm = document.createElement('div'); mm.id = 'mainMenu';
   mm.innerHTML = `<canvas id="mmC"></canvas><div class="mm">
+      <img id="mmLogo" alt="" style="display:none;max-width:min(260px,60vw);max-height:120px;margin-bottom:8px;filter:drop-shadow(0 4px 18px rgba(0,0,0,.8))">
       <div class="k">1941 · 1942 · 1944</div>
       <h1>FRONTE<br>OCCIDENTALE 1944</h1>
       <button class="mmb" data-go="omaha">CAMPAGNA<small>Omaha Beach, Ardenne, Tunisia</small></button>
@@ -78,9 +79,10 @@
   const cr = document.createElement('div'); cr.id = 'mmCredits';
   cr.innerHTML = `<div class="c"><div style="width:140px;margin:0 auto">${LOGO}</div><h2>LE PALLE DI LUCA SONO PICCINE PICCINE</h2>
     <p>Ideazione e regia: Luca Deiana<br>Programmazione: Luca Deiana e Claude</p>
-    <p style="opacity:.75">Suoni reali di pubblico dominio (CC0): Internet Archive — Red Library, GOLD TAPE, SSE Library; OpenGameArt.<br>Grafica 3D: three.js. Caratteri: Oswald e Special Elite (Google Fonts).</p>
+    <p style="opacity:.75">Suoni reali di pubblico dominio (CC0): Internet Archive — Red Library, GOLD TAPE, SSE Library; OpenGameArt.<br>Musiche (CC0): «War Theme» e «Some Militaristic Tune» di Spring Spring, OpenGameArt.<br>Grafica 3D: three.js. Caratteri: Oswald e Special Elite (Google Fonts).</p>
     <p style="opacity:.55;font-size:12px">Clicca per chiudere</p></div>`;
   document.body.append(root, mm, cr);
+  { const im = mm.querySelector('#mmLogo'); im.onload = () => im.style.display = 'block'; im.src = 'assets/music/personali/logo.png'; }
 
   // ---------- audio: buffer decodificati dai suoni veri del gioco ----------
   let AC = null; const BUF = {};
@@ -108,6 +110,21 @@
     }
     for (const [f, d] of [[2093, 2.7], [2637, 3.05]]) { const o = AC.createOscillator(), g = AC.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0, t0 + d); g.gain.linearRampToValueAtTime(.5, t0 + d + .01); g.gain.exponentialRampToValueAtTime(.001, t0 + d + 1.4); o.connect(g).connect(out); o.start(t0 + d); o.stop(t0 + d + 1.5); }
   }
+
+  // ---------- musica: prima i file personali (assets/music/personali), poi i brani CC0 ----------
+  const MUS = { a: null, key: '', fadeT: 0 };
+  function music(key, vol = .55) {
+    if (MUS.key === key && MUS.a && !MUS.a.paused) return; stopMusic(.4);
+    const files = { intro: ['assets/music/personali/intro.mp3', 'assets/music/intro_march.mp3'], menu: ['assets/music/personali/menu.mp3', 'assets/music/menu_war_theme.mp3'] }[key];
+    const a = new Audio(); a.loop = key === 'menu'; a.volume = 0; MUS.a = a; MUS.key = key; MUS.want = vol;
+    let i = 0; a.onerror = () => { if (++i < files.length) { a.src = files[i]; a.play().catch(() => {}); } }; a.src = files[0]; a.play().catch(() => {});
+    clearInterval(MUS.fadeT); MUS.fadeT = setInterval(() => { if (MUS.a !== a) return clearInterval(MUS.fadeT); a.volume = Math.min(MUS.want * menuVol(), a.volume + .03); if (a.volume >= MUS.want * menuVol()) clearInterval(MUS.fadeT); }, 50);
+  }
+  function stopMusic(t = 1) { const a = MUS.a; if (!a) return; MUS.a = null; MUS.key = ''; const st = a.volume / (t * 20); const iv = setInterval(() => { a.volume = Math.max(0, a.volume - st); if (a.volume <= 0) { a.pause(); clearInterval(iv); } }, 50); }
+  // il volume del menù segue il cursore del volume
+  document.addEventListener('input', e => { if (e.target && e.target.id === 'optVol' && MUS.a) MUS.a.volume = Math.min(1, MUS.want * menuVol()); });
+  // la battaglia comincia: la musica sfuma
+  document.addEventListener('click', e => { if (e.target && e.target.id === 'startBtn') stopMusic(1.5); }, true);
 
   // ---------- disegno ----------
   const cv = $('introC'), g = cv.getContext('2d'); let W = 0, H = 0;
@@ -206,14 +223,14 @@
     if (state !== 'gate') return; state = 'studio'; st = 0; initAudio(); jingle();
     $('introGate').style.display = 'none'; const s = $('studio'); s.style.display = 'flex'; s.style.opacity = 1; requestAnimationFrame(() => s.classList.add('on')); $('introSkip').style.display = 'block';
   }
-  function startFilm() { state = 'film'; $('studio').style.display = 'none'; $('studio').classList.remove('on'); sc = -1; nextScene(); }
+  function startFilm() { music('intro', .32); state = 'film'; $('studio').style.display = 'none'; $('studio').classList.remove('on'); sc = -1; nextScene(); }
   function nextScene() {
     sc++; st = 0; const S = SCENES[sc];
     if (S) { setCap(S.d, S.l); S.start(); } else { setCap('', ''); snd('boom_big', .9, .8, .2); }
   }
   function skip() { if (state === 'gate') return startStudio(); if (state === 'studio') { hush(.3); return startFilm(); } if (state === 'film') showMain(); }
   function showMain() {
-    hush(.8); state = 'menu'; root.style.display = 'none'; $('menu').classList.add('hidden'); mm.style.display = 'block'; menuBg(); const b = mm.querySelector('.mmb'); if (b) b.focus({ preventScroll: true });
+    hush(.8); music('menu', .5); state = 'menu'; root.style.display = 'none'; $('menu').classList.add('hidden'); mm.style.display = 'block'; menuBg(); const b = mm.querySelector('.mmb'); if (b) b.focus({ preventScroll: true });
   }
   function playIntro() { mm.style.display = 'none'; root.style.display = 'block'; state = 'gate'; last = 0; cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); if (AC) startStudio(); else { state = 'gate'; } }
 

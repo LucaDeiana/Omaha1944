@@ -55,6 +55,7 @@ Checkpoint automatici: se cadi riparti dall'ultimo.
 - Soldati dettagliati disegnati in istanze GPU con due livelli di dettaglio: centinaia di soldati in poche chiamate di disegno.
 - Ragdoll fisico (Verlet) per i caduti, corpi che galleggiano, smembramenti e sangue (disattivabili).
 - Audio sintetizzato offline: spari a strati, eco della scogliera, schiocchi supersonici, rimbalzi, esplosioni con pioggia di detriti, motori, risacca, urla.
+- Musiche CC0 di Spring Spring (OpenGameArt): «Some Militaristic Tune» nel filmato introduttivo, «War Theme» nei menù. Musiche e logo personali: vedi assets/music/personali/LEGGIMI.txt (cartella esclusa da git).
 - Voci dei soldati in inglese (americani) e tedesco (tedeschi) con le voci di sintesi del browser e sottotitoli in italiano.
 - Qualità: Basso, Medio, Alto, Ultra. La **risoluzione dinamica** abbassa da sola la risoluzione interna quando gli FPS calano.
 

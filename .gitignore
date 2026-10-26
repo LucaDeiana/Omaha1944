@@ -4,3 +4,5 @@ Thumbs.db
 node_modules/
 .claude/
 *.lnk
+assets/music/personali/*
+!assets/music/personali/LEGGIMI.txt
