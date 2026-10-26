@@ -18,7 +18,7 @@ class NavPlane {
     this.vel = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)).multiplyScalar(this.spd);
     this.hp = (sp.hp || 800) * .55; this.alive = true; this.crash = false; this.roll = 0;
     this.target = o.target || null; this.state = 'ingress'; this.armed = this.role !== 'fighter'; this.fireT = 0; this.cruise = o.alt || (this.role === 'dive' ? 2800 : this.role === 'torpedo' ? 400 : 1500);
-    this.turn = this.role === 'fighter' ? .75 : .42; this.t = 0; this.squad = o.squad || null;
+    this.turn = this.role === 'fighter' ? .75 : .42; this.t = 0; this.squad = o.squad || null; this.cap = o.cap || null;
     PLANES.push(this);
   }
   // sterza verso una direzione con velocità angolare limitata e inclina le ali
@@ -85,7 +85,7 @@ class NavPlane {
     const d = Math.hypot(T.pos.x - this.pos.x, T.pos.z - this.pos.z), tv = (this.type === 'kate' ? 42 : 33) * KN;
     if (this.state === 'ingress' && this.armed) {
       this.cruise = d < 6000 ? 40 : 300;
-      let tt = d / tv; const P = T.pos.clone().addScaledVector(T.vel, tt + d / this.spd);
+      const tt = Math.min(d, 1100) / tv + Math.max(0, d - 1100) / this.spd; const P = T.pos.clone().addScaledVector(T.vel, tt);
       if (d < 1100 && this.pos.y < 90) { this.dropTorp(P); this.state = 'egress'; this.egT = 30; }
       return P.sub(this.pos).setY(0).normalize();
     }
@@ -94,7 +94,7 @@ class NavPlane {
   }
   // caccia: insegue l'aereo nemico più vicino (anche quello del giocatore), altrimenti mitraglia le navi
   fighterAI(dt) {
-    let best = null, bd = 6000;
+    let best = null, bd = this.cap ? 9000 : 6000;
     for (const p of PLANES) if (p.team !== this.team && p.alive && !p.crash) { const d = p.pos.distanceTo(this.pos); if (d < bd) { bd = d; best = p; } }
     this.fireT -= dt;
     if (best) {
@@ -107,6 +107,8 @@ class NavPlane {
       }
       return want;
     }
+    // pattuglia di scorta: gira in cerchio sopra le navi da proteggere
+    if (this.cap) { const c = this.cap.pos || this.cap, a = this.t * .05 + (this.capA ??= R() * TAU); this.cruise = 2400; return _na1.set(c.x + Math.cos(a) * 2500 - this.pos.x, 0, c.z + Math.sin(a) * 2500 - this.pos.z).normalize(); }
     // mitragliamento: passaggio basso sulla nave più vicina
     const fs = this.foes(); if (!fs.length) return null;
     const s = fs.reduce((a, b) => a.pos.distanceTo(this.pos) < b.pos.distanceTo(this.pos) ? a : b), d = s.pos.distanceTo(this.pos);
@@ -148,7 +150,8 @@ function navBombHitShip(p, kg, by) {
     if (sh.sinking) continue; const l = sh.toLocal(p, new V3());
     if (Math.abs(l.x) < sh.C.B / 2 && Math.abs(l.z) < sh.C.L / 2 && l.y < sh.C.F + 12) {
       // colpo diretto sul ponte: perforazione della corazza orizzontale (bomba perforante ~ 0,4 mm per kg)
-      const pen = kg * .4 > (Math.abs(l.z) < sh.C.L * .27 ? sh.C.deck : sh.C.deck * .3), dmg = kg * (pen ? 3.2 : 1.1);
+      const pen = kg * .4 > (Math.abs(l.z) < sh.C.L * .27 ? sh.C.deck : sh.C.deck * .3), cv = sh.C.type === 'cv', dmg = kg * (pen ? 3.2 : 1.1) * (cv ? 2.6 : 1);
+      if (cv) { for (let k = 0; k < 3; k++) sh.addFire(new V3(rnd(-sh.C.B * .3, sh.C.B * .3), sh.C.F + 7, l.z + rnd(-25, 25)), by === PL.me ? NV.me : null); if (by === PL.me) navyHitText('Ponte di volo in fiamme: aerei e carburante esplodono!', '#ffcf5a'); }
       sh.damage(dmg, by && by.team !== sh.team ? (by === PL.me ? NV.me : by) : null, 'bomb'); sh.addFire(l, by === PL.me ? NV.me : null);
       if (pen && Math.abs(l.z) < sh.C.L * .27 && kg >= 400 && R() < .06) sh.sink('magazine');
       if (by === PL.me) { navyHitText((pen ? 'Bomba perfora il ponte! · ' : 'Bomba a segno · ') + Math.round(dmg), '#ffcf5a'); navyRibbon(pen ? 'pen' : 'hit'); }
@@ -171,7 +174,7 @@ function updateNavBombs(dt) {
 }
 
 // ---------- contraerea delle navi ----------
-const AA_POWER = { bb: 34, cl: 26, dd: 12, pt: 4, cargo: 2 };
+const AA_POWER = { bb: 34, cl: 26, dd: 12, pt: 4, cargo: 2, cv: 24 };
 function updateNavAA(dt) {
   NAIR.aaRamp = Math.min(1, NAIR.aaRamp + dt / 90);
   NAIR.aaT -= dt; if (NAIR.aaT > 0) return; NAIR.aaT = .1;

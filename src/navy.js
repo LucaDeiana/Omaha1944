@@ -51,6 +51,12 @@ const NCLS = {
   satsuma: { name: 'Super corazzata Satsuma', nat: 'jp', type: 'bb', style: 'pagoda', L: 400, B: 56, D: 14, F: 15, vmax: 27, tau: 100, R: 950, rud: .14, hp: 60000, belt: 650, deck: 300, ends: 200, hull: 0x7a7e82,
     guns: [{ s: 'jp2000', reload: 10, trav: .06, elev: .6, disp: .05, mounts: [[0, 20, -142, 'fore', 2], [0, 30, -104, 'fore', 2], [0, 30, 100, 'aft', 2], [0, 20, 138, 'aft', 2]] },
       { s: 'us305', sec: true, reload: 20, trav: .12, elev: .6, disp: 1, mounts: [[-21, 23, -50, 'port', 2], [21, 23, -50, 'stbd', 2], [-23, 23, 0, 'port', 2], [23, 23, 0, 'stbd', 2], [-21, 23, 50, 'port', 2], [21, 23, 50, 'stbd', 2]] }] },
+  akagi: { name: 'Portaerei Akagi', nat: 'jp', type: 'cv', L: 260, B: 31, D: 8.7, F: 14, vmax: 31, tau: 60, R: 650, rud: .2, hp: 8500, belt: 152, deck: 79, ends: 40, hull: 0x7a7e82,
+    guns: [{ s: 'us127', sec: true, reload: 4, trav: .4, elev: 1.4, disp: 1.6, mounts: [[-15, 12, -70, 'port', 2], [15, 12, -70, 'stbd', 2], [-15, 12, 60, 'port', 2], [15, 12, 60, 'stbd', 2]] }] },
+  kaga: { name: 'Portaerei Kaga', nat: 'jp', type: 'cv', L: 248, B: 32, D: 9.5, F: 13, vmax: 28, tau: 60, R: 640, rud: .2, hp: 8800, belt: 152, deck: 38, ends: 40, hull: 0x7a7e82,
+    guns: [{ s: 'us127', sec: true, reload: 4, trav: .4, elev: 1.4, disp: 1.6, mounts: [[-16, 12, -60, 'port', 2], [16, 12, -60, 'stbd', 2], [-16, 12, 50, 'port', 2], [16, 12, 50, 'stbd', 2]] }] },
+  soryu: { name: 'Portaerei Soryu', nat: 'jp', type: 'cv', L: 227, B: 21, D: 7.6, F: 12, vmax: 34, tau: 50, R: 560, rud: .22, hp: 6000, belt: 41, deck: 25, ends: 20, hull: 0x7a7e82,
+    guns: [{ s: 'us127', sec: true, reload: 4, trav: .4, elev: 1.4, disp: 1.6, mounts: [[-11, 11, -50, 'port', 2], [11, 11, -50, 'stbd', 2]] }] },
   z1934: { name: 'Zerstörer 1934', nat: 'de', type: 'dd', L: 119, B: 11.3, D: 4, F: 7, vmax: 36, tau: 24, R: 340, rud: .4, hp: 1900, belt: 0, deck: 0, ends: 0, hull: 0x7b8086,
     guns: [{ s: 'de127', reload: 4.5, trav: .4, elev: .52, disp: 1.4, mounts: [[0, 9, -42, 'fore', 1], [0, 11.5, -33, 'fore', 1], [0, 11.5, 28, 'aft', 1], [0, 9, 37, 'aft', 1], [0, 9, 46, 'aft', 1]] },
       { s: 'de37', sec: true, reload: .8, trav: 1, elev: 1.4, disp: 2.5, mounts: [[-4, 10, 10, 'port', 2], [4, 10, 10, 'stbd', 2]] }],
@@ -68,6 +74,8 @@ const NCLS = {
 };
 
 // ---------- balistica esterna ----------
+NCLS.kirishima = Object.assign({}, NCLS.texas, { name: 'Corazzata Kirishima', nat: 'jp', style: 'pagoda', vmax: 30, hp: 10500, belt: 203, deck: 70 });
+NCLS.kagero = Object.assign({}, NCLS.z1934, { name: 'Cacciatorpediniere Kagero', nat: 'jp', vmax: 35 });
 const RHO0 = 1.225;
 // coefficiente di resistenza in funzione del numero di Mach (proiettile navale con ogiva lunga)
 function cdMach(M) { if (M < .8) return .14; if (M < 1) return .14 + (M - .8) / .2 * .24; if (M < 1.2) return .38; return Math.max(.2, .38 - (M - 1.2) * .1); }
@@ -636,7 +644,7 @@ function aiShip(sh, dt, t) {
   const T = sh.fc.tgt && !sh.fc.tgt.sinking && sh.fc.tgt.alive ? sh.fc.tgt : (sh.fc.tgt = nearestFoe(sh));
   if (!T) { sh.tele = 1; return; }
   const dv = _nva.set(T.pos.x - sh.pos.x, 0, T.pos.z - sh.pos.z), dist = dv.length(), brg = Math.atan2(-dv.x, -dv.z);
-  const want = { bb: 15000, cl: 10500, dd: 6500, pt: 2500 }[sh.role] || 8000;
+  const want = { bb: 15000, cl: 10500, dd: 6500, pt: 2500, cv: 30000 }[sh.role] || 8000;
   sh.zig -= dt; if (sh.zig <= 0) { sh.zig = rnd(25, 50); sh.zigS = -sh.zigS; }
   let hd;
   if (!sh.route) {
@@ -652,7 +660,7 @@ function aiShip(sh, dt, t) {
     steerTo(sh, hd); sh.tele = 4;
   }
   // centrale di tiro: errore iniziale in distanza e direzione che si riduce salva dopo salva (correzione sulle colonne d'acqua)
-  if (sh.turrets.length) {
+  if (sh.main.length) {
     if (sh.fc.last !== T) { sh.fc.last = T; sh.fc.err.set(gauss() * dist * .05, 0, gauss() * dist * .05); sh.fc.vT = T.vel.clone(); }
     if (T.vel.distanceTo(sh.fc.vT) > 3) { sh.fc.err.multiplyScalar(1.6).clampLength(0, dist * .08); sh.fc.vT.copy(T.vel); }
     const tof = (solveElev(sh.main[0].T, dist) || { t: dist / 600 }).t;
@@ -898,6 +906,28 @@ const NAVY_MIS = {
       new NavShip('scharnhorst', 'E', 5000, -26000, PI * .9, { spd: .8, tag: 'flag', name: 'Scharnhorst' }); new NavShip('nurnberg', 'E', 2500, -24000, PI * .9, { spd: .8 });
       for (const [x, z] of [[3000, -22000], [6500, -23000], [1000, -21500], [8000, -24500]]) new NavShip('z1934', 'E', x, z, PI * .9, { spd: .8 }); },
     obj() { const n = NV.ships.filter(s => s.team === 'E' && !s.sinking).length; return [n === 0, 'Affonda la squadra tedesca — restano ' + n]; } },
+  midway: { weather: 'sereno', sun: [-.3, .7, .4], name: 'Midway — 4 giugno 1942', ship: 'fletcher', brief: 'Bombardieri in picchiata del gruppo aereo della Enterprise: la flotta di Nagumo è sotto di voi. Affondate le portaerei!',
+    setup() {
+      for (const [x, z, r] of [[9000, 21000, 900], [10400, 21600, 500]]) NV.islands.push({ x, z, r, h: 6, flat: true });   // atollo di Midway
+      for (const I of NV.islands) buildIsland(I);
+      NV.me = new NavShip(navyPick('fletcher'), 'A', 2000, 26000, 0, { ai: false, spd: .5, name: 'USS Hammann' });
+      const route = (x, z) => [{ x: x - 30000, z }, { x: x - 60000, z }];
+      const jp = [['akagi', 0, 0], ['kaga', -1600, 900], ['soryu', 1500, 1200], ['kirishima', 0, -2200], ['kagero', 2600, -1200], ['kagero', -2600, -1000], ['kagero', 2800, 2600], ['kagero', -2900, 2800]];
+      for (const [k, x, z] of jp) new NavShip(k, 'E', x, z, PI / 2, { route: route(x, z), spd: .8, tag: NCLS[k].type === 'cv' ? 'cv' : '' });
+      // la pattuglia di Zero sopra le portaerei e gli altri gruppi d'attacco americani
+      for (let i = 0; i < 8; i++) new NavPlane('zero', 'E', new V3(rnd(-2500, 2500), 2600 + i * 40, rnd(-2000, 2500)), R() * TAU, { cap: NV.ships.find(s => s.cls === 'akagi') });
+      for (let i = 0; i < 9; i++) new NavPlane('sbd', 'A', new V3(-3000 + (i % 3) * 70, 4300 + i * 15, 12500 + Math.floor(i / 3) * 80), 0, { target: NV.ships.find(s => s.cls === ['akagi', 'kaga', 'soryu'][i % 3]) });
+      for (let i = 0; i < 6; i++) new NavPlane('tbf', 'A', new V3(3000 + (i % 3) * 70, 350, 13000 + Math.floor(i / 3) * 80), 0, { target: NV.ships.find(s => s.cls === ['kaga', 'akagi', 'soryu'][i % 3]) });
+      NV.escT = 720;
+      // il giocatore guida il capo pattuglia
+      after(.2, () => { enterPlane({ type: 'sbd', pos: new V3(-2600, 4500, 12000), vel: new V3(0, 0, -95) }); PL.bombs = 1; showMsg('Sei il capo pattuglia: picchiata sulla portaerei, Spazio sgancia la bomba · P per tornare alla nave', 6); });
+    },
+    tick(dt) { NV.escT -= dt; },
+    obj() {
+      const cv = NV.ships.filter(s => s.tag === 'cv'), sunk = cv.filter(s => s.sinking).length + (3 - cv.length);
+      if (NV.escT <= 0 && sunk < 3) return [false, 'La flotta giapponese si è ritirata', true];
+      return [sunk >= 3, 'Affonda le portaerei — ' + sunk + '/3 · ' + Math.max(0, Math.ceil(NV.escT)) + ' s · abbattuti ' + (NAIR.kills || 0)];
+    } },
   pearl: { weather: 'sereno', sun: [.85, .2, -.35], name: 'Pearl Harbor — 7 dicembre 1941', ship: 'fletcher', brief: 'Domenica mattina, 7:55. Aerei giapponesi su Pearl Harbor! Posti di combattimento: difendi la flotta in rada.',
     setup() {
       // rada: Ford Island al centro, colline di Oahu tutt'attorno con l'ingresso del canale a sud

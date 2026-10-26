@@ -82,6 +82,22 @@ function shipSuper(mb, C, hg) {
   const deckY = z => hg.sheer((z + L / 2) / L);
   // ancore e catene sul castello di prua
   if (C.type !== 'pt') for (const sd of [-1, 1]) { mb.add(U.box, 0x1d1f21, sd * (hg.hw(.06) + .1), deckY(-L * .44) - 1.5, -L * .44, 0, 0, sd * .3, .3, 1.6, 1.2); mb.add(U.cyl, 0x2a2c2e, sd * 1.2, deckY(-L * .4) + .15, -L * .4, PI / 2, 0, 0, .2, L * .08, .2); }
+  if (C.type === 'cv') {
+    // portaerei: ponte di volo in legno su piloni, isola sul lato, aerei parcheggiati a poppa, antiaeree in sponsoni
+    const F = C.F, fy = F + 7, fl = L * .94;
+    mb.add(U.box, 0x8a7350, 0, fy, L * .01, 0, 0, 0, B * 1.08, .8, fl);
+    for (let z = -fl / 2 + 6; z < fl / 2; z += 12) mb.add(U.box, 0x6e5c40, 0, fy + .42, z, 0, 0, 0, B * 1.06, .02, .12);   // giunti del ponte
+    mb.add(U.box, 0xd8d4c4, 0, fy + .43, L * .01, 0, 0, 0, .4, .02, fl * .9);   // linea centrale
+    mb.add(U.cyl12, 0xb02a24, 0, fy + .44, -fl * .3, 0, 0, 0, B * .5, .02, B * .5);   // cerchio rosso (hinomaru) a prua
+    for (let z = -fl / 2 + 15; z < fl / 2 - 10; z += 22) for (const sd of [-1, 1]) mb.add(U.box, u, sd * B * .42, (F + fy) / 2, z, 0, 0, 0, 1.4, fy - F, 1.4);   // piloni
+    mb.add(U.box, u, 0, F + 3, 0, 0, 0, 0, B * .7, 6, L * .8);   // hangar
+    const ix = B * .52, iz = -L * .08;
+    mb.add(U.box, u, ix, fy + 4, iz, 0, 0, 0, 4, 8, 14); mb.add(U.box, 0x223040, ix, fy + 7, iz - 7.05, 0, 0, 0, 3.6, .8, .1); shMast(mb, ix, fy + 8, iz + 3, 10, mt, 6, 2.5);
+    shFunnel(mb, B * .58, F + 2, L * .02, 4, 6, 9, u, dk, .7);
+    for (let i = 0; i < 9; i++) { const z = fl * .18 + i * 9, x = (i % 3 - 1) * 8, y = fy + .9; mb.add(U.box, 0x6e7a5c, x, y, z, 0, 0, 0, 1.2, .9, 8); mb.add(U.box, 0x6e7a5c, x, y + .2, z - 1, 0, 0, 0, 11, .25, 2); mb.add(U.box, 0x6e7a5c, x, y + .3, z + 3.3, 0, 0, 0, 4, .2, 1.2); mb.add(U.box, 0xb02a24, x + 3.5, y + .36, z - 1, 0, 0, 0, .9, .02, .9); mb.add(U.box, 0xb02a24, x - 3.5, y + .36, z - 1, 0, 0, 0, .9, .02, .9); }
+    for (const sd of [-1, 1]) for (const z of [-L * .3, -L * .1, L * .12, L * .3]) shAA(mb, sd * B * .58, fy - 2, z, u, 3);
+    return;
+  }
   if (C.type === 'cargo') {
     const F = C.F;
     mb.add(U.box, u, 0, F + 2, -L * .4, 0, 0, 0, B * .8, 4, L * .1);   // castello
