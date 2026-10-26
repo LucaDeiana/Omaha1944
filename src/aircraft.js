@@ -234,7 +234,7 @@ function updateAA(dt) {
     if (R() < .25) { PS_SMOKE.emit(lead.x, lead.y, lead.z, 0, 0, 0, 4, 2, 6, .8, .05, .05, .05, .2, 0); PS_FIRE.emit(lead.x, lead.y, lead.z, 0, 0, 0, .15, 2, 3, 1, 4, 2.5, 1); if (dist2Cam(lead) < 300 * 300) play('boom_far', lead, { ref: 80, vol: .6, rate: 1.6 }); }
     // colpo a segno: probabilità che cala con la distanza e con la velocità; al giocatore al massimo un colpo ogni 0,6 s
     const near = (1 - bd / 1100) ** 1.6, fast = clamp(1.4 - tgt.vel.length() / 160, .45, 1);
-    if (tgt.player ? AA.cool <= 0 && R() < .03 * near * fast : R() < .015) { if (tgt.player) AA.cool = .6; tgt.damage(tgt.player ? rnd(14, 32) : rnd(25, 60), false); if (tgt.player) { P.shake += .4; lensSplat('dirt', .2); play('imp_metal', null, { vol: .8 }); } }
+    if (tgt.player ? AA.cool <= 0 && R() < .03 * near * fast : R() < .015) { if (tgt.player) AA.cool = .6; tgt.damage(tgt.player ? rnd(14, 32) : rnd(25, 60), false); if (tgt.player) { P.shake = Math.min(.6, P.shake + .15); lensSplat('dirt', .2); play('imp_metal', null, { vol: .8 }); } }
   }
   for (const p of PLANES) {
     // contraerea delle navi alleate al largo di Omaha: solo dove le navi ci sono davvero
@@ -469,7 +469,7 @@ function enterPlane(o = {}) {
   PL.me = me; PL.throttle = .85; PL.stickX = PL.stickY = PL.rudder = 0; PL.bombs = PL.spec.bombs; PL.rearm = 0; PL.av = new V3();
   me.g.add(PL.cockpit); PL.cockpit.visible = true; if (me.g.userData.pilot) me.g.userData.pilot.visible = false;
   P.mode = 'plane'; P.dead = false;
-  scene.fog.density = FOG_BASE * .3;
+  scene.fog.density = SCEN === 'sea' ? FOG_BASE * FOG_K : FOG_BASE * .3;   // in mare la visibilità è quella del meteo (decine di km)
   if (!PL.onDeck) spawnWingmen();
   PL.head = null; if (PL.assist === undefined) PL.assist = true; PL.ext = PL.assist; resetPlaneAim();
   if (PL.cockpit) PL.cockpit.visible = !PL.ext; if (me.g.userData.pilot) me.g.userData.pilot.visible = PL.ext; if (me.g.userData.glass) me.g.userData.glass.visible = PL.ext;
@@ -626,7 +626,7 @@ function updatePlane(dt) {
   const hr = PL.head || (PL.head = { r: 0, p: 0, y: 0, dy: 0 }), k = Math.min(1, dt * 3);
   hr.r = lerp(hr.r, clamp(-PL.av.z * .09, -.22, .22), k); hr.p = lerp(hr.p, clamp(-PL.av.x * .05 - (PL.G - 1) * .012, -.12, .1), k);
   hr.y = lerp(hr.y, clamp(-PL.av.y * .12, -.1, .1), k); hr.dy = lerp(hr.dy, clamp(-(PL.G - 1) * .018, -.09, .03), k);
-  const shake = (PL.gunT > -.05 ? .002 : 0) + Math.min(.004, V * .00002) + P.shake * .01;
+  const shake = (PL.gunT > -.05 ? .002 : 0) + Math.min(.004, V * .00002), hitS = Math.min(P.shake, .6) * .004;
   if (PL.wreck) wreckCam(me, dt);
   else if (PL.ext) {
     // visuale esterna: inseguimento morbido dietro e sopra l'aereo
@@ -654,7 +654,7 @@ function updatePlane(dt) {
     camera.quaternion.copy(me.q);
     camera.rotateY((P.lookYaw || 0) + hr.y); camera.rotateX((P.lookPitch || 0) + hr.p); camera.rotateZ(hr.r);
   }
-  camera.rotateX(rnd(-shake, shake)); camera.rotateY(rnd(-shake, shake));
+  camera.rotateX(rnd(-shake, shake) + Math.sin(GAME.time * 19) * hitS); camera.rotateY(rnd(-shake, shake) + Math.sin(GAME.time * 15 + 1.3) * hitS * .7);
   planeReticle(me); planeDamageHud(me);
   const fov = (PL.ext ? 70 : 88) * (P.adsHeld ? .45 : 1); if (Math.abs(camera.fov - fov) > .05) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 9)); camera.updateProjectionMatrix(); }
   if (PL.eng !== me.eng) PL.eng = me.eng;

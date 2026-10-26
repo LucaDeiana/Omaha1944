@@ -227,7 +227,25 @@ function navyPlayerTorpedo() {
   showMsg('Siluro in acqua!', 1.5); play('imp_water', o, { ref: 50 });
   return true;
 }
+// in volo: segnalini sulle navi (rosse le nemiche, azzurre le amiche) con nome e distanza
+const _nmk = { els: [], v: new V3() };
+function updateNavMarkers() {
+  const on = P.mode === 'plane' && SCEN === 'sea'; let n = 0;
+  if (on) for (const s of NV.ships) {
+    if (s.sinking > 20) continue;
+    const d = s.pos.distanceTo(camera.position), v = _nmk.v.copy(s.pos).setY(s.C.F + 20).project(camera);
+    if (v.z > 1 || Math.abs(v.x) > 1.05 || Math.abs(v.y) > 1.05) continue;
+    let e = _nmk.els[n]; if (!e) { e = document.createElement('div'); e.style.cssText = 'position:fixed;pointer-events:none;transform:translate(-50%,-100%);font:600 11px Oswald,sans-serif;text-align:center;text-shadow:0 0 3px #000;white-space:nowrap;z-index:4'; document.body.appendChild(e); _nmk.els.push(e); }
+    const foe = s.team !== 'A', col = s.sinking ? '#999' : foe ? '#ff5a4a' : '#7fd3ff';
+    e.style.display = 'block'; e.style.left = ((v.x + 1) / 2 * innerWidth) + 'px'; e.style.top = ((1 - v.y) / 2 * innerHeight) + 'px'; e.style.color = col;
+    const txt = (d < 6000 || s.tag === 'cv' ? s.name || s.C.name : '') + ' ' + (d / 1000).toFixed(1) + ' km';
+    if (e._t !== txt) { e._t = txt; e.innerHTML = txt + '<br><span style="font-size:14px">▼</span>'; }
+    n++;
+  }
+  for (let i = n; i < _nmk.els.length; i++) _nmk.els[i].style.display = 'none';
+}
 function updateNavAir(dt) {
+  updateNavMarkers();
   NAIR.strikeT = Math.max(0, NAIR.strikeT - dt);
   updateNavBombs(dt); updateNavAA(dt);
   // aereo del giocatore abbattuto o ammarato: si torna alla nave
