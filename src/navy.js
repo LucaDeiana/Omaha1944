@@ -295,7 +295,7 @@ class NavShip {
     if (this.fires.length >= 4) return;
     const lpc = lp.clone(), e = addEmitter(this.pos, 'fire', this.C.L > 100 ? 1.4 : .8); e.follow = q => { this.toWorld(lpc.x, Math.max(lpc.y, this.C.F), lpc.z, q); };
     const s = addEmitter(this.pos, 'smoke', this.C.L > 100 ? 1.6 : .9); s.follow = e.follow;
-    this.fires.push({ e, t: rnd(30, 60), s });
+    this.fires.push({ e, t: rnd(30, 60), s, lp: lpc });
     if (this === NV.me) showMsg('Incendio a bordo! R: squadre di soccorso', 2);
   }
   // ---------- tiro ----------
@@ -314,8 +314,9 @@ class NavShip {
       const yawW = Math.atan2(-(tgt.x - gp.x), -(tgt.z - gp.z)), rel = wrapA(yawW - this.yaw);
       tu.inArc = this.arcOK(tu, rel); tu.sol = sol;
       const goal = tu.inArc ? rel : tu.rel;
-      tu.rel = wrapA(tu.rel + clamp(wrapA(goal - tu.rel), -tu.G.trav * dt, tu.G.trav * dt));
-      const eg = sol ? Math.min(sol.e, tu.G.elev) : tu.G.elev * .3; tu.el += clamp(eg - tu.el, -tu.G.trav * 1.5 * dt, tu.G.trav * 1.5 * dt);
+      const tv = tu.G.trav * (this === NV.me && NV.arcade ? 2.5 : 1);
+      tu.rel = wrapA(tu.rel + clamp(wrapA(goal - tu.rel), -tv * dt, tv * dt));
+      const eg = sol ? Math.min(sol.e, tu.G.elev) : tu.G.elev * .3; tu.el += clamp(eg - tu.el, -tv * 1.5 * dt, tv * 1.5 * dt);
       tu.aligned = tu.inArc && sol && Math.abs(wrapA(rel - tu.rel)) < .006 && Math.abs(eg - tu.el) < .004;
       any = any || tu.aligned;
     }
@@ -351,7 +352,7 @@ class NavShip {
     for (const mz of tu.muzzles) {
       const o = tu.pv.localToWorld(mz.clone()), d = tu.pv.localToWorld(mz.clone().add(new V3(0, 0, -1))).sub(o).normalize();
       // dispersione: angolare (mrad) e di velocità iniziale (±0,4 %)
-      const sg = tu.G.disp / 1000; d.x += gauss() * sg; d.y += gauss() * sg * .6; d.z += gauss() * sg; d.normalize();
+      const sg = tu.G.disp / 1000 * (this === NV.me ? (NV.arcade ? .3 : .6) : 1); d.x += gauss() * sg; d.y += gauss() * sg * .6; d.z += gauss() * sg; d.normalize();
       const v = d.multiplyScalar(S.v * (1 + gauss() * .004)).add(this.vel);
       const sh = { S, p: o.clone(), v, t: 0, by: this, ammo: ammo || 'AP', key: tu.key }; NV.shells.push(sh);
       if (this === NV.me && !tu.sec) NV.lastShell = sh;
@@ -409,17 +410,43 @@ function updateShells(dt) {
   drawShells();
 }
 const NVQ = { mesh: null };
+// proiettili: nucleo incandescente (punto luminoso che resta visibile anche lontano) e scia che sfuma alle spalle
+const NVG = { pts: null, trail: null, NP: 700, NS: 700 * 9 };
+function initShellFx() {
+  const P = new THREE.BufferGeometry(); P.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NVG.NP * 3), 3)); P.setAttribute('aSize', new THREE.BufferAttribute(new Float32Array(NVG.NP), 1)); P.setAttribute('aCol', new THREE.BufferAttribute(new Float32Array(NVG.NP * 3), 3));
+  const pm = new THREE.ShaderMaterial({
+    uniforms: { uScale: { value: 600 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `attribute float aSize; attribute vec3 aCol; varying vec3 vC; uniform float uScale;
+      void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.); vC = aCol; gl_PointSize = max(2.5, aSize * uScale / -mv.z); gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `varying vec3 vC; void main(){ vec2 d = gl_PointCoord - .5; float r = length(d) * 2.; float core = smoothstep(.35, 0., r), glow = smoothstep(1., 0., r); gl_FragColor = vec4(vC * (glow * .55 + core * 1.6) + vec3(core * .6), 1.); }`,
+  });
+  NVG.pts = new THREE.Points(P, pm); NVG.pts.frustumCulled = false; NVG.pts.renderOrder = 6; scene.add(NVG.pts);
+  const T = new THREE.BufferGeometry(); T.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NVG.NS * 6), 3)); T.setAttribute('color', new THREE.BufferAttribute(new Float32Array(NVG.NS * 6), 3));
+  NVG.trail = new THREE.LineSegments(T, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  NVG.trail.frustumCulled = false; NVG.trail.renderOrder = 5; scene.add(NVG.trail);
+}
 function drawShells() {
-  if (!NVQ.mesh) { NVQ.mesh = new THREE.InstancedMesh(FXP.tr.geometry, FXP.tr.material, 600); NVQ.mesh.frustumCulled = false; NVQ.mesh.renderOrder = 5; scene.add(NVQ.mesh); NVQ.n = 0; }
-  const L = NV.shells, n = Math.min(600, L.length), cp = camera.position, m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new V3(), p = new V3(), d = new V3();
-  for (let i = 0; i < n; i++) {
-    const s = L[i], sp = s.v.length(); d.copy(s.v).multiplyScalar(1 / sp); const len = Math.min(sp * .03, s.S.cal >= 100 ? 14 : 20);
-    p.copy(s.p).addScaledVector(d, -len); q.setFromUnitVectors(_fu, d);
-    const dc = Math.max(1, p.distanceTo(cp)), rad = Math.min(1.2, .02 + dc * .0012) * (s.S.cal >= 100 ? 1.6 : s.S.cal >= 20 ? 1.2 : .9);
-    m4.compose(p, q, sc.set(rad, len, rad)); NVQ.mesh.setMatrixAt(i, m4);
+  if (!NVG.pts) initShellFx();
+  const L = NV.shells, pp = NVG.pts.geometry.attributes, NP = NVG.NP * 12;
+  if (pp.position.count < NP) { const P = NVG.pts.geometry; P.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NP * 3), 3)); P.setAttribute('aSize', new THREE.BufferAttribute(new Float32Array(NP), 1)); P.setAttribute('aCol', new THREE.BufferAttribute(new Float32Array(NP * 3), 3)); NVG.trail.visible = false; return; }
+  NVG.pts.material.uniforms.uScale.value = innerHeight / (2 * Math.tan(camera.fov * PI / 360));
+  let k = 0; const q = new V3();
+  for (const s of L) {
+    if (k >= NP - 30) break;
+    const c = s.S.cal, big = c >= 100, cr = 1, cg = big ? .55 : c >= 20 ? .72 : .38, cb = big ? .2 : c >= 20 ? .28 : .14;
+    const sz = big ? .9 + c / 300 : c >= 20 ? .5 : .3;
+    pp.position.setXYZ(k, s.p.x, s.p.y, s.p.z); pp.aSize.setX(k, sz); pp.aCol.setXYZ(k, cr, cg, cb); k++;
+    // coda: punti sempre più piccoli e spenti lungo il tratto percorso di recente (lunga circa 0,35 s di volo per i grossi calibri)
+    s.tr = s.tr || []; s.tr.unshift(s.p.clone()); if (s.tr.length > (big ? 12 : 5)) s.tr.pop();
+    const n = big ? 26 : 8;
+    for (let j = 1; j <= n && s.tr.length > 1; j++) {
+      const u = j / n * (s.tr.length - 1), a = Math.floor(u), b = Math.min(s.tr.length - 1, a + 1); q.copy(s.tr[a]).lerp(s.tr[b], u - a);
+      const f = 1 - j / (n + 1);
+      pp.position.setXYZ(k, q.x, q.y, q.z); pp.aSize.setX(k, sz * (.25 + .55 * f)); pp.aCol.setXYZ(k, cr * f * .7, cg * f * .6, cb * f * .5); k++;
+    }
   }
-  for (let i = n; i < NVQ.n; i++) NVQ.mesh.setMatrixAt(i, _fz);
-  NVQ.n = n; NVQ.mesh.instanceMatrix.needsUpdate = true;
+  NVG.pts.geometry.setDrawRange(0, k);
+  pp.position.needsUpdate = pp.aSize.needsUpdate = pp.aCol.needsUpdate = true;
 }
 // colonne d'acqua alte secondo il calibro; le schegge dell'esplosivo colpiscono le navi vicinissime
 function splash(s, p) {
@@ -489,6 +516,7 @@ function shellOnShip(s, sh, H) {
     if (lp.y < .6 && face === 'side') { sh.leak += .0015 * Math.sqrt(S.m) / Math.sqrt(C.L / 100); sh.listS = Math.sign(lp.x) || 1; if (sh === NV.me) showMsg('Falla sotto la linea di galleggiamento!', 1.8); }
     if (R() < .25) sh.addFire(lp);
   }
+  if (me) { (sh.hitLog = sh.hitLog || []).push({ x: lp.x, z: lp.z, pen, t: GAME.time, big: S.cal >= 100 }); if (sh.hitLog.length > 80) sh.hitLog.shift(); }
   sh.damage(dmg, s.by, 'shell');
   const p = H.p;
   if (S.cal >= 100) { fxExplosion(p.clone(), Math.min(5, S.cal / (pen ? 70 : 120)), false); if (dist2Cam(p) < 3000 * 3000) sfxBoom(p, S.cal / (pen ? 80 : 140)); }
@@ -581,7 +609,10 @@ function navyMouse(dx, dy) {
   // col colpo seguito il mouse gira attorno al proiettile
   if (NV.follow) { const o = NV.forb, k = .003 * SETTINGS.sens; o.yaw -= dx * k; o.pitch = clamp(o.pitch - dy * k, -.15, 1.4); return; }
  const s = .0018 * SETTINGS.sens * (camera.fov / 60); NV.cam.yaw -= dx * s; NV.cam.pitch = clamp(NV.cam.pitch - dy * s, -.6, .25); }
-function navyWheel(dy) { NV.cam.dist = clamp(NV.cam.dist * (dy > 0 ? 1.12 : .89), .35, 4); }
+function navyWheel(dy) {
+  if (P.adsHeld || NV.zoomOn) { NV.zfov = clamp((NV.zfov || 9) * (dy > 0 ? 1.25 : .8), 2.5, 25); showMsg('Ingrandimento ' + (60 / NV.zfov).toFixed(1) + '×', .8); return; }
+  NV.cam.dist = clamp(NV.cam.dist * (dy > 0 ? 1.12 : .89), .35, 4);
+}
 function navyLock() {
   let best = null, ba = .2;
   const f = new V3(); camera.getWorldDirection(f);
@@ -597,7 +628,7 @@ function updateNavyPlayer(dt) {
   // camera: in terza persona attorno alla nave o col binocolo (tasto destro) dalla plancia
   const zoom = P.adsHeld || NV.zoomOn, C = me.C, cy = NV.cam.yaw, cpch = NV.cam.pitch;
   const dir = new V3(-Math.sin(cy) * Math.cos(cpch), Math.sin(cpch), -Math.cos(cy) * Math.cos(cpch));
-  if (zoom) { me.toWorld(0, C.F + (C.type === 'pt' ? 4 : 14), -C.L * .15, camera.position); camera.fov = lerp(camera.fov, 9, .25); }
+  if (zoom) { me.toWorld(0, C.F + (C.type === 'pt' ? 4 : 14), -C.L * .15, camera.position); camera.fov = lerp(camera.fov, NV.zfov || 9, .25); }
   else { const d = (C.L * 1.1 + 25) * NV.cam.dist; camera.position.copy(me.pos).addScaledVector(dir, -d); camera.position.y = Math.max(camera.position.y + C.F + C.L * .18, seaH(camera.position.x, camera.position.z, GAME.time) + 3); camera.fov = lerp(camera.fov, SETTINGS.fov, .2); }
   camera.updateProjectionMatrix();
   camera.lookAt(_nva.copy(camera.position).addScaledVector(dir, 1000).add(new V3(0, zoom ? 0 : C.L * .1, 0)));
@@ -673,15 +704,17 @@ function navyHud() {
   <div id="nvGun" style="position:fixed;width:34px;height:34px;margin:-17px 0 0 -17px;pointer-events:none;display:none"><svg width="34" height="34"><g id="nvGunC" stroke="#ffd25a" stroke-width="2" fill="none" style="filter:drop-shadow(0 0 2px #000)"><circle cx="17" cy="17" r="11"/><path d="M17 0v8M17 26v8M0 17h8M26 17h8"/></g></svg><div id="nvGunT" style="position:absolute;left:50%;top:36px;transform:translateX(-50%);font:600 11px Oswald,sans-serif;white-space:nowrap;text-shadow:0 0 3px #000"></div></div>
   <div id="nvSec" style="position:fixed;width:10px;height:10px;margin:-5px 0 0 -5px;border:2px solid #7fd3ff;transform:rotate(45deg);pointer-events:none;display:none"></div>
   <div id="nvLead" style="position:fixed;width:20px;height:20px;margin:-10px 0 0 -10px;pointer-events:none;display:none"><svg width="20" height="20"><path d="M10 1L19 10L10 19L1 10Z" stroke="#ff6a4a" stroke-width="2" fill="none"/></svg></div>
+  <div id="nvLine" style="position:fixed;height:2px;transform-origin:0 50%;pointer-events:none;display:none"></div>
   <div id="nvTorp" style="position:fixed;width:14px;height:14px;margin:-7px 0 0 -7px;border:2px dashed #7fd3ff;border-radius:50%;pointer-events:none;display:none"></div>
   <div id="nvLockB" style="position:fixed;width:46px;height:30px;margin:-15px 0 0 -23px;border:2px solid #ffb43a;pointer-events:none;display:none"></div>
   <div id="nvRange" style="position:fixed;left:50%;top:calc(50% + 22px);transform:translateX(-50%);font:12px Oswald,sans-serif;color:#fff;text-shadow:0 0 3px #000;pointer-events:none;white-space:nowrap"></div>
   <div id="nvHit" style="position:fixed;left:50%;top:calc(50% - 48px);transform:translateX(-50%);font:600 15px Oswald,sans-serif;text-shadow:0 0 4px #000;pointer-events:none;opacity:0;transition:opacity .4s"></div>
   <div id="nvLeft" style="position:fixed;left:14px;bottom:14px;width:250px;font:12px Oswald,sans-serif;color:#e8e2d0;background:rgba(10,14,16,.55);padding:8px 10px;border-radius:4px;pointer-events:none"></div>
   <div id="nvRight" style="position:fixed;right:14px;bottom:14px;width:230px;font:12px Oswald,sans-serif;color:#e8e2d0;background:rgba(10,14,16,.55);padding:8px 10px;border-radius:4px;pointer-events:none"></div>
+  <div id="nvTgt" style="position:fixed;left:14px;top:96px;width:300px;background:rgba(10,14,16,.68);border:1px solid rgba(255,180,60,.5);border-radius:4px;padding:7px 9px;font:12px Oswald,sans-serif;color:#e8e2d0;pointer-events:none;display:none"><div id="nvTgtH"></div><canvas id="nvTgtC" width="282" height="96" style="display:block;margin:4px 0"></canvas><div id="nvTgtS"></div></div>
   <canvas id="nvRadar" width="170" height="170" style="position:fixed;right:14px;top:70px;border-radius:50%;background:rgba(8,20,24,.55);pointer-events:none"></canvas>`;
   document.body.appendChild(box);
-  NV.el = { box, cross: $('nvCross'), gun: $('nvGun'), gunC: $('nvGunC'), gunT: $('nvGunT'), sec: $('nvSec'), lead: $('nvLead'), torp: $('nvTorp'), lockB: $('nvLockB'), range: $('nvRange'), hit: $('nvHit'), left: $('nvLeft'), right: $('nvRight'), radar: $('nvRadar') };
+  NV.el = { box, line: $('nvLine'), cross: $('nvCross'), gun: $('nvGun'), gunC: $('nvGunC'), gunT: $('nvGunT'), sec: $('nvSec'), lead: $('nvLead'), torp: $('nvTorp'), lockB: $('nvLockB'), range: $('nvRange'), hit: $('nvHit'), left: $('nvLeft'), right: $('nvRight'), radar: $('nvRadar'), tgt: $('nvTgt'), tgtH: $('nvTgtH'), tgtC: $('nvTgtC'), tgtS: $('nvTgtS') };
   return NV.el;
 }
 function navyHitText(t, c) { const E = navyHud(); E.hit.textContent = t; E.hit.style.color = c; E.hit.style.opacity = 1; clearTimeout(NV.hitTO); NV.hitTO = setTimeout(() => E.hit.style.opacity = 0, 1300); }
@@ -705,9 +738,17 @@ function updateNavyHud(dt) {
   if (L) {
     place(E.lockB, L.pos.clone().add(new V3(0, L.C.F, 0)));
     const d = L.pos.distanceTo(me.pos), sol = tu && solveElev(tu.T, d), tof = sol ? sol.t : 0;
-    place(E.lead, sol ? L.pos.clone().addScaledVector(L.vel, tof).setY(WATER_Y) : null);
+    const ls = place(E.lead, sol ? L.pos.clone().addScaledVector(L.vel, tof).setY(WATER_Y) : null);
+    if (ls) {
+      const cx = innerWidth / 2, cy = innerHeight / 2, dx = ls[0] - cx, dy = ls[1] - cy, len = Math.hypot(dx, dy);
+      // tolleranza: mezza lunghezza apparente della nave bersaglio sullo schermo (minimo 6 px)
+      const sl = scr(L.pos.clone().addScaledVector(L.fwd, L.C.L * .35)), sc = scr(L.pos), tol = Math.max(6, sl && sc ? Math.abs(sl[0] - sc[0]) : 6);
+      const ok = Math.abs(dx) < tol; E.line.style.display = 'block'; E.line.style.left = cx + 'px'; E.line.style.top = cy + 'px'; E.line.style.width = len + 'px';
+      E.line.style.transform = 'rotate(' + Math.atan2(dy, dx) + 'rad)'; E.line.style.background = ok ? 'rgba(110,230,100,.95)' : 'rgba(255,120,90,.7)';
+      E.lead.querySelector('path').setAttribute('stroke', ok ? '#6ee664' : '#ff6a4a');
+    } else E.line.style.display = 'none';
     if (me.C.torps && me.torpN > 0) { const vt = me.C.torps.kn * KN; let tt = d / vt; for (let i = 0; i < 3; i++) tt = L.pos.clone().addScaledVector(L.vel, tt).distanceTo(me.pos) / vt; place(E.torp, L.pos.clone().addScaledVector(L.vel, tt).setY(WATER_Y)); } else E.torp.style.display = 'none';
-  } else { E.lockB.style.display = E.lead.style.display = E.torp.style.display = 'none'; }
+  } else { E.lockB.style.display = E.lead.style.display = E.torp.style.display = E.line.style.display = 'none'; }
   const sol = tu && solveElev(tu.T, NV.aimR);
   E.range.innerHTML = (NV.rf ? '<span style="color:#7fe06a">telemetro</span> ' : '') + Math.round(NV.aimR) + ' m' + (sol ? ' · volo ' + sol.t.toFixed(1) + ' s' : ' · <span style="color:#ff8a6a">fuori portata</span>') + (L ? '<br><span style="color:#ffb43a">' + L.name + ' · ' + Math.round(L.pos.distanceTo(me.pos)) + ' m · ' + Math.round(Math.abs(L.spd) / KN) + ' nodi</span>' : '');
   NV.hudT = (NV.hudT || 0) - dt; if (NV.hudT > 0) return; NV.hudT = .15;
@@ -716,13 +757,14 @@ function updateNavyHud(dt) {
   E.left.innerHTML = `<b style="font-size:14px">${me.C.name}</b><br>Scafo ${Math.max(0, Math.round(me.hp / me.hpMax * 100))}%${bar(me.hp / me.hpMax, me.hp / me.hpMax > .4 ? '#7fc06a' : '#e0604a')}` +
     `Velocità <b>${(Math.abs(me.spd) / KN).toFixed(1)} nodi</b> · telegrafo <b>${tn[me.tele + 1]}</b><br>Timone ${me.rud < -.05 ? '◀ ' : me.rud > .05 ? '▶ ' : ''}${Math.round(Math.abs(me.rud) * 35)}°${me.mod.steer < .5 ? ' <span style="color:#ff8a6a">BLOCCATO</span>' : ''}` +
     `<br>Allagamento ${Math.round(me.flood * 100)}%${me.leak > 0 ? ' <span style="color:#7fd3ff">falla</span>' : ''} · incendi ${me.fires.length}${me.mod.eng < .5 ? '<br><span style="color:#ff8a6a">Macchine danneggiate</span>' : ''}` +
-    `<br>Soccorso (R): ${me.dcT > 0 ? 'al lavoro ' + Math.ceil(me.dcT) + ' s' : me.dcCool > 0 ? 'tra ' + Math.ceil(me.dcCool) + ' s' : 'pronto'}<br><small>W/S telegrafo · A/D timone · C centra · mouse mira (vicino a una nave la distanza la dà il telemetro: porta il mirino sul rombo d'anticipo) · tasto sx fuoco · Shift binocolo on/off (o tieni il tasto dx) · F secondarie · Z segui il colpo (mouse per girargli attorno) · Q aggancia · 1/2 munizioni${me.C.torps ? ' · T siluri' : ''} · rotella distanza</small>`;
+    `<br>Soccorso (R): ${me.dcT > 0 ? 'al lavoro ' + Math.ceil(me.dcT) + ' s' : me.dcCool > 0 ? 'tra ' + Math.ceil(me.dcCool) + ' s' : 'pronto'}<br><small>W/S telegrafo · A/D timone · C centra · mouse mira (vicino a una nave la distanza la dà il telemetro: porta il mirino sul rombo d'anticipo) · tasto sx fuoco · Shift binocolo on/off (o tieni il tasto dx), rotella ingrandisce · F secondarie · Z segui il colpo (mouse per girargli attorno) · Q aggancia · 1/2 munizioni${me.C.torps ? ' · T siluri' : ''} · rotella distanza</small>`;
   const S = tu ? tu.S : null;
   E.right.innerHTML = (S ? `<b>${S.name}</b> · ${S.cal >= 100 ? (NV.ammo === 'AP' ? 'perforante' : 'esplosivo') : 'mitragliere'}<br><small>${Math.round(S.v)} m/s · ${S.m >= 1 ? S.m + ' kg' : Math.round(S.m * 1000) + ' g'} · perfora ${Math.round(penDeMarre(S, S.v))} mm alla bocca</small><br>` : '') +
     me.main.map((t, i) => `<span style="display:inline-block;width:46px">${t.G.mounts.length > 3 ? 'T' + (i + 1) : 'A' + (i + 1)}</span><span style="display:inline-block;width:150px;height:6px;background:#222;vertical-align:middle"><span style="display:block;height:100%;width:${t.ok ? (1 - t.reload / t.G.reload) * 100 : 0}%;background:${!t.ok ? '#e0604a' : t.reload <= 0 ? (t.aligned ? '#7fc06a' : '#c9b25a') : '#6a8aa0'}"></span></span>`).slice(0, 8).join('<br>') +
     (me.secs.length ? `<br><b>Secondarie</b> ${me.secs[0].S.name} ×${me.secs.reduce((a, t) => a + t.muzzles.length, 0)} · ${NV.secMan ? '<span style="color:#7fd3ff">a comando</span>' : NV.secAuto ? 'automatiche' : 'ferme'}<br><small>F spara dove miri · G automatiche on/off</small>` : '') +
     (me.C.torps ? `<br>Siluri: <b>${me.torpN}</b>${me.torpT > 0 ? ' (ricarica ' + Math.ceil(me.torpT) + ' s)' : ''}` : '');
   drawRadar(E.radar);
+  drawTargetCard(E, NV.lock && !NV.lock.sinking ? NV.lock : null);
 }
 function drawRadar(cv) {
   const g = cv.getContext('2d'), me = NV.me, R0 = 85, sc = R0 / 16000;
@@ -780,7 +822,7 @@ function initNavy() {
   M.setup();
   P.mode = 'ship'; P.inBoat = false; P.boat = null; P.pos.copy(NV.me.pos);
   NV.cam.yaw = NV.me.yaw; NV.cam.pitch = -.02; camera.near = 2.5; camera.updateProjectionMatrix();
-  FOG_K = .03; scene.fog.density = FOG_BASE * FOG_K; FOG_COL.setRGB(.66, .72, .76); scene.fog.color.copy(FOG_COL);
+  FOG_K = .02; scene.fog.density = FOG_BASE * FOG_K; FOG_COL.setRGB(.66, .72, .76); scene.fog.color.copy(FOG_COL);
   MISSION.stage = 0; MISSION.markers = [];
   GAME.endTitle = null; GAME.endText = null;
   say('Radio', M.brief);
@@ -803,9 +845,48 @@ function updateNavy(dt) {
   const M = NV.mis; if (M.tick) M.tick(dt);
   const [win, txt, lose] = M.obj();
   MISSION.objText = txt;
-  MISSION.markers = NV.ships.filter(s => s !== NV.me && !s.sinking && s.pos.distanceTo(NV.me.pos) < 25000).map(s => ({ pos: s.pos.clone().add(new V3(0, s.C.F + 25, 0)), label: (s.team === 'A' ? '' : '') + s.C.name.split(' ').slice(-2).join(' ') + ' · ' + (s.pos.distanceTo(NV.me.pos) / 1000).toFixed(1) + ' km', friend: s.team === 'A' }));
+  MISSION.markers = P.adsHeld || NV.zoomOn ? [] : NV.ships.filter(s => s !== NV.me && !s.sinking && s.pos.distanceTo(NV.me.pos) < 25000).map(s => ({ pos: s.pos.clone().add(new V3(0, s.C.F + 25, 0)), label: (s.team === 'A' ? '' : '') + s.C.name.split(' ').slice(-2).join(' ') + ' · ' + (s.pos.distanceTo(NV.me.pos) / 1000).toFixed(1) + ' km', friend: s.team === 'A' }));
   if (!NV.over && win) { NV.over = true; banner('MISSIONE COMPIUTA', M.name); addScore(2000, 'Missione compiuta', '#9fe08a'); GAME.endTitle = 'VITTORIA NAVALE'; GAME.endText = M.name + ': obiettivo raggiunto.'; after(7, () => GAME.end(true)); }
   if (!NV.over && lose) { NV.over = true; banner('MISSIONE FALLITA', txt); GAME.endTitle = 'MISSIONE FALLITA'; GAME.endText = txt; after(5, () => GAME.end(false)); }
   updateNavyHud(dt);
 }
 function navyDeployPoints() { return [{ label: NV.me ? NV.me.C.name : 'Nave', sub: 'torna al comando', kind: 'navy', pos: NV.me ? NV.me.pos : new V3() }]; }
+
+// ---------- scheda del bersaglio agganciato: sagoma dall'alto, scafo, condizioni e colpi a segno ----------
+function drawTargetCard(E, T) {
+  if (!T) { E.tgt.style.display = 'none'; return; }
+  E.tgt.style.display = 'block';
+  const C = T.C, me = NV.me, d = T.pos.distanceTo(me.pos), hp = Math.max(0, T.hp / T.hpMax);
+  const rel = wrapA(Math.atan2(-(me.pos.x - T.pos.x), -(me.pos.z - T.pos.z)) - T.yaw), aspect = Math.round(Math.abs(rel) * 180 / PI);
+  E.tgtH.innerHTML = '<b style="font-size:14px;color:#ffcf7a">' + T.name + '</b><br>' + (d / 1000).toFixed(1) + ' km · ' + Math.round(Math.abs(T.spd) / KN) + ' nodi · angolo ' + aspect + '°' +
+    '<div style="height:7px;background:#222;margin:4px 0 0"><div style="height:100%;width:' + hp * 100 + '%;background:' + (hp > .5 ? '#7fc06a' : hp > .25 ? '#e0b04a' : '#e0604a') + '"></div></div>';
+  const g = E.tgtC.getContext('2d'), W = 282, Hh = 96, sc = Math.min((W - 16) / C.L, (Hh - 20) / C.B, 3.2), cx = W / 2, cy = Hh / 2;
+  g.clearRect(0, 0, W, Hh);
+  // scafo visto dall'alto (prua a sinistra) con l'allagamento in azzurro dal basso
+  const hw = t => C.B / 2 * (t < .3 ? Math.pow(Math.max(t, .002) / .3, .55) : t > .82 ? 1 - ((t - .82) / .18) ** 2 * .3 : 1);
+  g.beginPath(); for (let k = 0; k <= 40; k++) { const t = k / 40; g.lineTo(cx + (-C.L / 2 + t * C.L) * sc, cy - hw(t) * sc); } for (let k = 40; k >= 0; k--) { const t = k / 40; g.lineTo(cx + (-C.L / 2 + t * C.L) * sc, cy + hw(t) * sc); } g.closePath();
+  g.fillStyle = 'rgba(150,160,165,.35)'; g.fill(); g.strokeStyle = 'rgba(220,225,230,.85)'; g.lineWidth = 1.2; g.stroke();
+  if (T.flood > 0) { g.save(); g.clip(); g.fillStyle = 'rgba(80,160,230,.45)'; const h = C.B * sc * T.flood; g.fillRect(0, cy + C.B / 2 * sc - h, W, h); g.restore(); }
+  // cittadella corazzata
+  if (C.belt > 50) { g.strokeStyle = 'rgba(200,190,150,.5)'; g.setLineDash([3, 3]); g.strokeRect(cx - C.L * .27 * sc, cy - C.B * .42 * sc, C.L * .54 * sc, C.B * .84 * sc); g.setLineDash([]); }
+  // torri: verdi efficienti, rosse fuori uso; le secondarie più piccole
+  for (const tu of T.turrets) { g.beginPath(); g.arc(cx + tu.z * sc, cy + tu.x * sc, Math.max(1.6, (tu.sec ? 1.6 : 3.4) * Math.min(sc, 1.6)), 0, TAU); g.fillStyle = tu.ok ? (tu.sec ? '#8fb0a0' : '#7fd07a') : '#ff5a4a'; g.fill(); }
+  // incendi
+  for (const fi of T.fires) if (fi.lp) { g.fillStyle = '#ff9a2a'; g.beginPath(); g.arc(cx + fi.lp.z * sc, cy + fi.lp.x * sc, 4, 0, TAU); g.fill(); g.fillStyle = '#ffe07a'; g.beginPath(); g.arc(cx + fi.lp.z * sc, cy + fi.lp.x * sc, 1.8, 0, TAU); g.fill(); }
+  // colpi a segno: rossi perforanti, grigi non perforanti; i più recenti lampeggiano
+  for (const h of T.hitLog || []) {
+    const x = cx + h.z * sc, y = cy + clamp(h.x, -C.B / 2, C.B / 2) * sc, fresh = GAME.time - h.t < 1.5;
+    g.strokeStyle = h.pen ? '#ff4a3a' : '#c8c8c8'; g.lineWidth = fresh ? 2.2 : 1.4; const r = h.big ? 3.2 : 1.8;
+    g.beginPath(); g.moveTo(x - r, y - r); g.lineTo(x + r, y + r); g.moveTo(x + r, y - r); g.lineTo(x - r, y + r); g.stroke();
+    if (fresh) { g.beginPath(); g.arc(x, y, 6 + (GAME.time - h.t) * 6, 0, TAU); g.strokeStyle = 'rgba(255,200,90,' + (1 - (GAME.time - h.t) / 1.5) + ')'; g.stroke(); }
+  }
+  g.fillStyle = 'rgba(232,226,208,.6)'; g.font = '10px Oswald,sans-serif'; g.fillText('prua', 3, cy + 3);
+  const tOk = T.main.filter(t => t.ok).length, hits = (T.hitLog || []).length, pens = (T.hitLog || []).filter(h => h.pen).length;
+  const st = [];
+  st.push('Torri ' + tOk + '/' + T.main.length);
+  st.push(T.mod.eng < .5 ? '<span style="color:#ff8a6a">macchine colpite</span>' : 'macchine ok');
+  st.push(T.mod.steer < .5 ? '<span style="color:#ff8a6a">timone bloccato</span>' : 'timone ok');
+  if (T.fires.length) st.push('<span style="color:#ffaa4a">' + T.fires.length + ' incendi</span>');
+  if (T.flood > .01 || T.leak > 0) st.push('<span style="color:#7fc3ff">allagamento ' + Math.round(T.flood * 100) + '%</span>');
+  E.tgtS.innerHTML = st.join(' · ') + '<br><small>Colpi a segno: ' + hits + ' (perforanti ' + pens + ') · corazza: cintura ' + C.belt + ' mm, ponte ' + C.deck + ' mm</small>';
+}
