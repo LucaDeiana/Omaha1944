@@ -218,9 +218,10 @@ function shTurret(tm, S, sz, c, nat, drop = 0) {
 }
 function buildShipModel2(C) {
   const pal = SHIP_PAL[C.nat] || SHIP_PAL.x, g = new THREE.Group(), body = new THREE.Group(); g.add(body);
-  const hg = hullGeo2(C); body.add(new THREE.Mesh(hg, MAT.vcMetal || MAT.vc));
+  const mats = [], own = m => { const c = m.clone(); mats.push(c); return c; };
+  const hg = hullGeo2(C); body.add(new THREE.Mesh(hg, own(MAT.vcMetal || MAT.vc)));
   const mb = new MB(); shipSuper(mb, C, hg.userData);
-  if (mb.parts.length) body.add(groupMesh(mb.buildGroups(), true));
+  if (mb.parts.length) { const sg = groupMesh(mb.buildGroups(), true); const mm = new Map(); sg.traverse(o => { if (o.isMesh) { if (!mm.has(o.material)) mm.set(o.material, own(o.material)); o.material = mm.get(o.material); } }); body.add(sg); }
   // ringhiere lungo il bordo del ponte
   const rp = [], L = C.L;
   for (const sd of [-1, 1]) for (let k = 0; k < 40; k++) { const t0 = k / 40, t1 = (k + 1) / 40, y0 = hg.userData.sheer(t0) + .9, y1 = hg.userData.sheer(t1) + .9; rp.push(sd * hg.userData.hw(t0) * .98, y0, hg.userData.zAt(t0, y0), sd * hg.userData.hw(t1) * .98, y1, hg.userData.zAt(t1, y1)); }
@@ -245,5 +246,5 @@ function buildShipModel2(C) {
     pv.add(groupMesh(bl.buildGroups(), false));
     turrets.push({ sec: !!G.sec, G, S, key: G.s, g: tg, pv, muzzles, arc, x, y: tg.position.y, z, rel: arc === 'aft' ? PI : arc === 'port' ? PI / 2 : arc === 'stbd' ? -PI / 2 : 0, el: 0, reload: rnd(0, G.reload), ok: true, fixT: 0, T: firingTable(G.s, G.elev) });
   }
-  return { g, body, turrets };
+  return { g, body, turrets, hd: hg.userData, mats };
 }

@@ -232,7 +232,7 @@ function buildShipModel(C) {
 class NavShip {
   constructor(cls, team, x, z, yaw, o = {}) {
     const C = NCLS[cls]; this.C = C; this.cls = cls; this.team = team; this.name = o.name || C.name;
-    const M = (typeof buildShipModel2 === 'function' ? buildShipModel2 : buildShipModel)(C); this.g = M.g; this.body = M.body; this.turrets = M.turrets; scene.add(this.g);
+    const M = (typeof buildShipModel2 === 'function' ? buildShipModel2 : buildShipModel)(C); this.g = M.g; this.body = M.body; this.turrets = M.turrets; this.hd = M.hd; this.mats = M.mats || []; this.marks = []; scene.add(this.g);
     this.pos = new V3(x, WATER_Y, z); this.yaw = yaw; this.spd = (o.spd ?? (o.ai === false ? .9 : .6)) * C.vmax * KN; this.vel = new V3(); this.yawRate = 0;
     this.tele = o.tele ?? (o.ai === false ? 4 : 3); this.rud = 0; this.rudCmd = 0; this.hp = C.hp; this.hpMax = C.hp; this.alive = true; this.sinking = 0;
     this.flood = 0; this.leak = 0; this.fires = []; this.mod = { eng: 1, steer: 1 }; this.dcT = 0; this.dcCool = 0;
@@ -268,7 +268,11 @@ class NavShip {
     // riparazioni in corso
     if (this.dcT > 0) { this.dcT -= dt; this.leak = Math.max(0, this.leak - dt * .004); this.flood = Math.max(0, this.flood - dt * .01); if (this.dcT <= 0) { for (const f of this.fires) { f.t = 0; f.e.life = f.s.life = 0; } this.fires = []; this.mod.eng = Math.max(this.mod.eng, .8); this.mod.steer = 1; for (const tu of this.turrets) tu.ok = true; if (this === NV.me) showMsg('Squadre di soccorso: danni riparati', 2); } }
     this.dcCool = Math.max(0, this.dcCool - dt);
-    for (const tu of this.turrets) if (!tu.ok && tu.fixT > 0) { tu.fixT -= dt; if (tu.fixT <= 0) tu.ok = true; }
+    for (const tu of this.turrets) {
+      if (!tu.ok && tu.fixT > 0) { tu.fixT -= dt; if (tu.fixT <= 0) tu.ok = true; }
+      if (!tu.ok) tu.el = Math.max(-.07, tu.el - dt * .15);
+      if (tu.ok !== tu.vis) { tu.vis = tu.ok; tu.g.traverse(o => { if (o.isMesh) { if (!tu.ok) { o.userData.m0 = o.userData.m0 || o.material; o.material = NAVY_BURNT(); } else if (o.userData.m0) o.material = o.userData.m0; } }); }
+    }
     this.list = lerp(this.list, (this.listS || 0) * this.flood * .25, dt * .2);
     this.pose(t); this.stabilize();
     // scia: schiuma a prua e a poppa proporzionale alla velocità
@@ -293,6 +297,7 @@ class NavShip {
   damage(a, by, kind) {
     if (this.sinking || !this.alive) return;
     this.hp -= a; if (by && by.team !== this.team && by === NV.me) NV.dmgDone = (NV.dmgDone || 0) + a;
+    const k = 1 - .55 * clamp(1 - this.hp / this.hpMax, 0, 1); for (const m of this.mats) m.color.setRGB(k, k * .97, k * .94);
     if (this.hp <= 0) { if (by === NV.me && this !== NV.me) { addScore(this.C.type === 'bb' ? 3000 : this.C.type === 'cl' ? 1500 : this.C.type === 'dd' ? 800 : this.C.type === 'cargo' ? 600 : 300, this.C.name + ' affondato', '#9fe08a'); STATS.kills++; } this.sink(kind); }
   }
   sink(kind) {
@@ -302,8 +307,9 @@ class NavShip {
     if (this === NV.me) { showMsg(kind === 'magazine' ? 'La santabarbara è esplosa!' : 'La nave affonda! Abbandonare la nave!', 5); navyPlayerLost(); }
   }
   remove() { this.alive = false; scene.remove(this.g); for (const f of this.fires) f.e.life = f.s.life = 0; const i = NV.ships.indexOf(this); if (i >= 0) NV.ships.splice(i, 1); }
-  addFire(lp) {
+  addFire(lp, by) {
     if (this.fires.length >= 4) return;
+    if (by === NV.me && this !== NV.me) navyRibbon('fire');
     const lpc = lp.clone(), e = addEmitter(this.pos, 'fire', this.C.L > 100 ? 1.4 : .8); e.follow = q => { this.toWorld(lpc.x, Math.max(lpc.y, this.C.F), lpc.z, q); };
     const s = addEmitter(this.pos, 'smoke', this.C.L > 100 ? 1.6 : .9); s.follow = e.follow;
     this.fires.push({ e, t: rnd(30, 60), s, lp: lpc });
@@ -319,6 +325,7 @@ class NavShip {
   aimAt(P, dt, list = this.turrets) {
     let any = false;
     for (const tu of list) {
+      if (!tu.ok) { tu.aligned = false; continue; }
       const gp = this.toWorld(tu.x, tu.y, tu.z, _nva); let tgt = _nvb.copy(P), sol = null;
       // la velocità ereditata dalla nave viene frenata dall'aria più in fretta di quella alla bocca: ne resta circa (gittata / (v0·t))^1,5
       for (let it = 0; it < 3; it++) { const r = Math.hypot(tgt.x - gp.x, tgt.z - gp.z); sol = solveElev(tu.T, r); if (!sol) break; const fk = Math.pow(clamp(r / Math.max(1, sol.t * tu.S.v), .1, 1), 1.5); tgt.copy(P).addScaledVector(this.vel, -sol.t * fk); }
@@ -515,29 +522,37 @@ function shellOnShip(s, sh, H) {
         pen = true;
         // sovrapperforazione: contro scafi sottili il perforante grosso attraversa senza esplodere dentro
         const over = armor < S.cal / 8 && C.B < S.cal / 12 + 14 && R() < .65;
-        dmg = fullDmg * (over ? .25 : 1); txt = over ? 'Sovrapperforazione' : cit ? 'Perforata la cittadella!' : 'Perforazione';
+        let citHit = false;
+        if (!over && (C.type === 'bb' || C.type === 'cl')) {
+          const fz = Math.min(.033 * v, C.B * 1.2);
+          for (let k = 1; k <= 12 && !citHit; k++) { const q = lp.clone().addScaledVector(H.dirL, fz * k / 12); citHit = Math.abs(q.x) < C.B * .3 && q.y > -C.D * .85 && q.y < C.F * .45 && Math.abs(q.z) < C.L * .27; }
+        }
+        H.citadel = citHit;
+        dmg = fullDmg * (over ? .25 : citHit ? 1.5 : C.type === 'bb' || C.type === 'cl' ? .6 : 1); txt = over ? 'Sovrapperforazione' : citHit ? 'CITTADELLA!' : 'Perforazione';
       } else { dmg = fullDmg * .06; txt = 'Non perforato'; }
     }
   } else {
     // esplosivo (o calibri piccoli): danno di superficie; contro corazze spesse resta fuori
     const P = S.cal / 6; pen = P >= armor; dmg = heDmg * (pen ? 1 : .25); txt = S.cal >= 100 ? (pen ? 'Colpo esplosivo' : 'Esplosivo sulla corazza') : '';
-    if (S.cal >= 100 && R() < Math.min(.45, S.cal / 450)) sh.addFire(lp);
+    if (S.cal >= 100 && R() < Math.min(.45, S.cal / 450)) sh.addFire(lp, s.by);
   }
   // moduli: torri vicine al punto d'impatto, macchine nella cittadella, timone a poppa, santabarbara
   if (pen) {
     for (const tu of sh.turrets) if (Math.hypot(tu.z - lp.z, tu.x - lp.x) < Math.max(4, C.B * .25) && R() < .6) { tu.ok = false; tu.fixT = rnd(25, 40); if (sh === NV.me) showMsg('Torre fuori uso!', 1.5); }
-    if (cit && R() < .25) { sh.mod.eng = Math.max(0, sh.mod.eng - .5); if (sh === NV.me && sh.mod.eng < .5) showMsg('Sala macchine colpita: velocità ridotta', 2); }
+    if (H.citadel && R() < .4) { sh.mod.eng = Math.max(0, sh.mod.eng - .5); if (sh === NV.me && sh.mod.eng < .5) showMsg('Sala macchine colpita: velocità ridotta', 2); }
     if (lp.z > C.L * .38 && R() < .3) { sh.mod.steer = 0; if (sh === NV.me) showMsg('Timone bloccato!', 2); }
-    if (s.ammo === 'AP' && cit && S.cal >= 200 && C.type !== 'pt' && R() < .025) { sh.damage(sh.hp + 1, s.by, 'magazine'); dmg = 0; sh.sink('magazine'); }
-    if (lp.y < .6 && face === 'side') { sh.leak += .0015 * Math.sqrt(S.m) / Math.sqrt(C.L / 100); sh.listS = Math.sign(lp.x) || 1; if (sh === NV.me) showMsg('Falla sotto la linea di galleggiamento!', 1.8); }
-    if (R() < .25) sh.addFire(lp);
+    if (s.ammo === 'AP' && H.citadel && S.cal >= 200 && R() < .03) { sh.damage(sh.hp + 1, s.by, 'magazine'); dmg = 0; sh.sink('magazine'); }
+    if (lp.y < .6 && face === 'side') { sh.leak += .0015 * Math.sqrt(S.m) / Math.sqrt(C.L / 100); sh.listS = Math.sign(lp.x) || 1; if (me) navyRibbon('flood'); if (sh === NV.me) showMsg('Falla sotto la linea di galleggiamento!', 1.8); }
+    if (R() < .25) sh.addFire(lp, s.by);
   }
-  if (me) { (sh.hitLog = sh.hitLog || []).push({ x: lp.x, z: lp.z, pen, t: GAME.time, big: S.cal >= 100 && !s.sec, sec: s.sec }); if (sh.hitLog.length > 80) sh.hitLog.shift(); }
+  navyMark(sh, lp, H.ax, pen, S.cal, H.part);
+  if (me) navyRibbon(txt === 'Rimbalzo' ? 'rico' : txt === 'Sovrapperforazione' ? 'over' : H.citadel ? 'cit' : pen && S.cal >= 100 ? 'pen' : S.cal >= 100 ? 'nopen' : 'hit');
+  if (me) { (sh.hitLog = sh.hitLog || []).push({ x: lp.x, z: lp.z, pen, t: GAME.time, big: S.cal >= 100 && !s.sec, sec: s.sec, cit: H.citadel }); if (sh.hitLog.length > 80) sh.hitLog.shift(); }
   sh.damage(dmg, s.by, 'shell');
   const p = H.p;
   if (S.cal >= 100) { fxExplosion(p.clone(), Math.min(5, S.cal / (pen ? 70 : 120)), false); if (dist2Cam(p) < 3000 * 3000) sfxBoom(p, S.cal / (pen ? 80 : 140)); }
   else { fxImpact(p, 'metal'); if (S.he && R() < .3) fxExplosion(p.clone(), .3, false); }
-  if (me) { STATS.hits++; hitMarker(sh.sinking > 0, false); if (s.sec) navySecHit(sh, dmg, pen); else if (txt && S.cal >= 100) navyHitText(txt + (dmg > 0 ? ' · ' + Math.round(dmg) : ''), pen ? '#ffcf5a' : '#c9d2d8'); }
+  if (me) { STATS.hits++; hitMarker(sh.sinking > 0, false); if (s.sec) navySecHit(sh, dmg, pen); else if (txt && S.cal >= 100) navyHitText(txt + (dmg > 0 ? ' · ' + Math.round(dmg) : ''), H.citadel ? '#ffd23a' : pen ? '#ffcf5a' : '#c9d2d8'); }
 }
 // siluri: corrono a pochi metri di profondità con la scia di bolle; esplodono contro lo scafo
 function updateTorps(dt) {
@@ -554,7 +569,7 @@ function updateTorps(dt) {
         fxExplosion(p, 4, true); sfxBoom(p, 5, true);
         hit.damage(T.dmg * (hit.C.type === 'bb' ? .55 : 1), T.by, 'torpedo'); hit.leak += .006; hit.listS = Math.sign(hit.toLocal(p, _nvc).x) || 1;
         if (hit === NV.me) { showMsg('Colpiti da un siluro!', 2.5); P.shake = Math.max(P.shake, .5); }
-        if (T.by === NV.me) navyHitText('Siluro a segno! · ' + Math.round(T.dmg), '#ffcf5a');
+        if (T.by === NV.me) { navyHitText('Siluro a segno! · ' + Math.round(T.dmg), '#ffcf5a'); navyRibbon('torp'); }
       }
       scene.remove(T.mesh); NV.torps.splice(i, 1);
     }
@@ -903,7 +918,7 @@ function drawTargetCard(E, T) {
   g.fillStyle = 'rgba(150,160,165,.35)'; g.fill(); g.strokeStyle = 'rgba(220,225,230,.85)'; g.lineWidth = 1.2; g.stroke();
   if (T.flood > 0) { g.save(); g.clip(); g.fillStyle = 'rgba(80,160,230,.45)'; const h = C.B * sc * T.flood; g.fillRect(0, cy + C.B / 2 * sc - h, W, h); g.restore(); }
   // cittadella corazzata
-  if (C.belt > 50) { g.strokeStyle = 'rgba(200,190,150,.5)'; g.setLineDash([3, 3]); g.strokeRect(cx - C.L * .27 * sc, cy - C.B * .42 * sc, C.L * .54 * sc, C.B * .84 * sc); g.setLineDash([]); }
+  if (C.type === 'bb' || C.type === 'cl') { g.strokeStyle = 'rgba(200,190,150,.5)'; g.setLineDash([3, 3]); g.strokeRect(cx - C.L * .27 * sc, cy - C.B * .42 * sc, C.L * .54 * sc, C.B * .84 * sc); g.setLineDash([]); }
   // torri: verdi efficienti, rosse fuori uso; le secondarie più piccole
   for (const tu of T.turrets) { g.beginPath(); g.arc(cx + tu.z * sc, cy + tu.x * sc, Math.max(1.6, (tu.sec ? 1.6 : 3.4) * Math.min(sc, 1.6)), 0, TAU); g.fillStyle = tu.ok ? (tu.sec ? '#8fb0a0' : '#7fd07a') : '#ff5a4a'; g.fill(); }
   // incendi
@@ -911,6 +926,7 @@ function drawTargetCard(E, T) {
   // colpi a segno: rossi perforanti, grigi non perforanti; i più recenti lampeggiano
   for (const h of T.hitLog || []) {
     const x = cx + h.z * sc, y = cy + clamp(h.x, -C.B / 2, C.B / 2) * sc, fresh = GAME.time - h.t < 1.5;
+    if (h.cit) { g.fillStyle = '#ffd23a'; g.fillRect(x - 3.5, y - 3.5, 7, 7); g.strokeStyle = '#000'; g.lineWidth = 1; g.strokeRect(x - 3.5, y - 3.5, 7, 7); continue; }
     g.strokeStyle = h.pen ? '#ff4a3a' : '#c8c8c8'; g.lineWidth = fresh ? 2.2 : 1.4; const r = h.big ? 3.2 : 1.8;
     g.beginPath(); g.moveTo(x - r, y - r); g.lineTo(x + r, y + r); g.moveTo(x + r, y - r); g.lineTo(x - r, y + r); g.stroke();
     if (fresh) { g.beginPath(); g.arc(x, y, 6 + (GAME.time - h.t) * 6, 0, TAU); g.strokeStyle = 'rgba(255,200,90,' + (1 - (GAME.time - h.t) / 1.5) + ')'; g.stroke(); }
@@ -924,4 +940,42 @@ function drawTargetCard(E, T) {
   if (T.fires.length) st.push('<span style="color:#ffaa4a">' + T.fires.length + ' incendi</span>');
   if (T.flood > .01 || T.leak > 0) st.push('<span style="color:#7fc3ff">allagamento ' + Math.round(T.flood * 100) + '%</span>');
   E.tgtS.innerHTML = st.join(' · ') + '<br><small>Colpi a segno: ' + hits + ' (perforanti ' + pens + ') · corazza: cintura ' + C.belt + ' mm, ponte ' + C.deck + ' mm</small>';
+}
+
+// ---------- segni dei colpi sullo scafo ----------
+let _nburnt = null;
+const NAVY_BURNT = () => _nburnt || (_nburnt = new THREE.MeshStandardMaterial({ color: 0x1c1b1a, roughness: .95, metalness: .1 }));
+const NVM = { geo: null, hole: null, scorch: null, dent: null };
+function navyMark(sh, lp, ax, pen, cal, part) {
+  // solo scafo e ponte (la sovrastruttura è una sagoma approssimata: il segno resterebbe sospeso) e solo dai 100 mm in su
+  if (part !== 'hull' || cal < 100) return;
+  if (!NVM.geo) {
+    NVM.geo = new THREE.CircleGeometry(1, 10);
+    const mk = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, side: THREE.DoubleSide });
+    NVM.hole = mk(0x0b0a09, .95); NVM.scorch = mk(0x1d1712, .6); NVM.dent = mk(0x4a4c4e, .7);
+  }
+  const C = sh.C, hd = sh.hd, add = (mat, r, off) => {
+    const m = new THREE.Mesh(NVM.geo, mat); m.scale.setScalar(r); let x = lp.x, y = lp.y, z = lp.z;
+    if (hd && part === 'hull') { const t = clamp((z + C.L / 2) / C.L, 0, 1); if (ax === 0) x = Math.sign(x || 1) * (hd.hw(t) + .06 + off); if (ax === 1) y = hd.sheer(t) + .06 + off; }
+    m.position.set(x, y, z);
+    if (ax === 0) m.rotation.y = x > 0 ? PI / 2 : -PI / 2; else if (ax === 1) m.rotation.x = -PI / 2; else m.rotation.y = z > 0 ? 0 : PI;
+    m.renderOrder = 2; sh.body.add(m); sh.marks.push(m);
+    if (sh.marks.length > 90) sh.body.remove(sh.marks.shift());
+  };
+  // grossi calibri: alone bruciato attorno al foro; perforanti: foro nero; non perforanti: scalfittura chiara
+  if (pen) add(NVM.scorch, cal / 90 + .8, 0);
+  add(pen ? NVM.hole : NVM.dent, Math.max(.2, cal / (pen ? 450 : 1000)), .01);
+}
+// ---------- nastri dei risultati (stile World of Warships) ----------
+const RIB = { cit: ['CITTADELLA', '#ffd23a'], pen: ['Perforazione', '#ffb04a'], over: ['Sovrapperforazione', '#c9d2d8'], nopen: ['Non perforato', '#9aa3a8'], rico: ['Rimbalzo', '#9aa3a8'], hit: ['Colpo', '#c9d2d8'], fire: ['Incendio', '#ff8a3a'], flood: ['Allagamento', '#6fb8ff'], torp: ['Siluro', '#7fd3ff'] };
+function navyRibbon(k) {
+  if (!RIB[k]) return;
+  let box = $('nvRib');
+  if (!box) { box = document.createElement('div'); box.id = 'nvRib'; box.style.cssText = 'position:fixed;left:50%;bottom:118px;transform:translateX(-50%);display:flex;gap:6px;pointer-events:none;font:600 12px Oswald,sans-serif;z-index:6'; document.body.appendChild(box); }
+  NV.ribs = NV.ribs || {}; NV.ribs[k] = (NV.ribs[k] || 0) + 1;
+  let el = box.querySelector('[data-k="' + k + '"]');
+  if (!el) { el = document.createElement('div'); el.dataset.k = k; el.style.cssText = 'padding:3px 8px;border-radius:3px;background:rgba(10,14,16,.7);border:1px solid ' + RIB[k][1] + ';color:' + RIB[k][1] + ';transition:transform .15s'; box.appendChild(el); }
+  el.textContent = RIB[k][0] + ' ×' + NV.ribs[k];
+  el.style.transform = 'scale(1.25)'; setTimeout(() => el.style.transform = 'scale(1)', 160);
+  if (k === 'cit') play('ping', null, { vol: .5, rate: .8 });
 }

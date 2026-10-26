@@ -116,6 +116,8 @@ Nella modalità aerea si sceglie l'aereo e la mappa:
 Scenario a sé con navi divise per classi: PT boat Elco, cacciatorpediniere Fletcher, incrociatore leggero Cleveland, corazzata Texas; nemici Schnellboot, Zerstörer 1934, incrociatore Nürnberg, corazzata Scharnhorst e mercantili.
 - **Balistica**: ogni proiettile ha calibro, massa e velocità alla bocca reali; in volo subisce gravità e resistenza dell'aria variabile col numero di Mach e con la quota; il fattore di forma è tarato perché le gittate massime coincidano con quelle storiche (5"/38: 15,9 km; 14"/45: 21 km; 28 cm: 40,9 km). Dispersione angolare e di velocità iniziale per ogni cannone; il proiettile eredita la velocità della nave.
 - **Corazze**: perforazione De Marre con angolo d'impatto, rimbalzi, sovrapperforazione, cintura e ponte distinti; perforante (1) ed esplosivo (2).
+- **Cittadella**: blocco interno di macchine e santabarbara dietro cintura e ponte; un perforante che ci arriva entro il ritardo della spoletta fa danni moltiplicati (scritta CITTADELLA!), le perforazioni alte fanno meno danni.
+- **Segni e distruzione**: fori, bruciature e scalfitture restano sullo scafo, la nave si annerisce coi danni, le torri fuori uso abbassano le canne annerite; nastri dei risultati come in World of Warships.
 - **Danni**: torri fuori uso, macchine, timone, falle e allagamenti, incendi, santabarbara; squadre di soccorso con R.
 - **Navi**: telegrafo (W/S), timone (A/D, C al centro), accelerazione e raggio di virata per classe, perdita di velocità in virata, beccheggio e rollio dalle onde, torri stabilizzate.
 - **Tiro**: la mira indica il punto sul mare, la centrale di tiro calcola l'alzo; Q aggancia un bersaglio e mostra il punto d'anticipo (e quello dei siluri, T); tasto destro: binocolo.
