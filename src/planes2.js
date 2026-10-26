@@ -18,7 +18,7 @@ const PLANE_SPECS = {
   },
   f4u: {
     name: 'F4U Corsair', nation: 'us', engine: 'radial', len: 10.2, w: 1.4, h: 1.55, nose: .6,
-    wing: { span: 12.5, root: 2.8, tip: 1.3, le: -1.4, sweep: .04, gull: true, y0: -.55 }, tail: { span: 5, root: 1.4, z: 4 }, fin: { h: 1.9, root: 1.7, z: 3.75 },
+    wing: { span: 12.5, root: 2.8, tip: 1.3, le: -1.4, sweep: .04, gull: true, y0: -.38 }, tail: { span: 5, root: 1.4, z: 4 }, fin: { h: 1.9, root: 1.7, z: 3.75 },
     canopy: { z0: -.4, z1: .9, w: .66, h: .5, y: .6 }, stripes: false,
     colors: { top: 0x2f4664, bottom: 0xc9cfd3, mid: 0x5f7590 },
     prop: { R: 2.0, n: 3, chord: .3, tip: 0xd8c040 }, eye: [0, 1.0, .2],
@@ -211,7 +211,7 @@ function buildSpecPlane(type) {
   // ala
   const w = sp.wing, span = [];
   for (let x = -half; x <= half + .01; x += half / 14) span.push(x);
-  const wy = x => { const a = Math.abs(x); if (w.gull === true) return w.y0 + (a < 1.9 ? -a * .22 : -.42 + (a - 1.9) * .13); if (w.gull === 'inv') return w.y0 + (a < 2.2 ? -a * .2 : -.44 + (a - 2.2) * .16); return w.y0 + a * (w.dihedral || .08); };
+  const wy = x => { const a = Math.abs(x); if (w.gull === true) return w.y0 + (a < 1.9 ? -a * .17 : -.32 + (a - 1.9) * .12); if (w.gull === 'inv') return w.y0 + (a < 2.2 ? -a * .2 : -.44 + (a - 2.2) * .16); return w.y0 + a * (w.dihedral || .08); };
   const chord = x => { const a = Math.abs(x) / half; if (w.ellip) return Math.max(w.tip, w.root * Math.sqrt(Math.max(0, 1 - a * a))); return lerp(w.root, w.tip, a) * (a > .94 ? Math.sqrt(Math.max(.1, 1 - ((a - .94) / .06) ** 2)) : 1); };
   const le = x => w.le + Math.abs(x) * (w.sweep || 0) + (w.root - chord(x)) * (w.ellip ? .35 : .15);
   mb.addG(wingGeo({ stations: span, chord, le, y: wy, thick: x => .15 - .007 * Math.abs(x), color: p => paint(p, true) }));
@@ -225,9 +225,12 @@ function buildSpecPlane(type) {
   let propZ = -L * .46 - .05;
   if (sp.engine === 'radial') { mb.add(new THREE.TorusGeometry(sp.w * .45, .07, 8, 24), 0x2a2a2a, 0, 0, propZ + .05); mb.add(cylG2(sp.w * .44, sp.w * .44, .2, 24), 0x111111, 0, 0, propZ + .15, PI / 2, 0, 0); }
   if (sp.engine === 'inline') { for (const sx of [-1, 1]) for (let k = 0; k < 6; k++) mb.add(U.box, 0x2b2622, sx * sp.w * .48, .1, -L * .4 + k * .22, 0, 0, 0, .1, .08, .12); }
-  if (sp.chin) mb.add(U.box, 0x2a2a2a, 0, -sp.h * .45, -L * .38, 0, 0, 0, sp.w * .7, .45, 1.1);
-  if (sp.rad) mb.add(U.box, 0x2a2a2a, 0, -sp.h * .48, -L * .36, 0, 0, 0, sp.w * .55, .35, .8);
-  if (sp.scoop) mb.add(U.box, bot.getHex ? 0xa9aca8 : 0xa9aca8, 0, -sp.h * .48, .2, 0, 0, 0, .55, .38, 1.6);
+  // prese d'aria e radiatori sotto la fusoliera: appoggiati al ventre vero (la fusoliera si assottiglia e sale verso coda)
+  const fbot = z => { for (let i = 0; i < fst.length - 1; i++) { const a = fst[i], b = fst[i + 1]; if (z >= a[0] && z <= b[0]) { const t = (z - a[0]) / (b[0] - a[0]); return lerp(a[3] - a[2] / 2, b[3] - b[2] / 2, t); } } return 0; };
+  const belly = (c, z, w, h, l) => { const y = Math.max(fbot(z - l / 2), fbot(z), fbot(z + l / 2)) + .12; mb.add(U.box, c, 0, y - h / 2, z, 0, 0, 0, w, h + .12, l); mb.add(U.box, 0x111111, 0, y - h / 2, z - l / 2 - .005, 0, 0, 0, w * .85, h * .7, .02); };
+  if (sp.chin) belly(0x2a2a2a, -L * .38, sp.w * .7, .4, 1.1);
+  if (sp.rad) belly(0x2a2a2a, -L * .36, sp.w * .55, .3, .8);
+  if (sp.scoop) belly(C.bottom, .2, .55, .36, 1.6);
   if (sp.bulges) for (const sx of [-1, 1]) mb.add(U.sph, C.top, sx * sp.w * .4, .35, -L * .2, 0, 0, 0, .14, .12, .3);
   // gondole dei motori del bimotore
   const twinProps = [];
@@ -247,7 +250,7 @@ function buildSpecPlane(type) {
   // gondole dei cannoni pesanti sotto le ali
   if (sp.pods) for (const sx of [-1, 1]) { const x = sx * (sp.pods === 'cannon37' ? 2.6 : 1.9), y = wy(x) - (sp.pods === 'cannon37' ? .65 : .4); mb.add(U.box, 0x3a3e33, x, y, -1.2, 0, 0, 0, .28, .3, 2.0); mb.add(cylG2(.06, .06, 1.8, 8), 0x1a1a1a, x, y, -2.9, PI / 2, 0, 0); mb.add(cylG2(.09, .09, .2, 8), 0x1a1a1a, x, y, -3.8, PI / 2, 0, 0); }
   // carrello fisso carenato (Stuka)
-  if (sp.spats) for (const sx of [-1, 1]) { const x = sx * 1.8, y = wy(x); mb.add(U.box, C.top, x, y - .7, -1.1, 0, 0, 0, .3, 1.3, .9); mb.add(U.sph, C.top, x, y - 1.35, -1.1, 0, 0, 0, .3, .5, .7); }
+  if (sp.spats) for (const sx of [-1, 1]) { const x = sx * 1.8, y = wy(x); mb.add(U.box, C.top, x, y - .55, -1.1, 0, 0, 0, .14, 1.1, .7); mb.add(U.sph, C.top, x, y - 1.2, -1.15, 0, 0, 0, .2, .34, .58); }
   // armi che sporgono dal bordo d'attacco
   // canne: quelle alari sporgono dal bordo d'attacco seguendo la forma dell'ala
   for (const g of sp.guns.pos) { if (sp.pods && Math.abs(g[0]) > 1) continue; const onWing = Math.abs(g[0]) > 1.2, gy = onWing ? wy(g[0]) : g[1], gz = onWing ? le(g[0]) - .22 : g[2] - .3; mb.add(cylG2(.025, .03, .6, 6), 0x1c1c1c, g[0], gy, gz, PI / 2, 0, 0); }
@@ -255,18 +258,31 @@ function buildSpecPlane(type) {
   const cn = sp.canopy, czs = cn.long ? [cn.z0, cn.z0 + .3, (cn.z0 + cn.z1) / 2, cn.z1 - .3, cn.z1] : [cn.z0, cn.z0 + .25, cn.z0 + .6, (cn.z0 + cn.z1) / 2 + .2, cn.z1 - .15, cn.z1];
   glass.addG(loftGeo(czs.map((z, i) => { const f = Math.sin((i / (czs.length - 1)) * PI) * .9 + .1, r = []; for (let k = 0; k < 16; k++) { const a = k / 15 * PI; r.push(new V3(Math.cos(a) * cn.w / 2 * Math.max(.3, f), cn.y + Math.sin(a) * cn.h * f, z)); } return r; }), null, true));
   if (cn.framed) for (let k = 1; k < czs.length - 1; k++) mb.add(new THREE.TorusGeometry(cn.w / 2, .015, 4, 14, PI), 0x30331f, 0, cn.y, czs[k], 0, 0, 0, 1, cn.h * 2 / cn.w * .9, 1);
-  if (!cn.bubble) mb.add(U.box, C.top, 0, cn.y + cn.h * .5, cn.z1 + .7, 0, 0, 0, .35, .4, 1.4);
+  // dorso carenato dietro il tettuccio: dal profilo del tettuccio scende fino al dorso della fusoliera (prima era una scatola sospesa)
+  const ftop = z => { for (let i = 0; i < fst.length - 1; i++) { const a = fst[i], b = fst[i + 1]; if (z >= a[0] && z <= b[0]) { const t = (z - a[0]) / (b[0] - a[0]); return lerp(a[3] + a[2] / 2, b[3] + b[2] / 2, t); } } return fst[fst.length - 1][3]; };
+  if (!cn.bubble) { const len = Math.min(L * .3, 2.6), secs = [];
+    for (let i = 0; i <= 6; i++) { const t = i / 6, z = cn.z1 - .15 + t * len, base = ftop(z) - .12, topY = lerp(cn.y + cn.h * .88, ftop(z), Math.pow(t, .8)), hh = Math.max(.02, topY - base), ww = lerp(cn.w * .92, cn.w * .25, t), r = [];
+      for (let k = 0; k < 12; k++) { const a = k / 11 * PI; r.push(new V3(Math.cos(a) * ww / 2, base + Math.sin(a) * hh, z)); } secs.push(r); }
+    mb.addG(loftGeo(secs, p => paint(p, false), true)); }
+  // dettagli: antenna col filo fino alla deriva, luci di navigazione, tubo di Pitot, alettoni e flap, scarichi del motore radiale
+  if (!sp.sixth && sp.engine !== 'jet' && fn) { const az = cn.z1 + (cn.bubble ? .4 : .9), ay = ftop(az); mb.add(cylG2(.012, .03, .55, 5), 0x262626, 0, ay + .25, az, -.25, 0, 0); sp._ant = [new V3(0, ay + .5, az + .12), new V3(0, fn.h + .1, fn.z + fn.root * .5)]; }
+  for (const sx of [-1, 1]) { const x = sx * (half - .05); mb.add(U.sph, sx < 0 ? 0xc0201c : 0x1fa040, x, wy(x) + .02, le(x) + chord(x) * .35, 0, 0, 0, .05, .04, .09); }
+  { const x = half * .78; mb.add(cylG2(.012, .012, .7, 5), 0x8a8d86, x, wy(x) - .05, le(x) - .3, PI / 2, 0, 0); }
+  for (const sx of [-1, 1]) { for (const [a0, a1] of [[.55, .95], [.15, .5]]) { const xs = []; for (let k = 0; k <= 8; k++) xs.push(sx * half * lerp(a0, a1, k / 8));
+    for (let k = 0; k < 8; k++) { const xa = xs[k], xb = xs[k + 1], xm = (xa + xb) / 2, z = le(xm) + chord(xm) * .74; mb.add(U.box, 0x22261f, xm, wy(xm) + .045 - Math.abs(xm) * .002, z, 0, 0, Math.atan2(wy(xb) - wy(xa), xb - xa), Math.abs(xb - xa) + .02, .012, .025); } } }
+  if (sp.engine === 'radial' && !sp.twin) { const r = sp.w * .5, zc = -L * .46 + L * .07; for (let k = 0; k < 14; k++) { const a = k / 14 * TAU; mb.add(U.box, 0x2b2b28, Math.cos(a) * r * 1.01, Math.sin(a) * r * 1.01 - .05, zc, 0, 0, a, .02, .14, .3); }   // alette del cofano
+    for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) mb.add(cylG2(.04, .05, .22, 6), 0x2a2420, sx * r * .98, -.15 - k * .14, zc + .25, 0, 0, sx * PI / 2); }   // scarichi
   // elica
   let d;
   if (sp.glassNose) glass.addG(loftGeo([-L * .46, -L * .44, -L * .4, -L * .36].map((z, i) => superRing([.2, .9, 1.25, 1.4][i], [.2, .95, 1.4, 1.6][i], 0, 16, 2, 2, z)), null, true));
   if (sp.prop) { propSpinner(prop, sp.engine === 'radial' ? .38 : .3, sp.engine === 'radial' ? .55 : .75, nose ? C.nose : 0x1a1a1a); propBlades(prop, sp.prop.n, sp.prop.R, sp.prop.chord, sp.prop.tip); }
   // insegne
   const ins = sp.nation === 'uk' ? 'uk' : sp.nation, d2 = [];
-  const fz = L * .12, fy = .05, fw = sp.nation === 'de' ? .7 : .85;
+  const fz = sp.engine === 'jet' ? L * .26 : L * .12, fy = .05, fw = sp.nation === 'de' ? .7 : .85;
   d2.push([ins, fw * (sp.nation === 'us' ? 1.6 : 1), fw * (sp.nation === 'us' ? .8 : 1), sp.w * .52, fy, fz, 0, PI / 2], [ins, fw * (sp.nation === 'us' ? 1.6 : 1), fw * (sp.nation === 'us' ? .8 : 1), -sp.w * .52, fy, fz, 0, -PI / 2]);
   for (const sx of [-1, 1]) { const x = sx * half * .7; d2.push([ins, 1.1 * (sp.nation === 'us' ? 1.6 : 1), 1.1 * (sp.nation === 'us' ? .8 : 1), x, wy(x) + .12, le(x) + chord(x) * .45, -PI / 2, 0]); }
   d = { prop: sp.prop ? { z: propZ, R: sp.prop.R } : { z: 0, R: .1 }, props: sp.twin ? twinProps : sp.prop ? undefined : [], decals: [], decals2: d2, pilot: [0, cn.y + .3, (cn.z0 + cn.z1) / 2], eye: sp.eye, spec: sp };
-  d.paint = mb.buildGroups(); d.glass = glass.build(); d.propG = prop.buildGroups();
+  d.paint = mb.buildGroups(); d.glass = glass.build(); d.propG = prop.buildGroups(); d.antenna = sp._ant || null;
   // carrello retrattile: gambe nelle ali, ruotino di coda
   d.gear = { x: half * .3, y: wy(half * .3) + .05, z: le(half * .3) + chord(half * .3) * .35, len: sp.h * 1.05, tailZ: sp.sixth ? 6 : tl.z + .4, fixed: !!sp.spats };
   return d;

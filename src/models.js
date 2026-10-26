@@ -129,7 +129,10 @@ function snapDecals(g, type) {
       if (!hits.length) continue; let segs = [[hits[0]]]; for (let i = 1; i < hits.length; i++) { if (hits[i].z - hits[i - 1].z > .15) segs.push([]); segs[segs.length - 1].push(hits[i]); }
       segs = segs.filter(sg => sg.length > 6); if (!segs.length) continue;
       const sg = segs.reduce((b, c) => Math.abs((c[0].z + c[c.length - 1].z) / 2 - p.z) < Math.abs((b[0].z + b[b.length - 1].z) / 2 - p.z) ? c : b);
-      const mid = sg[Math.floor(sg.length / 2)], span = sg[sg.length - 1].z - sg[0].z; p.z = (sg[0].z + sg[sg.length - 1].z) / 2; p.y = mid.y + .03;
+      const mid = sg[Math.floor(sg.length / 2)], span = sg[sg.length - 1].z - sg[0].z; p.z = (sg[0].z + sg[sg.length - 1].z) / 2;
+      // quota: il punto più alto del profilo sotto tutta l'insegna (gobba del profilo e diedro), così non affonda nell'ala
+      let top = -1e9; const hw = m.geometry.parameters.width * m.scale.x * .5; for (const dx of [-hw, 0, hw]) for (const h of sg) { const q = cast(new THREE.Vector3(p.x + dx, 6, h.z), new THREE.Vector3(0, -1, 0)); if (q && Math.abs(q.y - p.y) < 1.2) top = Math.max(top, q.y); }
+      p.y = (top > -1e9 ? top : mid.y) + .02;
       const sc = Math.min(1, span * .8 / m.geometry.parameters.height); m.scale.setScalar(sc);
     } else if (Math.abs(Math.abs(m.rotation.y) - PI / 2) < .01) {
       const sx = Math.sign(p.x) || 1, h = cast(new THREE.Vector3(sx * 6, p.y, p.z), new THREE.Vector3(-sx, 0, 0));
@@ -461,6 +464,7 @@ function makePlaneModel(type) {
   }
   for (const [k, w, h, x, y, z, rx, ry] of d.decals2 || []) decal(g, k === 'uk' ? ukRoundel() : k === 'jp' ? jpRoundel() : I[k], w, h, x, y, z, rx, ry, 0);
   snapDecals(g, type);
+  if (d.antenna) { const lg = new THREE.BufferGeometry().setFromPoints(d.antenna); g.add(new THREE.Line(lg, new THREE.LineBasicMaterial({ color: 0x1a1a1a }))); }   // filo d'antenna
   if (d.pilot) { const ph = new MB(); ph.add(U.sph, 0xc69a7a, 0, 0, 0, 0, 0, 0, .11, .13, .12); ph.add(U.hemi, 0x3a2a1a, 0, .03, 0, 0, 0, 0, .13, .12, .14); const pm = new THREE.Mesh(ph.build(), MAT.vc); pm.position.set(...d.pilot); g.add(pm); g.userData.pilot = pm; }
   g.userData.props = props; g.userData.data = d;
   return g;

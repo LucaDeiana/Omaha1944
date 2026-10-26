@@ -74,7 +74,7 @@
     cur = c; let o;
     try { o = c.build(); } catch (e) { $id('err').textContent = c.name + ': ' + e.message; return; }
     curObj = o; scene.add(o); o.updateMatrixWorld(true);
-    o.traverse(m => { if (m.isMesh) { m.castShadow = m.receiveShadow = true; m.frustumCulled = false; } });
+    o.traverse(m => { if (m.isMesh) { const tr = [].concat(m.material).some(x => x && (x.transparent || x.alphaTest > 0)); m.castShadow = !tr; m.receiveShadow = true; m.frustumCulled = false; } });
     const bb = new THREE.Box3().setFromObject(o); bb.getSize(size); bb.getCenter(center);
     let tris = 0; o.traverse(m => { if (m.isMesh && m.geometry) tris += (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3; });
     $id('info').innerHTML = `<b style="color:var(--txt)">${c.name}</b><br>Ingombro: ${size.z.toFixed(1)} m lungo · ${size.x.toFixed(1)} m largo · ${size.y.toFixed(1)} m alto<br>${c.note ? c.note + '<br>' : ''}${Math.round(tris).toLocaleString('it-IT')} triangoli`;
