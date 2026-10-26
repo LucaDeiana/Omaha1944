@@ -59,8 +59,8 @@
     reno: ['1945', 'Il Reno', 'Dalla pista avanzata Y-29, attacca i ponti e scorta i bombardieri.'],
   };
   const SEC = {
-    omaha: { title: 'CAMPAGNA', k: 'FANTERIA · 1943–1944', sel: 'optMap', opts: ['omaha', 'ard', 'tun'], start: 'INIZIA LA BATTAGLIA', show: ['optSide', 'modeL', 'tunModeL', 'optDiff', 'mp'] },
-    sea: { title: 'BATTAGLIE NAVALI', k: 'MARE · 1941–1944', sel: 'optNavMis', start: 'SALPA', show: ['navL', 'optDiff'] },
+    omaha: { title: 'CAMPAGNA', k: 'FANTERIA · 1943–1944', sel: 'optMap', opts: ['omaha', 'ard', 'tun'], start: 'INIZIA LA BATTAGLIA', show: ['optSide', 'modeL', 'tunModeL', 'planeL', 'optDiff', 'mp'] },
+    sea: { title: 'BATTAGLIE NAVALI', k: 'MARE · 1941–1944', sel: 'optNavMis', start: 'SALPA', show: ['navL', 'planeL', 'optDiff'] },
     air: { title: 'CIELI D’EUROPA', k: 'AVIAZIONE · 1944–1945', sel: 'optAirMap', start: 'DECOLLA', show: ['airMapL', 'planeL', 'optDiff'] },
   };
 

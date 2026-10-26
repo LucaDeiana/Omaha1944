@@ -38,8 +38,8 @@ function bindSettings() {
   fillSelect('optDiff', DIFF, SETTINGS.diff);
   const modeVis = () => { $('modeL').style.display = $('optSide').value === 'E' ? '' : 'none'; }; $('optSide').addEventListener('change', modeVis); setTimeout(modeVis, 0); try { $('optName').value = localStorage.getItem('omahaName') || ''; } catch (e) { }
   $('optNet').addEventListener('change', () => $('netNote').classList.toggle('hidden', !$('optNet').checked || netAvailable())); $('optSide').value = SETTINGS.side || 'A'; $('optMap').value = SETTINGS.map || 'omaha';
-  const ps = $('optPlane'); ps.innerHTML = PLAYER_PLANES.map(k => { const s = PLANE_SPECS[k], g = s.guns; return `<option value="${k}">${s.name} — ${g.pos.length}× ${g.cal} mm${g.he ? ' esplosivi' : ''}${s.guns2 ? ' + ' + s.guns2.pos.length + '× ' + s.guns2.cal + ' mm' : ''}</option>`; }).join(''); ps.value = SETTINGS.plane || 'p47';
-  const mapVis = () => { $('navL').style.display = $('optMap').value === 'sea' ? '' : 'none'; const a = $('optMap').value !== 'omaha'; $('optSide').parentNode.style.display = a ? 'none' : ''; $('tunModeL').style.display = $('optMap').value === 'tun' ? '' : 'none'; $('planeL').style.display = $('airMapL').style.display = $('optMap').value === 'air' ? '' : 'none'; if (a) $('modeL').style.display = 'none'; else modeVis(); }; $('optMap').addEventListener('change', mapVis); setTimeout(mapVis, 0);
+  const ps = $('optPlane'); ps.innerHTML = '<option value="mission">Aereo della missione</option>' + PLAYER_PLANES.map(k => { const s = PLANE_SPECS[k], g = s.guns; return `<option value="${k}">${s.name} — ${g.pos.length}× ${g.cal} mm${g.he ? ' esplosivi' : ''}${s.guns2 ? ' + ' + s.guns2.pos.length + '× ' + s.guns2.cal + ' mm' : ''}</option>`; }).join(''); ps.value = SETTINGS.plane || 'p47';
+  const mapVis = () => { $('navL').style.display = $('optMap').value === 'sea' ? '' : 'none'; const a = $('optMap').value !== 'omaha'; $('optSide').parentNode.style.display = a ? 'none' : ''; $('tunModeL').style.display = $('optMap').value === 'tun' ? '' : 'none'; $('planeL').style.display = ''; $('airMapL').style.display = $('optMap').value === 'air' ? '' : 'none'; if (a) $('modeL').style.display = 'none'; else modeVis(); }; $('optMap').addEventListener('change', mapVis); setTimeout(mapVis, 0);
   const sync = () => {
     for (const [a, b] of [['optSens', 'pSens'], ['optFov', 'pFov'], ['optVol', 'pVol']]) { $(a).value = $(b).value = SETTINGS[{ optSens: 'sens', optFov: 'fov', optVol: 'volume' }[a]]; }
     for (const [a, b, k] of [['optGore', 'pGore', 'gore'], ['optVoices', 'pVoices', 'voices'], ['optDyn', 'pDyn', 'dynres'], ['optFps', 'pFps', 'fps']]) $(a).checked = $(b).checked = SETTINGS[k];
@@ -96,7 +96,7 @@ document.addEventListener('pointerlockchange', () => {
   const locked = renderer && document.pointerLockElement === renderer.domElement;
   GAME.running = locked && GAME.started && !GAME.over;
   if (!locked && GAME.started && !GAME.over) {
-    if (SCEN === 'air') { const ps = $('pPlane'); if (!ps.options.length) ps.innerHTML = $('optPlane').innerHTML; ps.value = SETTINGS.plane; $('pPlaneL').style.display = ''; }
+    { const ps = $('pPlane'); if (!ps.options.length) ps.innerHTML = $('optPlane').innerHTML; ps.value = SETTINGS.plane || 'mission'; $('pPlaneL').style.display = ''; }
     try { speechSynthesis.cancel(); } catch (e) {}
     $('pause').classList.remove('hidden'); mouseL = false; P.trigger = false; P.adsHeld = false; for (const k in KEYS) KEYS[k] = false;
     if (window.speechSynthesis) speechSynthesis.cancel();

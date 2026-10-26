@@ -507,10 +507,15 @@ function togglePlaneView() {
 function togglePlaneAssist() { PL.assist = !PL.assist; resetPlaneAim(); showMsg(PL.assist ? 'Comandi assistiti: il mouse indica la direzione' : 'Comandi manuali: il mouse è la cloche', 2); }
 function resetPlaneAim() { const me = PL.me; if (!me) return; PL.camD = null; const f = _a1.set(0, 0, -1).applyQuaternion(me.q); PL.aimYaw = Math.atan2(-f.x, -f.z); PL.aimPitch = Math.asin(clamp(f.y, -1, 1)); PL.camP = null; }
 function swapPlane(type) {
-  if (!PLAYER_PLANES.includes(type) || type === SETTINGS.plane) return;
-  SETTINGS.plane = type; const nm = PLANE_SPECS[type].name;
-  if (P.mode === 'plane' && PL.me && !PL.me.crash && PL.onDeck && PL.atBase !== false && (PL.deckV || 0) < 3) { exitPlane(); PL.spawnCarrier = true; enterPlane(); showMsg('Ora piloti il ' + nm, 3); }
-  else showMsg(nm + ' pronto: lo avrai al prossimo decollo (atterra alla base o rientra)', 4);
+  if (type === SETTINGS.plane) return; SETTINGS.plane = type;
+  if (!PLAYER_PLANES.includes(type)) { showMsg('Userai l’aereo previsto dalla missione', 3); return; }
+  const nm = PLANE_SPECS[type].name;
+  if (P.mode === 'plane' && PL.me && !PL.me.crash) {
+    const me = PL.me;
+    if (PL.onDeck) { exitPlane(); PL.spawnCarrier = true; enterPlane({ type }); }
+    else { const pos = me.pos.clone(), vel = me.vel.clone(), q = me.q.clone(); exitPlane(); enterPlane({ type, pos, vel, q }); if (typeof NAIR !== 'undefined' && SCEN === 'sea') PL.torpedo = NA_ROLE[type] === 'torpedo'; }
+    showMsg('Ora piloti il ' + nm, 3);
+  } else showMsg(nm + ' pronto: lo avrai la prossima volta che sali su un aereo', 4);
 }
 function exitPlane() {
   AB.lock = null;

@@ -285,6 +285,8 @@ function updateProjectiles(dt) {
       if (q.type === 'rocket') { PS_SMOKE.emit(q.p.x, q.p.y, q.p.z, rnd(-.3, .3), rnd(0, .4), rnd(-.3, .3), rnd(1, 2), .15, 1.1, .5, .62, .62, .62, 1); PS_FIRE.emit(q.p.x, q.p.y, q.p.z, 0, 0, 0, .05, .25, .1, 1, 4, 2.4, 1); }
       else if (q.type === 'shell') PS_FIRE.emit(q.p.x, q.p.y, q.p.z, 0, 0, 0, .08, 1.4, .4, 1, 4, 2.5, 1.2);
       if (q.type === 'bomb' && !q.wh && q.v.y < -8) { q.wh = true; sfxWhistle(q.p, true); }
+      // in mare le bombe le gestisce la battaglia navale (navi, acqua, isole): qui solo il movimento
+      if (SCEN === 'sea' && q.type === 'bomb') { if (q.life <= 0 || q.p.y < -60) { scene.remove(q.m); projectiles.splice(i, 1); } continue; }
       let hit = q.life <= 0 || q.p.y < Hf(q.p.x, q.p.z) || (q.p.z > -9 && q.p.y < WATER_Y && Hf(q.p.x, q.p.z) < WATER_Y);
       const sol = pointInSolid(q.p); if (sol) hit = true;
       if (q.type === 'rocket') {

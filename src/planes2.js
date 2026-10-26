@@ -157,7 +157,9 @@ PLANE_SPECS.ju88 = {
   guns: { pos: [[0, .6, -2]], dmg: 10, int: .1, cal: 7.9, snd: 'mg42', spread: .01 }, mass: 12000, S: 54.7, thrust: 1, agile: .5, hp: 2200, bombs: 4,
 };
 PLANE_SPECS.p47 = { name: 'P-47D Thunderbolt', nation: 'us', builtin: true, guns: { pos: [[-2.5, -.3, -2.2], [-2.8, -.3, -2.2], [-3.1, -.3, -2.2], [-3.4, -.3, -2.2], [2.5, -.3, -2.2], [2.8, -.3, -2.2], [3.1, -.3, -2.2], [3.4, -.3, -2.2]], dmg: 25, int: .055, cal: 12.7, snd: 'm2', spread: .006 }, mass: 6000, S: 27.9, thrust: 1, agile: 1, hp: 1100, bombs: 2, eye: [0, 1.12, -.5] };
-const PLAYER_PLANES = ['p47', 'p51', 'f4u', 'spit', 'typhoon', 'hurri', 'bf109', 'stuka', 'me262', 'mosquito', 'f47'];
+// aereo scelto dal giocatore, o quello previsto dalla missione
+function chosenPlane(def) { return typeof SETTINGS !== 'undefined' && PLAYER_PLANES.includes(SETTINGS.plane) ? SETTINGS.plane : def; }
+const PLAYER_PLANES = ['p47', 'p51', 'f4u', 'spit', 'typhoon', 'hurri', 'p40', 'sbd', 'tbf', 'bf109', 'stuka', 'me262', 'mosquito', 'zero', 'val', 'kate', 'f47'];
 
 // tondo britannico
 // hinomaru: disco rosso con bordo bianco sottile

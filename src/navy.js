@@ -956,7 +956,7 @@ const NAVY_MIS = {
       for (let i = 0; i < 6; i++) new NavPlane('tbf', 'A', new V3(3000 + (i % 3) * 70, 350, 13000 + Math.floor(i / 3) * 80), 0, { target: NV.ships.find(s => s.cls === ['kaga', 'akagi', 'soryu'][i % 3]) });
       NV.escT = 720;
       // il giocatore guida il capo pattuglia
-      after(.2, () => { enterPlane({ type: 'sbd', pos: new V3(-2600, 4500, 12000), vel: new V3(0, 0, -95) }); PL.bombs = 1; showMsg('Sei il capo pattuglia: picchiata sulla portaerei, Spazio sgancia la bomba · P per tornare alla nave', 6); });
+      after(.2, () => { const tp = chosenPlane('sbd'); enterPlane({ type: tp, pos: new V3(-2600, 4500, 12000), vel: new V3(0, 0, -Math.max(95, (PLANE_VMAX[tp] || 400) / 3.6 * .5)) }); PL.bombs = Math.max(1, PLANE_SPECS[tp].bombs || 1); PL.torpedo = NA_ROLE[tp] === 'torpedo'; showMsg('Sei il capo pattuglia: picchiata sulla portaerei, Spazio sgancia la bomba · P per tornare alla nave', 6); });
     },
     tick(dt) { NV.escT -= dt; },
     obj() {

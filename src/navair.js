@@ -180,7 +180,8 @@ function updateNavBombs(dt) {
     if (done || b.life <= 0) { scene.remove(b.m); NAIR.bombs.splice(i, 1); }
   }
   // bombe del giocatore (sistema dei proiettili generale): urto con le navi
-  if (typeof projectiles !== 'undefined') for (let i = projectiles.length - 1; i >= 0; i--) { const q = projectiles[i]; if (q.type !== 'bomb' || !q.byPlayer) continue; if (navBombHitShip(q.p, 454, PL.me) || q.p.y < WATER_Y) { if (q.p.y < WATER_Y) { splash({ S: { cal: 380, he: 200 }, by: NV.me }, q.p.clone().setY(WATER_Y)); sfxBoom(q.p, 2.5, true); } scene.remove(q.m); projectiles.splice(i, 1); } }
+  if (typeof projectiles !== 'undefined') for (let i = projectiles.length - 1; i >= 0; i--) { const q = projectiles[i]; if (q.type !== 'bomb' || !q.byPlayer) continue; if (q.p.y < navyH(q.p.x, q.p.z) && navyH(q.p.x, q.p.z) > WATER_Y) { fxExplosion(q.p.clone(), 3, true); sfxBoom(q.p, 2.5); scene.remove(q.m); projectiles.splice(i, 1); continue; }
+    if (navBombHitShip(q.p, (PL.spec && PL.spec.bombKg) || 454, PL.me) || q.p.y < WATER_Y) { if (q.p.y < WATER_Y) { splash({ S: { cal: 380, he: 200 }, by: NV.me }, q.p.clone().setY(WATER_Y)); sfxBoom(q.p, 2.5, true); } scene.remove(q.m); projectiles.splice(i, 1); } }
 }
 
 // ---------- contraerea delle navi ----------
@@ -222,9 +223,9 @@ function navyTakePlane() {
   const own = PLANES.filter(p => p.navy && p.team === NV.me.team && p.alive && !p.crash);
   if (!own.length) { showMsg('Nessun aereo amico in volo: chiama una squadriglia con Y', 2); return; }
   const p = own.reduce((a, b) => a.pos.distanceTo(camera.position) < b.pos.distanceTo(camera.position) ? a : b);
-  const type = p.type, pos = p.pos.clone(), vel = p.vel.clone(), q = p.q.clone(), armed = p.armed; p.remove();
+  const type = chosenPlane(p.type), pos = p.pos.clone(), vel = p.vel.clone(), q = p.q.clone(), armed = p.armed || type !== p.type; p.remove();
   enterPlane({ type, pos, vel, q });
-  PL.bombs = armed ? 1 : 0; PL.torpedo = NA_ROLE[type] === 'torpedo';
+  PL.bombs = armed ? Math.max(1, (PLANE_SPECS[type] || {}).bombs || 1) : 0; PL.torpedo = NA_ROLE[type] === 'torpedo';
   showMsg('Ai comandi: ' + (PLANE_SPECS[type] ? PLANE_SPECS[type].name : type) + (PL.torpedo ? ' · Spazio: siluro (sotto 90 m e 330 km/h)' : PL.bombs ? ' · Spazio: bomba' : '') + ' · P per tornare alla nave', 4);
 }
 function navyPlayerTorpedo() {
