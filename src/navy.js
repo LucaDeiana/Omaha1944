@@ -8,7 +8,7 @@
 //  shader solo vicino, normali di dettaglio da texture lontano.
 // ============================================================
 const KN = .5144;
-const NV = { ships: [], shells: [], torps: [], me: null, cam: { yaw: 0, pitch: -.02, dist: 1 }, aim: new V3(), aimR: 0, lock: null, ammo: 'AP', mis: null, t: 0, tables: {}, el: null, ocean: null, islands: [], over: false, free: { wave: 0, t: 5 } };
+const NV = { secAuto: true, ships: [], shells: [], torps: [], me: null, cam: { yaw: 0, pitch: -.02, dist: 1 }, aim: new V3(), aimR: 0, lock: null, ammo: 'AP', mis: null, t: 0, tables: {}, el: null, ocean: null, islands: [], over: false, free: { wave: 0, t: 5 } };
 
 // ---------- munizioni: calibro (mm), fattore di forma i (tarato sulle gittate massime storiche), velocità alla bocca (m/s), massa (kg), esplosivo (kg) ----------
 const SHELL = {
@@ -17,6 +17,10 @@ const SHELL = {
   us127: { cal: 127, i: 1.37, v: 792, m: 25, he: 3.6, name: '5"/38 Mk 12' },
   us152: { cal: 152, i: 1.08, v: 762, m: 59, he: 3.0, name: '6"/47 Mk 16' },
   us356: { cal: 356, i: 1.05, v: 792, m: 635, he: 47, name: '14"/45 Mk 8' },
+  us127b: { cal: 127, i: 1.27, v: 960, m: 22.7, he: 3.0, name: '5"/51 Mk 15' },
+  us40: { cal: 40, i: 1.09, v: 881, m: .9, he: .068, name: '40 mm Bofors' },
+  de88: { cal: 88, i: 1.2, v: 950, m: 9, he: .9, name: '8,8 cm SK C/32' },
+  de37: { cal: 37, i: 1.46, v: 1000, m: .745, he: .04, name: '3,7 cm SK C/30' },
   de20: { cal: 20, i: 1.56, v: 900, m: .12, he: .015, name: '2 cm Flak 38' },
   de127: { cal: 127, i: 1.19, v: 830, m: 28, he: 3.4, name: '12,7 cm SK C/34' },
   de150: { cal: 150, i: 1.17, v: 960, m: 45.5, he: 3.9, name: '15 cm SK C/25' },
@@ -29,19 +33,25 @@ const NCLS = {
     guns: [{ s: 'us50', reload: .12, trav: 1.6, elev: 1.2, disp: 5, mounts: [[-1.8, 2.7, -3, 'all', 2], [1.8, 2.7, -3, 'all', 2]] }, { s: 'us20', reload: .14, trav: 1.4, elev: 1.2, disp: 4, mounts: [[0, 2.6, 9, 'aft', 1]] }],
     torps: { n: 4, kn: 33.5, range: 5700, dmg: 1100, salvo: 2, arc: 'bow', mounts: [[-2.4, 1.6, 2], [2.4, 1.6, 2]] } },
   fletcher: { name: 'Cacciatorpediniere classe Fletcher', nat: 'us', type: 'dd', L: 114.7, B: 12, D: 4.2, F: 7, vmax: 36.5, tau: 24, R: 330, rud: .4, hp: 1800, belt: 13, deck: 13, ends: 0, hull: 0x6b737a,
-    guns: [{ s: 'us127', reload: 4, trav: .44, elev: 1.48, disp: 1.3, mounts: [[0, 9, -40, 'fore', 1], [0, 11.5, -31, 'fore', 1], [0, 11.5, 26, 'aft', 1], [0, 9, 35, 'aft', 1], [0, 9, 44, 'aft', 1]] }],
+    guns: [{ s: 'us127', reload: 4, trav: .44, elev: 1.48, disp: 1.3, mounts: [[0, 9, -40, 'fore', 1], [0, 11.5, -31, 'fore', 1], [0, 11.5, 26, 'aft', 1], [0, 9, 35, 'aft', 1], [0, 9, 44, 'aft', 1]] },
+      { s: 'us40', sec: true, reload: .5, trav: 1, elev: 1.5, disp: 2.5, mounts: [[-4.5, 10, 8, 'port', 2], [4.5, 10, 8, 'stbd', 2], [0, 10, 16, 'aft', 2]] }],
     torps: { n: 10, kn: 45, range: 5500, dmg: 1500, salvo: 5, arc: 'side', mounts: [[0, 8, -2], [0, 8, 12]] } },
   cleveland: { name: 'Incrociatore leggero classe Cleveland', nat: 'us', type: 'cl', L: 186, B: 20.2, D: 7.5, F: 9, vmax: 32.5, tau: 40, R: 440, rud: .28, hp: 4500, belt: 127, deck: 51, ends: 25, hull: 0x666e73,
-    guns: [{ s: 'us152', reload: 7, trav: .17, elev: .82, disp: 1.1, n: 3, mounts: [[0, 11, -58, 'fore', 3], [0, 14, -46, 'fore', 3], [0, 14, 46, 'aft', 3], [0, 11, 58, 'aft', 3]] }] },
+    guns: [{ s: 'us152', reload: 7, trav: .17, elev: .82, disp: 1.1, n: 3, mounts: [[0, 11, -58, 'fore', 3], [0, 14, -46, 'fore', 3], [0, 14, 46, 'aft', 3], [0, 11, 58, 'aft', 3]] },
+      { s: 'us127', sec: true, reload: 4, trav: .44, elev: 1.48, disp: 1.4, mounts: [[-7.5, 14, -22, 'port', 2], [7.5, 14, -22, 'stbd', 2], [-7.5, 14, 22, 'port', 2], [7.5, 14, 22, 'stbd', 2], [0, 17, -34, 'fore', 2], [0, 17, 34, 'aft', 2]] }] },
   texas: { name: 'Corazzata USS Texas (classe New York)', nat: 'us', type: 'bb', L: 174, B: 29, D: 8.7, F: 8.5, vmax: 21, tau: 70, R: 560, rud: .2, hp: 11000, belt: 305, deck: 76, ends: 64, hull: 0x6a7176,
-    guns: [{ s: 'us356', reload: 35, trav: .07, elev: .26, disp: .8, mounts: [[0, 11, -60, 'fore', 2], [0, 14, -47, 'fore', 2], [0, 11.5, 2, 'side', 2], [0, 14, 42, 'aft', 2], [0, 11, 55, 'aft', 2]] }] },
+    guns: [{ s: 'us356', reload: 35, trav: .07, elev: .26, disp: .8, mounts: [[0, 11, -60, 'fore', 2], [0, 14, -47, 'fore', 2], [0, 11.5, 2, 'side', 2], [0, 14, 42, 'aft', 2], [0, 11, 55, 'aft', 2]] },
+      { s: 'us127b', sec: true, reload: 6, trav: .3, elev: .35, disp: 1.6, mounts: [[-13.6, 6.5, -26, 'port', 1], [13.6, 6.5, -26, 'stbd', 1], [-13.6, 6.5, -14, 'port', 1], [13.6, 6.5, -14, 'stbd', 1], [-13.6, 6.5, 16, 'port', 1], [13.6, 6.5, 16, 'stbd', 1]] }] },
   z1934: { name: 'Zerstörer 1934', nat: 'de', type: 'dd', L: 119, B: 11.3, D: 4, F: 7, vmax: 36, tau: 24, R: 340, rud: .4, hp: 1900, belt: 0, deck: 0, ends: 0, hull: 0x7b8086,
-    guns: [{ s: 'de127', reload: 4.5, trav: .4, elev: .52, disp: 1.4, mounts: [[0, 9, -42, 'fore', 1], [0, 11.5, -33, 'fore', 1], [0, 11.5, 28, 'aft', 1], [0, 9, 37, 'aft', 1], [0, 9, 46, 'aft', 1]] }],
+    guns: [{ s: 'de127', reload: 4.5, trav: .4, elev: .52, disp: 1.4, mounts: [[0, 9, -42, 'fore', 1], [0, 11.5, -33, 'fore', 1], [0, 11.5, 28, 'aft', 1], [0, 9, 37, 'aft', 1], [0, 9, 46, 'aft', 1]] },
+      { s: 'de37', sec: true, reload: .8, trav: 1, elev: 1.4, disp: 2.5, mounts: [[-4, 10, 10, 'port', 2], [4, 10, 10, 'stbd', 2]] }],
     torps: { n: 8, kn: 44, range: 6000, dmg: 1450, salvo: 4, arc: 'side', mounts: [[0, 8, -4], [0, 8, 10]] } },
   nurnberg: { name: 'Incrociatore leggero Nürnberg', nat: 'de', type: 'cl', L: 181, B: 16.4, D: 5.6, F: 9, vmax: 32, tau: 40, R: 450, rud: .28, hp: 4000, belt: 50, deck: 25, ends: 18, hull: 0x7d8288,
-    guns: [{ s: 'de150', reload: 8, trav: .14, elev: .7, disp: 1.1, mounts: [[0, 11, -56, 'fore', 3], [0, 14, 46, 'aft', 3], [0, 11, 58, 'aft', 3]] }] },
+    guns: [{ s: 'de150', reload: 8, trav: .14, elev: .7, disp: 1.1, mounts: [[0, 11, -56, 'fore', 3], [0, 14, 46, 'aft', 3], [0, 11, 58, 'aft', 3]] },
+      { s: 'de88', sec: true, reload: 3.5, trav: .5, elev: 1.4, disp: 1.6, mounts: [[-6.5, 13, 2, 'port', 2], [6.5, 13, 2, 'stbd', 2], [-6.5, 13, 18, 'port', 2], [6.5, 13, 18, 'stbd', 2]] }] },
   scharnhorst: { name: 'Corazzata Scharnhorst', nat: 'de', type: 'bb', L: 235, B: 30, D: 9.7, F: 10, vmax: 31, tau: 70, R: 620, rud: .2, hp: 12500, belt: 350, deck: 105, ends: 70, hull: 0x7a7f84,
-    guns: [{ s: 'de283', reload: 17, trav: .1, elev: .7, disp: .9, mounts: [[0, 13, -72, 'fore', 3], [0, 16.5, -58, 'fore', 3], [0, 13, 70, 'aft', 3]] }] },
+    guns: [{ s: 'de283', reload: 17, trav: .1, elev: .7, disp: .9, mounts: [[0, 13, -72, 'fore', 3], [0, 16.5, -58, 'fore', 3], [0, 13, 70, 'aft', 3]] },
+      { s: 'de150', sec: true, reload: 9, trav: .15, elev: .7, disp: 1.3, mounts: [[-11, 13.5, -30, 'port', 2], [11, 13.5, -30, 'stbd', 2], [-11, 13.5, 30, 'port', 2], [11, 13.5, 30, 'stbd', 2]] }] },
   sboot: { name: 'Schnellboot S-100', nat: 'de', type: 'pt', L: 35, B: 5.3, D: 1.7, F: 2.6, vmax: 43.6, tau: 7, R: 70, rud: 1.2, hp: 420, belt: 0, deck: 0, ends: 0, hull: 0x8a9096,
     guns: [{ s: 'de20', reload: .13, trav: 1.4, elev: 1.2, disp: 5, mounts: [[0, 3.2, -10, 'all', 1], [0, 3.2, 10, 'aft', 1]] }],
     torps: { n: 2, kn: 40, range: 7500, dmg: 1450, salvo: 2, arc: 'bow', mounts: [[-1.8, 1.8, -8], [1.8, 1.8, -8]] } },
@@ -150,7 +160,7 @@ function hullGeo(C) {
   const hw = t => B / 2 * (t < .3 ? Math.pow(Math.max(t, .002) / .3, .55) : t > .82 ? 1 - ((t - .82) / .18) ** 2 * .3 : 1);
   const sheer = t => F + (t < .25 ? (1 - t / .25) * F * .35 : 0);
   const prof = t => [[hw(t), sheer(t), 1], [hw(t) * .99, .1, 1], [hw(t) * .97, -.1, 0], [hw(t) * .82, -D * .75, 0], [0, -D, 0]];
-  const cA = new THREE.Color(C.hull), cB = new THREE.Color(0x5a2420), cDk = new THREE.Color(0x45484a);
+  const cA = new THREE.Color(C.hull).convertSRGBToLinear(), cB = new THREE.Color(0x5a2420).convertSRGBToLinear(), cDk = new THREE.Color(0x45484a).convertSRGBToLinear();
   const vtx = (x, y, z, c) => { pos.push(x, y, z); col.push(c.r, c.g, c.b); return pos.length / 3 - 1; };
   for (const sd of [-1, 1]) {
     const rows = [];
@@ -161,6 +171,7 @@ function hullGeo(C) {
   const dk = [];
   for (let k = 0; k <= N; k++) { const t = k / N, z = -L / 2 + t * L; dk.push([vtx(-hw(t), sheer(t), z, cDk), vtx(hw(t), sheer(t), z, cDk)]); }
   for (let k = 0; k < N; k++) idx.push(dk[k][0], dk[k][1], dk[k + 1][0], dk[k][1], dk[k + 1][1], dk[k + 1][0]);
+  for (let i = 0; i < idx.length; i += 3) { const t = idx[i + 1]; idx[i + 1] = idx[i + 2]; idx[i + 2] = t; }  // facce verso l'esterno
   // specchio di poppa
   const tl = prof(1), base = pos.length / 3; for (const [w, y] of tl) vtx(-w, y, L / 2, cA); for (const [w, y] of tl) vtx(w, y, L / 2, cA);
   for (let s = 0; s < 4; s++) idx.push(base + s, base + s + 1, base + 5 + s, base + s + 1, base + 6 + s, base + 5 + s);
@@ -201,7 +212,7 @@ function buildShipModel(C) {
     const bl = new MB(), len = S.cal >= 100 ? S.cal / 1000 * 45 : S.cal > 15 ? 2.2 : 1.4, muzzles = [];
     for (let i = 0; i < n; i++) { const xo = (i - (n - 1) / 2) * Math.max(.3, S.cal / 1000 * 4.5); bl.add(U.cyl, 0x2b2e30, xo, 0, -len / 2, PI / 2, 0, 0, Math.max(.05, S.cal / 2000 * 1.6), len, Math.max(.05, S.cal / 2000 * 1.6)); muzzles.push(new V3(xo, 0, -len)); }
     pv.add(groupMesh(bl.buildGroups(), false));
-    turrets.push({ G, S, key: G.s, g: tg, pv, muzzles, arc, x, y, z, rel: arc === 'aft' ? PI : 0, el: 0, reload: rnd(0, G.reload), ok: true, fixT: 0, T: firingTable(G.s, G.elev) });
+    turrets.push({ sec: !!G.sec, G, S, key: G.s, g: tg, pv, muzzles, arc, x, y, z, rel: arc === 'aft' ? PI : arc === 'port' ? PI / 2 : arc === 'stbd' ? -PI / 2 : 0, el: 0, reload: rnd(0, G.reload), ok: true, fixT: 0, T: firingTable(G.s, G.elev) });
   }
   return { g, body, turrets };
 }
@@ -289,12 +300,12 @@ class NavShip {
   turretWorldDir(tu) { return _nvd.set(-Math.sin(this.yaw + tu.rel), 0, -Math.cos(this.yaw + tu.rel)); }
   arcOK(tu, rel) {
     const a = Math.abs(wrapA(rel));
-    if (tu.arc === 'fore') return a < 2.6; if (tu.arc === 'aft') return a > .55; if (tu.arc === 'side') return a > .5 && a < 2.65; return true;
+    if (tu.arc === 'fore') return a < 2.6; if (tu.arc === 'aft') return a > .55; if (tu.arc === 'side') return a > .5 && a < 2.65; if (tu.arc === 'port') return rel > .15 && rel < 2.95; if (tu.arc === 'stbd') return rel < -.15 && rel > -2.95; return true;
   }
   // punta le torri verso un punto: alzo dalla tavola di tiro, compensando il moto proprio (il proiettile eredita la velocità della nave)
-  aimAt(P, dt) {
+  aimAt(P, dt, list = this.turrets) {
     let any = false;
-    for (const tu of this.turrets) {
+    for (const tu of list) {
       const gp = this.toWorld(tu.x, tu.y, tu.z, _nva); let tgt = _nvb.copy(P), sol = null;
       // la velocità ereditata dalla nave viene frenata dall'aria più in fretta di quella alla bocca: ne resta circa (gittata / (v0·t))^1,5
       for (let it = 0; it < 3; it++) { const r = Math.hypot(tgt.x - gp.x, tgt.z - gp.z); sol = solveElev(tu.T, r); if (!sol) break; const fk = Math.pow(clamp(r / Math.max(1, sol.t * tu.S.v), .1, 1), 1.5); tgt.copy(P).addScaledVector(this.vel, -sol.t * fk); }
@@ -306,7 +317,6 @@ class NavShip {
       tu.aligned = tu.inArc && sol && Math.abs(wrapA(rel - tu.rel)) < .006 && Math.abs(eg - tu.el) < .004;
       any = any || tu.aligned;
     }
-    this.stabilize();
     return any;
   }
   // stabilizzazione: brandeggio e alzo voluti sono riferiti all'orizzonte vero; si convertono nel sistema dello scafo che beccheggia e rolla
@@ -316,6 +326,20 @@ class NavShip {
       const a = this.yaw + tu.rel, w = _nvw.set(-Math.sin(a) * Math.cos(tu.el), Math.sin(tu.el), -Math.cos(a) * Math.cos(tu.el)).applyQuaternion(_nvq);
       tu.g.rotation.y = Math.atan2(-w.x, -w.z); tu.pv.rotation.x = Math.asin(clamp(w.y, -1, 1));
     }
+  }
+  get main() { return this._m || (this._m = this.turrets.filter(t => !t.sec)); }
+  get secs() { return this._s || (this._s = this.turrets.filter(t => t.sec)); }
+  // secondarie: sul bersaglio dato se a tiro, altrimenti sul nemico più vicino a portata, con l'anticipo
+  secAim(dt, P) {
+    const L = this.secs; if (!L.length) return null;
+    let aim = P;
+    if (!aim) {
+      const mr = tableMax(L[0].T) * .9; let best = null, bd = mr;
+      for (const o of NV.ships) if (o.team !== this.team && !o.sinking) { const d = o.pos.distanceTo(this.pos); if (d < bd) { bd = d; best = o; } }
+      if (best) { const sol = solveElev(L[0].T, bd); aim = best.pos.clone().addScaledVector(best.vel, sol ? sol.t : 0); aim.y = WATER_Y; }
+    }
+    if (aim) this.aimAt(aim, dt, L);
+    return aim;
   }
   fireTurret(tu, ammo) {
     if (!tu.ok || tu.reload > 0 || !tu.aligned || this.sinking) return false;
@@ -524,11 +548,12 @@ function aiShip(sh, dt, t) {
   if (sh.turrets.length) {
     if (sh.fc.last !== T) { sh.fc.last = T; sh.fc.err.set(gauss() * dist * .05, 0, gauss() * dist * .05); sh.fc.vT = T.vel.clone(); }
     if (T.vel.distanceTo(sh.fc.vT) > 3) { sh.fc.err.multiplyScalar(1.6).clampLength(0, dist * .08); sh.fc.vT.copy(T.vel); }
-    const tof = (solveElev(sh.turrets[0].T, dist) || { t: dist / 600 }).t;
+    const tof = (solveElev(sh.main[0].T, dist) || { t: dist / 600 }).t;
     const aim = T.pos.clone().addScaledVector(T.vel, tof).add(sh.fc.err);
-    const inRange = dist < tableMax(sh.turrets[0].T) * .95;
-    sh.aimAt(aim, dt);
-    if (inRange) { let fired = false; for (const tu of sh.turrets) { tu.reload -= 0; if (sh.fireTurret(tu, T.C.belt > 100 || T.C.deck > 40 ? 'AP' : 'HE')) fired = true; } if (fired && sh.turrets[0].S.cal >= 100) sh.fc.err.multiplyScalar(rnd(.5, .75)).add(_nvw.set(gauss() * dist * .012, 0, gauss() * dist * .012)); }  // correzione sulle colonne d'acqua, mai perfetta
+    const inRange = dist < tableMax(sh.main[0].T) * .95;
+    sh.aimAt(aim, dt, sh.main);
+    const sa = sh.secAim(dt, null); if (sa) for (const tu of sh.secs) sh.fireTurret(tu, 'HE');
+    if (inRange) { let fired = false; for (const tu of sh.main) { tu.reload -= 0; if (sh.fireTurret(tu, T.C.belt > 100 || T.C.deck > 40 ? 'AP' : 'HE')) fired = true; } if (fired && sh.main[0].S.cal >= 100) sh.fc.err.multiplyScalar(rnd(.5, .75)).add(_nvw.set(gauss() * dist * .012, 0, gauss() * dist * .012)); }  // correzione sulle colonne d'acqua, mai perfetta
   }
 }
 function steerTo(sh, hd) { sh.rudCmd = clamp(-wrapA(hd - sh.yaw) * 2.5, -1, 1); }
@@ -543,6 +568,7 @@ function navyKey(c) {
   else if (c === 'KeyQ') navyLock();
   else if (c === 'Digit1') { NV.ammo = 'AP'; showMsg('Granate perforanti (AP)', 1.2); }
   else if (c === 'Digit2') { NV.ammo = 'HE'; showMsg('Granate esplosive (HE)', 1.2); }
+  else if (c === 'KeyG') { NV.secAuto = !NV.secAuto; showMsg('Armi secondarie: ' + (NV.secAuto ? 'fuoco automatico sul nemico più vicino' : 'solo a comando (F)'), 1.8); }
   else if (c === 'KeyR') { if (me.dcCool > 0) showMsg('Squadre di soccorso pronte tra ' + Math.ceil(me.dcCool) + ' s', 1.5); else { me.dcT = 18; me.dcCool = 75; showMsg('Squadre di soccorso al lavoro (18 s)', 2); } }
 }
 function teleMsg() { const n = ['Indietro', 'Stop', '1/4 avanti', '1/2 avanti', '3/4 avanti', 'Avanti tutta']; showMsg('Telegrafo: ' + n[NV.me.tele + 1], 1.2); }
@@ -560,7 +586,7 @@ function updateNavyPlayer(dt) {
   // A/D: muovono il timone e lo lasciano dov'è
   if (!me.sinking) { if (KEYS.KeyA) me.rudCmd = clamp(me.rudCmd - dt * .8, -1, 1); if (KEYS.KeyD) me.rudCmd = clamp(me.rudCmd + dt * .8, -1, 1); }
   // camera: in terza persona attorno alla nave o col binocolo (tasto destro) dalla plancia
-  const zoom = P.adsHeld, C = me.C, cy = NV.cam.yaw, cpch = NV.cam.pitch;
+  const zoom = P.adsHeld || KEYS.ShiftLeft || KEYS.ShiftRight, C = me.C, cy = NV.cam.yaw, cpch = NV.cam.pitch;
   const dir = new V3(-Math.sin(cy) * Math.cos(cpch), Math.sin(cpch), -Math.cos(cy) * Math.cos(cpch));
   if (zoom) { me.toWorld(0, C.F + (C.type === 'pt' ? 4 : 14), -C.L * .15, camera.position); camera.fov = lerp(camera.fov, 9, .25); }
   else { const d = (C.L * 1.1 + 25) * NV.cam.dist; camera.position.copy(me.pos).addScaledVector(dir, -d); camera.position.y = Math.max(camera.position.y + C.F + C.L * .18, seaH(camera.position.x, camera.position.z, GAME.time) + 3); camera.fov = lerp(camera.fov, SETTINGS.fov, .2); }
@@ -568,16 +594,31 @@ function updateNavyPlayer(dt) {
   camera.lookAt(_nva.copy(camera.position).addScaledVector(dir, 1000).add(new V3(0, zoom ? 0 : C.L * .1, 0)));
   if (P.shake > 0) { camera.rotation.x += rnd(-1, 1) * P.shake * .01; camera.rotation.y += rnd(-1, 1) * P.shake * .01; }
   // punto mirato: dove il raggio del mirino tocca il mare (oltre l'orizzonte: gittata massima)
-  const f = new V3(); camera.getWorldDirection(f); const maxR = me.turrets.length ? tableMax(me.turrets[0].T) : 3000;
+  const f = new V3(); camera.getWorldDirection(f); const maxR = me.main.length ? tableMax(me.main[0].T) : 3000;
   if (f.y < -1e-4) { const t = (camera.position.y - WATER_Y) / -f.y; NV.aim.copy(camera.position).addScaledVector(f, Math.min(t, maxR * 1.3 / Math.max(.05, Math.hypot(f.x, f.z)))); }
   else NV.aim.copy(me.pos).add(new V3(f.x, 0, f.z).normalize().multiplyScalar(maxR));
   NV.aim.y = WATER_Y; NV.aimR = Math.hypot(NV.aim.x - me.pos.x, NV.aim.z - me.pos.z);
   if (!me.sinking) {
-    me.aimAt(NV.aim, dt);
+    me.aimAt(NV.aim, dt, me.main);
     for (const tu of me.turrets) tu.reload = Math.max(0, tu.reload - dt);
-    if (mouseL) for (const tu of me.turrets) me.fireTurret(tu, NV.ammo);
+    if (mouseL) { let shot = 0; for (const tu of me.main) if (me.fireTurret(tu, NV.ammo)) shot++; if (!shot) navyWhyNot(me.main); }
+    const man = KEYS.KeyF; NV.secMan = man;
+    const sa = me.secAim(dt, man ? NV.aim : null);
+    if (man || (sa && NV.secAuto)) { let shot = 0; for (const tu of me.secs) if (me.fireTurret(tu, 'HE')) shot++; if (man && !shot) navyWhyNot(me.secs, true); }
   }
   me.torpT = Math.max(0, me.torpT - dt);
+}
+// perché non parte il colpo: torri in ricarica, fuori arco, fuori portata o non ancora in punteria
+function navyWhyNot(list, sec) {
+  if (!list.length || (NV.whyT || 0) > GAME.time) return; NV.whyT = GAME.time + .6;
+  const ok = list.filter(t => t.ok), ready = ok.filter(t => t.reload <= 0), arc = ready.filter(t => t.inArc), sol = arc.filter(t => t.sol);
+  let m;
+  if (!ok.length) m = 'Torri fuori uso';
+  else if (!ready.length) m = 'In ricarica: ' + Math.ceil(Math.min(...ok.map(t => t.reload))) + ' s';
+  else if (!arc.length) m = 'Nessuna torre può brandeggiare da quel lato';
+  else if (!sol.length) m = 'Bersaglio fuori portata';
+  else m = (sec ? 'Secondarie' : 'Torri') + ' non ancora in punteria: ' + sol.filter(t => t.aligned).length + '/' + sol.length;
+  navyHitText(m, '#ff9a6a');
 }
 function navyPlayerLost() {
   after(7, () => {
@@ -592,7 +633,8 @@ function navyHud() {
   if (NV.el) return NV.el;
   const box = document.createElement('div'); box.id = 'navyhud';
   box.innerHTML = `<div id="nvCross" style="position:fixed;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;pointer-events:none"><svg width="26" height="26"><g stroke="#fff" stroke-width="1.5" fill="none" style="filter:drop-shadow(0 0 2px #000)"><path d="M13 0v9M13 17v9M0 13h9M17 13h9"/></g></svg></div>
-  <div id="nvGun" style="position:fixed;width:16px;height:16px;margin:-8px 0 0 -8px;border:2px solid rgba(255,210,90,.85);border-radius:50%;pointer-events:none;display:none"></div>
+  <div id="nvGun" style="position:fixed;width:34px;height:34px;margin:-17px 0 0 -17px;pointer-events:none;display:none"><svg width="34" height="34"><g id="nvGunC" stroke="#ffd25a" stroke-width="2" fill="none" style="filter:drop-shadow(0 0 2px #000)"><circle cx="17" cy="17" r="11"/><path d="M17 0v8M17 26v8M0 17h8M26 17h8"/></g></svg><div id="nvGunT" style="position:absolute;left:50%;top:36px;transform:translateX(-50%);font:600 11px Oswald,sans-serif;white-space:nowrap;text-shadow:0 0 3px #000"></div></div>
+  <div id="nvSec" style="position:fixed;width:10px;height:10px;margin:-5px 0 0 -5px;border:2px solid #7fd3ff;transform:rotate(45deg);pointer-events:none;display:none"></div>
   <div id="nvLead" style="position:fixed;width:20px;height:20px;margin:-10px 0 0 -10px;pointer-events:none;display:none"><svg width="20" height="20"><path d="M10 1L19 10L10 19L1 10Z" stroke="#ff6a4a" stroke-width="2" fill="none"/></svg></div>
   <div id="nvTorp" style="position:fixed;width:14px;height:14px;margin:-7px 0 0 -7px;border:2px dashed #7fd3ff;border-radius:50%;pointer-events:none;display:none"></div>
   <div id="nvLockB" style="position:fixed;width:46px;height:30px;margin:-15px 0 0 -23px;border:2px solid #ffb43a;pointer-events:none;display:none"></div>
@@ -602,7 +644,7 @@ function navyHud() {
   <div id="nvRight" style="position:fixed;right:14px;bottom:14px;width:230px;font:12px Oswald,sans-serif;color:#e8e2d0;background:rgba(10,14,16,.55);padding:8px 10px;border-radius:4px;pointer-events:none"></div>
   <canvas id="nvRadar" width="170" height="170" style="position:fixed;right:14px;top:70px;border-radius:50%;background:rgba(8,20,24,.55);pointer-events:none"></canvas>`;
   document.body.appendChild(box);
-  NV.el = { box, cross: $('nvCross'), gun: $('nvGun'), lead: $('nvLead'), torp: $('nvTorp'), lockB: $('nvLockB'), range: $('nvRange'), hit: $('nvHit'), left: $('nvLeft'), right: $('nvRight'), radar: $('nvRadar') };
+  NV.el = { box, cross: $('nvCross'), gun: $('nvGun'), gunC: $('nvGunC'), gunT: $('nvGunT'), sec: $('nvSec'), lead: $('nvLead'), torp: $('nvTorp'), lockB: $('nvLockB'), range: $('nvRange'), hit: $('nvHit'), left: $('nvLeft'), right: $('nvRight'), radar: $('nvRadar') };
   return NV.el;
 }
 function navyHitText(t, c) { const E = navyHud(); E.hit.textContent = t; E.hit.style.color = c; E.hit.style.opacity = 1; clearTimeout(NV.hitTO); NV.hitTO = setTimeout(() => E.hit.style.opacity = 0, 1300); }
@@ -612,8 +654,15 @@ function place(el, p) { const s = p && scr(p); if (s) { el.style.display = 'bloc
 function updateNavyHud(dt) {
   const E = navyHud(), me = NV.me; E.box.style.display = me && GAME.running !== undefined ? 'block' : 'none'; if (!me) return;
   // dove cadrebbero ora i colpi delle torri (in ritardo rispetto al mirino finché le torri ruotano)
-  const tu = me.turrets.find(t => t.ok) || me.turrets[0];
-  if (tu) { const T = tu.T; let r = 0; for (let i = 1; i < T.length; i++) if (T[i].e >= tu.el) { r = lerp(T[i - 1].r, T[i].r, (tu.el - T[i - 1].e) / (T[i].e - T[i - 1].e)); break; } if (tu.el >= T[T.length - 1].e) r = tableMax(T); const gp = me.toWorld(tu.x, 0, tu.z), a = me.yaw + tu.rel; place(E.gun, new V3(gp.x - Math.sin(a) * r, WATER_Y, gp.z - Math.cos(a) * r)); }
+  const tu = me.main.find(t => t.ok) || me.main[0];
+  if (tu) { const T = tu.T; let r = 0; for (let i = 1; i < T.length; i++) if (T[i].e >= tu.el) { r = lerp(T[i - 1].r, T[i].r, (tu.el - T[i - 1].e) / (T[i].e - T[i - 1].e)); break; } if (tu.el >= T[T.length - 1].e) r = tableMax(T); const gp = me.toWorld(tu.x, 0, tu.z), a = me.yaw + tu.rel; place(E.gun, new V3(gp.x - Math.sin(a) * r, WATER_Y, gp.z - Math.cos(a) * r));
+    const live = me.main.filter(t => t.ok && t.inArc), al = live.filter(t => t.aligned).length, rd = live.filter(t => t.aligned && t.reload <= 0).length, inR = live.some(t => t.sol);
+    const col = !live.length || !inR ? '#ff6a5a' : al === live.length ? '#7fe06a' : '#ffd25a';
+    E.gunC.setAttribute('stroke', col); E.gunT.style.color = col;
+    E.gunT.textContent = !live.length ? 'FUORI ARCO' : !inR ? 'FUORI PORTATA' : al + '/' + live.length + ' IN PUNTERIA' + (rd < al ? ' · ' + (al - rd) + ' in ricarica' : ''); }
+  // bersaglio delle secondarie
+  const st = me.secs.find(t => t.ok && t.sol && t.inArc);
+  if (st && (NV.secMan || NV.secAuto)) { const T = st.T; let r = 0; for (let i = 1; i < T.length; i++) if (T[i].e >= st.el) { r = lerp(T[i - 1].r, T[i].r, (st.el - T[i - 1].e) / (T[i].e - T[i - 1].e)); break; } const gp = me.toWorld(st.x, 0, st.z), a = me.yaw + st.rel; place(E.sec, new V3(gp.x - Math.sin(a) * r, WATER_Y, gp.z - Math.cos(a) * r)); } else E.sec.style.display = 'none';
   // bersaglio agganciato: anticipo (dove sarà quando arrivano i colpi) e, coi siluri, punto d'intercettazione
   const L = NV.lock && !NV.lock.sinking ? NV.lock : (NV.lock = null);
   if (L) {
@@ -630,10 +679,11 @@ function updateNavyHud(dt) {
   E.left.innerHTML = `<b style="font-size:14px">${me.C.name}</b><br>Scafo ${Math.max(0, Math.round(me.hp / me.hpMax * 100))}%${bar(me.hp / me.hpMax, me.hp / me.hpMax > .4 ? '#7fc06a' : '#e0604a')}` +
     `Velocità <b>${(Math.abs(me.spd) / KN).toFixed(1)} nodi</b> · telegrafo <b>${tn[me.tele + 1]}</b><br>Timone ${me.rud < -.05 ? '◀ ' : me.rud > .05 ? '▶ ' : ''}${Math.round(Math.abs(me.rud) * 35)}°${me.mod.steer < .5 ? ' <span style="color:#ff8a6a">BLOCCATO</span>' : ''}` +
     `<br>Allagamento ${Math.round(me.flood * 100)}%${me.leak > 0 ? ' <span style="color:#7fd3ff">falla</span>' : ''} · incendi ${me.fires.length}${me.mod.eng < .5 ? '<br><span style="color:#ff8a6a">Macchine danneggiate</span>' : ''}` +
-    `<br>Soccorso (R): ${me.dcT > 0 ? 'al lavoro ' + Math.ceil(me.dcT) + ' s' : me.dcCool > 0 ? 'tra ' + Math.ceil(me.dcCool) + ' s' : 'pronto'}<br><small>W/S telegrafo · A/D timone · C centra · mouse mira · tasto sx fuoco · tasto dx binocolo · Q aggancia · 1/2 munizioni${me.C.torps ? ' · T siluri' : ''} · rotella distanza</small>`;
+    `<br>Soccorso (R): ${me.dcT > 0 ? 'al lavoro ' + Math.ceil(me.dcT) + ' s' : me.dcCool > 0 ? 'tra ' + Math.ceil(me.dcCool) + ' s' : 'pronto'}<br><small>W/S telegrafo · A/D timone · C centra · mouse mira · tasto sx fuoco · tasto dx o Shift mira col binocolo · F secondarie · Q aggancia · 1/2 munizioni${me.C.torps ? ' · T siluri' : ''} · rotella distanza</small>`;
   const S = tu ? tu.S : null;
   E.right.innerHTML = (S ? `<b>${S.name}</b> · ${S.cal >= 100 ? (NV.ammo === 'AP' ? 'perforante' : 'esplosivo') : 'mitragliere'}<br><small>${Math.round(S.v)} m/s · ${S.m >= 1 ? S.m + ' kg' : Math.round(S.m * 1000) + ' g'} · perfora ${Math.round(penDeMarre(S, S.v))} mm alla bocca</small><br>` : '') +
-    me.turrets.map((t, i) => `<span style="display:inline-block;width:46px">${t.G.mounts.length > 3 ? 'T' + (i + 1) : 'A' + (i + 1)}</span><span style="display:inline-block;width:150px;height:6px;background:#222;vertical-align:middle"><span style="display:block;height:100%;width:${t.ok ? (1 - t.reload / t.G.reload) * 100 : 0}%;background:${!t.ok ? '#e0604a' : t.reload <= 0 ? (t.aligned ? '#7fc06a' : '#c9b25a') : '#6a8aa0'}"></span></span>`).slice(0, 8).join('<br>') +
+    me.main.map((t, i) => `<span style="display:inline-block;width:46px">${t.G.mounts.length > 3 ? 'T' + (i + 1) : 'A' + (i + 1)}</span><span style="display:inline-block;width:150px;height:6px;background:#222;vertical-align:middle"><span style="display:block;height:100%;width:${t.ok ? (1 - t.reload / t.G.reload) * 100 : 0}%;background:${!t.ok ? '#e0604a' : t.reload <= 0 ? (t.aligned ? '#7fc06a' : '#c9b25a') : '#6a8aa0'}"></span></span>`).slice(0, 8).join('<br>') +
+    (me.secs.length ? `<br><b>Secondarie</b> ${me.secs[0].S.name} ×${me.secs.reduce((a, t) => a + t.muzzles.length, 0)} · ${NV.secMan ? '<span style="color:#7fd3ff">a comando</span>' : NV.secAuto ? 'automatiche' : 'ferme'}<br><small>F spara dove miri · G automatiche on/off</small>` : '') +
     (me.C.torps ? `<br>Siluri: <b>${me.torpN}</b>${me.torpT > 0 ? ' (ricarica ' + Math.ceil(me.torpT) + ' s)' : ''}` : '');
   drawRadar(E.radar);
 }
