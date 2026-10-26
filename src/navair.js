@@ -18,7 +18,7 @@ class NavPlane {
     this.vel = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)).multiplyScalar(this.spd);
     this.hp = (sp.hp || 800) * .55; this.alive = true; this.crash = false; this.roll = 0;
     this.target = o.target || null; this.state = 'ingress'; this.armed = this.role !== 'fighter'; this.fireT = 0; this.cruise = o.alt || (this.role === 'dive' ? 2800 : this.role === 'torpedo' ? 400 : 1500);
-    this.turn = this.role === 'fighter' ? .75 : .42; this.t = 0; this.squad = o.squad || null; this.cap = o.cap || null;
+    this.turn = this.role === 'fighter' ? .45 : .32;   // rad/s: virata sostenuta realistica (Zero ~26°/s) this.t = 0; this.squad = o.squad || null; this.cap = o.cap || null;
     PLANES.push(this);
   }
   // sterza verso una direzione con velocità angolare limitata e inclina le ali
@@ -100,10 +100,13 @@ class NavPlane {
     if (best) {
       const lead = best.pos.clone().addScaledVector(best.vel, bd / 800), want = lead.sub(this.pos).normalize(), cur = _na2.copy(this.vel).normalize();
       this.hold = false; this.cruise = best.pos.y;
-      if (bd < 600 && cur.dot(want) > .993 && this.fireT <= 0) {
-        this.fireT = .12; const o = this.pos.clone().addScaledVector(cur, 6); const hit = R() < .3, miss = hit ? 2 : 14; fxTracer(o, best.pos.clone().add(new V3(rnd(-miss, miss), rnd(-miss, miss), rnd(-miss, miss))).addScaledVector(cur, 150), 3);
-        sfxAirGun(o, this.type);
-        if (R() < .12 * (1 - bd / 700)) best.damage(rnd(18, 40), false);
+      // stesse regole del giocatore: spara solo col muso puntato (cono di 3°) e sotto i 500 m;
+      // il colpo va dove punta il muso più la dispersione della raffica, e colpisce solo se passa sull'aereo
+      if (bd < 500 && cur.dot(want) > .9986 && this.fireT <= 0) {
+        this.fireT = .12; const o = this.pos.clone().addScaledVector(cur, 6);
+        const shot = cur.clone().add(new V3(gauss() * .012, gauss() * .012, gauss() * .012)).normalize(), aimP = this.pos.clone().addScaledVector(shot, bd);
+        fxTracer(o, this.pos.clone().addScaledVector(shot, bd + 200), 3); sfxAirGun(o, this.type);
+        if (aimP.distanceTo(best.pos.clone().addScaledVector(best.vel, bd / 800)) < 5.5) best.damage(rnd(18, 40), false);
       }
       return want;
     }
@@ -263,7 +266,7 @@ function navyAirRaid(types, from, dist, alt = 0) {
 function sfxAirGun(o, type) {
   const d = Math.sqrt(dist2Cam(o)); if (d > 1800) return;
   const now = GAME.time; if (now - (NAIR.gunT || 0) < .09) return; NAIR.gunT = now;
-  const light = type === 'zero' || type === 'val' || type === 'kate';
-  play('m2', o, { ref: 70, vol: .55, rate: light ? 1.3 + R() * .06 : .95 + R() * .05 });
-  if (d < 400 && R() < .5) play('m2', o, { ref: 70, vol: .35, rate: light ? .9 : .7, delay: .045 });
+  // registrazione vera (mitragliatrice), senza toni sintetici; da lontano il rombo smorzato
+  if (d < 700) play('bar', o, { ref: 60, vol: .5, rate: .92 + R() * .06 });
+  else play('mg_far', o, { ref: 200, vol: .6, rate: .95 + R() * .05 });
 }
