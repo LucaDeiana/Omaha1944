@@ -52,7 +52,7 @@ const NCLS = {
     guns: [{ s: 'jp2000', reload: 10, trav: .06, elev: .6, disp: .05, mounts: [[0, 20, -142, 'fore', 2], [0, 30, -104, 'fore', 2], [0, 30, 100, 'aft', 2], [0, 20, 138, 'aft', 2]] },
       { s: 'us305', sec: true, reload: 20, trav: .12, elev: .6, disp: 1, mounts: [[-21, 23, -50, 'port', 2], [21, 23, -50, 'stbd', 2], [-23, 23, 0, 'port', 2], [23, 23, 0, 'stbd', 2], [-21, 23, 50, 'port', 2], [21, 23, 50, 'stbd', 2]] }] },
   akagi: { name: 'Portaerei Akagi', nat: 'jp', type: 'cv', L: 260, B: 31, D: 8.7, F: 14, vmax: 31, tau: 60, R: 650, rud: .2, hp: 8500, belt: 152, deck: 79, ends: 40, hull: 0x7a7e82,
-    guns: [{ s: 'us127', sec: true, reload: 4, trav: .4, elev: 1.4, disp: 1.6, mounts: [[-17.5, 12, -70, 'port', 2], [17.5, 12, -70, 'stbd', 2], [-17.5, 12, 60, 'port', 2], [17.5, 12, 60, 'stbd', 2]] }] },
+    guns: [{ s: 'us127', sec: true, reload: 4, trav: .4, elev: 1.4, disp: 1.6, mounts: [[-18.3, 12, -70, 'port', 2], [18.3, 12, -70, 'stbd', 2], [-18.3, 12, 60, 'port', 2], [18.3, 12, 60, 'stbd', 2]] }] },
   kaga: { name: 'Portaerei Kaga', nat: 'jp', type: 'cv', L: 248, B: 32, D: 9.5, F: 13, vmax: 28, tau: 60, R: 640, rud: .2, hp: 8800, belt: 152, deck: 38, ends: 40, hull: 0x7a7e82,
     guns: [{ s: 'us127', sec: true, reload: 4, trav: .4, elev: 1.4, disp: 1.6, mounts: [[-18.5, 12, -60, 'port', 2], [18.5, 12, -60, 'stbd', 2], [-18.5, 12, 50, 'port', 2], [18.5, 12, 50, 'stbd', 2]] }] },
   soryu: { name: 'Portaerei Soryu', nat: 'jp', type: 'cv', L: 227, B: 21, D: 7.6, F: 12, vmax: 34, tau: 50, R: 560, rud: .22, hp: 6000, belt: 41, deck: 25, ends: 20, hull: 0x7a7e82,
@@ -79,7 +79,12 @@ NCLS.texas.screws = 2; NCLS.scharnhorst.screws = 3; NCLS.scharnhorst.bow = 'atla
 NCLS.kirishima = Object.assign({}, NCLS.texas, { name: 'Corazzata Kirishima', nat: 'jp', style: 'kongo', L: 222, B: 31, D: 9.7, F: 9, screws: 4, vmax: 30, hp: 10500, belt: 203, deck: 70,
   guns: [Object.assign({}, NCLS.texas.guns[0], { mounts: [[0, 12, -80, 'fore', 2], [0, 15, -63, 'fore', 2], [0, 12.5, 36, 'aft', 2], [0, 12, 80, 'aft', 2]] }),
     Object.assign({}, NCLS.texas.guns[1], { mounts: [[-14.6, 6.5, -44, 'port', 1], [14.6, 6.5, -44, 'stbd', 1], [-15.3, 6.5, -32, 'port', 1], [15.3, 6.5, -32, 'stbd', 1], [-15.4, 6.5, -20, 'port', 1], [15.4, 6.5, -20, 'stbd', 1], [-15.4, 6.5, 14, 'port', 1], [15.4, 6.5, 14, 'stbd', 1]] })] });
-NCLS.kagero = Object.assign({}, NCLS.z1934, { name: 'Cacciatorpediniere Kagero', nat: 'jp', vmax: 35 });
+NCLS.kagero = Object.assign({}, NCLS.z1934, { name: 'Cacciatorpediniere Kagero', nat: 'jp', vmax: 35, L: 118.5, B: 10.8, D: 3.8,
+  guns: [Object.assign({}, NCLS.z1934.guns[0], { mounts: [[0, 9.5, -40, 'fore', 2], [0, 11.5, 27, 'aft', 2], [0, 9, 40, 'aft', 2]] }), Object.assign({}, NCLS.z1934.guns[1], { mounts: [[-3.6, 9.5, 8.6, 'port', 2], [3.6, 9.5, 8.6, 'stbd', 2]] })] });
+// portaerei: forma propria per ognuna (isola, fumaioli, ascensori)
+NCLS.akagi.cv = { islandSide: -1, islandZ: -.04, islandH: 7, funnels: [.0], funnelR: 3, elev: [-.3, -.04, .24] };
+NCLS.kaga.cv = { islandSide: 1, islandZ: -.14, islandH: 6.5, funnelAft: true, funnels: [-.02], funnelR: 2.2, elev: [-.3, -.06, .2] };
+NCLS.soryu.cv = { islandSide: 1, islandZ: -.26, islandH: 7.5, funnels: [-.03, .03], funnelR: 1.9, deckW: 1.2, elev: [-.3, .0, .26] };
 const RHO0 = 1.225;
 // coefficiente di resistenza in funzione del numero di Mach (proiettile navale con ogiva lunga)
 function cdMach(M) { if (M < .8) return .14; if (M < 1) return .14 + (M - .8) / .2 * .24; if (M < 1.2) return .38; return Math.max(.2, .38 - (M - 1.2) * .1); }
