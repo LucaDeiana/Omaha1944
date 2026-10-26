@@ -633,7 +633,8 @@ function updateNavyPlayer(dt) {
   // camera: in terza persona attorno alla nave o col binocolo (tasto destro) dalla plancia
   const zoom = P.adsHeld || NV.zoomOn, C = me.C, cy = NV.cam.yaw, cpch = NV.cam.pitch;
   const dir = new V3(-Math.sin(cy) * Math.cos(cpch), Math.sin(cpch), -Math.cos(cy) * Math.cos(cpch));
-  if (zoom) { me.toWorld(0, C.F + (C.type === 'pt' ? 4 : 14), -C.L * .15, camera.position); camera.fov = lerp(camera.fov, NV.zfov || 9, .25); }
+  // col binocolo la camera sta davanti e sopra la nave lungo la mira: niente alberi o fumaioli in vista
+  if (zoom) { camera.position.set(me.pos.x + dir.x / Math.max(.2, Math.hypot(dir.x, dir.z)) * C.L * .6, me.pos.y + C.F + 12 + C.L * .06, me.pos.z + dir.z / Math.max(.2, Math.hypot(dir.x, dir.z)) * C.L * .6); camera.fov = lerp(camera.fov, NV.zfov || 9, .25); }
   else { const d = (C.L * 1.1 + 25) * NV.cam.dist; camera.position.copy(me.pos).addScaledVector(dir, -d); camera.position.y = Math.max(camera.position.y + C.F + C.L * .18, seaH(camera.position.x, camera.position.z, GAME.time) + 3); camera.fov = lerp(camera.fov, SETTINGS.fov, .2); }
   camera.updateProjectionMatrix();
   camera.lookAt(_nva.copy(camera.position).addScaledVector(dir, 1000).add(new V3(0, zoom ? 0 : C.L * .1, 0)));
