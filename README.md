@@ -29,6 +29,9 @@ Fai doppio clic su `Avvia Fronte Occidentale 1944.bat` (oppure apri `index.html`
 | Aereo | mouse = direzione (istruttore; M per la cloche manuale) · click sx mitragliatrici · click dx zoom · Spazio o F bomba · A/D rollio · W/S manetta · G carrello · V visuale |
 | Esc | Pausa |
 
+## Modelli 3D
+Apri `viewer.html` (o «MODELLI 3D» nel menù principale) per vedere da vicino navi, aerei, mezzi e armi del gioco: visuali di fianco, prua, poppa e dall'alto, fil di ferro, uomo di 1,8 m per la scala e linea d'acqua. Con «Aggiungi nota» tocchi un punto del modello e scrivi cosa cambiare; «Copia tutte» copia le note (con posizione e coordinate) da incollare nella chat.
+
 ## Ruoli (tasto B o dopo la morte)
 - **Fanteria**: dall'ultimo checkpoint oppure a bordo della prossima ondata di sbarco.
 - **USS Texas**: torretta da 14 pollici con binocolo; bombarda la costa (attenzione al fuoco amico).

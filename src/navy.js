@@ -74,7 +74,11 @@ const NCLS = {
 };
 
 // ---------- balistica esterna ----------
-NCLS.kirishima = Object.assign({}, NCLS.texas, { name: 'Corazzata Kirishima', nat: 'jp', style: 'pagoda', vmax: 30, hp: 10500, belt: 203, deck: 70 });
+NCLS.texas.screws = 2; NCLS.scharnhorst.screws = 3;
+// classe Kongo dopo la ricostruzione del 1936: 222 m, quattro torri binate da 356 mm, casematte da 152 mm, pagoda, due fumaioli
+NCLS.kirishima = Object.assign({}, NCLS.texas, { name: 'Corazzata Kirishima', nat: 'jp', style: 'kongo', L: 222, B: 31, D: 9.7, F: 9, screws: 4, vmax: 30, hp: 10500, belt: 203, deck: 70,
+  guns: [Object.assign({}, NCLS.texas.guns[0], { mounts: [[0, 12, -80, 'fore', 2], [0, 15, -63, 'fore', 2], [0, 12.5, 36, 'aft', 2], [0, 12, 80, 'aft', 2]] }),
+    Object.assign({}, NCLS.texas.guns[1], { mounts: [[-14.6, 6.5, -44, 'port', 1], [14.6, 6.5, -44, 'stbd', 1], [-15.3, 6.5, -32, 'port', 1], [15.3, 6.5, -32, 'stbd', 1], [-15.4, 6.5, -20, 'port', 1], [15.4, 6.5, -20, 'stbd', 1], [-15.4, 6.5, 14, 'port', 1], [15.4, 6.5, 14, 'stbd', 1]] })] });
 NCLS.kagero = Object.assign({}, NCLS.z1934, { name: 'Cacciatorpediniere Kagero', nat: 'jp', vmax: 35 });
 const RHO0 = 1.225;
 // coefficiente di resistenza in funzione del numero di Mach (proiettile navale con ogiva lunga)
@@ -335,7 +339,7 @@ class NavShip {
   damage(a, by, kind) {
     if (this.sinking || !this.alive) return;
     this.hp -= a; if (by && by.team !== this.team && by === NV.me) NV.dmgDone = (NV.dmgDone || 0) + a;
-    const k = 1 - .55 * clamp(1 - this.hp / this.hpMax, 0, 1); for (const m of this.mats) m.color.setRGB(k, k * .97, k * .94);
+    const k = 1 - .55 * clamp(1 - this.hp / this.hpMax, 0, 1); for (const m of this.mats) { const b = m.userData.base; if (b) m.color.setRGB(b.r * k, b.g * k * .97, b.b * k * .94); else m.color.setRGB(k, k * .97, k * .94); }
     if (this.hp <= 0) { if (by === NV.me && this !== NV.me) { addScore(this.C.type === 'bb' ? 3000 : this.C.type === 'cl' ? 1500 : this.C.type === 'dd' ? 800 : this.C.type === 'cargo' ? 600 : 300, this.C.name + ' affondato', '#9fe08a'); STATS.kills++; } this.sink(kind); }
   }
   sink(kind) {

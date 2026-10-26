@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Visualizzatore modelli 3D</title>
+<style>
+  :root { --bg: #15181b; --panel: #1f2428; --line: #333a40; --txt: #e3e0d6; --dim: #9aa0a3; --acc: #d4a94a; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--txt); font: 14px/1.4 system-ui, sans-serif; overflow: hidden; }
+  #gl { position: fixed; inset: 0; width: 100% !important; height: 100% !important; filter: none !important; }
+  #vignette { display: none !important; }
+  #side { position: fixed; top: 0; left: 0; bottom: 0; width: 290px; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; z-index: 2; transition: transform .2s; }
+  #side.closed { transform: translateX(-100%); }
+  #side h1 { font-size: 15px; margin: 12px 14px 6px; color: var(--acc); letter-spacing: .04em; }
+  #side .sec { padding: 6px 14px; border-bottom: 1px solid var(--line); }
+  select, button, textarea, input { font: inherit; color: var(--txt); background: #2a3035; border: 1px solid var(--line); border-radius: 6px; }
+  select { width: 100%; padding: 6px; }
+  button { padding: 6px 9px; cursor: pointer; }
+  button:hover { border-color: var(--acc); }
+  button.on { background: var(--acc); color: #111; border-color: var(--acc); }
+  #list { flex: 1; overflow: auto; padding: 4px 0; }
+  #list div { padding: 6px 14px; cursor: pointer; }
+  #list div:hover { background: #2a3035; }
+  #list div.sel { background: #3a3220; color: var(--acc); }
+  #info { color: var(--dim); font-size: 12px; }
+  #bar { position: fixed; top: 10px; right: 10px; left: 300px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; z-index: 2; }
+  #side.closed ~ #bar { left: 54px; }
+  #toggle { position: fixed; top: 10px; left: 300px; z-index: 3; }
+  #side.closed ~ #toggle { left: 10px; }
+  #notes { position: fixed; right: 10px; bottom: 10px; width: 340px; max-height: 45vh; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; z-index: 2; }
+  #notes header { display: flex; gap: 6px; align-items: center; padding: 8px; border-bottom: 1px solid var(--line); }
+  #notes header b { flex: 1; }
+  #nlist { overflow: auto; padding: 6px 8px; }
+  .note { border-bottom: 1px solid var(--line); padding: 6px 0; }
+  .note .h { display: flex; gap: 6px; font-size: 12px; color: var(--dim); }
+  .note .h span { flex: 1; }
+  .note textarea { width: 100%; min-height: 44px; margin-top: 4px; padding: 5px; resize: vertical; }
+  #hint { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); background: #000a; padding: 6px 12px; border-radius: 6px; font-size: 12px; color: var(--dim); z-index: 1; pointer-events: none; }
+  .pin { position: fixed; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: var(--acc); color: #111; font: bold 12px/22px system-ui; text-align: center; z-index: 1; pointer-events: none; box-shadow: 0 0 0 2px #0008; }
+  #load { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--bg); z-index: 9; font-size: 16px; }
+  #err { color: #f07a6a; white-space: pre-wrap; font-size: 12px; padding: 0 14px; }
+  @media (max-width: 760px) {
+    #side { width: 82vw; }
+    #bar { left: 54px; top: 10px; }
+    #toggle { left: 10px; }
+    #side:not(.closed) ~ #toggle { left: calc(82vw + 6px); }
+    #notes { left: 10px; width: auto; max-height: 38vh; }
+  }
+</style>
+</head>
+<body>
+<div id="vignette"></div>
+<div id="load">Caricamento dei modelli…</div>
+<aside id="side">
+  <h1>MODELLI DEL GIOCO</h1>
+  <div class="sec"><select id="cat"></select></div>
+  <div id="list"></div>
+  <div class="sec" id="info"></div>
+  <div id="err"></div>
+</aside>
+<button id="toggle" title="Mostra/nascondi elenco">☰</button>
+<div id="bar">
+  <button data-v="side">Fianco</button>
+  <button data-v="front">Prua</button>
+  <button data-v="back">Poppa</button>
+  <button data-v="top">Sopra</button>
+  <button data-v="iso">3/4</button>
+  <button id="bWire">Fil di ferro</button>
+  <button id="bScale">Uomo 1,8 m</button>
+  <button id="bWater">Linea d'acqua</button>
+  <button id="bSun">Luce</button>
+  <button id="bNote">✎ Aggiungi nota</button>
+</div>
+<div id="notes">
+  <header><b>Note <span id="ncount"></span></b><button id="bCopy">Copia tutte</button><button id="bClear">Svuota</button></header>
+  <div id="nlist"></div>
+</div>
+<div id="hint">Trascina per ruotare · rotella/pizzico per lo zoom · tasto destro/due dita per spostare</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// raccoglie gli errori dei moduli del gioco senza bloccare il visualizzatore
+window.addEventListener('error', e => { const el = document.getElementById('err'); if (el) el.textContent += (e.message || e) + '\n'; });
+</script>
+<script src="assets/tex_photo.js"></script>
+<script src="src/config.js"></script>
+<script src="src/textures.js"></script>
+<script src="src/models.js"></script>
+<script src="src/planes2.js"></script>
+<script src="src/engine.js"></script>
+<script src="src/fx.js"></script>
+<script src="src/world.js"></script>
+<script src="assets/models/male_base.js"></script>
+<script src="src/crowd.js"></script>
+<script src="src/soldier.js"></script>
+<script src="src/weapons.js"></script>
+<script src="src/guns.js"></script>
+<script src="src/aircraft.js"></script>
+<script src="src/ballistics.js"></script>
+<script src="src/mission.js"></script>
+<script src="src/tank.js"></script>
+<script src="src/water.js"></script>
+<script src="src/navy.js"></script>
+<script src="src/shipmodels.js"></script>
+<script src="src/viewer.js"></script>
+</body>
+</html>
