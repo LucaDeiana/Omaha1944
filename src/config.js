@@ -130,7 +130,7 @@ class MB {
     _e.set(rx, ry, rz); _q.setFromEuler(_e); _p.set(x, y, z); _s.set(sx, sy, sz);
     const m = new THREE.Matrix4().compose(_p, _q, _s);
     if (this.base) m.premultiply(this.base);
-    this.parts.push({ g, c: typeof c === 'number' ? col(c) : c, m, mat: this.mat });
+    this.parts.push({ g, c: typeof c === 'number' ? col(c) : c, m, mat: this.mat, gid: this.gid || 0 });
     return this;
   }
   // cilindro tra due punti
@@ -139,14 +139,14 @@ class MB {
     const q = new THREE.Quaternion().setFromUnitVectors(new V3(0, 1, 0), d.clone().normalize());
     const m = new THREE.Matrix4().compose(a.clone().addScaledVector(d, .5), q, new V3(r, len, r));
     if (this.base) m.premultiply(this.base);
-    this.parts.push({ g, c: typeof c === 'number' ? col(c) : c, m, mat: this.mat });
+    this.parts.push({ g, c: typeof c === 'number' ? col(c) : c, m, mat: this.mat, gid: this.gid || 0 });
     return this;
   }
   // aggiunge una geometria con i suoi colori per vertice
   addG(g, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, s = 1, tint = 0xffffff) {
     _e.set(rx, ry, rz); _q.setFromEuler(_e); _p.set(x, y, z); _s.set(s, s, s);
     const m = new THREE.Matrix4().compose(_p, _q, _s); if (this.base) m.premultiply(this.base);
-    this.parts.push({ g, c: col(tint), m, mat: this.mat, vc: true }); return this;
+    this.parts.push({ g, c: col(tint), m, mat: this.mat, vc: true, gid: this.gid || 0 }); return this;
   }
   build() { return mergeGeos(this.parts); }
   // divide le parti in tasselli quadrati di lato size: ogni tassello ha i suoi gruppi di materiali
