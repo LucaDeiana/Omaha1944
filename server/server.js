@@ -11,6 +11,10 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/index.html';
+  // nell'applicazione installata le musiche personali stanno in Documenti (la cartella del programma è di sola lettura)
+  const PERS = process.env.FO_PERSONALI, PP = '/assets/music/personali/';
+  if (PERS && p.startsWith(PP)) { const pf = path.normalize(path.join(PERS, p.slice(PP.length))); if (!pf.startsWith(path.normalize(PERS))) { res.writeHead(403); return res.end(); }
+    return fs.readFile(pf, (err, data) => { if (err) { res.writeHead(404); return res.end('404'); } res.writeHead(200, { 'Content-Type': MIME[path.extname(pf).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(data); }); }
   const f = path.normalize(path.join(ROOT, p));
   if (!f.startsWith(ROOT) || f.includes(`${path.sep}.git`) || f.includes(`${path.sep}server${path.sep}`)) { res.writeHead(403); return res.end(); }
   fs.readFile(f, (err, data) => {

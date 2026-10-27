@@ -1,9 +1,74 @@
 {
-  "name": "omaha1944",
+  "name": "fronte-occidentale-1944",
   "version": "1.0.0",
-  "private": true,
-  "description": "Omaha 1944 — FPS dello sbarco in Normandia",
+  "description": "Fronte Occidentale 1944 — FPS sul fronte occidentale",
   "scripts": {
-    "server": "node server/server.js"
+    "server": "node server/server.js",
+    "app": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "productName": "Fronte Occidentale 1944",
+  "author": "Luca Deiana",
+  "main": "electron/main.js",
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "it.lucadeiana.fronteoccidentale1944",
+    "productName": "Fronte Occidentale 1944",
+    "copyright": "Luca Deiana",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "viewer.html",
+      "style.css",
+      "package.json",
+      "src/**",
+      "assets/**",
+      "server/**",
+      "electron/**",
+      "!assets/music/personali/*.mp3",
+      "!assets/music/personali/*.png"
+    ],
+    "asarUnpack": [
+      "assets/music/personali/LEGGIMI.txt"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "artifactName": "Fronte-Occidentale-1944-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Fronte Occidentale 1944",
+      "runAfterFinish": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "LucaDeiana",
+        "repo": "Omaha1944",
+        "releaseType": "release"
+      }
+    ]
   }
 }

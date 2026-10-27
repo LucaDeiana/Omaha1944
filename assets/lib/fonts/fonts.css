@@ -1,0 +1,4 @@
+/* caratteri del gioco inclusi nei file (funzionano anche senza internet) — licenze nella stessa cartella */
+@font-face { font-family: 'Oswald'; font-style: normal; font-weight: 400; font-display: swap; src: url(oswald-latin-400-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Oswald'; font-style: normal; font-weight: 500 700; font-display: swap; src: url(oswald-latin-600-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Special Elite'; font-style: normal; font-weight: 400; font-display: swap; src: url(special-elite-latin-400-normal.woff2) format('woff2'); }

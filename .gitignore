@@ -7,3 +7,4 @@ node_modules/
 assets/music/personali/*
 !assets/music/personali/LEGGIMI.txt
 versione.txt
+dist/

@@ -1,0 +1,29 @@
+# Costruisce l'installatore Windows (.exe) di Fronte Occidentale 1944 a ogni aggiornamento del ramo main
+# e lo pubblica nelle Releases del repository; il programma installato si aggiorna da solo da lì.
+name: Programma Windows
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'Avvia Fronte Occidentale 1944.bat']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: programma-windows
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Numero di versione
+        run: npm version 1.0.${{ github.run_number }} --no-git-tag-version --allow-same-version
+      - name: Dipendenze
+        run: npm install --no-audit --no-fund
+      - name: Costruisci e pubblica l'installatore
+        run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
