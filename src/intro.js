@@ -120,9 +120,12 @@
   const MUS = { a: null, key: '', fadeT: 0 };
   function music(key, vol = .55) {
     if (MUS.key === key && MUS.a && !MUS.a.paused) return; stopMusic(.4);
-    const files = { intro: ['assets/music/personali/intro.mp3', 'assets/music/intro_march.mp3'], menu: ['assets/music/personali/menu.mp3', 'assets/music/menu_war_theme.mp3'] }[key];
-    const a = new Audio(); a.loop = key === 'menu'; a.volume = 0; MUS.a = a; MUS.key = key; MUS.want = vol;
+    // prima i brani personali (con varianti numerate, scelte a caso), poi il brano CC0 predefinito
+    const files = musicVariants(key).concat({ intro: ['assets/music/intro_march.mp3'], menu: ['assets/music/menu_war_theme.mp3'] }[key]);
+    const a = new Audio(); a.volume = 0; MUS.a = a; MUS.key = key; MUS.want = vol;
     let i = 0; a.onerror = () => { if (++i < files.length) { a.src = files[i]; a.play().catch(() => {}); } }; a.src = files[0]; a.play().catch(() => {});
+    // menù: finito un brano ne parte un altro a caso
+    a.onended = () => { if (MUS.a === a && key === 'menu') { MUS.key = ''; MUS.a = null; music('menu', vol); MUS.a && (MUS.a.volume = a.volume); } };
     clearInterval(MUS.fadeT); MUS.fadeT = setInterval(() => { if (MUS.a !== a) return clearInterval(MUS.fadeT); a.volume = Math.min(MUS.want * menuVol(), a.volume + .03); if (a.volume >= MUS.want * menuVol()) clearInterval(MUS.fadeT); }, 50);
   }
   function stopMusic(t = 1) { const a = MUS.a; if (!a) return; MUS.a = null; MUS.key = ''; const st = a.volume / (t * 20); const iv = setInterval(() => { a.volume = Math.max(0, a.volume - st); if (a.volume <= 0) { a.pause(); clearInterval(iv); } }, 50); }

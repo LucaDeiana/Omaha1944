@@ -173,3 +173,7 @@ const U = {
   prism: (() => { const s = new THREE.Shape(); s.moveTo(-.5, 0); s.lineTo(.5, 0); s.lineTo(0, 1); s.lineTo(-.5, 0); const g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false }); g.translate(0, 0, -.5); return g; })(),
   skirt: new THREE.CylinderGeometry(1, 1.25, 1, 12, 1, true),
 };
+
+// brani personali con varianti numerate (menu.mp3, menu1.mp3 … menu20.mp3): elenco in ordine casuale.
+// Il primo file che esiste viene suonato, quindi ogni variante presente ha la stessa probabilità.
+function musicVariants(base, n = 20) { const d = 'assets/music/personali/', l = [d + base + '.mp3']; for (let i = 1; i <= n; i++) l.push(d + base + i + '.mp3'); for (let i = l.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [l[i], l[j]] = [l[j], l[i]]; } return l; }

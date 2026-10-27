@@ -10,6 +10,20 @@ I file di questa cartella NON vengono caricati su GitHub e NON
 vengono cancellati dall'aggiornamento automatico del gioco.
 
 
+PIU' BRANI PER LA STESSA SEZIONE (SCELTI A CASO)
+--------------------------------------------------------------
+Per ogni nome qui sotto puoi mettere piu' brani aggiungendo un
+numero da 1 a 20 alla fine del nome, per esempio:
+
+  menu.mp3   menu1.mp3   menu2.mp3   menu3.mp3 ...
+  battaglia_omaha1.mp3   battaglia_omaha2.mp3 ...
+  vittoria1.mp3   vittoria2.mp3 ...
+
+Ogni volta il gioco ne sceglie uno a caso tra quelli presenti.
+Nel menu' e in battaglia, finito un brano ne parte un altro a caso.
+I numeri non devono essere consecutivi (vanno bene anche 1, 4, 9).
+
+
 1) MENU' E INTRODUZIONE
 --------------------------------------------------------------
   intro.mp3      filmato iniziale (dopo il logo dello studio)
