@@ -241,3 +241,102 @@ function updateTanks(dt) {
   const alive = TANKS.list.filter(t => t.alive).length, cap = PT === 'E' ? 3 : (MISSION.stage >= 3 ? 2 : 1);
   if (TANKS.respawnT <= 0 && alive < cap) { TANKS.respawnT = 90; new Panzer(roadPathX(-560) + rnd(-6, 6), -560, PI); if (P.mode === 'foot' && PT === 'A') say(N.radio, 'Attenzione: carri tedeschi in movimento dalla città!'); }
 }
+
+// ============================================================
+//  Sd.Kfz. 251/1 Ausf. D (1943-44): semicingolato da trasporto truppe.
+//  Misure reali: 5,80 × 2,10 m, scafo aperto alto 1,75 m. Cofano a
+//  piastre saldate con prese d'aria, ruote anteriori sterzanti con
+//  parafanghi, carreggiata Schachtellaufwerk a ruote intercalate,
+//  cassoni laterali, due porte posteriori, MG 34 anteriore con scudo
+//  e MG 34 posteriore su supporto. Il davanti è verso -z.
+// ============================================================
+function buildHalftrackGeo() {
+  const c = 0xa59a72, d = 0x7d7556, k = 0x2a2a26, tr = 0x34322c, ol = 0x5d6142, br = 0x6b4a33, rub = 0x1e1e1c, inn = 0x8a8266;
+  const mb = new MB(); mb.mat = 'paint';
+  const B = (col, x, y, z, rx, ry, rz, w, h, l) => mb.add(U.box, col, x, y, z, rx, ry, rz, w, h, l);
+  const C = (col, x, y, z, rx, ry, rz, r, h, r2) => mb.add(U.cyl12, col, x, y, z, rx, ry, rz, r, h, r2 ?? r);
+  const camo = (x, y, z, rx, ry, rz, w, h, l) => { for (let i = 0; i < 2; i++) B(R() < .5 ? ol : br, x + rnd(-w / 4, w / 4), y + rnd(-h / 5, h / 5), z + rnd(-l / 4, l / 4), rx, ry, rz, w * rnd(.3, .6), h * rnd(.35, .6), l * rnd(.2, .4)); };
+  // --- vano di combattimento aperto: fondo, fiancate inclinate (doppio piano: esterno e interno), paratia posteriore con porte
+  B(inn, 0, .86, .85, 0, 0, 0, 1.62, .06, 3.9);
+  for (const sx of [-1, 1]) {
+    B(c, sx * .9, .78, .85, 0, 0, sx * -.38, .05, .62, 3.95);           // fiancata inferiore, inclinata verso l'interno
+    B(c, sx * .93, 1.38, .9, 0, 0, sx * .2, .05, .72, 3.85);            // fiancata superiore, inclinata verso l'esterno
+    camo(sx * .955, 1.38, .9, 0, 0, sx * .2, .02, .7, 3.8);
+    B(inn, sx * .88, 1.36, .9, 0, 0, sx * .2, .02, .64, 3.75);          // lato interno, più chiaro
+    B(d, sx * .99, 1.73, .9, 0, 0, 0, .1, .03, 3.85);                   // bordo superiore
+    // panche lungo le fiancate con schienale
+    B(0x5a4a36, sx * .6, 1.12, 1.05, 0, 0, 0, .34, .06, 2.7); B(0x5a4a36, sx * .74, 1.36, 1.05, 0, 0, sx * .2, .04, .3, 2.7);
+    for (let i = 0; i < 3; i++) B(k, sx * .6, .99, .1 + i * 1.1, 0, 0, 0, .04, .22, .04);
+    // rastrelliera per fucili e contenitori delle munizioni interni
+    for (let i = 0; i < 4; i++) B(0x4e5038, sx * .78, 1.5, -.15 + i * .2, 0, 0, sx * .2, .06, .2, .14);
+  }
+  // paratia posteriore inclinata con due porte e maniglie, gancio di traino, fanale
+  B(c, 0, 1.25, 2.86, -.12, 0, 0, 1.86, 1.0, .05); camo(0, 1.25, 2.89, -.12, 0, 0, 1.8, .9, .02);
+  for (const sx of [-1, 1]) { B(d, sx * .38, 1.2, 2.9, -.12, 0, 0, .66, .88, .02); B(k, sx * .08, 1.25, 2.93, -.12, 0, 0, .04, .16, .03); B(k, sx * .7, 1.45, 2.92, -.12, 0, 0, .04, .1, .04); B(k, sx * .7, 1.0, 2.92, -.12, 0, 0, .04, .1, .04); }
+  B(k, 0, .62, 2.95, 0, 0, 0, .18, .14, .2); C(k, 0, .62, 3.06, 0, 0, PI / 2, .05, .16); B(0x7a1f17, -.72, .8, 2.93, 0, 0, 0, .1, .06, .02);
+  B(d, 0, .55, 2.6, 0, 0, 0, 1.6, .35, .5);
+  // --- cabina: piastra frontale con due feritoie di guida, tettuccio laterale, volante, sedili
+  B(c, 0, 1.52, -1.13, -.62, 0, 0, 1.86, .62, .05); camo(0, 1.52, -1.1, -.62, 0, 0, 1.8, .6, .02);
+  for (const sx of [-1, 1]) { B(d, sx * .42, 1.55, -1.11, -.62, 0, 0, .34, .12, .04); B(k, sx * .42, 1.555, -1.1, -.62, 0, 0, .22, .025, .045); }
+  for (const sx of [-1, 1]) B(c, sx * .93, 1.4, -1.0, 0, 0, sx * .2, .05, .7, .45);
+  C(k, -.42, 1.35, -.72, -1.0, 0, 0, .17, .02); C(k, -.42, 1.2, -.83, -1.0, 0, 0, .02, .35);
+  for (const sx of [-1, 1]) { B(0x5a4a36, sx * .42, 1.05, -.38, 0, 0, 0, .44, .1, .42); B(0x5a4a36, sx * .42, 1.3, -.17, -.2, 0, 0, .44, .45, .08); }
+  B(k, .1, .98, -.72, 0, 0, 0, .5, .24, .14);   // cruscotto
+  // --- cofano motore: piastre saldate a spigolo con prese d'aria e sportelli d'ispezione
+  B(c, 0, 1.27, -1.95, .08, 0, 0, 1.3, .05, 1.55); camo(0, 1.29, -1.95, .08, 0, 0, 1.25, .02, 1.5);
+  for (const sx of [-1, 1]) { B(c, sx * .72, 1.0, -1.95, 0, 0, sx * -.32, .05, .55, 1.6); B(c, sx * .78, .66, -1.95, 0, 0, sx * .2, .05, .3, 1.6); camo(sx * .74, 1.0, -1.95, 0, 0, sx * -.32, .02, .5, 1.5); }
+  B(c, 0, .98, -2.78, -.55, 0, 0, 1.22, .62, .05); B(c, 0, .58, -2.82, .3, 0, 0, 1.26, .3, .05);
+  for (let i = 0; i < 6; i++) B(k, 0, .96 + i * .045, -2.79 - i * .028, -.55, 0, 0, 1.0, .012, .02);   // griglia del radiatore
+  for (const sx of [-1, 1]) { B(d, sx * .38, 1.3, -1.95, .08, 0, 0, .46, .02, 1.1); for (let i = 0; i < 5; i++) B(k, sx * .38, 1.315, -2.35 + i * .2, .08, 0, 0, .4, .012, .05); }
+  for (const sx of [-1, 1]) B(d, sx * .7, 1.06, -1.6, 0, 0, sx * -.32, .02, .22, .4);                        // prese d'aria laterali
+  // paraurti anteriore, ganci, fari Notek e indicatori di ingombro
+  B(k, 0, .55, -2.98, 0, 0, 0, 1.75, .12, .1); for (const sx of [-1, 1]) { B(k, sx * .45, .55, -3.06, 0, 0, 0, .1, .1, .12); C(k, sx * .45, .5, -3.1, 0, 0, 0, .05, .1); }
+  // --- ruote anteriori sterzanti con parafanghi a scatola
+  for (const sx of [-1, 1]) {
+    C(rub, sx * .86, .44, -2.2, 0, 0, PI / 2, .44, .22); C(k, sx * .98, .44, -2.2, 0, 0, PI / 2, .25, .03); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; C(k, sx * .99, .44 + Math.sin(a) * .17, -2.2 + Math.cos(a) * .17, 0, 0, PI / 2, .025, .03); }
+    for (let i = 0; i < 18; i++) { const a = i / 18 * TAU; B(0x262624, sx * .86, .44 + Math.sin(a) * .44, -2.2 + Math.cos(a) * .44, a, 0, 0, .23, .03, .06); }   // battistrada
+    B(k, sx * .62, .44, -2.2, 0, 0, 0, .3, .08, .08); B(k, sx * .72, .62, -2.0, 0, 0, 0, .07, .3, .07);    // asse e balestra
+    B(c, sx * .9, .98, -2.2, 0, 0, 0, .34, .04, 1.05); B(c, sx * .9, .86, -2.76, -.6, 0, 0, .34, .04, .32); B(c, sx * .9, .8, -1.62, .7, 0, 0, .34, .04, .3); B(c, sx * 1.06, .9, -2.2, 0, 0, 0, .03, .16, 1.05);
+    B(k, sx * .82, 1.12, -2.55, 0, 0, 0, .14, .1, .14); B(0xd8d2b0, sx * .82, 1.12, -2.63, 0, 0, 0, .1, .025, .01);   // faro Notek
+    C(k, sx * 1.02, 1.25, -2.62, 0, 0, 0, .012, .3);
+  }
+  // --- parafanghi sopra i cingoli e cassoni laterali (attrezzi e munizioni)
+  for (const sx of [-1, 1]) {
+    B(c, sx * 1.02, .99, .85, 0, 0, 0, .22, .03, 3.9); B(c, sx * 1.12, .93, .85, 0, 0, 0, .03, .12, 3.9);
+    for (let i = 0; i < 3; i++) { B(c, sx * .99, 1.12, -.35 + i * 1.15, 0, 0, sx * .2, .2, .24, 1.0); B(k, sx * 1.1, 1.12, -.35 + i * 1.15, 0, 0, sx * .2, .02, .03, .9); camo(sx * 1.0, 1.12, -.35 + i * 1.15, 0, 0, sx * .2, .21, .22, .95); }
+  }
+  // attrezzi del pioniere: pala, piccone, cric
+  mb.mat = 'wood'; B(0x6b5238, -1.1, 1.3, .5, 0, 0, .2, .04, .04, 1.1); B(0x6b5238, 1.1, 1.3, 1.5, 0, 0, -.2, .04, .04, 1.0);
+  mb.mat = 'paint'; B(k, -1.1, 1.3, 1.1, 0, 0, .2, .04, .2, .22); B(k, 1.1, 1.36, 1.98, 0, 0, -.2, .04, .25, .05);
+  // marmitta sul fianco sinistro
+  C(k, -.72, .58, -1.25, PI / 2, 0, 0, .09, .7); C(k, -.72, .58, -.86, PI / 2, 0, 0, .04, .15);
+  // --- carreggiata Schachtellaufwerk: ruota motrice anteriore, 6 assi di ruote intercalate su due file, tendicingolo, cingolo con pattini di gomma
+  for (const sx of [-1, 1]) {
+    const xm = sx * .8;
+    C(k, xm, .55, -.82, 0, 0, PI / 2, .3, .26); for (let t = 0; t < 14; t++) { const a = t / 14 * TAU; B(k, xm, .55 + Math.sin(a) * .33, -.82 + Math.cos(a) * .33, a, 0, 0, .22, .05, .07); }
+    C(d, sx * .95, .55, -.82, 0, 0, PI / 2, .14, .04);
+    for (let i = 0; i < 6; i++) {
+      const z = -.3 + i * .48, outer = i % 2 === 0;
+      for (const dx of outer ? [.1, -.02] : [-.1, .02]) { C(rub, xm + sx * dx, .33, z, 0, 0, PI / 2, .28, .06); C(d, xm + sx * dx, .33, z, 0, 0, PI / 2, .2, .065); }
+      C(k, xm + sx * (outer ? .14 : -.14), .33, z, 0, 0, PI / 2, .07, .03);
+      B(k, sx * .66, .42, z, 0, 0, 0, .1, .1, .3);   // braccio della sospensione a barra di torsione
+    }
+    C(k, xm, .45, 2.62, 0, 0, PI / 2, .27, .24); C(d, sx * .94, .45, 2.62, 0, 0, PI / 2, .12, .04);
+    // cingolo: tratto inferiore, superiore, avvolgimenti sulle ruote estreme
+    const top = (z0, z1, y0, y1, n) => { for (let i = 0; i <= n; i++) { const t = i / n, z = lerp(z0, z1, t), y = lerp(y0, y1, t); B(tr, xm, y, z, Math.atan2(y1 - y0, z1 - z0) * -1, 0, 0, .3, .05, (Math.hypot(z1 - z0, y1 - y0) / n) * .9); B(rub, xm, y + (y < .3 ? -.03 : .03), z, Math.atan2(y1 - y0, z1 - z0) * -1, 0, 0, .2, .02, (Math.hypot(z1 - z0, y1 - y0) / n) * .6); } };
+    top(-.6, 2.62, .03, .03, 22); top(-.78, 2.62, .9, .74, 22);
+    for (let i = 1; i < 6; i++) { const a = -PI / 2 + i / 6 * PI; B(tr, xm, .47 + Math.sin(a) * .44, -.82 - Math.cos(a) * .4, -a, 0, 0, .3, .05, .12); }
+    for (let i = 1; i < 6; i++) { const a = -PI / 2 + i / 6 * PI; B(tr, xm, .39 + Math.sin(a) * .36, 2.62 + Math.cos(a) * .32, a, 0, 0, .3, .05, .12); }
+  }
+  // --- MG 34 anteriore con scudo (Ausf. D) e MG 34 posteriore antiaereo
+  B(c, 0, 1.98, -.72, -.15, 0, 0, .55, .42, .025); for (const sx of [-1, 1]) B(c, sx * .32, 1.98, -.62, -.15, sx * -.6, 0, .2, .42, .025);
+  B(k, 0, 1.8, -.72, 0, 0, 0, .05, .2, .05);
+  C(k, 0, 1.96, -1.05, PI / 2, 0, 0, .028, .62); C(k, 0, 1.96, -1.4, PI / 2, 0, 0, .012, .2); B(k, 0, 1.94, -.62, 0, 0, 0, .06, .1, .32); B(0x5a3f28, 0, 1.92, -.38, 0, 0, 0, .05, .08, .2); C(0x3a3a34, .07, 1.94, -.68, 0, 0, PI / 2, .06, .1);
+  C(k, .55, 1.95, 2.55, 0, 0, 0, .025, .45); C(k, .55, 2.2, 2.4, PI / 2, 0, 0, .025, .55); B(0x5a3f28, .55, 2.18, 2.75, 0, 0, 0, .05, .08, .2);
+  // antenna a stilo del radio Fu 5 sul lato destro
+  C(k, .95, 2.4, .2, 0, 0, 0, .008, 1.6); C(k, .95, 1.65, .2, 0, 0, 0, .03, .1);
+  // croce nazionale sui fianchi e targa
+  for (const sx of [-1, 1]) { B(0x111111, sx * 1.0, 1.42, 1.2, 0, 0, sx * .2, .006, .32, .32); B(0xeeeeee, sx * 1.004, 1.42, 1.2, 0, 0, sx * .2, .006, .24, .08); B(0xeeeeee, sx * 1.004, 1.42, 1.2, 0, 0, sx * .2, .006, .08, .24); B(0x111111, sx * 1.007, 1.42, 1.2, 0, 0, sx * .2, .006, .2, .04); B(0x111111, sx * 1.007, 1.42, 1.2, 0, 0, sx * .2, .006, .04, .2); }
+  B(0xe8e4d8, 0, .74, -2.86, .3, 0, 0, .4, .1, .01);
+  return mb.buildGroups();
+}

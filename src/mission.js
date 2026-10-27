@@ -568,19 +568,9 @@ function onPlayerDisembark() { MISSION.godT = Math.max(MISSION.godT, 4); P.supp 
 let HT_G, SHERMAN_G;
 class Halftrack {
   constructor(x, z) {
-    if (!HT_G) {
-      const mb = new MB(), c = 0xa59a72, d = 0x55544c, g = 0x6a7050; mb.mat = 'paint';
-      mb.add(U.box, c, 0, .95, 0, 0, 0, 0, 2.1, 1.0, 5.8);
-      mb.add(U.box, c, 0, 1.35, -2.4, .28, 0, 0, 1.9, .7, 1.8);
-      for (const sx of [-1, 1]) { mb.add(U.box, c, sx * 1.02, 1.85, .7, 0, 0, sx * -.18, .08, .9, 3.6); mb.add(U.box, d, sx * .95, .5, .9, 0, 0, 0, .38, .85, 3.6); mb.add(U.cyl12, d, sx * 1.0, .45, -2.3, 0, 0, PI / 2, .45, .3, .45); for (let k = 0; k < 4; k++) mb.add(U.cyl12, d, sx * .95, .4, -.3 + k * .75, 0, 0, PI / 2, .3, .4, .3); }
-      mb.add(U.box, c, 0, 1.85, 2.55, -.15, 0, 0, 2.1, .9, .08);
-      mb.add(U.box, g, .5, 1.2, 1.5, 0, 0, 0, .8, .5, 1.2); mb.add(U.box, g, -.6, 1.3, -1.2, 0, 0, 0, .7, .4, 1.5);
-      mb.add(U.box, d, 0, 2.5, -.75, 0, 0, 0, .9, .55, .06);
-      mb.add(U.cyl, d, 0, 2.55, -1.2, PI / 2, 0, 0, .035, .9, .035);
-      HT_G = mb.buildGroups();
-    }
+    if (!HT_G) HT_G = buildHalftrackGeo();   // Sd.Kfz. 251/1 Ausf. D dettagliato (tank.js)
     this.g = groupMesh(HT_G);
-    this.gm = makeSoldierModelStatic('E', 'mg'); this.gm.position.set(0, .85, .1); this.g.add(this.gm);
+    this.gm = makeSoldierModelStatic('E', 'mg'); this.gm.position.set(0, .9, -.25); this.g.add(this.gm);
     this.pos = this.g.position; this.pos.set(x, H(x, z), z);
     this.yaw = PI; this.g.rotation.y = PI;
     this.alive = true; this.hp = 700; this.gunnerAlive = true; this.dest = new V3(x + rnd(-10, 10), 0, -350);
@@ -590,10 +580,10 @@ class Halftrack {
     this.eng = loopSound('eng_boat', 0);
     scene.add(this.g); MISSION.vehicles.push(this);
   }
-  eye(o) { return o.set(this.pos.x - Math.sin(this.yaw) * 1.2, this.pos.y + 2.6, this.pos.z - Math.cos(this.yaw) * 1.2); }
+  eye(o) { return o.set(this.pos.x - Math.sin(this.yaw) * 1.45, this.pos.y + 1.96, this.pos.z - Math.cos(this.yaw) * 1.45); }
   muzzle(o) { return this.eye(o); }
   chest(o) { return o.set(this.pos.x, this.pos.y + 1.5, this.pos.z); }
-  gunnerHead(o) { return o.set(this.pos.x + Math.sin(this.yaw) * .1, this.pos.y + .85 + 1.72, this.pos.z + Math.cos(this.yaw) * .1); }
+  gunnerHead(o) { return o.set(this.pos.x - Math.sin(this.yaw) * .25, this.pos.y + .9 + 1.72, this.pos.z - Math.cos(this.yaw) * .25); }
   update(dt) {
     if (this.eng) this.eng.at(this.pos, this.alive ? 1.2 : 0, .8, 60);
     if (!this.alive) return;
