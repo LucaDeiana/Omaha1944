@@ -1,8 +1,58 @@
-Cartella per musiche e loghi personali (NON viene caricata su GitHub).
+==============================================================
+  FRONTE OCCIDENTALE 1944 - GUIDA ALLE MUSICHE PERSONALI
+==============================================================
 
-Metti qui i tuoi file con questi nomi e il gioco li userà al posto di quelli predefiniti:
-  intro.mp3   musica del filmato introduttivo
-  menu.mp3    musica del menù principale e delle schermate di scelta
-  logo.png    logo mostrato nel menù principale (sfondo trasparente consigliato)
+In questa cartella puoi mettere i tuoi brani: il gioco li usa
+al posto di quelli predefiniti. Basta copiare il file qui dentro
+con il NOME ESATTO indicato sotto (tutto minuscolo, estensione .mp3).
 
-Senza questi file suonano i brani CC0 "War Theme" e "Some Militaristic Tune" di Spring Spring (OpenGameArt).
+I file di questa cartella NON vengono caricati su GitHub e NON
+vengono cancellati dall'aggiornamento automatico del gioco.
+
+
+1) MENU' E INTRODUZIONE
+--------------------------------------------------------------
+  intro.mp3      filmato iniziale (dopo il logo dello studio)
+  menu.mp3       menu' principale e schermate di scelta
+
+  Se mancano: suonano "Some Militaristic Tune" e "War Theme"
+  di Spring Spring (CC0).
+
+
+2) DURANTE LE BATTAGLIE
+--------------------------------------------------------------
+  Il gioco cerca prima il brano dello scenario; se non c'e',
+  usa battaglia.mp3; se manca anche quello, niente musica
+  (solo i suoni della guerra). Il brano si ripete in loop e
+  suona a volume basso per non coprire spari e voci.
+
+  battaglia.mp3            brano generico per tutte le missioni
+
+  battaglia_omaha.mp3      Omaha Beach (sbarco)
+  battaglia_notte.mp3      Notte del D-Day (paracadutisti)
+  battaglia_mare.mp3       battaglie navali
+  battaglia_cielo.mp3      missioni aeree
+  battaglia_carri.mp3      Passo di Kasserine (carri armati)
+  battaglia_ardenne.mp3    Ardenne
+  battaglia_tunisia.mp3    Tunisia (deathmatch)
+
+
+3) FINE PARTITA
+--------------------------------------------------------------
+  vittoria.mp3     schermata di vittoria (suona una volta)
+  sconfitta.mp3    schermata di sconfitta (suona una volta)
+
+
+4) LOGO
+--------------------------------------------------------------
+  logo.png         logo nel menu' principale
+                   (meglio PNG con sfondo trasparente)
+
+
+CONSIGLI
+--------------------------------------------------------------
+- Formato: MP3. Se hai un altro formato (WAV, M4A...), convertilo
+  in MP3 con un programma o un sito di conversione.
+- Il volume segue il cursore "Volume" nelle impostazioni.
+- Per tornare al brano predefinito basta cancellare il file.
+- Dopo aver aggiunto un brano, ricarica la pagina (Ctrl+F5).
