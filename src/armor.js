@@ -136,6 +136,27 @@ function kasTigerGeo() {
   gn.add(U.box, c, 0, 0, 0, 0, 0, 0, 1.25, .75, .35); gn.add(U.cyl12, d, 0, 0, -2.6, PI / 2, 0, 0, .1, 5.0, .1); gn.add(U.cyl12, k, 0, 0, -5.2, PI / 2, 0, 0, .17, .4, .17); gn.add(U.box, k, 0, 0, -5.2, 0, 0, 0, .5, .14, .3);
   return KAS_GEO.tiger = { hull: h.buildGroups(), tur: t.buildGroups(), gun: gn.buildGroups(), turY: 2.08, turZ: .2, gunY: .45, gunZ: -1.35, len: 5.4, cup: [-.65, 1.95, .7] };
 }
+function kasPz3Geo() {
+  if (KAS_GEO.pz3) return KAS_GEO.pz3;
+  const c = 0xa8996a, d = 0x8a7c54, k = 0x2a2822, tr = 0x302c26, h = new MB(), t = new MB(), gn = new MB(); h.mat = t.mat = gn.mat = 'paint';
+  // scafo con piastra frontale verticale da 50 mm, piastra del pilota con la feritoia, sei ruote piccole e rulli di ritorno per lato
+  h.add(U.box, d, 0, .9, 0, 0, 0, 0, 2.15, .9, 5.3); h.add(U.box, c, 0, 1.6, .2, 0, 0, 0, 2.9, .55, 4.6); h.add(U.box, c, 0, 1.0, -2.6, -.55, 0, 0, 2.15, .8, .1);
+  h.add(U.box, c, 0, 1.6, -2.1, 0, 0, 0, 2.9, .55, .12); h.add(U.box, k, -.55, 1.68, -2.17, 0, 0, 0, .3, .08, .02); h.add(U.cyl12, k, .55, 1.65, -2.18, PI / 2, 0, 0, .08, .06, .08);
+  h.add(U.box, d, 0, 1.92, 1.7, 0, 0, 0, 2.0, .08, 1.3); for (let i = 0; i < 2; i++) h.add(U.box, k, (i ? .45 : -.45), 1.97, 1.7, 0, 0, 0, .7, .02, 1.1);
+  for (const sx of [-1, 1]) { h.add(U.box, d, sx * 1.4, 1.33, 0, 0, 0, 0, .1, .05, 5.3);
+    for (let i = 0; i < 6; i++) { const z = -1.75 + i * .68; h.add(U.cyl12, d, sx * 1.22, .4, z, 0, 0, PI / 2, .27, .14, .27); h.add(U.cyl12, k, sx * 1.22, .4, z, 0, 0, PI / 2, .1, .16, .1); }
+    for (let i = 0; i < 3; i++) h.add(U.cyl12, k, sx * 1.22, 1.0, -1.3 + i * 1.3, 0, 0, PI / 2, .08, .12, .08);
+    h.add(U.cyl12, k, sx * 1.22, .75, -2.55, 0, 0, PI / 2, .3, .25, .3); h.add(U.cyl12, k, sx * 1.22, .7, 2.5, 0, 0, PI / 2, .27, .25, .27);
+    for (let i = 0; i < 42; i++) { const zz = -2.65 + i * .127; h.add(U.box, tr, sx * 1.22, .09, zz, 0, 0, 0, .4, .07, .1); h.add(U.box, tr, sx * 1.22, 1.13, zz + .05, 0, 0, 0, .4, .06, .1); }
+    h.add(U.cyl, 0x3a3630, sx * 1.36, 1.5, .2, PI / 2, 0, 0, .02, 3.6, .02); h.add(U.box, 0x6b5132, sx * 1.36, 1.42, 1.3, 0, 0, 0, .05, .05, 1.1); }
+  h.mat = 'vc'; for (const sx of [-1, 1]) { h.add(U.box, 0x1a1a1a, sx * 1.46, 1.6, -.3, 0, 0, 0, .01, .4, .4); h.add(U.box, 0xe8e6dc, sx * 1.465, 1.6, -.3, 0, 0, 0, .01, .1, .4); h.add(U.box, 0xe8e6dc, sx * 1.465, 1.6, -.3, 0, 0, 0, .01, .4, .1); }
+  // torretta con fianchi inclinati, portelli laterali, cupola posteriore e mantelletto
+  t.add(slabGeo([[-1.0, -1.05], [1.0, -1.05], [1.05, 1.1], [-1.05, 1.1]], [[-.8, -.85], [.8, -.85], [.85, .95], [-.85, .95]], .78), c, 0, 0, 0);
+  t.add(U.box, c, 0, .35, 1.3, 0, 0, 0, 1.4, .5, .4); t.add(U.cyl12, c, 0, .9, .75, 0, 0, 0, .32, .26, .32); t.add(U.cyl12, k, 0, 1.04, .75, 0, 0, 0, .3, .04, .3);
+  for (const sx of [-1, 1]) { t.add(U.box, d, sx * .96, .38, 0, 0, 0, sx * .17, .04, .42, .5); t.add(U.box, k, sx * .97, .5, -.6, 0, 0, sx * .17, .02, .06, .12); }
+  gn.add(U.box, c, 0, 0, 0, 0, 0, 0, .95, .5, .3); gn.add(U.cyl12, d, 0, 0, -1.6, PI / 2, 0, 0, .06, 3.0, .06); gn.add(U.cyl12, k, 0, 0, -3.1, PI / 2, 0, 0, .08, .15, .08); gn.add(U.cyl12, k, .3, .05, -.35, PI / 2, 0, 0, .03, .3, .03);
+  return KAS_GEO.pz3 = { hull: h.buildGroups(), tur: t.buildGroups(), gun: gn.buildGroups(), turY: 1.88, turZ: -.1, gunY: .38, gunZ: -1.05, len: 3.2, cup: [0, 1.6, .75] };
+}
 function kasPz4Geo() {
   if (KAS_GEO.pz4) return KAS_GEO.pz4;
   if (!TANKS.hull) buildPanzerGeo();
@@ -155,6 +176,7 @@ function kasPakGeo() {
 const KAS_T = {
   sherman: { name: 'M4A1 Sherman', geo: kasShermanGeo, hp: 100, f: 76, s: 38, r: 38, t: 76, ts: 51, pen: 88, v: 620, cal: 75, reload: 4.2, vmax: 11, trav: .5, elev: .35, hullH: 2.0, half: [1.4, 3.0] },
   pz4: { name: 'Panzer IV G', geo: kasPz4Geo, hp: 95, f: 80, s: 30, r: 20, t: 50, ts: 30, pen: 110, v: 740, cal: 75, reload: 4.8, vmax: 10, trav: .3, elev: .3, hullH: 1.9, half: [1.45, 2.95] },
+  pz3: { name: 'Panzer III J', geo: kasPz3Geo, hp: 85, f: 50, s: 30, r: 30, t: 57, ts: 30, pen: 72, v: 830, cal: 50, reload: 3.5, vmax: 11, trav: .35, elev: .35, hullH: 1.9, half: [1.45, 2.75] },
   tiger: { name: 'Tiger I', geo: kasTigerGeo, hp: 150, f: 100, s: 80, r: 80, t: 110, ts: 80, pen: 162, v: 810, cal: 88, reload: 7, vmax: 7, trav: .2, elev: .25, hullH: 2.2, half: [1.8, 3.2] },
 };
 // ---------- carro ----------
@@ -168,7 +190,7 @@ class KasTank {
     this.pos = this.g.position; this.pos.set(x, Hf(x, z), z); this.yaw = yaw; this.tyaw = 0; this.gpitch = 0; this.ayaw = 0; this.apitch = 0;
     this.alive = true; this.hp = this.hpMax = T.hp; this.speed = 0; this.reload = rnd(1, T.reload); this.mgT = 0; this.player = false; this.tank = true;
     this.immob = false; this.jam = false; this.box = { min: new V3(), max: new V3() }; this.aiT = rnd(0, .5); this.target = null; this.goalOff = new V3(rnd(-30, 30), 0, rnd(-30, 30)); this.err = new V3();
-    this.eng = loopSound(type === 'sherman' ? 'eng_sherman' : type === 'tiger' ? 'eng_tiger' : 'eng_pz4', 0); this.trk = loopSound('tracks', 0);
+    this.eng = loopSound(type === 'sherman' ? 'eng_sherman' : type === 'tiger' ? 'eng_tiger' : 'eng_pz4', 0); if (this.eng && type === 'pz3') this.rateK = 1.15; this.trk = loopSound('tracks', 0);
     MISSION.vehicles.push(this); KAS.tanks.push(this);
   }
   muzzle(o) { this.g.updateMatrixWorld(true); return o.set(0, 0, -this.G.len).applyMatrix4(this.gg.matrixWorld); }
@@ -359,11 +381,11 @@ function kasUpdateShells(dt) {
 // ---------- partita ----------
 function kasSpawnWave(stage) {
   const P0 = KAS_PTS[stage], spots = (n, r) => Array.from({ length: n }, (_, i) => { const a = i / n * TAU + rnd(-.3, .3), rr = r * rnd(.3, .9); return [P0.x + Math.cos(a) * rr, P0.z + Math.sin(a) * rr]; });
-  const W = [[['pz4', 2]], [['pz4', 3]], [['tiger', 1], ['pz4', 2]]][stage] || [];
+  const W = [[['pz3', 2], ['pz4', 1]], [['pz3', 1], ['pz4', 2]], [['tiger', 1], ['pz4', 2]]][stage] || [];
   for (const [type, n] of W) for (const [x, z] of spots(n, P0.r * .8)) { const t = new KasTank(type, 'E', x, z, 0); t.defend = new V3(x, 0, z); }
   for (const [x, z] of spots(stage + 1, P0.r * 1.1)) new KasGun(x, z - 20, 0);
   // rinforzi che scendono dal nord e attaccano la posizione
-  if (stage >= 1) for (let i = 0; i < stage; i++) { const t = new KasTank(stage === 2 && i === 0 ? 'tiger' : 'pz4', 'E', P0.x + rnd(-80, 80), P0.z - 260 - i * 30, 0); t.defend = null; }
+  if (stage >= 1) for (let i = 0; i < stage; i++) { const t = new KasTank(stage === 2 && i === 0 ? 'tiger' : stage === 1 ? 'pz3' : 'pz4', 'E', P0.x + rnd(-80, 80), P0.z - 260 - i * 30, 0); t.defend = null; }
 }
 function kasCounterattack() {
   const C = KAS_PTS[2];

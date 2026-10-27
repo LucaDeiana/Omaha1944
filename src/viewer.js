@@ -32,6 +32,7 @@
   // carri armati: scafo, torretta e cannone assemblati come in gioco
   const tankAsm = geoF => () => { const G = geoF(), g = groupMesh(G.hull), tg = groupMesh(G.tur), gg = groupMesh(G.gun); tg.position.set(0, G.turY, G.turZ); gg.position.set(0, G.gunY, G.gunZ); tg.add(gg); g.add(tg); return g; };
   add('Carri armati', 'M4A1 Sherman', 'veh', tankAsm(kasShermanGeo), 'carro medio USA, 75 mm M3, corazza frontale 76 mm');
+  add('Carri armati', 'Panzer III Ausf. J', 'veh', tankAsm(kasPz3Geo), 'carro medio tedesco, 5 cm KwK 39, corazza frontale 50 mm');
   add('Carri armati', 'Panzer IV Ausf. G', 'veh', tankAsm(kasPz4Geo), 'carro medio tedesco, 7,5 cm KwK 40, corazza frontale 80 mm');
   add('Carri armati', 'Tiger I', 'veh', tankAsm(kasTigerGeo), 'carro pesante tedesco, 8,8 cm KwK 36, corazza frontale 100 mm');
   add('Carri armati', 'Pak 40', 'veh', () => { const G = kasPakGeo(), g = groupMesh(G.base), gg = groupMesh(G.gun); gg.position.set(0, 1.05, -.2); g.add(gg); return g; }, 'cannone anticarro da 7,5 cm');
