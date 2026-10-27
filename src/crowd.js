@@ -28,23 +28,28 @@ const WPOSES = {
 };
 
 // ---------- testa scansionata (Lee Perry-Smith, Infinite Realities, CC BY 3.0) ----------
-let HEAD_GEO = null, FACE_MAT = null;
-function headScanGeo() {
-  if (HEAD_GEO || typeof HEAD_SCAN === 'undefined') return HEAD_GEO;
-  const dec = (s, T) => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return new T(u.buffer); };
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(dec(HEAD_SCAN.p, Float32Array), 3));
-  g.setAttribute('uv', new THREE.BufferAttribute(dec(HEAD_SCAN.uv, Float32Array), 2));
-  g.setIndex(new THREE.BufferAttribute(dec(HEAD_SCAN.i, Uint16Array), 1)); g.computeVertexNormals();
-  return HEAD_GEO = g;
+const HEAD_GEO = {}, FACE_MAT = {};
+const _b64 = (s, T) => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return new T(u.buffer); };
+// forma del volto: 8 varianti anatomiche della scansione (naso, mascella, mento, zigomi, labbra, orecchie, lunghezza)
+function headScanGeo(v = 0) {
+  if (HEAD_GEO[v] || typeof HEAD_SCAN === 'undefined') return HEAD_GEO[v];
+  const g = new THREE.BufferGeometry(), pv = HEAD_SCAN.pv && HEAD_SCAN.pv[v];
+  g.setAttribute('position', new THREE.BufferAttribute(_b64(pv || HEAD_SCAN.p, Float32Array), 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(_b64(HEAD_SCAN.uv, Float32Array), 2));
+  g.setIndex(new THREE.BufferAttribute(_b64(HEAD_SCAN.i, Uint16Array), 1)); g.computeVertexNormals();
+  return HEAD_GEO[v] = g;
 }
-function faceMaterial() {
-  if (FACE_MAT) return FACE_MAT;
-  const L = new THREE.TextureLoader(), map = L.load(HEAD_SCAN.col), nm = L.load(HEAD_SCAN.nrm); map.encoding = THREE.sRGBEncoding; map.anisotropy = 4;
-  FACE_MAT = new THREE.MeshStandardMaterial({ map, normalMap: nm, roughness: .62, metalness: 0 }); FACE_MAT.normalScale.set(.9, .9);
-  return FACE_MAT;
+// pelle: 0 rasato, 1 barba di qualche giorno, 2 barba e baffi
+function faceMaterial(t = 0) {
+  if (FACE_MAT[t]) return FACE_MAT[t];
+  const L = new THREE.TextureLoader(), map = L.load((HEAD_SCAN.cols || [])[t] || HEAD_SCAN.col), nm = FACE_MAT.nm || (FACE_MAT.nm = L.load(HEAD_SCAN.nrm));
+  map.encoding = THREE.sRGBEncoding; map.anisotropy = 4;
+  const m = new THREE.MeshStandardMaterial({ map, normalMap: nm, roughness: .62, metalness: 0 }); m.normalScale.set(.9, .9);
+  return FACE_MAT[t] = m;
 }
-const useScanHead = key => key.endsWith('_head') && typeof HEAD_SCAN !== 'undefined';
+const useScanHead = key => /_head(_\d+_\d+)?$/.test(key) && typeof HEAD_SCAN !== 'undefined';
+const scanParts = key => { const m = key.match(/_head_(\d+)_(\d+)$/); return m ? [+m[1], +m[2]] : [0, 0]; };
+function pickFace(team) { const r = R(); return [Math.floor(R() * ((HEAD_SCAN && HEAD_SCAN.pv) ? HEAD_SCAN.pv.length : 1)), r < (team === 'A' ? .5 : .62) ? 0 : r < .92 ? 1 : 2]; }
 
 // ---------- geometrie ----------
 const lath = (pts, seg) => new THREE.LatheGeometry(pts.slice().reverse().map(p => new THREE.Vector2(p[0], p[1])), seg);
@@ -178,7 +183,7 @@ function buildPartGeo(key, hi, gear) {
     const ls = hi ? 18 : 8;
     if (A) {
       add(lath([[0, .118], [.06, .112], [.112, .09], [.14, .052], [.153, .0], [.157, -.028], [.172, -.034], [.176, -.042], [.15, -.042]], ls), C.helm, 0, 0, 0);
-      if (hi) { for (let k = 0; k < 6; k++) add(U.box, C.net, 0, .07, 0, 0, k * PI / 6, 0, .31, .004, .006); for (const sx of [-1, 1]) add(U.box, 0x5a5236, sx * .15, -.08, .0, 0, 0, sx * .15, .012, .09, .018); }
+      if (hi) { for (let k = 0; k < 6; k++) add(U.box, C.net, 0, .07, 0, 0, k * PI / 6, 0, .31, .004, .006); for (const sx of [-1, 1]) add(U.box, 0x5a5236, sx * .122, -.09, -.012, 0, 0, sx * .28, .012, .11, .018); }
       if (kind === 'medic') for (let k = 0; k < 4; k++) { const a = k * PI / 2, x = Math.sin(a) * .148, z = Math.cos(a) * .148; add(U.cyl, 0xe5e2d8, x, .04, z, PI / 2, a, 0, .045, .006, .045); add(U.box, 0xa01010, x * 1.03, .04, z * 1.03, 0, a, 0, .055, .016, .004); add(U.box, 0xa01010, x * 1.03, .04, z * 1.03, 0, a, 0, .016, .055, .004); }
     } else {
       add(lath([[0, .118], [.07, .11], [.12, .085], [.145, .045], [.15, .0], [.152, -.03], [.166, -.052], [.178, -.077], [.182, -.082], [.16, -.082]], ls), C.helm, 0, 0, .01);
@@ -234,7 +239,8 @@ function getMesh(key) {
   const cap = key[0] === 'A' ? Q.allySlots : Q.enemySlots;
   const mk = (hi) => {
     const scan = hi && useScanHead(key);
-    const im = new THREE.InstancedMesh(scan ? headScanGeo() : buildPartGeo(key, hi), scan ? faceMaterial() : MAT.soldier, cap);
+    const [fv, ft] = scan ? scanParts(key) : [0, 0];
+    const im = new THREE.InstancedMesh(scan ? headScanGeo(fv) : buildPartGeo(key, hi), scan ? faceMaterial(ft) : MAT.soldier, cap);
     im.setColorAt(0, new THREE.Color(1, 1, 1)); im.instanceColor.setUsage(THREE.DynamicDrawUsage);
     im.count = 0; im.frustumCulled = false; im.castShadow = hi && Q.shadows > 0; im.receiveShadow = true;
     im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -251,7 +257,10 @@ function makeBody(team, kind) {
   const hips = N(); hips.position.y = .95; root.add(hips);
   const spine = N(); spine.position.y = .1; hips.add(spine);
   const neck = N(); neck.position.y = .52; spine.add(neck);
-  const helmet = N(); helmet.position.y = team === 'A' ? .185 : .2; helmet.scale.setScalar(.93); neck.add(helmet);
+  // elmetto calzato sulla testa scansionata: imbottitura di ~1,5 cm sopra la calotta, tesa all'altezza delle sopracciglia,
+  // centrato sul cranio (un po' indietro rispetto al collo)
+  const scanH = typeof HEAD_SCAN !== 'undefined';
+  const helmet = N(); helmet.position.set(0, scanH ? (team === 'A' ? .179 : .192) : team === 'A' ? .185 : .2, scanH ? .022 : 0); helmet.scale.setScalar(scanH ? .885 : .93); neck.add(helmet);
   const head = N(); head.scale.set(rnd(.95, 1.05), rnd(.96, 1.04), rnd(.95, 1.05)); neck.add(head);   // volti diversi: proporzioni variate
   const shL = N(); shL.position.copy(SH_L); spine.add(shL); const elL = N(); elL.position.y = -ARM_A; shL.add(elL);
   const shR = N(); shR.position.copy(SH_R); spine.add(shR); const elR = N(); elR.position.y = -ARM_A; shR.add(elR);
@@ -262,7 +271,7 @@ function makeBody(team, kind) {
   const parts = [
     { node: hips, key: team + '_pelvis', name: 'pelvis' },
     { node: spine, key: team + '_chest' + (med ? '_medic' : ''), name: 'chest' },
-    { node: head, key: team + '_head', name: 'head' },
+    { node: head, key: team + '_head' + (typeof HEAD_SCAN !== 'undefined' ? '_' + pickFace(team).join('_') : ''), name: 'head' },
     { node: helmet, key: team + '_helmet' + (med ? '_medic' : ''), name: 'helmet' },
     { node: shL, key: team + '_uarm', name: 'uarmL' }, { node: elL, key: team + '_farm', name: 'farmL' },
     { node: shR, key: team + '_uarm', name: 'uarmR' }, { node: elR, key: team + '_farm', name: 'farmR' },
