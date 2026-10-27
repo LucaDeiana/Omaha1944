@@ -5,6 +5,12 @@
   const css = `
   #intro{position:fixed;inset:0;z-index:50;background:#000;color:#e9dfc4;font-family:Oswald,sans-serif;overflow:hidden;user-select:none}
   #intro canvas{position:absolute;inset:0;width:100%;height:100%}
+  #introV{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;filter:sepia(.6) saturate(.8) contrast(1.12) brightness(.92)}
+  #mmV{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;filter:saturate(.75) contrast(1.06) brightness(.78);transform:scale(1.04)}
+  #mainMenu .shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(4,6,7,.92) 0%,rgba(4,6,7,.72) 32%,rgba(4,6,7,.18) 62%,rgba(4,6,7,.35) 100%),linear-gradient(0deg,rgba(0,0,0,.55),rgba(0,0,0,0) 30%)}
+  #mainMenu .grain{position:absolute;inset:-50%;pointer-events:none;opacity:.07;background-image:radial-gradient(rgba(255,255,255,.9) .6px,transparent .8px);background-size:3px 3px;animation:mmgr .9s steps(6) infinite}
+  @keyframes mmgr{0%{transform:translate(0,0)}20%{transform:translate(-1%,1%)}40%{transform:translate(1%,-2%)}60%{transform:translate(-2%,-1%)}80%{transform:translate(2%,1%)}100%{transform:translate(0,0)}}
+  #mainMenu .rule{width:min(340px,100%);height:1px;background:linear-gradient(90deg,#e8c46a,rgba(232,196,106,0));margin:-14px 0 18px;opacity:.7}
   #introGate{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;cursor:pointer}
   #introGate .t{font-size:13px;letter-spacing:.5em;opacity:.6;animation:igp 1.6s ease-in-out infinite}
   @keyframes igp{50%{opacity:.15}}
@@ -60,16 +66,16 @@
   </svg>`;
 
   const root = document.createElement('div'); root.id = 'intro';
-  root.innerHTML = `<canvas id="introC"></canvas>
+  root.innerHTML = `<video id="introV" muted playsinline preload="auto"></video><canvas id="introC"></canvas>
     <div id="introGate"><div style="font-family:'Special Elite',monospace;font-size:clamp(18px,3vw,26px);letter-spacing:.1em">FRONTE OCCIDENTALE 1944</div><div class="t">CLICCA O PREMI UN TASTO</div></div>
     <div id="studio">${LOGO}<div class="nm"></div><div class="pr">PRESENTA</div></div>
     <div id="filmCap"><div class="d"></div><div class="l"></div></div>
     <div id="introSkip"><kbd>Spazio</kbd> salta</div>`;
   const mm = document.createElement('div'); mm.id = 'mainMenu';
-  mm.innerHTML = `<canvas id="mmC"></canvas><div class="mm">
+  mm.innerHTML = `<video id="mmV" muted loop playsinline preload="auto" src="assets/media/menu.mp4"></video><canvas id="mmC"></canvas><div class="shade"></div><div class="grain"></div><div class="mm">
       <img id="mmLogo" alt="" style="display:none;max-width:min(260px,60vw);max-height:120px;margin-bottom:8px;filter:drop-shadow(0 4px 18px rgba(0,0,0,.8))">
       <div class="k">1941 · 1942 · 1943 · 1944</div>
-      <h1>FRONTE<br>OCCIDENTALE 1944</h1>
+      <h1>FRONTE<br>OCCIDENTALE 1944</h1><div class="rule"></div>
       <button class="mmb" data-go="omaha">CAMPAGNA<small>Omaha Beach, Ardenne, Tunisia</small></button>
       <button class="mmb" data-go="sea">BATTAGLIE NAVALI<small>Pearl Harbor, Midway, la Manica</small></button>
       <button class="mmb" data-go="armor">GUERRA CORAZZATA<small>Sherman contro Tiger a Kasserine</small></button>
@@ -99,6 +105,9 @@
       try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); AC.decodeAudioData(u.buffer, b => BUF[k] = b, () => {}); } catch (e) {}
     }
   }
+  // filmati dell'introduzione: usati solo se esistono (assets/media)
+  const VID = {};
+  for (const k of ['intro_pearl', 'intro_midway', 'intro_omaha', 'intro_ardenne']) { const v = document.createElement('video'); v.preload = 'metadata'; v.muted = true; v.onloadedmetadata = () => VID[k] = 'assets/media/' + k + '.mp4'; v.src = 'assets/media/' + k + '.mp4'; }
   const live = [];
   function snd(k, vol = 1, rate = 1, delay = 0) {
     if (!AC || !BUF[k]) return; const s = AC.createBufferSource(), g = AC.createGain(); s.buffer = BUF[k]; s.playbackRate.value = rate; g.gain.value = vol * menuVol();
@@ -160,9 +169,9 @@
   function plane(c, x, y, s, rot = 0, col = '#0b0907') { c.save(); c.translate(x, y); c.rotate(rot); c.scale(s, s); c.fillStyle = col; c.beginPath(); c.ellipse(0, 0, 14, 2.4, 0, 0, 7); c.fill(); c.fillRect(-3, -1, 6, 2); c.beginPath(); c.moveTo(-2, 0); c.lineTo(3, -15); c.lineTo(6, -15); c.lineTo(4, 0); c.lineTo(6, 15); c.lineTo(3, 15); c.closePath(); c.fill(); c.fillRect(-13, -5, 2, 10); c.restore(); }
   function smoke(c, x, y, h, w, t, k = 1) { for (let i = 0; i < 14; i++) { const f = i / 14, yy = y - f * h, xx = x + Math.sin(f * 3 + t * .4) * w * .6 + f * w * 1.4; c.fillStyle = `rgba(14,12,10,${.32 * (1 - f) * k})`; c.beginPath(); c.arc(xx, yy, w * (.4 + f * 1.3), 0, 7); c.fill(); } }
   function boom(c, x, y, r, a) { if (a <= 0) return; const gr = c.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(255,245,200,${a})`); gr.addColorStop(.35, `rgba(255,170,60,${a * .8})`); gr.addColorStop(1, 'rgba(120,40,0,0)'); c.fillStyle = gr; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill(); }
-  function grade(c, t, k) {
-    // pellicola: seppia, tremolio, graffi, grana, vignetta
-    c.globalCompositeOperation = 'color'; c.fillStyle = 'rgba(112,88,52,.55)'; c.fillRect(0, 0, W, H); c.globalCompositeOperation = 'source-over';
+  function grade(c, t, k, vid) {
+    // pellicola: seppia, tremolio, graffi, grana, vignetta (sul filmato il viraggio lo fa il filtro CSS)
+    if (!vid) { c.globalCompositeOperation = 'color'; c.fillStyle = 'rgba(112,88,52,.55)'; c.fillRect(0, 0, W, H); c.globalCompositeOperation = 'source-over'; }
     c.fillStyle = `rgba(0,0,0,${.06 + Math.random() * .07})`; c.fillRect(0, 0, W, H);
     for (let i = 0; i < 2; i++) if (Math.random() < .35) { c.strokeStyle = `rgba(240,230,200,${rnd(.05, .18)})`; c.lineWidth = rnd(.5, 1.5); const x = rnd(0, W); c.beginPath(); c.moveTo(x, 0); c.lineTo(x + rnd(-6, 6), H); c.stroke(); }
     for (let i = 0; i < 160; i++) { c.fillStyle = Math.random() < .5 ? 'rgba(255,250,230,.07)' : 'rgba(0,0,0,.12)'; c.fillRect(rnd(0, W), rnd(0, H), rnd(1, 2.5), rnd(1, 2.5)); }
@@ -172,7 +181,7 @@
 
   // ---------- scene del filmato ----------
   const SCENES = [
-    { d: '7 DICEMBRE 1941 · PEARL HARBOR', l: 'All’alba di una domenica, il cielo si riempie di aerei.', T: 7,
+    { d: '7 DICEMBRE 1941 · PEARL HARBOR', v: 'intro_pearl', l: 'All’alba di una domenica, il cielo si riempie di aerei.', T: 7,
       start() { snd('air_raid', .6); snd('eng_bomber', .5, 1, .5); snd('boom_far', .9, 1, 3); snd('boom_big', .8, 1, 4.6); },
       draw(c, t) { const hz = H * .6; sky(c, '#5d6c7a', '#e9c79a', hz); c.fillStyle = 'rgba(255,230,170,.9)'; c.beginPath(); c.arc(W * .78, hz - 30, 34, 0, 7); c.fill();
         c.fillStyle = '#1a1714'; c.beginPath(); c.moveTo(0, hz); for (let x = 0; x <= W; x += 30) c.lineTo(x, hz - 30 - Math.sin(x * .008) * 26 - Math.sin(x * .021) * 10); c.lineTo(W, hz); c.fill();
@@ -181,14 +190,14 @@
         if (t > 3) { smoke(c, W * .39, hz + 5, H * .45, 30 * s, t, cl((t - 3) / 2, 0, 1)); boom(c, W * .39, hz + 8, 90 * s, cl(1 - (t - 3) * 1.2, 0, 1)); }
         if (t > 4.6) { smoke(c, W * .58, hz + 5, H * .4, 26 * s, t, cl((t - 4.6) / 2, 0, 1)); boom(c, W * .58, hz + 8, 140 * s, cl(1 - (t - 4.6), 0, 1)); }
         const r = seed(7); for (let i = 0; i < 9; i++) { const x = W * (1.1 - t * .13 - r() * .3) + i * 40, y = H * (.12 + r() * .25); plane(c, x, y, s * (1 + r() * .5), Math.PI); } } },
-    { d: '4 GIUGNO 1942 · MIDWAY', l: 'Cinque minuti cambiarono la guerra nel Pacifico.', T: 6.5,
+    { d: '4 GIUGNO 1942 · MIDWAY', v: 'intro_midway', l: 'Cinque minuti cambiarono la guerra nel Pacifico.', T: 6.5,
       start() { snd('dive', .8, 1, .3); snd('whistle', .6, 1, 2.6); snd('boom_big', 1, 1, 3.4); },
       draw(c, t) { const hz = H * .55; sky(c, '#6f8796', '#c9d4d4', hz); sea(c, hz, ['#4b6470', '#15232a'], t);
         const s = Math.min(W, H) / 600, k = cl(t / 3.4, 0, 1);
         ship(c, W * .5, hz + 26, s * 1.25, 'cv');
         if (t < 3.4) plane(c, W * .5 + (1 - k) * W * .1, H * (.05 + k * .5), s * (1.5 + k * 1.3), Math.PI / 2 * .9);
         if (t > 3.4) { boom(c, W * .5, hz + 14, 220 * s, cl(1.4 - (t - 3.4) * .8, 0, 1)); smoke(c, W * .5, hz + 10, H * .5, 40 * s, t, cl((t - 3.4) / 1.5, 0, 1)); } } },
-    { d: '6 GIUGNO 1944 · OMAHA BEACH', l: 'La più grande flotta mai vista si avvicina alla Normandia.', T: 6.5,
+    { d: '6 GIUGNO 1944 · OMAHA BEACH', v: 'intro_omaha', l: 'La più grande flotta mai vista si avvicina alla Normandia.', T: 6.5,
       start() { snd('ship_far', .9, 1, .2); snd('surf', .5); snd('ship_far', .8, .9, 2.2); snd('flak_far', .5, 1, 3.5); },
       draw(c, t) { const hz = H * .5; sky(c, '#5b605f', '#a7a69a', hz); c.fillStyle = '#25231e'; c.beginPath(); c.moveTo(0, hz); for (let x = 0; x <= W; x += 20) c.lineTo(x, hz - 40 - Math.sin(x * .006) * 15); c.lineTo(W, hz); c.fill();
         sea(c, hz, ['#4c5650', '#151a18'], t); const s = Math.min(W, H) / 800;
@@ -196,7 +205,7 @@
         for (let i = 0; i < 14; i++) { const x = W * (.05 + (i * .071) % 1), y = H * (.66 + (i % 4) * .07) - t * 6 * (1 + i % 3); c.fillStyle = '#0c0b09'; c.fillRect(x, y, 34 * s, 10 * s); c.fillRect(x + 2 * s, y - 6 * s, 30 * s, 6 * s); }
         for (let i = 0; i < 6; i++) { const tt = (t * 1.3 + i * .37) % 1.6; if (tt < .5) { c.strokeStyle = `rgba(255,190,90,${1 - tt * 2})`; c.lineWidth = 1.5; const x0 = W * (.15 + i * .14), y0 = hz - 36; c.beginPath(); c.moveTo(x0, y0); c.lineTo(x0 + tt * 160, y0 + tt * 200); c.stroke(); } }
         if (t > 2.2) boom(c, W * .33, hz - 30, 60 * s * 2, cl(1 - (t - 2.2) * 1.5, 0, 1)); } },
-    { d: 'DICEMBRE 1944 · ARDENNE', l: 'Nella neve di Bastogne, nessuno arretra.', T: 6,
+    { d: 'DICEMBRE 1944 · ARDENNE', v: 'intro_ardenne', l: 'Nella neve di Bastogne, nessuno arretra.', T: 6,
       start() { snd('boom_far', .8, .9, .6); snd('boom_far', .6, .8, 2.4); snd('flak_far', .4, .8, 3.8); },
       draw(c, t) { sky(c, '#8b9196', '#c9cbc8', H); c.fillStyle = '#d9dad5'; c.fillRect(0, H * .7, W, H * .3); const r = seed(3);
         for (let l = 0; l < 3; l++) for (let i = 0; i < 26; i++) { const x = r() * W, h = H * (.1 + r() * .14) * (1 + l * .35), y = H * (.72 + l * .07); c.fillStyle = ['#5a5d5c', '#33302b', '#16130f'][l]; c.beginPath(); c.moveTo(x, y - h); c.lineTo(x - h * .18, y); c.lineTo(x + h * .18, y); c.fill(); }
@@ -216,10 +225,11 @@
       if (st > 8) startFilm();
     } else if (state === 'film') {
       const S = SCENES[sc]; g.clearRect(0, 0, W, H);
-      if (S) { S.draw(g, st); grade(g, st, cl(Math.min(st / .6, (S.T - st) / .6), 0, 1));
+      if (S) { const vid = S.v && VID[S.v]; if (!vid) S.draw(g, st); grade(g, st, cl(Math.min(st / .6, (S.T - st) / .6), 0, 1), vid);
         const L = $('filmCap').querySelector('.l'), n = cl(Math.floor((st - .6) * 30), 0, typed.length); if (L.textContent.length !== n) L.textContent = typed.slice(0, n);
         if (st > S.T) nextScene(); }
       else { // titolo finale
+        $('introV').style.display = 'none';
         g.fillStyle = '#000'; g.fillRect(0, 0, W, H); const k = cl(st / 1.5, 0, 1), z = 1 + st * .025;
         g.save(); g.translate(W / 2, H / 2); g.scale(z, z); g.textAlign = 'center'; g.fillStyle = `rgba(239,230,207,${k})`; g.font = `${Math.min(W / 10, 90)}px 'Special Elite',monospace`; g.fillText('FRONTE', 0, -8); g.fillText('OCCIDENTALE 1944', 0, Math.min(W / 10, 90) * .95);
         g.font = `600 ${Math.min(W / 46, 15)}px Oswald,sans-serif`; g.fillStyle = `rgba(232,196,106,${k * .9})`; g.fillText('MARE · CIELO · TERRA', 0, -Math.min(W / 10, 90) * .95); g.restore();
@@ -235,6 +245,8 @@
   function nextScene() {
     sc++; st = 0; const S = SCENES[sc];
     if (S) { setCap(S.d, S.l); S.start(); } else { setCap('', ''); snd('boom_big', .9, .8, .2); }
+    // filmato della scena (girato con il motore del gioco); se manca resta il disegno
+    const V = $('introV'); S && S.v && VID[S.v] ? (V.src = VID[S.v], V.currentTime = 0, V.style.display = 'block', V.play().catch(() => {})) : (V.pause(), V.style.display = 'none');
   }
   function skip() { if (state === 'gate') return startStudio(); if (state === 'studio') { hush(.3); return startFilm(); } if (state === 'film') showMain(); }
   function showMain() {
@@ -243,8 +255,10 @@
   function playIntro() { mm.style.display = 'none'; root.style.display = 'block'; state = 'gate'; last = 0; cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); if (AC) startStudio(); else { state = 'gate'; } }
 
   // sfondo animato del menù: mare notturno con fari che frugano il cielo e una corazzata in lontananza
-  let mmRaf = 0;
+  let mmRaf = 0, MENUV = false;
   function menuBg() {
+    const mv = $('mmV'); if (mv && !mv.dataset.ok) { mv.dataset.ok = '1'; mv.addEventListener('playing', () => { mv.style.display = 'block'; $('mmC').style.display = 'none'; cancelAnimationFrame(mmRaf); MENUV = true; }); }
+    if (mv) mv.play().catch(() => {}); if (MENUV) return;
     const c = $('mmC').getContext('2d'); let t0 = performance.now();
     cancelAnimationFrame(mmRaf);
     const loop = now => {
