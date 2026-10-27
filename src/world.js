@@ -431,9 +431,14 @@ function buildBoatGeos() {
   const C = (col, x, y, z, rx, ry, rz, r, h, r2) => mb.add(U.cyl12, col, x, y, z, rx, ry, rz, r, h, r2 ?? r);
   // scafo: sezioni a spigolo (fianco dritto, spigolo, fondo con leggera V) che si alzano verso prua
   const secs = [];
-  for (let i = 0; i <= 14; i++) {
-    const t = i / 14, z = 5.2 - t * 10.3, kb = lerp(-.3, -.22, t) + Math.pow(Math.max(0, t - .7) / .3, 2) * .52, sw = 1.68 - Math.pow(Math.max(0, t - .92) / .08, 2) * .06;
-    const ring = [[-sw, 2.1], [-sw, 1.25], [-sw + .01, .5], [-sw + .14, kb + .3], [-.8, kb + .1], [0, kb], [.8, kb + .1], [sw - .14, kb + .3], [sw - .01, .5], [sw, 1.25], [sw, 2.1], [0, 2.1]];
+  for (let i = 0; i <= 28; i++) {
+    const t = i / 28, z = 5.2 - t * 10.3;
+    // fondo: piatto a poppa, curva lunga e morbida (piede di prua) che sale fino alla cerniera della rampa
+    const fw = Math.max(0, t - .5) / .5, kb = lerp(-.3, -.24, t) + (1 - Math.cos(fw * PI / 2)) * .56;
+    // poppa: angoli dello specchio arrotondati
+    const st = Math.max(0, 1 - t / .07), sw = 1.68 - st * st * .14 - Math.pow(Math.max(0, t - .95) / .05, 2) * .05, lift = st * st * .12;
+    const ring = [[-sw, 2.1], [-sw, 1.25], [-sw, .62], [-sw + .03, .46 + lift * .5], [-sw + .1, kb + .38 + lift], [-sw + .24, kb + .27 + lift], [-.8, kb + .1 + lift * .5], [0, kb + lift * .3],
+      [.8, kb + .1 + lift * .5], [sw - .24, kb + .27 + lift], [sw - .1, kb + .38 + lift], [sw - .03, .46 + lift * .5], [sw, .62], [sw, 1.25], [sw, 2.1], [0, 2.1]];
     secs.push(ring.map(([x, y]) => new V3(x, y, z)));
   }
   mb.mat = 'paint';
@@ -463,7 +468,7 @@ function buildBoatGeos() {
   mb.mat = 'paint';
   // paratia del vano motore e ponte di poppa
   B(c, 0, 1.25, 2.72, 0, 0, 0, 3.05, 1.65, .08); B(d, 0, 2.08, 3.95, 0, 0, 0, 3.3, .08, 2.55);
-  B(c, 0, 1.15, 5.2, 0, 0, 0, 3.4, 2.05, .1);                                // specchio di poppa
+  B(c, 0, 1.2, 5.19, 0, 0, 0, 3.05, 1.8, .08);                               // specchio di poppa
   // portello del motore con feritoie, due scarichi del diesel
   B(dk, -.25, 2.14, 3.55, 0, 0, 0, 1.1, .05, 1.2); for (let i = 0; i < 6; i++) B(k, -.25, 2.17, 3.08 + i * .18, 0, 0, 0, .9, .02, .05);
   for (const sx of [-1, 1]) { C(k, sx * .55 - .25, 2.28, 4.95, 0, 0, 0, .07, .35); C(k, sx * .55 - .25, 2.46, 5.05, PI / 2.6, 0, 0, .07, .25); }
