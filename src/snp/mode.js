@@ -36,7 +36,7 @@ function initSniper() {
   SNP.board.set(SNP.me, { kills: 0, deaths: 0, team: PT, me: true, lvl: 0 });
   // bot per squadra; la squadra del giocatore ne ha uno in meno (il suo posto)
   snpBalance();
-  MISSION.title = 'Solo cecchini — Saint-Lô';
+  MISSION.title = 'Solo cecchini — ' + SNP.M.name;
   MISSION.objText = `Prima squadra a ${SNPCFG.goal} uccisioni`;
   MISSION.stage = 0; MISSION.stageT = 0;
   if (!SNP.el) { SNP.el = document.createElement('div'); SNP.el.id = 'snpScore'; SNP.el.style.cssText = 'position:fixed;top:44px;left:50%;transform:translateX(-50%);pointer-events:none;z-index:18;font:600 15px/1.35 Oswald,sans-serif;color:#efe6cf;text-shadow:0 1px 3px #000;text-align:center;letter-spacing:.06em'; document.body.appendChild(SNP.el); }
@@ -120,13 +120,13 @@ function updateSniper(dt) {
 }
 function snpEnd() {
   const win = SNP.score[PT] > SNP.score[PT === 'A' ? 'E' : 'A'];
-  GAME.endTitle = SNP.score.A === SNP.score.E ? 'PAREGGIO' : SNP.score.A > SNP.score.E ? 'VITTORIA ALLEATA' : 'VITTORIA DELL\'ASSE';
+  GAME.endTitle = SNP.score.A === SNP.score.E ? 'PAREGGIO' : SNP.score.A > SNP.score.E ? 'VITTORIA: ' + SNP.M.teamA : 'VITTORIA: ' + SNP.M.teamE;
   GAME.endText = snpBoardHTML(true) + '<br>';
   after(4, () => GAME.end(win));
 }
 function snpHud() {
   const left = Math.max(0, SNPCFG.time - SNP.t), clock = `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`, me = SNP.board.get(SNP.me) || { kills: 0, deaths: 0 };
-  SNP.el.innerHTML = `<span style="color:#9fc2e8">ALLEATI ${SNP.score.A}</span> &nbsp;—&nbsp; <span style="color:#e8c98f">ASSE ${SNP.score.E}</span><br><span style="font-size:13px">${clock} · obiettivo ${SNPCFG.goal} · tu ${me.kills}/${me.deaths}</span>`;
+  SNP.el.innerHTML = `<span style="color:#9fc2e8">${SNP.M.teamA} ${SNP.score.A}</span> &nbsp;—&nbsp; <span style="color:#e8c98f">${SNP.M.teamE} ${SNP.score.E}</span><br><span style="font-size:13px">${clock} · obiettivo ${SNPCFG.goal} · tu ${me.kills}/${me.deaths}</span>`;
   SNP.tab.style.display = KEYS.Tab && !P.spawnMenu ? 'block' : 'none';
   if (KEYS.Tab) SNP.tab.innerHTML = snpBoardHTML();
 }
@@ -192,5 +192,5 @@ function snpBoardHTML(end) {
   const col = team => rows.filter(r => r.team === team).sort((a, b) => b.kills - a.kills || a.deaths - b.deaths)
     .map(r => { r.me = r.n === SNP.me; return r; }).map(r => `<tr${r.me ? ' class="me" style="color:#e8c46a"' : ''}><td>${r.n}${r.bot ? ` <small style="opacity:.6">${SNP_DIFF[r.lvl].name} · ${SNP_PROF[r.prof].name.toLowerCase()}</small>` : ''}</td><td style="text-align:right;padding-left:14px">${r.kills}</td><td style="text-align:right;padding-left:10px">${r.deaths}</td></tr>`).join('');
   const head = `<tr style="opacity:.6;font-size:12px"><td></td><td style="text-align:right">U</td><td style="text-align:right">M</td></tr>`;
-  return `<div style="display:flex;gap:28px;justify-content:center;flex-wrap:wrap"><div><b style="color:#9fc2e8">ALLEATI ${SNP.score.A}</b><table>${head}${col('A')}</table></div><div><b style="color:#e8c98f">ASSE ${SNP.score.E}</b><table>${head}${col('E')}</table></div></div>`;
+  return `<div style="display:flex;gap:28px;justify-content:center;flex-wrap:wrap"><div><b style="color:#9fc2e8">${SNP.M.teamA} ${SNP.score.A}</b><table>${head}${col('A')}</table></div><div><b style="color:#e8c98f">${SNP.M.teamE} ${SNP.score.E}</b><table>${head}${col('E')}</table></div></div>`;
 }

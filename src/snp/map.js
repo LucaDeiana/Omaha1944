@@ -249,7 +249,7 @@ function snpFloor(x, z, yf) {
   for (const f of SNP.floors) {
     if (x < f.x0 || x > f.x1 || z < f.z0 || z > f.z1) continue;
     let y = f.y;
-    if (f.ramp) { const r = f.ramp, k = clamp((x - r.c0) / (r.c1 - r.c0), 0, 1); y = r.y0 + (r.y1 - r.y0) * k; }
+    if (f.ramp) { const r = f.ramp, k = clamp(((r.axis === 'z' ? z : x) - r.c0) / (r.c1 - r.c0), 0, 1); y = r.y0 + (r.y1 - r.y0) * k; }
     if (y <= yf + .55 && y > best) best = y;
   }
   return best;
@@ -300,7 +300,13 @@ function snpNavBuild(team, facadeOps, breaches, holes) {
   for (const u of team === 'A' ? [-13.8, 3.2, 20.2, -6, 12] : [-18.8, -2.8, 12.2, 6, -12]) post(u, 1.1, 3, Math.abs(u) % 6 < 1 ? 1 : 2, 'tetto', .5, .65);
   post(team === 'A' ? 13 : -13.5, 7.4, 3, 1, 'crollo del tetto', .6, .4);
   // griglia fitta di punti calpestabili per ogni piano (riempie stanze, cortile e tetto)
-  for (let L = 0; L <= 3; L++) for (let u = -22.9; u <= 22.9; u += 1.5) for (let v = .95; v <= (L === 0 ? SNP.D + SNP.YARD - .6 : SNP.D - .7); v += 1.5) add(u, v, L, 'g');
+  const grid = [];
+  for (let L = 0; L <= 3; L++) grid.push({ L, u0: -22.9, u1: 22.9, v0: .95, v1: L === 0 ? SNP.D + SNP.YARD - .6 : SNP.D - .7 });
+  snpNavFinish(team, nodes, add, grid, n => n.L === 0 && (n.tag === 'yard' || (n.tag === 'room' && snpL(team, n.pos.x, n.pos.z).v > 12)));
+}
+// parte comune a tutte le mappe: griglia di punti, scarto dei punti nei solidi, archi, isole, rinascite
+function snpNavFinish(team, nodes, add, grid, isSpawn) {
+  for (const g of grid) for (let u = g.u0; u <= g.u1; u += 1.5) for (let v = g.v0; v <= g.v1; v += 1.5) add(u, v, g.L, 'g');
   // punti dentro un mobile o troppo vicini a un muro: spostati di poco, altrimenti scartati
   const free = n => { for (const [ox, oz] of [[0, 0], [.3, 0], [-.3, 0], [0, .3], [0, -.3]]) { _snpO.set(n.pos.x + ox, n.pos.y + .45, n.pos.z + oz); if (pointInSolid(_snpO)) return false; _snpO.y = n.pos.y + 1.3; if (pointInSolid(_snpO)) return false; } return Math.abs(snpFloor(n.pos.x, n.pos.z, n.pos.y + .1) - n.pos.y) < .2; };
   for (const n of nodes) {
@@ -322,7 +328,7 @@ function snpNavBuild(team, facadeOps, breaches, holes) {
   // punti isolati (schegge tra muri e fori): esclusi
   { const st = nodes.find(n => n.tag === 'yard' && !n.dead), seen = new Set([st.id]), q = [st.id]; while (q.length) { const c = q.shift(); for (const k of nodes[c].e) if (!seen.has(k)) { seen.add(k); q.push(k); } } for (const n of nodes) if (!seen.has(n.id)) n.dead = true; }
   // punti di rinascita: cortile e stanze sul retro del piano terra
-  for (const n of nodes) if (!n.dead && n.L === 0 && (n.tag === 'yard' || (n.tag === 'room' && snpL(team, n.pos.x, n.pos.z).v > 12))) SNP.spawns[team].push(n);
+  for (const n of nodes) if (!n.dead && isSpawn(n)) SNP.spawns[team].push(n);
 }
 const _snpD = new V3(), _snpS = new V3(), _snpO = new V3();
 // passaggio libero tra due punti dello stesso piano: tre raggi paralleli a due altezze e pavimento continuo
@@ -374,14 +380,14 @@ function snpNearestNode(team, p) {
 
 // ---------- terreno: strada in piano con crateri ----------
 const SNP_CRATERS = [[-6, -146, 4.2, 1.2], [14, -158, 3.2, .9], [-20, -138, 2.6, .7], [24, -168, 3.6, 1.1], [3, -170, 2.4, .6], [-28, -160, 3, .8], [30, -136, 2.4, .6]];
-function snpH(x, z) {
+function slH(x, z) {
   let y = SNP.G;
   const out = Math.max(0, Math.abs(x) - 70) + Math.max(0, Math.abs(z - SNP.C.z) - 110);
   if (out > 0) y += (fbm(x * .02, z * .02, 2) - .5) * 1.5 * Math.min(1, out / 30);
   for (const [cx, cz, r, d] of SNP_CRATERS) { const k = Math.hypot(x - cx, z - cz) / r; if (k < 1) y += k < .72 ? -d * (1 - (k / .72) ** 2) : d * .35 * Math.sin((k - .72) / .28 * PI); }
   return y;
 }
-function snpSplat(x, z, n2) {
+function slSplat(x, z, n2) {
   const street = Math.abs(z - SNP.C.z) < SNP.GAP / 2, cr = SNP_CRATERS.some(([cx, cz, r]) => Math.hypot(x - cx, z - cz) < r * 1.1);
   const peb = street ? .9 : .5, dirt = cr ? 1.6 : .7 + n2 * .4, tot = peb + dirt, t = .78 + .1 * n2;
   return { sp: [0, peb / tot, 0, dirt / tot], cl: [t * .92, t * .9, t * .88] };
@@ -429,20 +435,41 @@ function snpStreet() {
   addTiled(ruins, 60);
 }
 // fumo che sale dalle rovine lontane
-function snpSmoke(dt) {
+function slSmoke(dt) {
   SNP.smokeT = (SNP.smokeT || 0) - dt; if (SNP.smokeT > 0) return; SNP.smokeT = .35;
   for (const [x, z] of [[-55, -172], [58, -130], [-30, -100 + 40], [40, -235]]) PS_SMOKE.emit(x + rnd(-2, 2), SNP.G + 4, z + rnd(-2, 2), rnd(-.3, .3), rnd(1.2, 2), rnd(-.3, .3), rnd(9, 14), 4, 14, .32, .3, .28, .5, .1, -.05);
 }
 
-function buildSniperMap() {
-  SNP.floors.length = 0; SNP.posts.length = 0; SNP.nav.A.length = 0; SNP.nav.E.length = 0; SNP.spawns.A.length = 0; SNP.spawns.E.length = 0;
-  WORLD.mortarPits = []; WORLD.aaSites = []; WORLD.tobruks = []; WORLD.bombard = 'off';
-  buildHF(); buildHC();
-  buildTerrain(); buildWater(); if (WORLD.waterMesh) WORLD.waterMesh.visible = false;
+function slBuild() {
   snpStreet();
   snpBuilding('A'); snpBuilding('E');
   snpComputeSees();
   // cielo coperto di fine luglio 1944: luce diffusa, foschia grigia della polvere
   FOG_COL.setRGB(.62, .63, .64); scene.fog.color.copy(FOG_COL); FOG_K = 1.15; scene.fog.density = FOG_BASE * FOG_K;
   if (sun) sun.intensity *= .62;
+}
+
+// ---------- registro delle mappe della modalità ----------
+// ogni mappa fornisce misure dei palazzi, terreno, costruzione, fumo e nomi delle due posizioni
+const SNP_MAPS = {
+  saintlo: { name: 'Saint-Lô', date: 'Luglio 1944 — Saint-Lô, Normandia', GAP: 75, W: 48, D: 22, FH: 3.6, YARD: 10, H: slH, splat: slSplat, build: slBuild, smoke: slSmoke,
+    sideA: 'Hôtel de la Gare', sideE: 'Postes et Télégraphes', teamA: 'ALLEATI', teamE: 'ASSE', guns: { A: ['springfield', 'enfield', 'mosin'], E: ['kar98zf', 'g43'] } },
+};
+SNP.map = 'saintlo';
+function snpSetMap(id) {
+  const m = SNP_MAPS[id] || SNP_MAPS.saintlo; SNP.map = SNP_MAPS[id] ? id : 'saintlo'; SNP.M = m;
+  Object.assign(SNP, { GAP: m.GAP, W: m.W, D: m.D, FH: m.FH, YARD: m.YARD });
+  SNP.FRONT = { A: SNP.C.z + SNP.GAP / 2, E: SNP.C.z - SNP.GAP / 2 };
+}
+function snpH(x, z) { return (SNP.M || SNP_MAPS.saintlo).H(x, z); }
+function snpSplat(x, z, n2) { return (SNP.M || SNP_MAPS.saintlo).splat(x, z, n2); }
+function snpSmoke(dt) { (SNP.M || SNP_MAPS.saintlo).smoke(dt); }
+snpSetMap('saintlo');
+function buildSniperMap() {
+  snpSetMap($('optSnpMap') ? $('optSnpMap').value : 'saintlo');
+  SNP.floors.length = 0; SNP.posts.length = 0; SNP.nav.A.length = 0; SNP.nav.E.length = 0; SNP.spawns.A.length = 0; SNP.spawns.E.length = 0;
+  WORLD.mortarPits = []; WORLD.aaSites = []; WORLD.tobruks = []; WORLD.bombard = 'off';
+  buildHF(); buildHC();
+  buildTerrain(); buildWater(); if (WORLD.waterMesh) WORLD.waterMesh.visible = false;
+  SNP.M.build();
 }

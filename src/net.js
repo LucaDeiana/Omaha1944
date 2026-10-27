@@ -11,7 +11,7 @@ function connectNet(name, side) {
   return new Promise(res => {
     let done = false; const fin = ok => { if (!done) { done = true; res(ok); } };
     try { NET.ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws'); } catch (e) { return fin(false); }
-    NET.ws.onopen = () => { NET.on = true; netSend({ t: 'join', name, side, map: SCEN }); fin(true); };
+    NET.ws.onopen = () => { NET.on = true; netSend({ t: 'join', name, side, map: SCEN === 'snp' ? 'snp:' + SNP.map : SCEN }); fin(true); };
     NET.ws.onerror = () => fin(false);
     NET.ws.onclose = () => { if (NET.on) { NET.on = false; feed('Connessione al server persa'); for (const p of NET.peers.values()) netRemovePuppet(p); NET.peers.clear(); } fin(false); };
     NET.ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (x) { return; } netOnMessage(m); };

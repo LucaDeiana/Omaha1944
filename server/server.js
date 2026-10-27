@@ -37,7 +37,7 @@ function broadcast(obj, except) { for (const c of clients.values()) if (c !== ex
 function drop(c) {
   if (c.dead) return; c.dead = true; clients.delete(c.id); try { c.sock.destroy(); } catch (e) { }
   for (const [k, v] of stations) if (v === c.id) { stations.delete(k); broadcast({ t: 'occ', i: k, by: 0 }); }
-  if (c.joined && c.id === hostId && c.map === 'snp') { const nx = [...clients.values()].find(x => x.joined && !x.dead); hostId = nx ? nx.id : 0; if (nx) { broadcast({ t: 'newhost', id: nx.id }); console.log(`! nuovo host: ${nx.name}`); } }
+  if (c.joined && c.id === hostId && String(c.map).startsWith('snp')) { const nx = [...clients.values()].find(x => x.joined && !x.dead); hostId = nx ? nx.id : 0; if (nx) { broadcast({ t: 'newhost', id: nx.id }); console.log(`! nuovo host: ${nx.name}`); } }
   else if (c.joined && c.id === hostId) { hostId = 0; broadcast({ t: 'hostgone' }); console.log("! l'host ha lasciato: la battaglia condivisa termina"); }
   if (c.joined) { broadcast({ t: 'leave', id: c.id }); console.log(`- ${c.name} ha lasciato la partita (${clients.size} connessi)`); }
 }

@@ -66,7 +66,7 @@
     omaha: { title: 'CAMPAGNA', k: 'FANTERIA · 1943–1944', sel: 'optMap', opts: ['omaha', 'ard', 'tun'], start: 'INIZIA LA BATTAGLIA', show: ['optSide', 'modeL', 'tunModeL', 'planeL', 'optDiff', 'mp'] },
     sea: { title: 'BATTAGLIE NAVALI', k: 'MARE · 1941–1944', sel: 'optNavMis', start: 'SALPA', show: ['navL', 'planeL', 'optDiff'] },
     armor: { title: 'GUERRA CORAZZATA', k: 'CARRI ARMATI · 1943', sel: 'optKasSide', start: 'AVANTI, CARRI!', show: ['kasTankL', 'optDiff'] },
-    snp: { title: 'SOLO CECCHINI', k: 'MULTIGIOCATORE · BOT', sel: 'optMap', opts: ['snp'], start: 'IN POSIZIONE', show: ['snpSideL', 'snpGunL', 'snpBotsL', 'snpDiffL', 'snpProfL', 'snpRespL', 'snpFillL', 'mp'] },
+    snp: { title: 'SOLO CECCHINI', k: 'MULTIGIOCATORE · BOT', sel: 'optMap', opts: ['snp'], start: 'IN POSIZIONE', show: ['snpMapL', 'snpSideL', 'snpGunL', 'snpBotsL', 'snpDiffL', 'snpProfL', 'snpRespL', 'snpFillL', 'mp'] },
     air: { title: 'CIELI D’EUROPA', k: 'AVIAZIONE · 1944–1945', sel: 'optAirMap', start: 'DECOLLA', show: ['airMapL', 'planeL', 'optDiff'] },
   };
 

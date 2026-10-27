@@ -6,7 +6,8 @@
 //  Attive solo con SCEN === 'snp': le altre modalità non cambiano.
 // ============================================================
 const SNP_ZOOM = { springfield: 2.5, enfield: 3.5, mosin: 3.5, kar98zf: 4, g43: 4 };   // M73B1, No.32, PU, ZF39, ZF4
-const SNP_GUNS = { A: ['springfield', 'enfield', 'mosin'], E: ['kar98zf', 'g43'] };
+const SNP_GUNS = { get A() { return (SNP.M || SNP_MAPS.saintlo).guns.A; }, get E() { return (SNP.M || SNP_MAPS.saintlo).guns.E; } };
+SNP_ZOOM.svt40 = 3.5;
 const _lr = new V3(), _le = new V3();
 
 function snpCamera(dt, w) {

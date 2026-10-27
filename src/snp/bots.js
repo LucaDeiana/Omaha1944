@@ -72,7 +72,7 @@ class SnpBot extends Soldier {
     super(team, 'sniper', x, z, { y, state: 'snp', stationary: true, name: o.name, yaw: team === 'A' ? 0 : PI });
     this.fixedY = true; this.snp = true; this.bid = SNP_BOT_ID++;
     this.lvl = o.lvl; this.D = SNP_DIFF[o.lvl]; this.prof = SNP_PROF[o.prof]; this.profKey = o.prof;
-    this.wid = team === 'A' ? 'springfield' : 'kar98zf'; this.W = WEAPONS[this.wid]; this.snd = this.W.snd;
+    this.wid = SNP_GUNS[team][0]; this.W = WEAPONS[this.wid]; this.snd = this.W.snd;
     this.mag = this.W.mag; this.res = this.W.res;
     this.st = 'PATROL'; this.stT = 0; this.path = null; this.pi = 0; this.post = null; this.postT = 0; this.shotsHere = 0;
     this.lookY = this.yaw; this.lookP = 0; this.wantY = this.yaw; this.wantP = 0;
