@@ -84,7 +84,7 @@
   const cr = document.createElement('div'); cr.id = 'mmCredits';
   cr.innerHTML = `<div class="c"><div style="width:140px;margin:0 auto">${LOGO}</div><h2>LE PALLE DI LUCA SONO PICCINE PICCINE</h2>
     <p>Ideazione e regia: Luca Deiana<br>Programmazione: Luca Deiana e Claude</p>
-    <p style="opacity:.75">Suoni reali di pubblico dominio (CC0): Internet Archive — Red Library, GOLD TAPE, SSE Library; OpenGameArt.<br>Musiche (CC0): «War Theme» e «Some Militaristic Tune» di Spring Spring, OpenGameArt.<br>Grafica 3D: three.js. Caratteri: Oswald e Special Elite (Google Fonts).</p>
+    <p style="opacity:.75">Suoni reali di pubblico dominio (CC0): Internet Archive — Red Library, GOLD TAPE, SSE Library; OpenGameArt.<br>Musiche (CC0): «War Theme» e «Some Militaristic Tune» di Spring Spring, OpenGameArt.<br>Volti dei soldati: scansione «Lee Perry-Smith» di Infinite Realities (CC BY 3.0). Grafica 3D: three.js. Caratteri: Oswald e Special Elite (Google Fonts).</p>
     <p style="opacity:.55;font-size:12px">Clicca per chiudere</p></div>`;
   document.body.append(root, mm, cr);
   { const im = mm.querySelector('#mmLogo'); im.onload = () => im.style.display = 'block'; im.src = 'assets/music/personali/logo.png'; }

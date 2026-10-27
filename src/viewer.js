@@ -40,7 +40,7 @@
   // unità: lo stesso scheletro e la stessa animazione dei soldati in gioco, con le andature scelte dal menù
   const unit = (team, kind) => () => {
     const b = makeBody(team, kind); b.removed = true;
-    for (const p of b.parts) { const m = new THREE.Mesh(buildPartGeo(p.key, true), MAT.soldier); p.node.add(m); }
+    for (const p of b.parts) { const scan = useScanHead(p.key), m = new THREE.Mesh(scan ? headScanGeo() : buildPartGeo(p.key, true), scan ? faceMaterial() : MAT.soldier); p.node.add(m); }
     const u = Object.create(Soldier.prototype);
     Object.assign(u, { body: b, root: b.root, pos: new V3(), yaw: 0, kind, team, crouch: 0, prone: 0, wounded: false, ph: 0, flinch: 0, aim: 0, aimW: 0, moving: false, throwT: 0 });
     b.root.userData.unit = u; return b.root;

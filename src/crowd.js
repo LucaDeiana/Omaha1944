@@ -27,6 +27,25 @@ const WPOSES = {
   boat: { p: new V3(.05, .25, -.15), q: qE(-1.1, .2, 0) },
 };
 
+// ---------- testa scansionata (Lee Perry-Smith, Infinite Realities, CC BY 3.0) ----------
+let HEAD_GEO = null, FACE_MAT = null;
+function headScanGeo() {
+  if (HEAD_GEO || typeof HEAD_SCAN === 'undefined') return HEAD_GEO;
+  const dec = (s, T) => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return new T(u.buffer); };
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(dec(HEAD_SCAN.p, Float32Array), 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(dec(HEAD_SCAN.uv, Float32Array), 2));
+  g.setIndex(new THREE.BufferAttribute(dec(HEAD_SCAN.i, Uint16Array), 1)); g.computeVertexNormals();
+  return HEAD_GEO = g;
+}
+function faceMaterial() {
+  if (FACE_MAT) return FACE_MAT;
+  const L = new THREE.TextureLoader(), map = L.load(HEAD_SCAN.col), nm = L.load(HEAD_SCAN.nrm); map.encoding = THREE.sRGBEncoding; map.anisotropy = 4;
+  FACE_MAT = new THREE.MeshStandardMaterial({ map, normalMap: nm, roughness: .62, metalness: 0 }); FACE_MAT.normalScale.set(.9, .9);
+  return FACE_MAT;
+}
+const useScanHead = key => key.endsWith('_head') && typeof HEAD_SCAN !== 'undefined';
+
 // ---------- geometrie ----------
 const lath = (pts, seg) => new THREE.LatheGeometry(pts.slice().reverse().map(p => new THREE.Vector2(p[0], p[1])), seg);
 const cylG = (rt, rb, h, seg) => new THREE.CylinderGeometry(rt, rb, h, seg);
@@ -214,7 +233,8 @@ function getMesh(key) {
   let m = CROWD.meshes[key]; if (m) return m;
   const cap = key[0] === 'A' ? Q.allySlots : Q.enemySlots;
   const mk = (hi) => {
-    const im = new THREE.InstancedMesh(buildPartGeo(key, hi), MAT.soldier, cap);
+    const scan = hi && useScanHead(key);
+    const im = new THREE.InstancedMesh(scan ? headScanGeo() : buildPartGeo(key, hi), scan ? faceMaterial() : MAT.soldier, cap);
     im.setColorAt(0, new THREE.Color(1, 1, 1)); im.instanceColor.setUsage(THREE.DynamicDrawUsage);
     im.count = 0; im.frustumCulled = false; im.castShadow = hi && Q.shadows > 0; im.receiveShadow = true;
     im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -232,6 +252,7 @@ function makeBody(team, kind) {
   const spine = N(); spine.position.y = .1; hips.add(spine);
   const neck = N(); neck.position.y = .52; spine.add(neck);
   const helmet = N(); helmet.position.y = team === 'A' ? .185 : .2; helmet.scale.setScalar(.93); neck.add(helmet);
+  const head = N(); head.scale.set(rnd(.95, 1.05), rnd(.96, 1.04), rnd(.95, 1.05)); neck.add(head);   // volti diversi: proporzioni variate
   const shL = N(); shL.position.copy(SH_L); spine.add(shL); const elL = N(); elL.position.y = -ARM_A; shL.add(elL);
   const shR = N(); shR.position.copy(SH_R); spine.add(shR); const elR = N(); elR.position.y = -ARM_A; shR.add(elR);
   const gun = N(); spine.add(gun);
@@ -241,7 +262,7 @@ function makeBody(team, kind) {
   const parts = [
     { node: hips, key: team + '_pelvis', name: 'pelvis' },
     { node: spine, key: team + '_chest' + (med ? '_medic' : ''), name: 'chest' },
-    { node: neck, key: team + '_head', name: 'head' },
+    { node: head, key: team + '_head', name: 'head' },
     { node: helmet, key: team + '_helmet' + (med ? '_medic' : ''), name: 'helmet' },
     { node: shL, key: team + '_uarm', name: 'uarmL' }, { node: elL, key: team + '_farm', name: 'farmL' },
     { node: shR, key: team + '_uarm', name: 'uarmR' }, { node: elR, key: team + '_farm', name: 'farmR' },
@@ -250,7 +271,8 @@ function makeBody(team, kind) {
   ];
   if (!med) parts.push({ node: gun, key: team + '_w_' + kind, name: 'weapon' });
   for (const p of parts) { p.mesh = getMesh(p.key); p.hidden = false; }
-  const b = { root, hips, spine, neck, helmet, shL, elL, shR, elR, gun, hipL, knL, hipR, knR, parts, kind, team, tint: new THREE.Color(rnd(.9, 1.05), rnd(.9, 1.05), rnd(.9, 1.05)), removed: false, settled: false, ikT: 0, fore: WFORE[kind] || WFORE.rifle };
+  const skinT = new THREE.Color(rnd(.86, 1.06), rnd(.8, .98), rnd(.74, .92));
+  const b = { skinT, root, hips, spine, neck, head, helmet, shL, elL, shR, elR, gun, hipL, knL, hipR, knR, parts, kind, team, tint: new THREE.Color(rnd(.9, 1.05), rnd(.9, 1.05), rnd(.9, 1.05)), removed: false, settled: false, ikT: 0, fore: WFORE[kind] || WFORE.rifle };
   BODIES.push(b);
   return b;
 }
@@ -376,7 +398,7 @@ function skinTemplate(b) {
   const parts = [], ranges = [], white = new THREE.Color(1, 1, 1);
   const base = typeof BASE_MALE !== 'undefined';
   if (base) { const g = baseBodyGeo(b.team); parts.push({ g, m: new THREE.Matrix4(), c: white, vc: true, uvs: 1 }); ranges.push(['base', g.attributes.position.count, null]); }
-  for (const p of r.parts) { const g = (p.name === 'weapon' && gunGeo(b.team, b.kind)) || buildPartGeo(p.key, true, base); parts.push({ g, m: p.node.matrixWorld.clone(), c: white, vc: true, uvs: 1 }); ranges.push([p.name, g.attributes.position.count, p.node.matrixWorld.clone().invert()]); }
+  for (const p of r.parts) { if (base && p.name === 'head' && useScanHead(p.key)) continue; const g = (p.name === 'weapon' && gunGeo(b.team, b.kind)) || buildPartGeo(p.key, true, base); parts.push({ g, m: p.node.matrixWorld.clone(), c: white, vc: true, uvs: 1 }); ranges.push([p.name, g.attributes.position.count, p.node.matrixWorld.clone().invert()]); }
   const geo = mergeGeos(parts), n = geo.attributes.position.count, si = new Float32Array(n * 4), sw = new Float32Array(n * 4), pa = geo.attributes.position, v = new V3();
   let o = 0;
   for (const [name, cnt, inv] of ranges) {
@@ -434,6 +456,7 @@ function baseBodyGeo(team) {
     c.copy(col(hex)); const sh = .92 + (y > .99 && y < 1.06 ? -.12 : 0); // ombra sotto la cintura
     cl[i * 3] = c.r * sh; cl[i * 3 + 1] = c.g * sh; cl[i * 3 + 2] = c.b * sh;
     for (let k = 0; k < 3; k++) pos[i * 3 + k] = BP[i * 3 + k] + BN[i * 3 + k] * inf;
+    if (bo === 3 && y > 1.6 && typeof HEAD_SCAN !== 'undefined') { pos[i * 3] *= .55; pos[i * 3 + 1] = 1.6; pos[i * 3 + 2] *= .55; }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
@@ -500,21 +523,21 @@ function updateCrowd() {
   for (let i = BODIES.length - 1; i >= 0; i--) {
     const b = BODIES[i];
     if (b.removed) { BODIES.splice(i, 1); continue; }
-    if (b._sk) continue;
     const rp = b.rag ? b.rag.p[0] : b.root.position;
     _cs.center.set(rp.x, rp.y + .9, rp.z); _cs.radius = 1.6;
     const near = Q.shadows && Math.abs(rp.x - cp.x) < Q.shadowDist * .6 && Math.abs(rp.z - cp.z) < Q.shadowDist * .6;
     if (!CROWD.frustum.intersectsSphere(_cs) && !near) continue;
     if (!b.settled) b.root.updateMatrixWorld(true);
     const dx = rp.x - cp.x, dz = rp.z - cp.z, d2 = dx * dx + dz * dz;
-    const L = d2 < lod2 ? 0 : 1;
+    const L = d2 < lod2 || b._sk ? 0 : 1;
     _cc.copy(b.tint);
     for (const p of b.parts) {
-      if (p.hidden) continue;
+      const scanH = p.name === 'head' && useScanHead(p.key);
+      if (p.hidden || (b._sk && !(scanH && typeof BASE_MALE !== 'undefined'))) continue;
       const mm = p.mesh, im = L === 0 && mm.hi ? mm.hi : mm.lo, li = im === mm.hi ? 0 : 1, idx = mm.n[li];
       if (idx >= im.instanceMatrix.count) continue;
       im.instanceMatrix.array.set(p.node.matrixWorld.elements, idx * 16);
-      const ca = im.instanceColor.array; ca[idx * 3] = _cc.r; ca[idx * 3 + 1] = _cc.g; ca[idx * 3 + 2] = _cc.b;
+      const tc = scanH && im === mm.hi ? b.skinT : _cc, ca = im.instanceColor.array; ca[idx * 3] = tc.r; ca[idx * 3 + 1] = tc.g; ca[idx * 3 + 2] = tc.b;
       mm.n[li]++;
     }
   }
