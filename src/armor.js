@@ -29,8 +29,10 @@ function kasRoadX(z) { return 40 * Math.sin(z * .003) + (z < -400 && z > -680 ? 
 function kasSplat(x, z, n2) {
   const sl = (Math.abs(kasH(x, z - 2) - kasH(x, z + 2)) + Math.abs(kasH(x - 2, z) - kasH(x + 2, z))) * .25;
   const rock = smooth((sl - .35) / .4), road = Math.abs(x - kasRoadX(z)) < 5 ? 1 : 0, vil = Math.hypot(x - KAS_PTS[1].x, z - KAS_PTS[1].z) < 90 ? .6 : 0;
-  const sa = 1.3 * (1 - rock), pe = rock * 1.4 + (fbm(x * .03, z * .03, 2) > .6 ? .4 : 0), di = road * 1.8 + vil, gr = 0, tot = sa + pe + gr + di || 1, t = 1 + .08 * n2;
-  return { sp: [sa / tot, pe / tot, gr / tot, di / tot], cl: [t * 1.08, t * .98, t * .82] };
+  const scrub = fbm(x * .05 + 9, z * .05, 2) > .62 ? .25 : 0, sa = 1.3 * (1 - rock), pe = rock * 1.4 + (fbm(x * .03, z * .03, 2) > .6 ? .4 : 0), di = road * 1.8 + vil + scrub, gr = scrub * .5, tot = sa + pe + gr + di || 1;
+  // increspature delle dune (strisce oblique al vento) e chiazze più scure di ghiaia
+  const rip = Math.sin((x * .8 + z * .35) * .9 + fbm(x * .02, z * .02, 2) * 6) * .025, t = 1 + .08 * n2 + rip, dk = fbm(x * .008 + 4, z * .008, 3) < .38 ? .9 : 1;
+  return { sp: [sa / tot, pe / tot, gr / tot, di / tot], cl: [t * 1.1 * dk, t * .99 * dk, t * .8 * dk] };
 }
 function kasPalm(mb, x, z, s = 1) {
   const y = kasH(x, z), h = rnd(7, 11) * s, lean = rnd(-.2, .2), dir = R() * TAU;
@@ -59,6 +61,11 @@ function buildKasserine() {
   // postazioni: sacchetti attorno ai pezzi anticarro e alle posizioni
   for (const p of KAS_PTS) for (let i = 0; i < 5; i++) { const a = i / 5 * TAU + rnd(-.3, .3), r = p.r * rnd(.4, .8), x = p.x + Math.cos(a) * r, z = p.z + Math.sin(a) * r; if (pointInSolid(new V3(x, 4, z))) continue; sandbagLine(mb, x - 2, z, x + 2, z, 2); }
   addTiled(mb, 120);
+  // macchia: cespugli bassi e spinosi sparsi nella valle (istanziati)
+  { const N = 2600, g = new THREE.IcosahedronGeometry(1, 0), m = new THREE.InstancedMesh(g, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 }), N), M = new THREE.Matrix4(), c = new THREE.Color(); let k = 0;
+    for (let i = 0; i < N * 3 && k < N; i++) { const x = rnd(-560, 560), z = rnd(-1250, 360); if (Math.abs(x - kasRoadX(z)) < 8) continue; const y = kasH(x, z); if (fbm(x * .05 + 9, z * .05, 2) < .5 && R() < .7) continue; const sc = rnd(.35, 1.1);
+      M.compose(new V3(x, y + sc * .25, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, R() * 6, 0)), new V3(sc * rnd(1, 1.6), sc * rnd(.4, .7), sc * rnd(1, 1.6))); m.setMatrixAt(k, M); c.setHex(pick([0x6b6a3a, 0x7a704a, 0x5a5a34, 0x8a7a50])).convertSRGBToLinear(); m.setColorAt(k, c); k++; }
+    m.count = k; m.receiveShadow = true; scene.add(m); }
   // luce del deserto: foschia sabbiosa leggera, sole alto
   FOG_COL.setRGB(.88, .82, .7); scene.fog.color.copy(FOG_COL); FOG_K = .45; scene.fog.density = FOG_BASE * FOG_K; if (sun) sun.intensity *= 1.25;
   // bandiere sulle posizioni da conquistare
