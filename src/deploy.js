@@ -5,6 +5,7 @@
 // ============================================================
 const DEP = { pts: [], sel: 0, wait: 0 };
 function deployPoints() {
+  if (PARA.on && SCEN === 'omaha') return paraDeployPoints();
   if (SCEN === 'ard') return ardDeployPoints();
   if (SCEN === 'air') return airDeployPoints();
   if (SCEN === 'tun') return tunDeployPoints();

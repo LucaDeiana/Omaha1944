@@ -20,13 +20,14 @@ uniform float uScale,fogDensity;varying vec4 vCol;varying float vRot,vFog;
 void main(){vCol=aCol;vRot=aRot;vec4 mv=modelViewMatrix*vec4(position,1.);
 gl_PointSize=min(aSize*uScale/max(-mv.z,.3),900.);gl_Position=projectionMatrix*mv;
 float fd=-mv.z;vFog=1.-exp(-fogDensity*fogDensity*fd*fd);}`;
-const P_FS = `uniform sampler2D uTex;uniform vec3 fogColor;varying vec4 vCol;varying float vRot,vFog;
+const P_LIT = { value: 1 };   // luce ambiente per fumo e polvere (di notte si scuriscono)
+const P_FS = `uniform sampler2D uTex;uniform vec3 fogColor;uniform float uLit;varying vec4 vCol;varying float vRot,vFog;
 void main(){vec2 uv=gl_PointCoord-.5;float c=cos(vRot),s=sin(vRot);uv=vec2(c*uv.x-s*uv.y,s*uv.x+c*uv.y)+.5;
 vec4 t=mapTexelToLinear(texture2D(uTex,uv));
 #ifdef ADD
 gl_FragColor=vec4(vCol.rgb*t.rgb,t.a*vCol.a*(1.-vFog));
 #else
-gl_FragColor=vec4(mix(vCol.rgb*t.rgb,fogColor,vFog),t.a*vCol.a);
+gl_FragColor=vec4(mix(vCol.rgb*t.rgb*uLit,fogColor,vFog),t.a*vCol.a);
 #endif
 #include <tonemapping_fragment>
 #include <encodings_fragment>
@@ -45,7 +46,7 @@ class Particles {
     this.aR = new THREE.BufferAttribute(this.r, 1).setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('position', this.aP); geo.setAttribute('aSize', this.aS); geo.setAttribute('aCol', this.aC); geo.setAttribute('aRot', this.aR);
     this.mat = new THREE.ShaderMaterial({
-      uniforms: { uTex: { value: tex }, uScale: { value: 800 }, fogColor: { value: FOG_COL }, fogDensity: { value: scene.fog.density } },
+      uniforms: { uTex: { value: tex }, uScale: { value: 800 }, fogColor: { value: FOG_COL }, fogDensity: { value: scene.fog.density }, uLit: P_LIT },
       vertexShader: P_VS, fragmentShader: P_FS, defines: additive ? { ADD: '' } : {},
       transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
     });

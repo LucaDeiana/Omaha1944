@@ -68,11 +68,13 @@ function addBangaloreCrate(x, z) {
 }
 
 function initMission() {
+  P_LIT.value = 1;
   if (SCEN === 'ard') { initArdennes(); return; }
   if (SCEN === 'air') { initAirMode(); return; }
   if (SCEN === 'tun') { initTunisia(); return; }
   if (SCEN === 'kas') { initArmor(); return; }
   if (SCEN === 'sea') { initNavy(); return; }
+  if (PARA.on) { initPara(); return; }
   if (PT === 'E') { initAxis(); return; }
   const xs = [-97, -72, -47, -22, 3, 28, 53];
   const per = clamp(Math.floor((Q.allyAlive * .55 - 9) / 6), 4, 10);
@@ -670,6 +672,7 @@ function updateMission(dt) {
   if (SCEN === 'air') { updateAirMode(dt); return; }
   if (SCEN === 'tun') { updateTunisia(dt); return; }
   if (SCEN === 'kas') { updateArmor(dt); return; }
+  if (PARA.on && SCEN === 'omaha') { updatePara(dt); return; }
   if (SCEN === 'sea') { updateNavy(dt); return; }
   if (ARD.snow) updateSnowfall(dt);
   MISSION.suppT = Math.max(0, (MISSION.suppT || 0) - dt);

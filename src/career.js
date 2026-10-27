@@ -7,7 +7,7 @@
 const CAREER = (function () {
   const KEY = 'omahaCareer';
   const MISSIONS = [
-    ['omaha/A', 'Omaha Beach', 'Fanteria USA, 6 giugno 1944'], ['omaha/E', 'Difesa del WN 62', 'Wehrmacht, 6 giugno 1944'], ['ard', 'Ardenne — Bois Jacques', 'dicembre 1944'], ['tun', 'Medjez el-Bab', 'deathmatch, 1943'],
+    ['omaha/A', 'Omaha Beach', 'Fanteria USA, 6 giugno 1944'], ['omaha/E', 'Difesa del WN 62', 'Wehrmacht, 6 giugno 1944'], ['para', 'Notte del D-Day', '101ª Aviotrasportata'], ['ard', 'Ardenne — Bois Jacques', 'dicembre 1944'], ['tun', 'Medjez el-Bab', 'deathmatch, 1943'],
     ['kas/A', 'Passo di Kasserine', 'Sherman, febbraio 1943'], ['kas/E', 'Difesa del passo', 'Tiger I, febbraio 1943'], ['kas/S', 'Battaglia libera di carri', 'Sidi Bou Zid'],
     ['sea/dd', 'Caccia nella Manica', 'Fletcher'], ['sea/pt', 'Siluri sul convoglio', 'PT boat'], ['sea/escort', 'Scorta al convoglio', 'Cleveland'], ['sea/line', 'Battaglia di linea', 'Texas'], ['sea/midway', 'Midway', '4 giugno 1942'], ['sea/pearl', 'Pearl Harbor', '7 dicembre 1941'], ['sea/maine', 'Il mostro d’acciaio', 'immaginaria'], ['sea/free', 'Battaglia navale libera', 'ondate'],
     ['air/norm', 'Cieli di Normandia', 'dalla portaerei'], ['air/manica', 'La Manica', 'Hawkinge'], ['air/reno', 'Il Reno', 'pista Y-29'],
@@ -28,6 +28,7 @@ const CAREER = (function () {
   function load() { let c = null; try { c = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { } return Object.assign({ pts: 0, played: 0, won: 0, kills: 0, deaths: 0, heads: 0, time: 0, m: {}, medals: [] }, c || {}); }
   function save(c) { try { localStorage.setItem(KEY, JSON.stringify(c)); } catch (e) { } }
   function missionKey() {
+    if (SCEN === 'omaha' && PARA.on) return 'para';
     if (SCEN === 'omaha') return 'omaha/' + (typeof PT !== 'undefined' ? PT : 'A');
     if (SCEN === 'sea') return 'sea/' + (NV.misKey || 'dd');
     if (SCEN === 'air') return 'air/' + (typeof AIRMAP !== 'undefined' ? AIRMAP : 'norm');

@@ -54,7 +54,7 @@ function bindSettings() {
 
 async function startGame() {
   SETTINGS.plane = $('optPlane') ? $('optPlane').value : 'p47'; AIRMAP = $('optAirMap') ? $('optAirMap').value : 'norm'; AIRFREE = !!$('optAirFree') && $('optAirFree').value === '1';
-  SCEN = $('optMap').value; NV.misKey = $('optNavMis').value; NV.freeShip = $('optNavShip').value; NV.arcade = $('optNavDiff').value === 'arcade'; TUN.mode = $('optTunMode') ? $('optTunMode').value : 'dm'; SETTINGS.map = SCEN; SETTINGS.side = $('optSide').value; if (SCEN !== 'omaha') SETTINGS.side = 'A'; PT = SETTINGS.side; MISSION.endless = PT === 'E' && $('optMode').value === 'e'; try { localStorage.setItem('omahaName', $('optName').value); } catch (e) { }
+  SCEN = $('optMap').value; NV.misKey = $('optNavMis').value; NV.freeShip = $('optNavShip').value; NV.arcade = $('optNavDiff').value === 'arcade'; TUN.mode = $('optTunMode') ? $('optTunMode').value : 'dm'; SETTINGS.map = SCEN; SETTINGS.side = $('optSide').value; if (SCEN !== 'omaha') SETTINGS.side = 'A'; PARA.on = SETTINGS.side === 'P'; PT = PARA.on ? 'A' : SETTINGS.side; MISSION.endless = PT === 'E' && $('optMode').value === 'e'; try { localStorage.setItem('omahaName', $('optName').value); } catch (e) { }
   SETTINGS.quality = $('optQuality').value; SETTINGS.diff = $('optDiff').value; saveSettings();
   Q = QUALITY[SETTINGS.quality]; D = DIFF[SETTINGS.diff];
   const audioP = initAudio();

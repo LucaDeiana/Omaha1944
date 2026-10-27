@@ -13,6 +13,7 @@ function startCutscene() {
   if (SCEN === 'sea') { showMsg('1944 — La Manica', 4); return; }
   if (SCEN === 'tun') { showMsg('Aprile 1943 — Medjez el-Bab, Tunisia', 4); return; }
   if (SCEN === 'kas') { showMsg('Febbraio 1943 — Passo di Kasserine, Tunisia', 4); return; }
+  if (PARA.on) { showMsg('Notte del 5–6 giugno 1944 — Normandia', 4); return; }
   if (SCEN === 'ard') CUT_SHOTS.splice(0, CUT_SHOTS.length, ...ARD_SHOTS);
   if (PT === 'E') {
     CUT_SHOTS[0].cap = 'La flotta alleata al largo della Normandia — 05:50';
