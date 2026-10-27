@@ -4,7 +4,7 @@
 //  feriti, medici, soppressione, grida, ragdoll alla morte
 // ============================================================
 const allies = [], enemies = [], corpses = [];
-const T1 = new V3(), T2 = new V3(), T3 = new V3(), T4 = new V3(), T5 = new V3();
+const _sw = new V3(), T1 = new V3(), T2 = new V3(), T3 = new V3(), T4 = new V3(), T5 = new V3();
 const AI_BUDGET = { n: 0 };
 
 let soldierId = 0;
@@ -251,7 +251,11 @@ class Soldier {
     b.spine.rotation.set((-(.15 * run + cr * (still ? .3 : .45) + this.lean) + this.aim * .7 + Math.sin(this.br) * .012) * (1 - pr) + pr * .35 + fl - wd * .3, -s * .07 * run * up, -(c * .04 * Math.min(1, run * 4) + this.bank * .5) * up);
     b.neck.rotation.set(-this.aim * .3 + pr * .7 - fl * .5 + wd * .5, 0, 0);
     if (wd) { solveArm(SH_R, T5.set(.06, .1, -.2), POLE_R, b.shR, b.elR); solveArm(SH_L, T5.set(-.06, .12, -.2), POLE_L, b.shL, b.elL); return; }
-    poseWeapon(b, this.aimW, this.kind === 'mg' && this.moving ? 1 : 0, boatW);
+    // di corsa l'arma passa sul petto in diagonale; camminando dondola col passo
+    const wPort = clamp((this.aSp - 3) / 1.6, 0, 1) * (1 - this.aimW) * (this.kind === 'mg' ? 0 : 1) * (1 - pr);
+    _sw.set(s * .012 * run * (1 - this.aimW), (Math.abs(c) - .5) * .02 * run * (1 - this.aimW), 0);
+    poseWeapon(b, this.aimW, this.kind === 'mg' ? 1 - this.aimW : 0, boatW, wPort, _sw);
+    if (this.aimW > .3) b.neck.rotation.z -= .1 * this.aimW;   // guancia sul calcio
     if (this.throwT > 0) { const k = 1 - this.throwT / .7; solveArm(SH_R, T5.set(.22, lerp(.75, .5, k), lerp(.25, -.55, k)), POLE_R, b.shR, b.elR); }
   }
 

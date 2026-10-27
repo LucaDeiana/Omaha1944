@@ -15,9 +15,14 @@ const SH_L = new V3(-.172, .43, 0), SH_R = new V3(.172, .43, 0);
 const POLE_L = new V3(-.5, -1, .35).normalize(), POLE_R = new V3(.6, -1, .3).normalize();
 const qE = (x, y, z) => new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z));
 const WFORE = { rifle: new V3(0, .02, -.36), sniper: new V3(0, .02, -.36), smg: new V3(0, -.04, -.2), bar: new V3(0, .0, -.36), mg: new V3(-.02, .02, -.32) };
+// posizioni dell'arma (impugnatura) nello spazio del busto; l'arma punta verso -z, il calcio sta dietro l'impugnatura
+// mira: calcio nella spalla, linea di mira all'altezza dell'occhio
+// pronto basso: calcio sotto l'ascella, volata in avanti e in basso (marcia e attesa)
+// arma diagonale sul petto ("port arms"): volata in alto a sinistra, per correre
 const WPOSES = {
-  aim: { p: new V3(.12, .43, -.25), q: qE(0, .05, 0) },
-  ready: { p: new V3(.07, .3, -.2), q: qE(-.55, .6, .3) },
+  aim: { p: new V3(.105, .47, -.3), q: qE(.015, .045, 0) },
+  ready: { p: new V3(.115, .29, -.27), q: qE(-.42, .12, .04) },
+  port: { p: new V3(.08, .2, -.21), q: qE(.78, .55, .3) },
   hip: { p: new V3(.13, .24, -.26), q: qE(-.06, 0, 0) },
   boat: { p: new V3(.05, .25, -.15), q: qE(-1.1, .2, 0) },
 };
@@ -264,9 +269,12 @@ function solveArm(S, T, pole, up, fore) {
   _q2.copy(up.quaternion).invert(); fore.quaternion.copy(_q2.multiply(_q1));
 }
 // posa dell'arma interpolata e braccia agganciate
-function poseWeapon(b, wAim, wHip, wBoat) {
+function poseWeapon(b, wAim, wHip, wBoat, wPort = 0, sway = null) {
   const g = b.gun;
-  g.position.copy(WPOSES.ready.p).lerp(WPOSES.aim.p, wAim); g.quaternion.copy(WPOSES.ready.q).slerp(WPOSES.aim.q, wAim);
+  g.position.copy(WPOSES.ready.p); g.quaternion.copy(WPOSES.ready.q);
+  if (wPort > 0) { g.position.lerp(WPOSES.port.p, wPort); g.quaternion.slerp(WPOSES.port.q, wPort); }
+  if (wAim > 0) { g.position.lerp(WPOSES.aim.p, wAim); g.quaternion.slerp(WPOSES.aim.q, wAim); }
+  if (sway) g.position.add(sway);
   if (wHip > 0) { g.position.lerp(WPOSES.hip.p, wHip); g.quaternion.slerp(WPOSES.hip.q, wHip); }
   if (wBoat > 0) { g.position.lerp(WPOSES.boat.p, wBoat); g.quaternion.slerp(WPOSES.boat.q, wBoat); }
   if (b.kind === 'medic') { solveArm(SH_R, _tL.set(.18, .12, -.12), POLE_R, b.shR, b.elR); solveArm(SH_L, _tL.set(-.18, .12, -.12), POLE_L, b.shL, b.elL); return; }
