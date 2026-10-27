@@ -196,7 +196,7 @@ function buildAirFar() {
   g.dispose(); initAirWorld();
   // mare calmo unico: l'acqua a onde di Omaha (fondale e schiuma della spiaggia) qui darebbe chiazze e bande
   scene.traverse(o => { if (o.material === waterMat) o.visible = false; });
-  const nt = TEX.water.normal.clone(); nt.wrapS = nt.wrapT = THREE.RepeatWrapping; nt.repeat.set(1000, 1000); nt.needsUpdate = true;
+  const nt = TEX.water.normal; nt.wrapS = nt.wrapT = THREE.RepeatWrapping; nt.repeat.set(1000, 1000);   // texture generata in GPU: non si clona (il clone non si può caricare)
   const sea = new THREE.Mesh(new THREE.PlaneGeometry(40000, 40000), new THREE.MeshStandardMaterial({ color: 0x2f474c, roughness: .32, metalness: .15, normalMap: nt, normalScale: new THREE.Vector2(.35, .35) }));
   sea.rotation.x = -PI / 2; sea.position.set(0, WATER_Y, 0); sea.frustumCulled = false; sea.receiveShadow = true; scene.add(sea); AIRM.sea = sea;
 }
