@@ -59,7 +59,7 @@ function initInput() {
     if (P.spawnMenu) { deployKey(c); return; }
     if (P.mode === 'naval' && c === 'KeyE') { leaveTurretToDeck(); return; }
     if ((P.mode === 'mg' || P.mode === 'mortar' || P.mode === 'flak') && stationKey(c)) return;
-    if (P.mode === 'tank') { if (c === 'KeyE' && SCEN !== 'kas') leaveTank(); return; }
+    if (P.mode === 'tank') { if (c === 'KeyE' && SCEN !== 'kas') leaveTank(); if (c === 'KeyV' && TANKS.me) { TANKS.me.view = TANKS.me.view === 1 ? 0 : 1; showMsg(TANKS.me.view === 1 ? 'Capocarro fuori dalla cupola (V per la visuale esterna)' : 'Visuale esterna (V per il capocarro)', 1.5); } return; }
     if (P.mode === 'airmark') { if (c === 'KeyT' || c === 'KeyE') closeAirMark(); return; }
     if (c === 'KeyT' && P.mode === 'foot') { openAirMark(); return; }
     if (c === 'KeyX' && P.mode === 'foot' && PT === 'A') { cycleOrder(); return; }

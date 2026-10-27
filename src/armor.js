@@ -71,7 +71,9 @@ const KAS_GEO = {};
 function kasShermanGeo() {
   if (KAS_GEO.sherman) return KAS_GEO.sherman;
   const c = 0x5f6646, d = 0x464c34, k = 0x26261f, tr = 0x2f2d27, h = new MB(), t = new MB(), gn = new MB(); h.mat = t.mat = gn.mat = 'paint';
-  h.add(U.box, d, 0, .78, .15, 0, 0, 0, 2.0, .62, 5.4); h.add(U.box, c, 0, 1.45, .45, 0, 0, 0, 2.5, .72, 4.3); h.add(U.box, c, 0, 1.3, -2.15, -.98, 0, 0, 2.5, .95, .1);
+  h.add(U.box, d, 0, .78, .15, 0, 0, 0, 2.0, .62, 5.4);
+  { const sh = new THREE.Shape(), w = 1.25, hh = .74, r = .32; sh.moveTo(-w, 0); sh.lineTo(w, 0); sh.lineTo(w, hh - r); sh.quadraticCurveTo(w, hh, w - r, hh); sh.lineTo(-w + r, hh); sh.quadraticCurveTo(-w, hh, -w, hh - r); sh.lineTo(-w, 0);
+    const eg = new THREE.ExtrudeGeometry(sh, { depth: 4.3, bevelEnabled: true, bevelThickness: .12, bevelSize: .06, bevelSegments: 2, curveSegments: 6 }); eg.translate(0, 0, -4.3 / 2); h.add(eg, c, 0, 1.09, .45); }   // scafo superiore fuso dell'M4A1 h.add(U.box, c, 0, 1.3, -2.15, -.98, 0, 0, 2.5, .95, .1);
   h.add(U.cyl12, c, 0, .78, -2.6, 0, 0, PI / 2, .45, 2.3, .45); for (const sx of [-1, 1]) h.add(U.box, d, sx * .55, 1.82, -1.55, 0, 0, 0, .5, .25, .5);
   h.add(U.box, d, .55, 1.62, -2.05, -.98, 0, 0, .25, .12, .2); h.add(U.cyl12, k, .55, 1.62, -2.3, PI / 2 - .2, 0, 0, .025, .35, .025);
   for (let i = 0; i < 4; i++) h.add(U.box, k, -.5 + i * .33, 1.82, 2.1, 0, 0, 0, .25, .02, .8); h.add(U.box, d, 0, 1.15, 2.67, .2, 0, 0, 2.3, .7, .1);
@@ -80,14 +82,25 @@ function kasShermanGeo() {
     h.add(U.cyl12, k, sx * 1.24, .62, -2.7, 0, 0, PI / 2, .3, .32, .3); h.add(U.cyl12, k, sx * 1.24, .5, 2.55, 0, 0, PI / 2, .25, .32, .25);
     for (let i = 0; i < 44; i++) { const zz = -2.85 + i * .127; h.add(U.box, tr, sx * 1.24, .05, zz, 0, 0, 0, .42, .07, .1); h.add(U.box, tr, sx * 1.24, .96, zz + .05, 0, 0, 0, .42, .06, .1); } }
   for (let i = 0; i < 4; i++) h.add(U.box, 0x6a6448, -.9 + i * .6, 1.95, 2.3, 0, 0, 0, .5, .3, .3);
+  // dettagli: fari con le grate, ganci di traino, periscopi del pilota, griglie e attrezzi sul vano motore, deflettore degli scarichi, parafanghi
+  for (const sx of [-1, 1]) { h.add(U.cyl12, k, sx * .85, 1.55, -2.35, PI / 2 - .9, 0, 0, .09, .12, .09); h.add(U.box, k, sx * .85, 1.62, -2.42, -.9, 0, 0, .26, .01, .22);
+    for (let i = 0; i < 3; i++) h.add(U.box, k, sx * .85 + (i - 1) * .1, 1.6, -2.4, -.9, 0, 0, .012, .02, .24);
+    h.add(U.box, k, sx * .7, .55, -2.95, 0, 0, 0, .12, .2, .18); h.add(U.box, k, sx * .5, 1.88, -1.25, 0, 0, 0, .18, .1, .25);
+    h.add(U.box, d, sx * 1.3, 1.04, -2.75, -.4, 0, 0, .5, .03, .4); h.add(U.box, d, sx * 1.3, 1.04, 2.85, .3, 0, 0, .5, .03, .4); }
+  for (let i = 0; i < 6; i++) h.add(U.box, k, -.75 + i * .3, 1.86, 1.55, 0, 0, 0, .2, .02, .6);
+  h.add(U.box, 0x6b5132, .95, 1.86, .9, 0, 0, 0, .06, .05, 1.2); h.add(U.box, 0x3a3a34, .95, 1.86, .25, 0, 0, 0, .18, .04, .2);   // badile
+  h.add(U.box, 0x6b5132, -.95, 1.86, 1.1, 0, 0, 0, .06, .05, .9); h.add(U.box, 0x3a3a34, -.95, 1.86, .62, 0, 0, 0, .04, .12, .16);   // ascia
+  h.add(U.box, k, 0, .95, 2.85, -.5, 0, 0, 1.8, .03, .45);
   h.mat = 'vc'; for (const sx of [-1, 1]) { h.add(U.cyl12, 0xe8e6dc, sx * 1.26, 1.45, .2, 0, 0, PI / 2, .3, .01, .3); h.add(U.cyl, c, sx * 1.27, 1.45, .2, 0, 0, PI / 2, .2, .01, .2); }
   // torretta fusa (perno a quota 1.81, centro .3 dietro il centro scafo)
   t.add(lath([[0, .85], [.55, .82], [.85, .65], [.98, .35], [1.0, 0], [.95, -.05], [0, -.05]], 18), c, 0, 0, 0); t.add(U.box, c, 0, .36, .65, 0, 0, 0, .9, .5, .7);
   t.add(U.cyl12, d, -.4, .91, .15, 0, 0, 0, .32, .14, .32); t.add(U.cyl12, k, -.4, .99, .15, 0, 0, 0, .3, .03, .3); t.add(U.cyl12, k, .42, 1.14, 0, 0, 0, 0, .025, .45, .025); t.add(U.box, k, .42, 1.34, -.15, 0, 0, 0, .07, .12, .55);
+  t.add(U.cyl12, d, .35, .9, -.25, 0, 0, 0, .14, .1, .14); t.add(U.cyl, k, -.2, 1.5, .85, 0, 0, 0, .01, 2.4, .01); t.add(U.cyl12, k, -.2, .85, .85, 0, 0, 0, .05, .1, .05);   // ventilatore, antenna
+  t.add(U.cyl12, k, .98, .45, .3, 0, 0, PI / 2, .06, .04, .06); t.add(U.box, d, -.3, .88, -.45, 0, 0, 0, .14, .08, .12); t.add(U.box, 0x20262a, -.3, .9, -.52, 0, 0, 0, .1, .04, .01);   // feritoia, periscopio del cannoniere
   t.mat = 'vc'; t.add(U.cyl12, 0xe8e6dc, 0, .5, .2, 0, 0, 0, .5, .01, .5);
   // cannone M3 da 75 mm con mantelletto (perno all'altezza dell'orecchione)
   gn.add(U.box, d, 0, 0, 0, 0, 0, 0, .75, .45, .25); gn.add(U.cyl12, d, 0, 0, -1.25, PI / 2, 0, 0, .075, 2.5, .075); gn.add(U.cyl12, k, 0, 0, -2.47, PI / 2, 0, 0, .09, .12, .09);
-  return KAS_GEO.sherman = { hull: h.buildGroups(), tur: t.buildGroups(), gun: gn.buildGroups(), turY: 1.81, turZ: .3, gunY: .37, gunZ: -1.05, len: 2.55 };
+  return KAS_GEO.sherman = { hull: h.buildGroups(), tur: t.buildGroups(), gun: gn.buildGroups(), turY: 1.81, turZ: .3, gunY: .37, gunZ: -1.05, len: 2.55, cup: [-.4, 1.65, .15] };
 }
 function kasTigerGeo() {
   if (KAS_GEO.tiger) return KAS_GEO.tiger;
@@ -100,20 +113,26 @@ function kasTigerGeo() {
     for (let i = 0; i < 8; i++) { const z = -2.3 + i * .66, off = i % 2 ? .18 : -.02; h.add(U.cyl12, d, sx * (1.3 + off), .55, z, 0, 0, PI / 2, .4, .1, .4); h.add(U.cyl12, k, sx * (1.36 + off), .55, z, 0, 0, PI / 2, .12, .12, .12); }   // ruote interallacciate
     h.add(U.cyl12, k, sx * 1.4, .95, -2.85, 0, 0, PI / 2, .38, .5, .38); h.add(U.cyl12, k, sx * 1.4, .85, 2.75, 0, 0, PI / 2, .32, .5, .32);
     for (let i = 0; i < 48; i++) { const zz = -3.05 + i * .127; h.add(U.box, tr, sx * 1.42, .1, zz, 0, 0, 0, .72, .07, .11); h.add(U.box, tr, sx * 1.42, 1.0, zz + .05, 0, 0, 0, .72, .06, .11); } }
+  // dettagli: filtri Feifel e scarichi con le protezioni, cavi di traino, attrezzi, faro Bosch, parafanghi
+  for (const sx of [-1, 1]) { h.add(U.cyl12, d, sx * .95, 1.55, 3.2, 0, 0, 0, .28, .9, .28); h.add(U.cyl12, k, sx * .45, 1.95, 3.0, 0, 0, 0, .09, .7, .09); h.add(U.box, d, sx * .45, 2.0, 3.06, 0, 0, 0, .3, .55, .05);
+    h.add(U.cyl, 0x3a3630, sx * 1.6, 1.95, 0, PI / 2, 0, 0, .025, 4.5, .025); h.add(U.box, 0x6b5132, sx * 1.55, 2.09, -1.0, 0, 0, 0, .06, .05, 1.3); h.add(U.box, d, sx * 1.64, 1.1, -2.9, -.2, 0, 0, .4, .03, .5); }
+  h.add(U.cyl12, k, -.95, 2.15, -2.3, PI / 2 - .3, 0, 0, .1, .14, .1); h.add(U.box, d, -.95, 2.13, -2.2, 0, 0, 0, .05, .1, .06);
   h.mat = 'vc'; for (const sx of [-1, 1]) { h.add(U.box, 0x1a1a1a, sx * 1.73, 1.75, -1.0, 0, 0, 0, .01, .5, .5); h.add(U.box, 0xe8e6dc, sx * 1.735, 1.75, -1.0, 0, 0, 0, .01, .12, .5); h.add(U.box, 0xe8e6dc, sx * 1.735, 1.75, -1.0, 0, 0, 0, .01, .5, .12); }
   // torretta a ferro di cavallo, cupola del capocarro, mantelletto e 8,8 cm KwK 36 col freno di bocca
   const sh = new THREE.Shape(); sh.moveTo(-1.45, -1.3); sh.lineTo(1.45, -1.3); sh.absarc(0, .2, 1.5, 0, PI, false); sh.lineTo(-1.45, -1.3);
-  const tg = new THREE.ExtrudeGeometry(sh, { depth: .95, bevelEnabled: false }); tg.rotateX(-PI / 2); t.add(tg, c, 0, 0, 0);
-  t.add(U.cyl12, c, -.65, 1.1, .7, 0, 0, 0, .38, .3, .38); t.add(U.cyl12, k, -.65, 1.27, .7, 0, 0, 0, .36, .05, .36); t.add(U.box, d, 0, .55, 1.55, 0, 0, 0, 1.6, .6, .5);
+  const tg = new THREE.ExtrudeGeometry(sh, { depth: .95, bevelEnabled: false, curveSegments: 16 }); tg.rotateX(PI / 2); tg.translate(0, .95, 0); t.add(tg, c, 0, 0, 0);   // lato piatto davanti, ferro di cavallo dietro
+  t.add(U.cyl12, c, -.65, 1.1, .7, 0, 0, 0, .38, .3, .38); t.add(U.cyl12, k, -.65, 1.27, .7, 0, 0, 0, .36, .05, .36); t.add(U.box, d, 0, .5, -1.42, 0, 0, 0, 1.7, .75, .3);
   for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) t.add(U.cyl12, k, sx * .9 + i * .12 * sx, .75, -1.0, PI / 2 - .4, 0, 0, .05, .2, .05);   // lanciafumogeni
+  for (const sx of [-1, 1]) for (let i = 0; i < 4; i++) t.add(U.box, k, sx * 1.48, .5, -.2 + i * .32, 0, 0, 0, .06, .5, .28);   // maglie di cingolo di scorta sui fianchi della torretta
+  t.add(U.box, d, .55, .99, .3, 0, 0, 0, .55, .05, .7); t.add(U.cyl, k, 0, .98, -.4, 0, 0, 0, .05, .06, .05);   // portello del servente, periscopio
   t.mat = 'vc'; t.add(U.box, 0x1a1a1a, 1.5, .6, .2, 0, 0, 0, .01, .4, .6);
   gn.add(U.box, c, 0, 0, 0, 0, 0, 0, 1.25, .75, .35); gn.add(U.cyl12, d, 0, 0, -2.6, PI / 2, 0, 0, .1, 5.0, .1); gn.add(U.cyl12, k, 0, 0, -5.2, PI / 2, 0, 0, .17, .4, .17); gn.add(U.box, k, 0, 0, -5.2, 0, 0, 0, .5, .14, .3);
-  return KAS_GEO.tiger = { hull: h.buildGroups(), tur: t.buildGroups(), gun: gn.buildGroups(), turY: 2.08, turZ: .2, gunY: .45, gunZ: -1.35, len: 5.4 };
+  return KAS_GEO.tiger = { hull: h.buildGroups(), tur: t.buildGroups(), gun: gn.buildGroups(), turY: 2.08, turZ: .2, gunY: .45, gunZ: -1.35, len: 5.4, cup: [-.65, 1.95, .7] };
 }
 function kasPz4Geo() {
   if (KAS_GEO.pz4) return KAS_GEO.pz4;
   if (!TANKS.hull) buildPanzerGeo();
-  return KAS_GEO.pz4 = { hull: TANKS.hull, tur: TANKS.tur, gun: TANKS.gun, turY: 1.67, turZ: 0, gunY: .48, gunZ: -1.4, len: 4.9 };
+  return KAS_GEO.pz4 = { hull: TANKS.hull, tur: TANKS.tur, gun: TANKS.gun, turY: 1.67, turZ: 0, gunY: .48, gunZ: -1.4, len: 4.9, cup: [0, 1.6, .8] };
 }
 function kasPakGeo() {
   if (KAS_GEO.pak) return KAS_GEO.pak;
