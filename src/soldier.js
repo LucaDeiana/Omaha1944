@@ -223,22 +223,32 @@ class Soldier {
     this.aAcc = (this.aAcc || 0) + dt;
     if (every > 1 && (AI_FRAME + (this.aSlot || (this.aSlot = 1 + (R() * 6 | 0)))) % every) return;
     dt = Math.min(this.aAcc, .2); this.aAcc = 0;
-    const b = this.body, run = clamp(sp / 4.5, 0, 1), cr = this.crouch, pr = this.prone, wd = this.wounded ? 1 : 0;
-    this.ph += dt * (3 + sp * 2.1);
-    const s = Math.sin(this.ph), c = Math.cos(this.ph), still = run < .1;
-    let hy = (still ? lerp(.95, .56, cr) : lerp(.95, .78, cr)) + Math.abs(c) * .05 * run;
+    const b = this.body, cr = this.crouch, pr = this.prone, wd = this.wounded ? 1 : 0;
+    // fisica del passo: velocità smorzata (niente scatti), cadenza legata alla lunghezza del passo
+    // (i piedi non scivolano), inclinazione in accelerazione e in curva, respiro da fermo
+    const sp0 = this.aSp === undefined ? sp : this.aSp; this.aSp = lerp(sp0, sp, Math.min(1, dt * 7));
+    const acc = (this.aSp - sp0) / Math.max(dt, 1e-3), yr = this.aYaw === undefined ? 0 : angLerp(0, this.yaw - this.aYaw, 1) / Math.max(dt, 1e-3); this.aYaw = this.yaw;
+    const run = clamp(this.aSp / 4.5, 0, 1), stepL = lerp(.68, 1.2, run) * lerp(1, .7, cr);
+    this.ph += pr > .5 ? dt * (3 + sp * 2.1) : dt * this.aSp / stepL * PI;
+    this.br = (this.br || R() * 6) + dt * (1.5 + run * 2);
+    this.lean = lerp(this.lean || 0, clamp(acc * .035, -.22, .3), Math.min(1, dt * 5));
+    this.bank = lerp(this.bank || 0, clamp(-yr * this.aSp * .03, -.16, .16), Math.min(1, dt * 5));
+    const s = Math.sin(this.ph), c = Math.cos(this.ph), still = run < .1, up = 1 - Math.max(pr, wd);
+    let hy = (still ? lerp(.95, .56, cr) : lerp(.95, .78, cr)) + (Math.abs(c) - .5) * lerp(.035, .065, run) * run + Math.sin(this.br) * .004 * (still ? 1 : 0);
     hy = lerp(hy, .2, Math.max(pr, wd));
-    b.hips.position.set(0, hy, 0);
-    b.hips.rotation.set(-PI / 2 * .93 * pr + PI / 2 * .9 * wd, s * .06 * run, 0);
+    b.hips.position.set(-c * lerp(.025, .012, run) * Math.min(1, run * 4) * up, hy, 0);
+    b.hips.rotation.set(-PI / 2 * .93 * pr + PI / 2 * .9 * wd, s * lerp(.07, .1, run) * run * up, (c * .05 * Math.min(1, run * 4) + this.bank) * up);
     const crawl = pr * Math.min(1, sp);
     const base = still ? cr * 1.45 : cr * .45;
     b.hipL.rotation.set((s * .8 * run + base) * (1 - pr) + s * .3 * crawl + wd * (.3 + Math.sin(this.ph * .7) * .2), 0, -.04 - pr * .12);
     b.hipR.rotation.set((-s * .8 * run + base) * (1 - pr) - s * .3 * crawl + wd * .6, 0, .04 + pr * .12);
     const kb = still ? cr * 2.3 : cr * .7;
-    b.knL.rotation.x = -((Math.max(0, Math.sin(this.ph + 1.6)) * 1.25 * run + kb) * (1 - pr) + Math.max(0, s) * .8 * crawl + wd * .7);
-    b.knR.rotation.x = -((Math.max(0, Math.sin(this.ph + 1.6 + PI)) * 1.25 * run + kb) * (1 - pr) + Math.max(0, -s) * .8 * crawl + wd * 1.1);
+    // ginocchio: flessione in volo (gamba che avanza) + piccola flessione d'appoggio all'impatto
+    const kS = Math.min(1, run * 3), kAmp = lerp(.9, 1.35, run) * kS;
+    b.knL.rotation.x = -((Math.max(0, Math.sin(this.ph + 1.6)) * kAmp + Math.max(0, -Math.sin(this.ph + 1.6)) * .14 * kS + kb) * (1 - pr) + Math.max(0, s) * .8 * crawl + wd * .7);
+    b.knR.rotation.x = -((Math.max(0, Math.sin(this.ph + 1.6 + PI)) * kAmp + Math.max(0, -Math.sin(this.ph + 1.6 + PI)) * .14 * kS + kb) * (1 - pr) + Math.max(0, -s) * .8 * crawl + wd * 1.1);
     const fl = this.flinch * .35;
-    b.spine.rotation.set((-(.15 * run + cr * (still ? .3 : .45)) + this.aim * .7) * (1 - pr) + pr * .35 + fl - wd * .3, s * .08 * run, 0);
+    b.spine.rotation.set((-(.15 * run + cr * (still ? .3 : .45) + this.lean) + this.aim * .7 + Math.sin(this.br) * .012) * (1 - pr) + pr * .35 + fl - wd * .3, -s * .07 * run * up, -(c * .04 * Math.min(1, run * 4) + this.bank * .5) * up);
     b.neck.rotation.set(-this.aim * .3 + pr * .7 - fl * .5 + wd * .5, 0, 0);
     if (wd) { solveArm(SH_R, T5.set(.06, .1, -.2), POLE_R, b.shR, b.elR); solveArm(SH_L, T5.set(-.06, .12, -.2), POLE_L, b.shL, b.elL); return; }
     poseWeapon(b, this.aimW, this.kind === 'mg' && this.moving ? 1 : 0, boatW);

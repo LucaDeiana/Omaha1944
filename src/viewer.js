@@ -36,6 +36,17 @@
   add('Carri armati', 'Panzer IV Ausf. G', 'veh', tankAsm(kasPz4Geo), 'carro medio tedesco, 7,5 cm KwK 40, corazza frontale 80 mm');
   add('Carri armati', 'Tiger I', 'veh', tankAsm(kasTigerGeo), 'carro pesante tedesco, 8,8 cm KwK 36, corazza frontale 100 mm');
   add('Carri armati', 'Pak 40', 'veh', () => { const G = kasPakGeo(), g = groupMesh(G.base), gg = groupMesh(G.gun); gg.position.set(0, 1.05, -.2); g.add(gg); return g; }, 'cannone anticarro da 7,5 cm');
+  // unità: lo stesso scheletro e la stessa animazione dei soldati in gioco, con le andature scelte dal menù
+  const unit = (team, kind) => () => {
+    const b = makeBody(team, kind); b.removed = true;
+    for (const p of b.parts) { const m = new THREE.Mesh(buildPartGeo(p.key, true), MAT.soldier); p.node.add(m); }
+    const u = Object.create(Soldier.prototype);
+    Object.assign(u, { body: b, root: b.root, pos: new V3(), yaw: 0, kind, team, crouch: 0, prone: 0, wounded: false, ph: 0, flinch: 0, aim: 0, aimW: 0, moving: false, throwT: 0 });
+    b.root.userData.unit = u; return b.root;
+  };
+  const UN = { A: [['rifle', 'Fuciliere — M1 Garand'], ['smg', 'Capo squadra — Thompson'], ['bar', 'Mitragliere — BAR'], ['sniper', 'Tiratore scelto — Springfield'], ['medic', 'Infermiere']],
+    E: [['rifle', 'Grenadier — Kar98k'], ['smg', 'Gruppenführer — MP 40'], ['mg', 'Mitragliere — MG 42'], ['sniper', 'Scharfschütze — Kar98k ZF'], ['medic', 'Sanitäter']] };
+  for (const t of ['A', 'E']) for (const [k, n] of UN[t]) add('Unità', (t === 'A' ? 'USA · ' : 'Germania · ') + n, 'unit', unit(t, k), t === 'A' ? '29ª Divisione di fanteria, 1944' : '352ª Divisione di fanteria, 1944');
   add('Mezzi', 'Mezzo da sbarco LCVP (Higgins)', 'ship', () => { if (!LCVP_G) buildBoatGeos(); const g = groupMesh(LCVP_G); if (RAMP_G) g.add(groupMesh(RAMP_G)); return g; });
   add('Strutture', 'Bunker (WN 62)', 'veh', () => { if (!BUNKER_G) buildBunkerGeo(); return groupMesh(BUNKER_G); });
   const GN = { garand: 'M1 Garand', springfield: 'Springfield M1903', thompson: 'Thompson M1A1', bar: 'BAR M1918', colt: 'Colt M1911', bazooka: 'Bazooka M1', kar98: 'Kar98k', kar98zf: 'Kar98k con ottica', mp40: 'MP 40' };
@@ -77,7 +88,7 @@
     if (cur && cur.kind === 'cockpit' && curObj) { const e = curObj.userData.eye, d = { side: [1, -.2, 0], front: [0, -.15, -1], back: [0, -.3, -1], top: [0, -1, -.3], iso: [-.35, -.2, -1] }[v] || [0, -.15, -1];
       camera.position.set(e[0], e[1], e[2] + .001); ctl.target.set(e[0] + d[0] * .3, e[1] + d[1] * .3, e[2] + d[2] * .3); camera.fov = SETTINGS.fovAir || 88; camera.updateProjectionMatrix(); ctl.update(); return; }
     if (camera.fov !== 45) { camera.fov = 45; camera.updateProjectionMatrix(); }
-    const m = Math.max(size.x, size.y, size.z), r = m * 1.3 + (m < 4 ? .1 : 1), c = center;
+    const m = Math.max(size.x, size.y, size.z), r = (m * 1.3 + (m < 4 ? .1 : 1)) * (cur && cur.kind === 'unit' ? 1.6 : 1), c = center;
     const P = { side: [r, size.y * .15, 0], front: [0, size.y * .3, -r], back: [0, size.y * .3, r], top: [0, r, .001], iso: [r * .65, r * .45, -r * .6] }[v];
     camera.position.set(c.x + P[0], c.y + P[1], c.z + P[2]); ctl.target.copy(c); ctl.update();
   };
@@ -101,6 +112,7 @@
     if (c.kind === 'ship' && !$id('bWater').classList.contains('on')) $id('bWater').click();
     if (c.kind !== 'ship' && $id('bWater').classList.contains('on')) $id('bWater').click();
     const s = sun.shadow.camera, sd = r * .8 + 2; s.left = -sd; s.right = sd; s.top = sd; s.bottom = -sd; s.near = .1; s.far = sd * 6; s.updateProjectionMatrix(); sun.shadow.bias = -.0002 * Math.max(1, r / 50);
+    $id('gait').style.display = $id('bSlow').style.display = c.kind === 'unit' ? '' : 'none';
     placeSun(); applyWire(); view('iso'); fillList(); renderNotes();
     try { location.hash = encodeURIComponent(c.cat + '/' + c.name); } catch (e) { }
   }
@@ -157,6 +169,20 @@
     if (navigator.clipboard) navigator.clipboard.writeText(s).then(done, () => prompt('Copia il testo:', s)); else prompt('Copia il testo:', s);
   };
 
+  // ---------- andature delle unità ----------
+  let slow = false, tPrev = performance.now(), gT = 0;
+  $id('bSlow').onclick = e => toggle(e.target, on => slow = on);
+  function animUnit(u) {
+    const now = performance.now(); let dt = Math.min(.05, (now - tPrev) / 1000); tPrev = now; if (slow) dt *= .25; gT += dt;
+    const g = $id('gait').value, k = (a, b) => lerp(a, b, Math.min(1, dt * 5));
+    let sp = 0, cr = 0, pr = 0, aim = 0;
+    if (g === 'walk') sp = 1.6; else if (g === 'run') sp = 4.6; else if (g === 'crouch') { sp = 1.4; cr = 1; } else if (g === 'crawl') { sp = .7; pr = 1; } else if (g === 'aim') aim = 1;
+    else if (g === 'sprint') sp = (gT % 4) < 2 ? 5 : 0; else if (g === 'turn') { sp = 4.4; u.yaw += dt * 1.1; }
+    u.crouch = k(u.crouch, cr); u.prone = k(u.prone, pr); u.aimW = k(u.aimW, aim); u.aim = 0; u.wounded = g === 'hurt'; u.moving = sp > .3;
+    if (g === 'throw') { u.throwT -= dt; if (u.throwT < -1) u.throwT = .7; } else u.throwT = 0;
+    u.root.rotation.y = u.yaw; u.anim(dt, sp, 0);
+  }
+
   // ---------- ciclo ----------
   const _v = new V3();
   addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
@@ -164,6 +190,7 @@
   (function loop() {
     requestAnimationFrame(loop); ctl.update();
     if (cur && cur.kind === 'cockpit' && PL.me) { const t = performance.now() / 1000; PL.me.q.setFromEuler(new THREE.Euler(Math.sin(t * .3) * .12, Math.sin(t * .1) * 1.5, Math.sin(t * .4) * .35, 'YXZ')); PL.me.vel.set(0, Math.sin(t * .3) * 15, -130 - Math.sin(t * .2) * 30); PL.me.pos.y = 900 + Math.sin(t * .05) * 600; PL.throttle = .6 + Math.sin(t * .25) * .3; PL.stickX = Math.sin(t * .4) * .5; PL.stickY = Math.sin(t * .3) * .4; PL.rudder = Math.sin(t * .2) * .3; PL.G = 1 + Math.abs(Math.sin(t * .3)) * 2; if (!window.GAME) window.GAME = { time: t }; else GAME.time = t; if (!(PL._vt > t)) { PL._vt = t + .07; drawGauges(); } PL.cockpit.visible = true; updateCockpit(.016); }
+    if (cur && cur.kind === 'unit' && curObj && curObj.userData.unit) animUnit(curObj.userData.unit);
     for (const p of pins) { _v.copy(p.p).project(camera); const vis = _v.z < 1; p.el.style.display = vis ? '' : 'none'; p.el.style.left = (_v.x + 1) / 2 * innerWidth + 'px'; p.el.style.top = (1 - _v.y) / 2 * innerHeight + 'px'; }
     renderer.render(scene, camera);
   })();
