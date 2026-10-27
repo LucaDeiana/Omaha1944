@@ -30,7 +30,7 @@ function snpBox(mb, team, u0, u1, v0, v1, y0, y1, c, solid = true, tag = 'house'
 // pavimento calpestabile (solaio): solido che non blocca chi ci sta sopra
 function snpSlab(mb, team, u0, u1, v0, v1, y, c, cc) {
   const [x0, x1, z0, z1] = snpBoxW(team, u0, u1, v0, v1), G = SNP.G;
-  mb.mat = 'wood'; mb.add(U.box, c, (x0 + x1) / 2, G + y - .03, (z0 + z1) / 2, 0, 0, 0, x1 - x0, .06, z1 - z0);
+  mb.mat = 'wood'; mb.add(U.box, c, (x0 + x1) / 2, G + y - (y > .1 ? .02 : .01), (z0 + z1) / 2, 0, 0, 0, x1 - x0, y > .1 ? .06 : .06, z1 - z0);   // un filo sopra il terreno e il soffitto: niente sfarfallio
   if (y > .1) { mb.mat = 'plaster'; mb.add(U.box, cc, (x0 + x1) / 2, G + y - .2, (z0 + z1) / 2, 0, 0, 0, x1 - x0, .28, z1 - z0); const s = addSolid(x0, G + y - .32, z0, x1, G + y, z1, 'floor'); s.walk = true; }
   SNP.floors.push({ x0, x1, z0, z1, y: G + y });
 }

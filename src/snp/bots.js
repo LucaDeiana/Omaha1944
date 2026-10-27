@@ -32,7 +32,7 @@ function snpDamage(w, zone) { return zone === 'body' ? w.dmg : SNP_DMG[zone] || 
 function snpShotSound(pos, team, who) {
   SNP.sounds.push({ pos: pos.clone(), team, who, t: GAME.time });
   if (SNP.sounds.length > 40) SNP.sounds.shift();
-  if (who) who.flashT = GAME.time;
+  if (who) who.shotT = GAME.time;
 }
 
 // ---------- tracciamento del colpo di un bot: muri, terreno, corpi avversari, giocatore ----------
@@ -80,7 +80,7 @@ class SnpBot extends Soldier {
     this.mem = [];                  // memoria: { kind, pos, post, t, conf }
     this.tgt = null; this.reactT = 0; this.aimT = 0; this.errY = 0; this.errP = 0; this.nzY = 0; this.nzP = 0;
     this.fireCD = 0; this.reloadT = 0; this.boltT = 0; this.stance = 0; this.moveSp = 0; this.threat = 0; this.threatPos = null;
-    this.lastPos = new V3(x, y, z); this.stuckT = 0; this.recent = []; this.scanT = 0; this.scanPt = null; this.flashT = -99;
+    this.lastPos = new V3(x, y, z); this.stuckT = 0; this.recent = []; this.scanT = 0; this.scanPt = null; this.shotT = -99;
     this.thinkT = R() * .4;
   }
   // morte: niente feriti in questa modalità, danni secondo la zona colpita
@@ -128,7 +128,7 @@ class SnpBot extends Soldier {
       }
       r.vis = vis;
       if (vis > 0) {
-        const sp = snpSpeed(t), moveK = 1 + Math.min(sp, 7) * .42, stK = snpStanceK(t), light = snpLight(t), flash = GAME.time - (t.flashT || -99) < 1.3 ? 3.2 : 1;
+        const sp = snpSpeed(t), moveK = 1 + Math.min(sp, 7) * .42, stK = snpStanceK(t), light = snpLight(t), flash = GAME.time - (t.shotT || -99) < 1.3 ? 3.2 : 1;
         const rate = D.det * vis * fov * moveK * stK * light * flash / (1 + (d / 62) ** 2);
         r.m = Math.min(1.2, r.m + rate * dt);
         if (r.m >= 1) {
@@ -159,7 +159,7 @@ class SnpBot extends Soldier {
     let best = null, bs = 0;
     for (const [t, r] of this.per) {
       if (!r.seen || r.vis <= 0 || !snpAlive(t)) continue;
-      const d = this.pos.distanceTo(t.pos), engaged = GAME.time - (t.flashT || -99) < 4 ? this.prof.engaged : 1;
+      const d = this.pos.distanceTo(t.pos), engaged = GAME.time - (t.shotT || -99) < 4 ? this.prof.engaged : 1;
       const s = r.vis * engaged * (t === this.tgt ? 1.4 : 1) / (1 + d / 120);
       if (s > bs) { bs = s; best = t; }
     }

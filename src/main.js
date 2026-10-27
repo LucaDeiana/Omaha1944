@@ -133,6 +133,8 @@ function frame(now) {
     updateHUD(dt); updateFun(dt);
     updateDynRes(raw);
   }
+  // in pausa (anche prima di entrare in partita) la telecamera resta sugli occhi del giocatore, non nell'origine della mappa
+  else if (P.mode === 'foot' && !(typeof CUT !== 'undefined' && CUT.active) && !P.inBoat && P.pos.lengthSq() > 0) { try { updateCamera(0); } catch (e) { } }
   camera.updateMatrixWorld();
   updateCrowd();
   renderFrame(GAME.time);
