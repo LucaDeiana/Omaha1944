@@ -261,7 +261,7 @@
     if (map && map !== 'opts') { const sel = $('optMap'); if (sel && sel.value !== map) { sel.value = map; sel.dispatchEvent(new Event('change')); } }
     if (map === 'opts') { const q = $('optQuality'); if (q) q.scrollIntoView({ block: 'center' }); } else m.scrollTop = 0;
   }
-  mm.addEventListener('click', e => { const b = e.target.closest('.mmb'); if (!b) return; const go = b.dataset.go; if (go === 'models') { window.open('viewer.html', '_blank'); return; } if (go === 'career') { if (window.CAREER || typeof CAREER !== 'undefined') CAREER.show(); return; }
+  mm.addEventListener('click', e => { const b = e.target.closest('.mmb'); if (!b) return; const go = b.dataset.go; if (go === 'models') { location.href = 'viewer.html'; return; } if (go === 'career') { if (window.CAREER || typeof CAREER !== 'undefined') CAREER.show(); return; }
     if (go === 'intro') return playIntro(); if (go === 'cred') { cr.style.display = 'flex'; return; } openSetup(go); });
   cr.addEventListener('click', () => cr.style.display = 'none');
   root.addEventListener('click', () => state === 'gate' ? startStudio() : skip());

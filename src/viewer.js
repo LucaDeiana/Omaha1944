@@ -19,7 +19,10 @@
 
   // ---------- catalogo ----------
   const CAT = [];
-  const add = (cat, name, kind, build, note) => CAT.push({ cat, name, kind, build, note });
+  const PFX = { Navi: 'NAV', Aerei: 'AER', Cabine: 'CAB', Mezzi: 'MEZ', 'Carri armati': 'CAR', Strutture: 'STR', Armi: 'ARM', 'Unità': 'UNI' };
+  const slug = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toUpperCase().slice(0, 28);
+  // codice identificativo del modello: finisce nel testo copiato, così si sa sempre a quale modello si riferisce una nota
+  const add = (cat, name, kind, build, note) => CAT.push({ cat, name, kind, build, note, code: (PFX[cat] || 'MOD') + '-' + slug(name) });
   for (const k in NCLS) add('Navi', NCLS[k].name, 'ship', () => buildShipModel2(NCLS[k]).g, `${NCLS[k].L} × ${NCLS[k].B} m, pescaggio ${NCLS[k].D} m`);
   const planes = ['p47', 'fw190', 'b26'].concat(Object.keys(PLANE_SPECS).filter(k => !PLANE_SPECS[k].builtin));
   const pname = t => (PLANE_SPECS[t] && PLANE_SPECS[t].name) || { p47: 'P-47 Thunderbolt', fw190: 'Fw 190', b26: 'B-26 Marauder' }[t] || t;
@@ -61,7 +64,7 @@
   let cur = null, curObj = null, size = new V3(1, 1, 1), center = new V3();
   const fillList = () => {
     $id('list').innerHTML = '';
-    CAT.filter(c => c.cat === $id('cat').value).forEach(c => { const d = document.createElement('div'); d.textContent = c.name; d.onclick = () => show(c); if (c === cur) d.className = 'sel'; $id('list').appendChild(d); });
+    CAT.filter(c => c.cat === $id('cat').value).forEach(c => { const d = document.createElement('div'); d.textContent = c.name; d.onclick = () => { show(c); if (innerWidth < 760) $id('side').classList.add('closed'); }; if (c === cur) d.className = 'sel'; $id('list').appendChild(d); });
   };
   $id('cat').onchange = fillList;
   $id('toggle').onclick = () => $id('side').classList.toggle('closed');
@@ -105,7 +108,7 @@
     o.traverse(m => { if (m.isMesh) { const tr = [].concat(m.material).some(x => x && (x.transparent || x.alphaTest > 0)); m.castShadow = !tr; m.receiveShadow = true; m.frustumCulled = false; } });
     const bb = new THREE.Box3().setFromObject(o); bb.getSize(size); bb.getCenter(center);
     let tris = 0; o.traverse(m => { if (m.isMesh && m.geometry) tris += (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3; });
-    $id('info').innerHTML = `<b style="color:var(--txt)">${c.name}</b><br>Ingombro: ${size.z.toFixed(1)} m lungo · ${size.x.toFixed(1)} m largo · ${size.y.toFixed(1)} m alto<br>${c.note ? c.note + '<br>' : ''}${Math.round(tris).toLocaleString('it-IT')} triangoli`;
+    $id('info').innerHTML = `<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">[codice modello: ${c.code}] </span><b style="color:var(--txt)">${c.name}</b><br>Ingombro: ${size.z.toFixed(1)} m lungo · ${size.x.toFixed(1)} m largo · ${size.y.toFixed(1)} m alto<br>${c.note ? c.note + '<br>' : ''}${Math.round(tris).toLocaleString('it-IT')} triangoli`;
     const r = Math.max(size.x, size.z);
     if (grid) scene.remove(grid);
     const step = r > 100 ? 10 : r > 10 ? 1 : .1; grid = new THREE.GridHelper(Math.ceil(r * 1.6 / step) * step, Math.ceil(r * 1.6 / step), 0x6a7378, 0x4a5257);
@@ -125,7 +128,7 @@
   let notes = []; try { notes = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(notes)); } catch (e) { } };
   let noteMode = false;
-  $id('bNote').onclick = e => toggle(e.target, on => { noteMode = on; $id('hint').textContent = on ? 'Tocca il modello nel punto da commentare' : 'Trascina per ruotare · rotella/pizzico per lo zoom · tasto destro/due dita per spostare'; });
+  $id('bNote').onclick = e => toggle(e.target, on => { noteMode = on; if (on && innerWidth < 760) $id('side').classList.add('closed'); $id('hint').textContent = on ? 'Tocca il modello nel punto da commentare' : 'Trascina per ruotare · rotella/pizzico per lo zoom · tasto destro/due dita per spostare'; });
   const where = (p) => {
     // descrizione del punto: posizione lungo l'oggetto (il davanti è verso -z), lato e altezza
     const bb = new THREE.Box3().setFromObject(curObj), L = bb.max.z - bb.min.z || 1, t = (p.z - bb.min.z) / L;
@@ -139,11 +142,11 @@
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(); let down = null;
   renderer.domElement.addEventListener('pointerdown', e => down = [e.clientX, e.clientY]);
   renderer.domElement.addEventListener('pointerup', e => {
-    if (!noteMode || !curObj || !down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
-    ndc.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1); ray.setFromCamera(ndc, camera);
+    if (!noteMode || !curObj || !down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > (e.pointerType === 'touch' ? 18 : 6)) return;
+    const rc = renderer.domElement.getBoundingClientRect(); ndc.set((e.clientX - rc.left) / rc.width * 2 - 1, -(e.clientY - rc.top) / rc.height * 2 + 1); ray.setFromCamera(ndc, camera);
     const hit = ray.intersectObject(curObj, true)[0]; if (!hit) return;
     const p = hit.point;
-    notes.push({ obj: cur.name, p: [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2)], where: where(p), text: '' });
+    notes.push({ obj: cur.name, code: cur.code, p: [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2)], where: where(p), text: '' });
     save(); renderNotes(); $id('bNote').click();
     const ta = $id('nlist').querySelectorAll('textarea'); if (ta.length) ta[ta.length - 1].focus();
   });
@@ -167,7 +170,7 @@
   $id('bCopy').onclick = () => {
     const by = {}; for (const n of notes) (by[n.obj] || (by[n.obj] = [])).push(n);
     let s = 'NOTE SUI MODELLI 3D\n';
-    for (const o in by) { s += `\n## ${o}\n`; by[o].forEach((n, i) => s += `#${i + 1} [${n.where}; x=${n.p[0]} y=${n.p[1]} z=${n.p[2]}]: ${n.text || '(nessun testo)'}\n`); }
+    for (const o in by) { const cd = by[o][0].code || (CAT.find(c => c.name === o) || {}).code || ''; s += `\n## ${o}${cd ? '  [codice: ' + cd + ']' : ''}\n`; by[o].forEach((n, i) => s += `#${i + 1} [${n.where}; x=${n.p[0]} y=${n.p[1]} z=${n.p[2]}]: ${n.text || '(nessun testo)'}\n`); }
     const done = () => { $id('bCopy').textContent = 'Copiate!'; setTimeout(() => $id('bCopy').textContent = 'Copia tutte', 1500); };
     if (navigator.clipboard) navigator.clipboard.writeText(s).then(done, () => prompt('Copia il testo:', s)); else prompt('Copia il testo:', s);
   };
@@ -201,7 +204,7 @@
   // apre il modello indicato nell'indirizzo (#Navi/...) oppure il primo
   let start = CAT[0];
   try { const h = decodeURIComponent(location.hash.slice(1)); const f = CAT.find(c => c.cat + '/' + c.name === h); if (f) start = f; } catch (e) { }
-  $id('cat').value = start.cat; show(start);
+  $id('cat').value = start.cat; show(start); if (innerWidth < 760) $id('side').classList.add('closed');
   $id('load').remove();
   window.VIEWER = { CAT, show, ctl, camera, view };
 })();

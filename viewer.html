@@ -53,7 +53,7 @@
 <div id="vignette"></div>
 <div id="load">Caricamento dei modelli…</div>
 <aside id="side">
-  <h1>MODELLI DEL GIOCO</h1>
+  <h1 style="display:flex;align-items:center;gap:8px"><a href="index.html" style="color:var(--txt);text-decoration:none;font-size:13px;border:1px solid var(--line);border-radius:6px;padding:4px 8px">← Menù</a>MODELLI DEL GIOCO</h1>
   <div class="sec"><select id="cat"></select></div>
   <div id="list"></div>
   <div class="sec" id="info"></div>
@@ -61,6 +61,7 @@
 </aside>
 <button id="toggle" title="Mostra/nascondi elenco">☰</button>
 <div id="bar">
+  <button onclick="location.href='index.html'">← Menù</button>
   <button data-v="side">Fianco</button>
   <button data-v="front">Prua</button>
   <button data-v="back">Poppa</button>
@@ -86,29 +87,29 @@
 // raccoglie gli errori dei moduli del gioco senza bloccare il visualizzatore
 window.addEventListener('error', e => { const el = document.getElementById('err'); if (el) el.textContent += (e.message || e) + '\n'; });
 </script>
-<script src="assets/tex_photo.js?v=20261027h"></script>
-<script src="src/config.js?v=20261027h"></script>
-<script src="src/textures.js?v=20261027h"></script>
-<script src="src/models.js?v=20261027h"></script>
-<script src="src/planes2.js?v=20261027h"></script>
-<script src="src/engine.js?v=20261027h"></script>
-<script src="src/fx.js?v=20261027h"></script>
-<script src="src/world.js?v=20261027h"></script>
-<script src="assets/models/male_base.js?v=20261027h"></script>
-<script src="assets/models/head_scan.js?v=20261027h"></script>
-<script src="src/crowd.js?v=20261027h"></script>
-<script src="src/soldier.js?v=20261027h"></script>
-<script src="src/weapons.js?v=20261027h"></script>
-<script src="src/guns.js?v=20261027h"></script>
-<script src="src/aircraft.js?v=20261027h"></script>
-<script src="src/cockpit.js?v=20261027h"></script>
-<script src="src/ballistics.js?v=20261027h"></script>
-<script src="src/mission.js?v=20261027h"></script>
-<script src="src/tank.js?v=20261027h"></script>
-<script src="src/armor.js?v=20261027h"></script>
-<script src="src/water.js?v=20261027h"></script>
-<script src="src/navy.js?v=20261027h"></script>
-<script src="src/shipmodels.js?v=20261027h"></script>
-<script src="src/viewer.js?v=20261027h"></script>
+<script src="assets/tex_photo.js?v=20261027i"></script>
+<script src="src/config.js?v=20261027i"></script>
+<script src="src/textures.js?v=20261027i"></script>
+<script src="src/models.js?v=20261027i"></script>
+<script src="src/planes2.js?v=20261027i"></script>
+<script src="src/engine.js?v=20261027i"></script>
+<script src="src/fx.js?v=20261027i"></script>
+<script src="src/world.js?v=20261027i"></script>
+<script src="assets/models/male_base.js?v=20261027i"></script>
+<script src="assets/models/head_scan.js?v=20261027i"></script>
+<script src="src/crowd.js?v=20261027i"></script>
+<script src="src/soldier.js?v=20261027i"></script>
+<script src="src/weapons.js?v=20261027i"></script>
+<script src="src/guns.js?v=20261027i"></script>
+<script src="src/aircraft.js?v=20261027i"></script>
+<script src="src/cockpit.js?v=20261027i"></script>
+<script src="src/ballistics.js?v=20261027i"></script>
+<script src="src/mission.js?v=20261027i"></script>
+<script src="src/tank.js?v=20261027i"></script>
+<script src="src/armor.js?v=20261027i"></script>
+<script src="src/water.js?v=20261027i"></script>
+<script src="src/navy.js?v=20261027i"></script>
+<script src="src/shipmodels.js?v=20261027i"></script>
+<script src="src/viewer.js?v=20261027i"></script>
 </body>
 </html>
