@@ -76,6 +76,36 @@ function installHeightFog() {
 	gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );
 #endif`;
 }
+
+// ---------- ombre: due cascate (vicina fine, lontana ampia) e bordi morbidi a campionamento Poisson ----------
+// la mappa vicina segue la telecamera spostata in avanti; quella lontana copre centinaia di metri e
+// subentra con una sfumatura dove la vicina finisce. La luce della cascata lontana è nera: serve solo
+// a produrre la sua mappa, che viene letta nel calcolo dell'ombra del sole.
+let sunFar = null;
+function patchShadowChunks() {
+  const SC = THREE.ShaderChunk;
+  let p = SC.shadowmap_pars_fragment;
+  const a = p.indexOf('#if defined( SHADOWMAP_TYPE_PCF )'), b = p.indexOf('#elif defined( SHADOWMAP_TYPE_PCF_SOFT )');
+  if (a < 0 || b < 0) return;
+  p = p.slice(0, a) + '#if defined( SHADOWMAP_TYPE_PCF )\n' +
+    'vec2 ks = shadowRadius / shadowMapSize;\n' +
+    'float ang = 6.2831853 * fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( 0.06711056, 0.00583715 ) ) ) );\n' +
+    'float ca = cos( ang ), sa = sin( ang ); mat2 rot = mat2( ca, sa, -sa, ca );\n' +
+    'shadow = 0.0;\n' + "shadow += texture2DCompare( shadowMap, shadowCoord.xy + rot * vec2( -0.61339, 0.61748 ) * ks, shadowCoord.z );\nshadow += texture2DCompare( shadowMap, shadowCoord.xy + rot * vec2( 0.17002, -0.04025 ) * ks, shadowCoord.z );\nshadow += texture2DCompare( shadowMap, shadowCoord.xy + rot * vec2( -0.29942, 0.79192 ) * ks, shadowCoord.z );\nshadow += texture2DCompare( shadowMap, shadowCoord.xy + rot * vec2( 0.64568, 0.49321 ) * ks, shadowCoord.z );\nshadow += texture2DCompare( shadowMap, shadowCoord.xy + rot * vec2( -0.65178, 0.71789 ) * ks, shadowCoord.z );\nshadow += texture2DCompare( shadowMap, shadowCoord.xy + rot * vec2( 0.42100, 0.02707 ) * ks, shadowCoord.z );\nshadow += texture2DCompare( shadowMap, shadowCoord.xy + rot * vec2( -0.81719, -0.27110 ) * ks, shadowCoord.z );\nshadow += texture2DCompare( shadowMap, shadowCoord.xy + rot * vec2( -0.70537, -0.66820 ) * ks, shadowCoord.z );\nshadow += texture2DCompare( shadowMap, shadowCoord.xy + rot * vec2( 0.97705, -0.10862 ) * ks, shadowCoord.z );\nshadow += texture2DCompare( shadowMap, shadowCoord.xy + rot * vec2( 0.06333, 0.14237 ) * ks, shadowCoord.z );\nshadow += texture2DCompare( shadowMap, shadowCoord.xy + rot * vec2( 0.20353, 0.21433 ) * ks, shadowCoord.z );\nshadow += texture2DCompare( shadowMap, shadowCoord.xy + rot * vec2( -0.66753, 0.32609 ) * ks, shadowCoord.z );\nshadow += texture2DCompare( shadowMap, shadowCoord.xy + rot * vec2( -0.09842, -0.29575 ) * ks, shadowCoord.z );\nshadow += texture2DCompare( shadowMap, shadowCoord.xy + rot * vec2( -0.88592, 0.21537 ) * ks, shadowCoord.z );\nshadow += texture2DCompare( shadowMap, shadowCoord.xy + rot * vec2( 0.56664, 0.60521 ) * ks, shadowCoord.z );\nshadow += texture2DCompare( shadowMap, shadowCoord.xy + rot * vec2( 0.03977, -0.39610 ) * ks, shadowCoord.z );\n" + 'shadow *= 1.0 / 16.0;\n' + p.slice(b);
+  p = p.replace(/\n#endif\s*$/, '\n#if NUM_DIR_LIGHT_SHADOWS > 1\n' +
+    'float csmShadow() {\n' +
+    '  vec4 c0 = vDirectionalShadowCoord[ 0 ]; vec2 q = c0.xy / c0.w; vec2 e = min( q, 1.0 - q ); float edge = min( e.x, e.y );\n' +
+    '  float s1 = 1.0;\n' +
+    '  if ( edge < 0.06 ) s1 = getShadow( directionalShadowMap[ 1 ], directionalLightShadows[ 1 ].shadowMapSize, directionalLightShadows[ 1 ].shadowBias, directionalLightShadows[ 1 ].shadowRadius, vDirectionalShadowCoord[ 1 ] );\n' +
+    '  if ( edge <= 0.0 ) return s1;\n' +
+    '  float s0 = getShadow( directionalShadowMap[ 0 ], directionalLightShadows[ 0 ].shadowMapSize, directionalLightShadows[ 0 ].shadowBias, directionalLightShadows[ 0 ].shadowRadius, c0 );\n' +
+    '  return mix( s1, s0, smoothstep( 0.0, 0.06, edge ) );\n' +
+    '}\n#endif\n#endif');
+  SC.shadowmap_pars_fragment = p;
+  const L = 'directLight.color *= all( bvec2( directLight.visible, receiveShadow ) ) ? getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] ) : 1.0;';
+  if (SC.lights_fragment_begin.includes(L)) SC.lights_fragment_begin = SC.lights_fragment_begin.replace(L,
+    '#if NUM_DIR_LIGHT_SHADOWS > 1\n directLight.color *= all( bvec2( directLight.visible, receiveShadow ) ) ? ( UNROLLED_LOOP_INDEX == 0 ? csmShadow() : 1.0 ) : 1.0;\n#else\n ' + L + '\n#endif');
+}
 function initEngine() {
   installHeightFog();
   renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false });
@@ -84,7 +114,7 @@ function initEngine() {
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = Q.post ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
-  if (Q.shadows) { renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; }
+  if (Q.shadows) { patchShadowChunks(); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; }
   renderer.domElement.id = 'gl';
   document.body.prepend(renderer.domElement);
 
@@ -104,9 +134,13 @@ function initEngine() {
     sun.shadow.mapSize.set(Q.shadows, Q.shadows);
     const c = sun.shadow.camera, s = Q.shadowDist;
     c.left = -s; c.right = s; c.top = s; c.bottom = -s; c.near = 10; c.far = 700;
-    sun.shadow.bias = -.0004; sun.shadow.normalBias = .04;
+    sun.shadow.bias = -.0003; sun.shadow.normalBias = .03; sun.shadow.radius = 2.2; sun.shadow.autoUpdate = false;
+    // cascata lontana: 4 volte più ampia, aggiornata meno spesso
+    sunFar = new THREE.DirectionalLight(0x000000, 0); sunFar.castShadow = true; const fs = Math.max(2048, Q.shadows / 2); sunFar.shadow.mapSize.set(fs, fs);
+    const f = sunFar.shadow.camera, S = s * 4.5; f.left = -S; f.right = S; f.top = S; f.bottom = -S; f.near = 10; f.far = 1600;
+    sunFar.shadow.bias = -.0008; sunFar.shadow.normalBias = .3; sunFar.shadow.radius = 1.4; sunFar.shadow.autoUpdate = false;
   }
-  scene.add(sun, sun.target);
+  scene.add(sun, sun.target); if (sunFar) scene.add(sunFar, sunFar.target);
 
   buildSky();
   const pm = new THREE.PMREMGenerator(renderer);
@@ -226,13 +260,18 @@ function flashLight(p, hex, intensity, dur) {
   best.userData.t = dur; best.userData.d = dur; best.userData.i = intensity; best.intensity = intensity;
 }
 
-const _snap = new V3();
+const _snap = new V3(), _snapF = new V3(), _fw = new V3(), _ctr = new V3();
 function updateEngine(dt, center, time) {
   // centro ombre agganciato alla griglia dei texel per evitare tremolii
-  if (Q.shadows) { const g = Q.shadowDist * 2 / Q.shadows * 4; _snap.set(Math.round(center.x / g) * g, Math.round(center.y / g) * g, Math.round(center.z / g) * g); }
+  // la cascata vicina è spostata in avanti nella direzione di sguardo: copre ciò che si vede, non ciò che sta alle spalle
+  camera.getWorldDirection(_fw); _fw.y = 0; if (_fw.lengthSq() > 1e-4) _fw.normalize();
+  _ctr.copy(center).addScaledVector(_fw, Q.shadowDist * .5);
+  if (Q.shadows) { const g = Q.shadowDist * 2 / Q.shadows * 4; _snap.set(Math.round(_ctr.x / g) * g, Math.round(_ctr.y / g) * g, Math.round(_ctr.z / g) * g); }
   else _snap.copy(center);
   sun.position.copy(_snap).addScaledVector(SUN_DIR, 350);
   sun.target.position.copy(_snap);
+  if (sunFar) { const sf = sunFar.shadow.camera, g = (sf.right - sf.left) / sunFar.shadow.mapSize.x * 4; _ctr.copy(center).addScaledVector(_fw, Q.shadowDist * 2);
+    _snapF.set(Math.round(_ctr.x / g) * g, Math.round(_ctr.y / g) * g, Math.round(_ctr.z / g) * g); sunFar.position.copy(_snapF).addScaledVector(SUN_DIR, 700); sunFar.target.position.copy(_snapF); }
   skyMat.uniforms.uTime.value = time;
   for (const l of lightPool) {
     const u = l.userData;
@@ -251,7 +290,8 @@ function renderFrame(time) {
   const lim = 2.05 / scene.fog.density, cp = camera.position;
   if (typeof cityLodUpdate === 'function') cityLodUpdate();
   for (const f of FOGCULL) f.obj.visible = f.s.center.distanceTo(cp) - f.s.radius < lim * (f.k || 1);
-  if (renderer.shadowMap.enabled) { renderer.shadowMap.autoUpdate = false; if ((_shF++ & 1) === 0) renderer.shadowMap.needsUpdate = true; }
+  // aggiornamento: vicina a ogni fotogramma (alto/ultra) o a fotogrammi alterni; lontana ogni 4
+  if (renderer.shadowMap.enabled) { _shF++; sun.shadow.needsUpdate = Q.shadows >= 4096 || (_shF & 1) === 0; if (sunFar) sunFar.shadow.needsUpdate = (_shF & 3) === 1; }
   if (composer) { gradePass.uniforms.uTime.value = time; composer.render(); }
   else renderer.render(scene, camera);
 }

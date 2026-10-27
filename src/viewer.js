@@ -10,6 +10,7 @@
   Q = Object.assign({}, Q, { post: false, shadows: 2048, shadowDist: 60, lights: 0, pr: Math.min(devicePixelRatio || 1, 2) });
   try { initEngine(); } catch (e) { $id('err').textContent += 'initEngine: ' + e.message + '\n'; }
   try { initWeapons(); } catch (e) { }
+  if (typeof sunFar !== 'undefined' && sunFar) sunFar.castShadow = false; if (sun) sun.shadow.autoUpdate = true;   // nel visualizzatore basta una mappa d'ombra, aggiornata sempre
   scene.fog = null; if (typeof skyMesh !== 'undefined' && skyMesh) skyMesh.visible = false;
   const BG = new THREE.Color(0x3b4247); scene.background = BG;
   renderer.domElement.style.filter = 'none';
