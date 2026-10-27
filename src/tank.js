@@ -218,7 +218,7 @@ function updateTankMode(dt) {
   ta.classList.toggle('ready', t.reload <= 0);
   $('tankSight').style.display = zoom ? 'block' : 'none';
   $('tankRange').textContent = Math.round(rr.t) + ' m';
-  $('stHud').innerHTML = `<b>${t.name || 'Panzer IV'}</b> — scafo ${Math.max(0, Math.round(t.hp / (t.hpMax ? t.hpMax / 100 : 15)))}%${t.immob ? ' · <b style="color:#ff7a50">CINGOLO ROTTO</b>' : ''}${t.jam ? ' · <b style="color:#ff7a50">TORRETTA BLOCCATA</b>' : ''} · ${Math.round(Math.abs(t.speed) * 3.6)} km/h · ${t.reload > 0 ? 'cannone in ricarica ' + t.reload.toFixed(1) + ' s' : '<b class="ok">CANNONE PRONTO</b>'}<br><small>W/S/A/D guida · mouse torretta · click sx cannone · click dx mirino · F mitragliatrice${SCEN === 'kas' ? '' : ' · E esci'}</small>`;
+  $('stHud').innerHTML = `<b>${t.name || 'Panzer IV'}</b>${t.ammo !== undefined || SCEN === 'kas' ? ' · ' + (t.ammo === 'he' ? 'ESPLOSIVO (2)' : 'PERFORANTE (1)') : ''} — scafo ${Math.max(0, Math.round(t.hp / (t.hpMax ? t.hpMax / 100 : 15)))}%${t.immob ? ' · <b style="color:#ff7a50">CINGOLO ROTTO</b>' : ''}${t.jam ? ' · <b style="color:#ff7a50">TORRETTA BLOCCATA</b>' : ''} · ${Math.round(Math.abs(t.speed) * 3.6)} km/h · ${t.reload > 0 ? 'cannone in ricarica ' + t.reload.toFixed(1) + ' s' : '<b class="ok">CANNONE PRONTO</b>'}<br><small>W/S/A/D guida · mouse torretta · click sx cannone · click dx mirino · F mitragliatrice${SCEN === 'kas' ? '' : ' · E esci'}</small>`;
 }
 // ---------- schieramento ----------
 function initTanks() {

@@ -76,7 +76,7 @@ function drawMini() {
   g.fillStyle = '#fff'; g.beginPath(); g.moveTo(c, c - 7); g.lineTo(c + 5, c + 5); g.lineTo(c, c + 2); g.lineTo(c - 5, c + 5); g.fill();
 }
 function updateHUD(dt) {
-  MINI.t -= dt; if (MINI.t <= 0) { MINI.t = .1; $('mini').style.display = P.mode === 'foot' || P.mode === 'tank' ? 'block' : 'none'; if (P.mode === 'foot' || P.mode === 'tank') drawMini(); }
+  MINI.t -= dt; if (MINI.t <= 0) { MINI.t = .1; $('mini').style.display = SCEN !== 'kas' && (P.mode === 'foot' || P.mode === 'tank') ? 'block' : 'none'; if (P.mode === 'foot' || P.mode === 'tank') drawMini(); }
   msgT -= dt; if (msgT <= 0) $('msg').style.opacity = 0;
   // marcatori 3D
   for (let i = 0; i < markerEls.length; i++) {
@@ -129,6 +129,6 @@ function updateHUD(dt) {
   }
   const slots = P.inv.map((x, i) => x ? `<span class="${i === P.cur ? 'on' : ''}">${i + 1} ${WEAPONS[x.id].name}</span>` : '').join('');
   $('wextra').innerHTML = `${w ? w.cal + '<br>' : ''}Granate: ${P.nades} · Cariche: ${P.charges} · Bende: ${P.bandages}<div class="slots">${slots}</div>`;
-  $('info').textContent = `Supporto aereo (T): ${AIR.cd > 0 ? Math.floor(AIR.cd / 60) + ':' + String(Math.floor(AIR.cd % 60)).padStart(2, '0') : 'PRONTO'} · ${PT === 'A' ? 'Alleati' : 'Camerati'}: ${FRIENDS().filter(a => a.alive).length} · Nemici in vista: ${FOES().filter(e => e.alive && dist2Cam(e.pos) < 200 * 200).length} · Uccisioni: ${STATS.kills} · Punti: ${FUN.score}${FUN.streak >= 3 ? ` · Serie: ${FUN.streak}` : ""} · Record: ${FUN.best}`;
+  if (SCEN === 'kas') $('info').textContent = ''; else $('info').textContent = `Supporto aereo (T): ${AIR.cd > 0 ? Math.floor(AIR.cd / 60) + ':' + String(Math.floor(AIR.cd % 60)).padStart(2, '0') : 'PRONTO'} · ${PT === 'A' ? 'Alleati' : 'Camerati'}: ${FRIENDS().filter(a => a.alive).length} · Nemici in vista: ${FOES().filter(e => e.alive && dist2Cam(e.pos) < 200 * 200).length} · Uccisioni: ${STATS.kills} · Punti: ${FUN.score}${FUN.streak >= 3 ? ` · Serie: ${FUN.streak}` : ""} · Record: ${FUN.best}`;
   drawCompass();
 }

@@ -157,6 +157,7 @@ class KasTank {
     this.type = type; this.team = team; this.name = T.name;
     this.g = groupMesh(G.hull); this.tg = groupMesh(G.tur); this.gg = groupMesh(G.gun);
     this.tg.position.set(0, G.turY, G.turZ); this.gg.position.set(0, G.gunY, G.gunZ); this.tg.add(this.gg); this.g.add(this.tg); scene.add(this.g); this.G = G;
+    if (typeof shipPlateMat === 'function') { KAS.mat = KAS.mat || shipPlateMat(); this.g.traverse(o => { if (o.isMesh && o.material && o.material.vertexColors) o.material = KAS.mat; }); }   // lamiera e getti d'acciaio con giunti, rivetti e ruggine
     this.pos = this.g.position; this.pos.set(x, Hf(x, z), z); this.yaw = yaw; this.tyaw = 0; this.gpitch = 0; this.ayaw = 0; this.apitch = 0;
     this.alive = true; this.hp = this.hpMax = T.hp; this.speed = 0; this.reload = rnd(1, T.reload); this.mgT = 0; this.player = false; this.tank = true;
     this.immob = false; this.jam = false; this.box = { min: new V3(), max: new V3() }; this.aiT = rnd(0, .5); this.target = null; this.goalOff = new V3(rnd(-30, 30), 0, rnd(-30, 30)); this.err = new V3();
@@ -169,7 +170,7 @@ class KasTank {
     if (this.reload > 0 || !this.alive) return; this.reload = this.T.reload * (byPlayer ? 1 : rnd(1, 1.3));
     const o = this.muzzle(new V3()), d = this.aimDir(new V3());
     if (!byPlayer) { const sp = .0018 + (Math.abs(this.speed) > 1 ? .006 : 0); d.x += rnd(-sp, sp); d.y += rnd(-sp, sp) * .6; d.z += rnd(-sp, sp); d.normalize(); }
-    kasShell(o, d, this.T, this);
+    kasShell(o, d, this.ammo === 'he' ? Object.assign({}, this.T, { pen: this.T.cal * .55, v: this.T.v * .75, he: true }) : this.T, this);
     PS_FIRE.emit(o.x, o.y, o.z, d.x * 6, d.y * 6, d.z * 6, .2, 2.4, 4, 1, 4, 2.5, 1.2);
     for (let i = 0; i < 8; i++) PS_SMOKE.emit(o.x, o.y, o.z, d.x * rnd(2, 6) + rnd(-1, 1), rnd(0, 1.5), d.z * rnd(2, 6) + rnd(-1, 1), rnd(2, 3.5), .8, 3.5, .62, .58, .5, .55, .8, -.05);
     for (let i = 0; i < 14; i++) PS_GRAIN.emit(this.pos.x + rnd(-3, 3), this.pos.y + .2, this.pos.z + rnd(-3, 3), rnd(-3, 3), rnd(1, 3), rnd(-3, 3), .8, .05, .05, .6, ...C_DIRT, .4, 9.8);
@@ -191,6 +192,7 @@ class KasTank {
     if (onTurret) { const tl = ld.clone().applyAxisAngle(new V3(0, 1, 0), -this.tyaw); const front = tl.z < 0 && Math.abs(tl.z) > Math.abs(tl.x); armor = front ? T.t : T.ts; cosA = Math.max(.25, Math.hypot(front ? tl.z : tl.x, 0) / Math.max(.01, tl.length())); face = front ? 'torretta frontale' : 'torretta laterale'; }
     else if (Math.abs(ld.z) > Math.abs(ld.x) * .9) { const front = ld.z < 0; armor = front ? T.f : T.r; cosA = Math.max(.25, Math.abs(ld.z) / ld.length()); face = front ? 'fronte' : 'retro'; }
     else { armor = T.s; cosA = Math.max(.25, Math.abs(ld.x) / ld.length()); face = 'fianco'; }
+    if (sh.he) { fxExplosion(p, 1.4, false); sfxBoom(p, 1); this.hp -= 4; if (!onTurret && R() < .25) { this.immob = true; if (sh.owner && sh.owner.player) showMsg('Esplosivo: cingolo spezzato!', 1.4); } if (this.player) P.shake += .7; if (this.hp <= 0) this.destroy(sh.owner && sh.owner.player, false); return; }
     const dist = sh.travel, pen = sh.T.pen * Math.max(.45, 1 - dist / 3500) * rnd(.9, 1.1), eff = armor / cosA;
     const byP = sh.owner && sh.owner.player, mine = this.player;
     if (cosA < .34 && R() < .7 || pen < eff) {   // rimbalzo
@@ -230,7 +232,7 @@ class KasTank {
     if (this.player) this.drive(dt); else this.think(dt);
     if (this.immob) this.speed = lerp(this.speed, 0, dt * 3);
     const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
-    this.pos.x += fx * this.speed * dt; this.pos.z += fz * this.speed * dt;
+    this.pos.x += fx * this.speed * dt; this.pos.z += fz * this.speed * dt; this.odo = (this.odo || 0) + Math.abs(this.speed) * dt; if (this.odo > 1.2) { this.odo = 0; kasTrackMark(this); }
     const tk = this.pos.clone(); tk.y += 1.25; pushOut(tk, 2.6, 1.4); this.pos.x = tk.x; this.pos.z = tk.z;
     for (const o of KAS.tanks) if (o !== this && (o.alive || true)) { const dx = this.pos.x - o.pos.x, dz = this.pos.z - o.pos.z, d = Math.hypot(dx, dz); if (d < 5.5 && d > .01) { this.pos.x += dx / d * (5.5 - d) * .5; this.pos.z += dz / d * (5.5 - d) * .5; } }
     this.pos.x = clamp(this.pos.x, -620, 620); this.pos.z = clamp(this.pos.z, -1300, 380);
@@ -293,7 +295,7 @@ class KasGun {
     this.box = { min: new V3(x - 1.6, this.pos.y, z - 1.6), max: new V3(x + 1.6, this.pos.y + 1.8, z + 1.6) }; this.T = { pen: 135, v: 790, cal: 75, reload: 5 };
     MISSION.vehicles.push(this); KAS.guns.push(this);
   }
-  hit(p, dir, sh) { this.damage(60, sh.owner && sh.owner.player); }
+  hit(p, dir, sh) { if (sh.he) explode(p, 7, 260, { byPlayer: !!(sh.owner && sh.owner.player), bomb: true }); this.damage(60, sh.owner && sh.owner.player); }
   damage(a, byPlayer) { if (!this.alive) return; this.hp -= a; if (this.hp > 0) return; this.alive = false; burnMeshes(this.g); this.gg.rotation.x = -.4; fxExplosion(this.pos.clone().add(new V3(0, 1, 0)), 2, false); sfxBoom(this.pos, 2); if (byPlayer) { STATS.kills += 2; feed('Pak 40 distrutto'); } }
   update(dt) {
     if (!this.alive) return; this.reload -= dt;
@@ -312,11 +314,19 @@ class KasGun {
 }
 // linea di vista: il terreno non deve coprire la congiungente fra le torrette
 function kasLOS(a, b) { const n = 10; for (let i = 1; i < n; i++) { const t = i / n, x = lerp(a.x, b.x, t), z = lerp(a.z, b.z, t), y = lerp(a.y + 2.2, b.y + 1.6, t); if (Hf(x, z) > y) return false; } return true; }
+// ---------- solchi dei cingoli sulla sabbia ----------
+const KAS_TRK = { mesh: null, n: 0, max: 2400, m: new THREE.Matrix4(), q: new THREE.Quaternion(), e: new THREE.Euler() };
+function kasTrackMark(t) {
+  if (!KAS_TRK.mesh) { const g = new THREE.PlaneGeometry(.55, 1.3).rotateX(-PI / 2); KAS_TRK.mesh = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ color: 0x5a4630, transparent: true, opacity: .32, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }), KAS_TRK.max); KAS_TRK.mesh.count = 0; KAS_TRK.mesh.frustumCulled = false; KAS_TRK.mesh.renderOrder = 1; scene.add(KAS_TRK.mesh); }
+  const w = t.T.half[0] - .15, cx = Math.cos(t.yaw), sx = Math.sin(t.yaw);
+  for (const sd of [-1, 1]) { const x = t.pos.x + cx * w * sd, z = t.pos.z - sx * w * sd, y = Hf(x, z) + .04; KAS_TRK.e.set(0, t.yaw, 0); KAS_TRK.q.setFromEuler(KAS_TRK.e); KAS_TRK.m.compose(new V3(x, y, z), KAS_TRK.q, new V3(1, 1, 1)); KAS_TRK.mesh.setMatrixAt(KAS_TRK.n % KAS_TRK.max, KAS_TRK.m); KAS_TRK.n++; }
+  KAS_TRK.mesh.count = Math.min(KAS_TRK.n, KAS_TRK.max); KAS_TRK.mesh.instanceMatrix.needsUpdate = true;
+}
 // ---------- proiettili ----------
 const KAS_SHELL_G = new THREE.CylinderGeometry(.06, .06, 1, 5).rotateX(PI / 2);
 function kasShell(o, d, T, owner) {
   const m = new THREE.Mesh(KAS_SHELL_G, new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 2.6, 1.2), transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false }));
-  m.scale.set(1, 1, 6); scene.add(m); KAS.shells.push({ p: o.clone(), v: d.clone().multiplyScalar(T.v), T, owner, m, life: 4, travel: 0 });
+  m.scale.set(1, 1, 6); scene.add(m); KAS.shells.push({ p: o.clone(), v: d.clone().multiplyScalar(T.v), T, owner, m, life: 4, travel: 0, he: !!T.he });
 }
 function kasUpdateShells(dt) {
   const tmp = new V3();
@@ -325,7 +335,7 @@ function kasUpdateShells(dt) {
     const steps = Math.max(1, Math.ceil(s.v.length() * dt / 2.5)), h = dt / steps;
     for (let k = 0; k < steps && !hit; k++) {
       s.v.y -= 9.8 * h; tmp.copy(s.v).multiplyScalar(h); s.p.add(tmp); s.travel += tmp.length();
-      if (s.p.y < Hf(s.p.x, s.p.z)) { hit = true; const p = s.p.clone(); p.y = Hf(p.x, p.z) + .2; fxImpact(p, 'dirt'); for (let j = 0; j < 16; j++) PS_GRAIN.emit(p.x, p.y, p.z, rnd(-3, 3), rnd(3, 8), rnd(-3, 3), 1, .08, .08, .9, ...C_DIRT, .5, 9.8); PS_SMOKE.emit(p.x, p.y + .5, p.z, 0, 1.5, 0, 3, 1, 3, .7, .8, .72, .58, .9); sfxBoom(p, .6); for (const g of KAS.guns) if (g.alive && g.pos.distanceTo(p) < 3) g.damage(25, s.owner && s.owner.player); break; }
+      if (s.p.y < Hf(s.p.x, s.p.z)) { hit = true; const p = s.p.clone(); p.y = Hf(p.x, p.z) + .2; if (s.he) { explode(p, 7, 260, { byPlayer: !!(s.owner && s.owner.player), bomb: true }); for (const g of KAS.guns) if (g.alive && g.pos.distanceTo(p) < 8) g.damage(30 * (1 - g.pos.distanceTo(p) / 9), s.owner && s.owner.player); break; } fxImpact(p, 'dirt'); for (let j = 0; j < 16; j++) PS_GRAIN.emit(p.x, p.y, p.z, rnd(-3, 3), rnd(3, 8), rnd(-3, 3), 1, .08, .08, .9, ...C_DIRT, .5, 9.8); PS_SMOKE.emit(p.x, p.y + .5, p.z, 0, 1.5, 0, 3, 1, 3, .7, .8, .72, .58, .9); sfxBoom(p, .6); for (const g of KAS.guns) if (g.alive && g.pos.distanceTo(p) < 3) g.damage(25, s.owner && s.owner.player); break; }
       for (const t of KAS.tanks) {
         if (t === s.owner || !t.alive) continue;
         const dx = s.p.x - t.pos.x, dz = s.p.z - t.pos.z; if (dx * dx + dz * dz > 16) continue;
@@ -366,7 +376,7 @@ function kasPlayerKilled() {
   else showMsg('Carro distrutto! L’equipaggio si salva — nuovo Sherman fra 6 secondi (' + KAS.lives + ' rimasti)', 5);
 }
 function initArmor() {
-  KAS.tanks = []; KAS.guns = []; KAS.shells = []; KAS.stage = 0; KAS.lives = D && D.label && /veterano/i.test(D.label) ? 2 : 3; KAS.over = false; KAS.killed = 0; KAS.holdT = 0; KAS.wave = 0; KAS.cap = 0;
+  KAS.tanks = []; KAS.guns = []; KAS.shells = []; KAS_TRK.mesh = null; KAS_TRK.n = 0; KAS.stage = 0; KAS.lives = D && D.label && /veterano/i.test(D.label) ? 2 : 3; KAS.over = false; KAS.killed = 0; KAS.holdT = 0; KAS.wave = 0; KAS.cap = 0;
   P.inBoat = false; P.boat = null; MISSION.stage = 0; MISSION.stageT = 0;
   MISSION.title = 'Passo di Kasserine — febbraio 1943'; MISSION.objText = 'Conquista la cresta di Djebel Ksaira';
   kasSpawnWave(0); kasSpawnPlayer();
