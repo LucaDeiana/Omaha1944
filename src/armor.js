@@ -189,14 +189,14 @@ class KasTank {
     if (typeof shipPlateMat === 'function') { KAS.mat = KAS.mat || shipPlateMat(); this.g.traverse(o => { if (o.isMesh && o.material && o.material.vertexColors) o.material = KAS.mat; }); }   // lamiera e getti d'acciaio con giunti, rivetti e ruggine
     this.pos = this.g.position; this.pos.set(x, Hf(x, z), z); this.yaw = yaw; this.tyaw = 0; this.gpitch = 0; this.ayaw = 0; this.apitch = 0;
     this.alive = true; this.hp = this.hpMax = T.hp; this.speed = 0; this.reload = rnd(1, T.reload); this.mgT = 0; this.player = false; this.tank = true;
-    this.immob = false; this.jam = false; this.box = { min: new V3(), max: new V3() }; this.aiT = rnd(0, .5); this.target = null; this.goalOff = new V3(rnd(-30, 30), 0, rnd(-30, 30)); this.err = new V3();
+    this.immob = false; this.jam = false; this.crew = { cmd: 1, gun: 1, load: 1, drv: 1, bow: 1 }; this.engDmg = 0; this.fire = 0; this.drvT = 0; this.box = { min: new V3(), max: new V3() }; this.aiT = rnd(0, .5); this.target = null; this.goalOff = new V3(rnd(-30, 30), 0, rnd(-30, 30)); this.err = new V3();
     this.eng = loopSound(type === 'sherman' ? 'eng_sherman' : type === 'tiger' ? 'eng_tiger' : 'eng_pz4', 0); if (this.eng && type === 'pz3') this.rateK = 1.15; this.trk = loopSound('tracks', 0);
     MISSION.vehicles.push(this); KAS.tanks.push(this);
   }
   muzzle(o) { this.g.updateMatrixWorld(true); return o.set(0, 0, -this.G.len).applyMatrix4(this.gg.matrixWorld); }
   aimDir(o) { this.g.updateMatrixWorld(true); return o.set(0, 0, -1).transformDirection(this.gg.matrixWorld); }
   fireMain(byPlayer) {
-    if (this.reload > 0 || !this.alive) return; this.reload = this.T.reload * (byPlayer ? 1 : rnd(1, 1.3));
+    if (this.reload > 0 || !this.alive) return; this.reload = this.T.reload * (byPlayer ? 1 : rnd(1, 1.3)) * (this.crew.load ? 1 : 2.2) * (this.crew.gun || this.crew.cmd ? 1 : 1.5);
     const o = this.muzzle(new V3()), d = this.aimDir(new V3());
     if (!byPlayer) { const sp = .0018 + (Math.abs(this.speed) > 1 ? .006 : 0); d.x += rnd(-sp, sp); d.y += rnd(-sp, sp) * .6; d.z += rnd(-sp, sp); d.normalize(); }
     kasShell(o, d, this.ammo === 'he' ? Object.assign({}, this.T, { pen: this.T.cal * .55, v: this.T.v * .75, he: true }) : this.T, this);
@@ -233,6 +233,14 @@ class KasTank {
     fxImpact(p, 'metal', dir); for (let i = 0; i < 12; i++) PS_FIRE.emit(p.x, p.y, p.z, rnd(-4, 4), rnd(0, 4), rnd(-4, 4), .05, .3, .5, 1, 3.5, 2.2, 1);
     sfxBoom(p, .8); play('clang', mine ? null : p, { vol: mine ? 1.5 : 1, rate: .7, ref: 40 });
     let crit = '';
+    // schegge all'interno: feriscono o uccidono membri dell'equipaggio vicini al punto d'impatto
+    const pool = onTurret ? ['cmd', 'gun', 'load', 'load'] : face === 'retro' ? ['drv', 'bow', 'load'] : ['drv', 'bow', 'load', 'gun'], nk = R() < .5 ? 1 : R() < .7 ? 2 : 0, lost = [];
+    for (let i = 0; i < nk; i++) { const m = pick(pool); if (this.crew[m]) { this.crew[m] = 0; lost.push(KAS_CREW[m]); } }
+    if (!this.crew.drv && this.crew.bow) this.drvT = 6;   // il mitragliere passa alla guida
+    if (!onTurret && (face === 'retro' || (face === 'fianco' && lp.z > 0)) && R() < .45) { this.engDmg = Math.min(1, this.engDmg + .5); if (R() < .3) this.fire = 1; crit = this.fire ? 'motore in fiamme' : 'motore colpito'; }
+    if (lost.length && !crit) crit = lost.join(', ') + (lost.length > 1 ? ' fuori combattimento' : ' fuori combattimento');
+    const alive = Object.values(this.crew).reduce((a, b) => a + b, 0);
+    if (alive <= 1) { this.hp = -1; crit = 'l’equipaggio abbandona il carro'; }
     if (!onTurret && face !== 'fronte' && R() < .3) { this.immob = true; crit = 'cingolo spezzato'; }
     else if (onTurret && R() < .25) { this.jam = true; crit = 'torretta bloccata'; }
     if (R() < (face === 'fianco' ? .16 : .08)) { this.hp = -1; crit = 'munizioni esplose'; }
@@ -260,6 +268,10 @@ class KasTank {
     this.reload -= dt; this.mgT -= dt; this.kick = Math.max(0, (this.kick || 0) - dt * 3);
     if (this.player) this.drive(dt); else this.think(dt);
     if (this.immob) this.speed = lerp(this.speed, 0, dt * 3);
+    // equipaggio e motore: chi manca rallenta il carro, il motore colpito toglie potenza, l'incendio distrugge
+    if (!this.crew.drv) { if (this.drvT > 0) { this.drvT -= dt; this.speed = lerp(this.speed, 0, dt * 2); } else if (!this.crew.bow) this.speed = lerp(this.speed, 0, dt * 2); }
+    if (this.engDmg > 0) this.speed = clamp(this.speed, -this.T.vmax * (1 - this.engDmg) * .6, this.T.vmax * (1 - this.engDmg * .6));
+    if (this.fire > 0) { this.fire += dt; if (R() < dt * 12) PS_FIRE.emit(this.pos.x - Math.sin(this.yaw) * 2.2 * -1, this.pos.y + 2, this.pos.z - Math.cos(this.yaw) * -2.2, rnd(-.5, .5), 2, rnd(-.5, .5), .4, 1.2, 1.8, 1, 3, 1.6, .5); if (R() < dt * 6) PS_SMOKE.emit(this.pos.x, this.pos.y + 2.5, this.pos.z, 0, 3, 0, 3, 1.5, 6, .2, .18, .16, .7, 1, -.1); if (this.fire > 14) { this.hp = -1; this.destroy(false, R() < .5); return; } if (this.player && Math.floor(this.fire) !== Math.floor(this.fire - dt) && Math.floor(this.fire) % 3 === 0) showMsg('INCENDIO A BORDO! ' + Math.max(0, Math.ceil(14 - this.fire)) + ' s', 1.5); }
     const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
     this.pos.x += fx * this.speed * dt; this.pos.z += fz * this.speed * dt; this.odo = (this.odo || 0) + Math.abs(this.speed) * dt; if (this.odo > 1.2) { this.odo = 0; kasTrackMark(this); }
     const tk = this.pos.clone(); tk.y += 1.25; pushOut(tk, 2.6, 1.4); this.pos.x = tk.x; this.pos.z = tk.z;
@@ -301,7 +313,7 @@ class KasTank {
       tp.add(this.err.clone().multiplyScalar(Math.min(1, tdist / 600)));
       this.err.multiplyScalar(1 - dt * (this.team === 'A' ? .3 : .16));   // la mira si affina tenendo il bersaglio
       const rel = Math.atan2(-(tp.x - this.pos.x), -(tp.z - this.pos.z)) - this.yaw;
-      if (!this.jam) this.tyaw = angLerpMax(this.tyaw, rel, dt * this.T.trav);
+      if (!this.jam) this.tyaw = angLerpMax(this.tyaw, rel, dt * this.T.trav * (this.crew.gun ? 1 : .45));
       const hd = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z), mz = this.muzzle(new V3()), want = Math.atan2(tp.y - mz.y, hd) + .5 * Math.asin(clamp(9.8 * hd / (this.T.v * this.T.v), -1, 1));
       const wel = Math.asin(clamp(this.aimDir(new V3()).y, -1, 1));   // alzo reale della canna nel mondo (lo scafo può essere inclinato)
       this.gpitch = clamp(this.gpitch + clamp(want - wel, -dt * this.T.elev, dt * this.T.elev), -.2, .35);
@@ -310,7 +322,7 @@ class KasTank {
   }
   drive(dt) {
     const th = (KEYS.KeyW ? 1 : 0) - (KEYS.KeyS ? 1 : 0), st = (KEYS.KeyA ? 1 : 0) - (KEYS.KeyD ? 1 : 0);
-    if (!this.immob) { this.speed = lerp(this.speed, th * (th > 0 ? this.T.vmax : 4), dt * (th ? .6 : 1.4)); this.yaw += st * dt * .5 * (this.speed < 0 ? -1 : 1) * (Math.abs(this.speed) > .5 || th ? 1 : .7); }
+    if (!this.immob && (this.crew.drv || (this.crew.bow && this.drvT <= 0))) { this.speed = lerp(this.speed, th * (th > 0 ? this.T.vmax : 4), dt * (th ? .6 : 1.4)); this.yaw += st * dt * .5 * (this.speed < 0 ? -1 : 1) * (Math.abs(this.speed) > .5 || th ? 1 : .7); }
     if (this.jam) this.ayaw = this.tyaw;
     if (mouseL) this.fireMain(true);
     if (KEYS.KeyF || KEYS.Space) this.fireMG(true);
@@ -353,6 +365,19 @@ function kasTrackMark(t) {
   KAS_TRK.mesh.count = Math.min(KAS_TRK.n, KAS_TRK.max); KAS_TRK.mesh.instanceMatrix.needsUpdate = true;
 }
 // ---------- proiettili ----------
+const KAS_CREW = { cmd: 'capocarro', gun: 'cannoniere', load: 'servente', drv: 'pilota', bow: 'mitragliere' };
+// pannello del carro del giocatore: schema dall'alto colorato secondo i danni e stato dell'equipaggio
+function kasDamagePanel(t) {
+  let el = $('kasDmg');
+  if (!el) { el = document.createElement('div'); el.id = 'kasDmg'; el.style.cssText = 'position:fixed;right:16px;top:96px;width:150px;pointer-events:none;z-index:18;font:600 10px/1.35 Oswald,sans-serif;color:#e8e2cf;text-shadow:0 1px 2px #000;letter-spacing:.06em;text-align:center;background:rgba(10,12,10,.55);padding:8px;border-radius:3px';
+    el.innerHTML = '<svg viewBox="0 0 120 150" width="120" height="150" style="display:block;margin:0 auto"><g stroke="#0c0e09" stroke-width="1.5"><rect id="kdTl" x="14" y="12" width="16" height="126" rx="3"/><rect id="kdTr" x="90" y="12" width="16" height="126" rx="3"/><rect id="kdHull" x="30" y="16" width="60" height="118"/><rect id="kdEng" x="36" y="100" width="48" height="30"/><circle id="kdTur" cx="60" cy="58" r="22"/><rect x="57" y="4" width="6" height="40" fill="#3a3a30"/></g></svg><div id="kdCrew" style="text-align:left;margin-top:4px"></div>';
+    document.body.appendChild(el); }
+  if (!t || P.mode !== 'tank') { el.style.display = 'none'; return; } el.style.display = 'block';
+  const col = (v, lost) => lost ? '#151515' : v > .66 ? '#6fae4f' : v > .33 ? '#d9b443' : '#c8432f', hp = clamp(t.hp / t.hpMax, 0, 1), blink = Math.sin(GAME.time * 10) > 0;
+  $('kdHull').setAttribute('fill', col(hp)); $('kdTur').setAttribute('fill', t.jam ? '#c8432f' : col(hp)); $('kdTl').setAttribute('fill', t.immob ? '#c8432f' : '#6fae4f'); $('kdTr').setAttribute('fill', t.immob ? '#c8432f' : '#6fae4f');
+  $('kdEng').setAttribute('fill', t.fire && blink ? '#ff7a30' : col(1 - t.engDmg));
+  $('kdCrew').innerHTML = Object.entries(KAS_CREW).map(([k, n]) => `<span style="color:${t.crew[k] ? '#cfe8b8' : '#c8432f'}">${t.crew[k] ? '●' : '✕'} ${n}</span>`).join('<br>') + (t.fire ? '<br><b style="color:#ff7a50">INCENDIO</b>' : '');
+}
 const KAS_SHELL_G = new THREE.CylinderGeometry(.06, .06, 1, 5).rotateX(PI / 2);
 function kasShell(o, d, T, owner) {
   const m = new THREE.Mesh(KAS_SHELL_G, new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 2.6, 1.2), transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false }));
@@ -499,7 +524,7 @@ function kasSkirmish(dt) {
   if (w) { KAS.over = true; const win = w === KAS.pteam; GAME.endTitle = w === '-' ? 'PAREGGIO' : win ? 'VITTORIA' : 'SCONFITTA'; GAME.endText = `USA ${KAS.score.A} — Asse ${KAS.score.E}<br>Carri distrutti da te: ${KAS.killed}`; after(4, () => GAME.end(win)); }
 }
 function kasHud() {
-  if (!KAS.el) return;
+  if (!KAS.el) return; kasDamagePanel(TANKS.me);
   const st = Math.min(KAS.stage, 2), C = KAS_PTS[st], me = TANKS.me;
   const dist = me ? Math.round(Math.hypot(me.pos.x - C.x, me.pos.z - C.z)) : 0;
   const foes = KAS.tanks.filter(t => t.alive && t.team === 'E').length, guns = KAS.guns.filter(g => g.alive).length;
