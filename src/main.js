@@ -96,6 +96,7 @@ document.addEventListener('pointerlockchange', () => {
   const locked = renderer && document.pointerLockElement === renderer.domElement;
   GAME.running = locked && GAME.started && !GAME.over;
   if (!locked && GAME.started && !GAME.over) {
+    $('roleBtn').style.display = SCEN === 'kas' || SCEN === 'tun' ? 'none' : '';   // nei carri e nel deathmatch non si cambia ruolo
     { const ps = $('pPlane'); if (!ps.options.length) ps.innerHTML = $('optPlane').innerHTML; ps.value = SETTINGS.plane || 'mission'; $('pPlaneL').style.display = ''; }
     try { speechSynthesis.cancel(); } catch (e) {}
     $('pause').classList.remove('hidden'); mouseL = false; P.trigger = false; P.adsHeld = false; for (const k in KEYS) KEYS[k] = false;
