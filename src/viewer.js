@@ -50,7 +50,7 @@
   for (const t of ['A', 'E']) for (const [k, n] of UN[t]) add('Unità', (t === 'A' ? 'USA · ' : 'Germania · ') + n, 'unit', unit(t, k), t === 'A' ? '29ª Divisione di fanteria, 1944' : '352ª Divisione di fanteria, 1944');
   add('Mezzi', 'Sd.Kfz. 251/1 Ausf. D', 'veh', () => groupMesh(buildHalftrackGeo()), 'semicingolato tedesco, 5,80 × 2,10 m, 2 MG 34, 10 soldati');
   add('Carri armati', 'M4 Sherman (Omaha)', 'veh', () => { const mb = new MB(); addSherman(mb, 0, 0, 0, 0, false); return groupMesh(mb.buildGroups()); }, 'carri DD e del 741° battaglione corazzato a Omaha');
-  add('Mezzi', 'Mezzo da sbarco LCVP (Higgins)', 'ship', () => { if (!LCVP_G) buildBoatGeos(); const g = groupMesh(LCVP_G); if (RAMP_G) g.add(groupMesh(RAMP_G)); return g; });
+  add('Mezzi', 'Mezzo da sbarco LCVP (Higgins)', 'ship', () => { if (!LCVP_G) buildBoatGeos(); const g = groupMesh(LCVP_G); lcvpMarks(g, 1); if (RAMP_G) { const rp = groupMesh(RAMP_G); rp.position.set(0, .25, -5.1); g.add(rp); } return g; });
   add('Strutture', 'Bunker (WN 62)', 'veh', () => { if (!BUNKER_G) buildBunkerGeo(); return groupMesh(BUNKER_G); });
   const GN = { garand: 'M1 Garand', springfield: 'Springfield M1903', thompson: 'Thompson M1A1', bar: 'BAR M1918', colt: 'Colt M1911', bazooka: 'Bazooka M1', kar98: 'Kar98k', kar98zf: 'Kar98k con ottica', mp40: 'MP 40' };
   for (const id in GN) add('Armi', GN[id], 'gun', () => { const g = buildGun(id).group; g.visible = true; g.traverse(o => o.visible = true); return g; });

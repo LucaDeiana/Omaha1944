@@ -126,6 +126,7 @@ function fxMuzzle(p, dir, big) {
   PS_SMOKE.emit(p.x, p.y, p.z, dir.x * 1.5, .4, dir.z * 1.5, rnd(.7, 1.4), .2 * s, 1.4 * s, .3, .55, .55, .55, 1.5, -.3);
 }
 function fxImpact(p, kind, dir) {
+  if (kind === 'water' && typeof waterDrop === 'function') waterDrop(p.x, p.z, .9, -.12, .35);
   if (dist2Cam(p) > 260 * 260) return;
   const near = dist2Cam(p) < 60 * 60;
   if (kind === 'water') {
@@ -151,6 +152,8 @@ function fxShock(p, size) {
   r.m.visible = true; r.m.position.copy(p); r.t = 0; r.s = size;
 }
 function fxExplosion(p, size, water) {
+  if (water && typeof waterDrop === 'function') waterDrop(p.x, p.z, 2 + size * 2.2, -Math.min(1.6, .35 * size), 1);
+  if (water && typeof WORLD !== 'undefined' && WORLD.boats) for (const b of WORLD.boats) if (b.kick) b.kick(p, size);
   const d2 = dist2Cam(p), far = d2 > 500 * 500, near = d2 < 90 * 90;
   flashLight(new V3(p.x, p.y + 2, p.z), 0xffa050, 90 * size, .4);
   if (!far) fxShock(new V3(p.x, p.y + .5, p.z), size * 6);

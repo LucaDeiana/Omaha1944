@@ -74,6 +74,11 @@ function updateWaterSim(dt, focus) {
     U.uShip.value[s * 2 + 1].set(C.L / 2 / WSIM.span, C.B / 2 / WSIM.span, Math.min(2.2, spd * .09 * Math.sqrt(C.B / 10)), clamp(spd / 12, 0, .9));
     s++;
   }
+  for (const h of WSIM.hulls || []) {
+    if (s >= 8) break; if (Math.abs(h.pos.x - nx) > WSIM.span / 2 + h.L || Math.abs(h.pos.z - nz) > WSIM.span / 2 + h.L) continue;
+    const [u, v] = toU(h.pos.x, h.pos.z);
+    U.uShip.value[s * 2].set(u, v, Math.cos(h.yaw), Math.sin(h.yaw)); U.uShip.value[s * 2 + 1].set(h.L / 2 / WSIM.span, h.B / 2 / WSIM.span, Math.min(1, h.spd * .1), clamp(h.spd / 9, 0, .55)); s++;
+  }
   U.uNS.value = s;
   U.uPrev.value = WSIM.a.texture;
   const prev = renderer.getRenderTarget(), xr = renderer.xr && renderer.xr.enabled; if (renderer.xr) renderer.xr.enabled = false;
@@ -96,5 +101,6 @@ function waterHullUniforms(U) {
     if (n >= 8 || sh.sinking > 0) continue; const d = dist2Cam(sh.pos); if (d > 2500 * 2500) continue;
     U.uHA.value[n].set(sh.pos.x, sh.pos.z, Math.cos(sh.yaw), Math.sin(sh.yaw)); U.uHB.value[n].set(sh.C.L / 2, sh.C.B / 2, 0, 0); n++;
   }
+  for (const h of WSIM.hulls || []) { if (n >= 8) break; if (dist2Cam(h.pos) > 400 * 400) continue; U.uHA.value[n].set(h.pos.x, h.pos.z, Math.cos(h.yaw), Math.sin(h.yaw)); U.uHB.value[n].set(h.L / 2, h.B / 2, 0, 0); n++; }
   U.uNH.value = n;
 }

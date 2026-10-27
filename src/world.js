@@ -333,30 +333,53 @@ function buildTerrain() {
 }
 
 // ---------- acqua ----------
+// simulazione d'onda sulla spiaggia: scafi dei mezzi da sbarco, soldati e giocatore a guado
+const _wsH = [];
+function updateBeachWater(dt, t) {
+  const m = WORLD.waterMesh; m.position.set(Math.round(camera.position.x / 4) * 4, WATER_Y, Math.round(camera.position.z / 4) * 4);
+  _wsH.length = 0;
+  for (const b of WORLD.boats) if (b.g.visible && b.state !== 'reload') _wsH.push({ pos: b.g.position, yaw: b.g.rotation.y, spd: b.state === 'move' ? b.speed : b.state === 'return' ? b.speed * 1.1 : 0, L: 10.4, B: 3.4 });
+  WSIM.hulls = _wsH;
+  updateWaterSim(dt, camera.position);
+  const U = waterMat.uniforms; U.uSimOn.value = WSIM.on ? 1 : 0;
+  if (WSIM.on) { U.uSim.value = WSIM.a.texture; U.uSimC.value.set(WSIM.cx, WSIM.cz, WSIM.span); waterHullUniforms(U); }
+  // passi nell'acqua: ogni soldato a guado smuove la superficie
+  WSIM.stepT = (WSIM.stepT || 0) - dt; if (WSIM.stepT > 0) return; WSIM.stepT = .18;
+  const wade = (p, mv) => { const wl = waterLevel(p.x, p.z, t); if (wl - Hf(p.x, p.z) > .15 && dist2Cam(p) < 120 * 120) waterDrop(p.x, p.z, mv ? 1.1 : .7, mv ? .09 : .03, mv ? .35 : .1); };
+  if (P.mode === 'foot' && !P.inBoat) wade(P.pos, true);
+  let n = 0; for (const a of allies) { if (!a.alive || a.state === 'boat' || n > 14) continue; if (a.pos.z > -8 && a.pos.z < 130) { wade(a.pos, a.moving); n++; } }
+}
 function buildWater() {
   waterMat = new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 }, uSunDir: { value: SUN_DIR }, uDeep: { value: col(0x1f363b) }, uShallow: { value: col(0x5a776d) },
       uFog: { value: FOG_COL }, uFogD: { value: scene.fog.density }, tN: { value: TEX.water.normal }, uSky: { value: skyCube },
+      // simulazione d'onda interattiva (la stessa delle battaglie navali): colpi, scafi, scie, soldati a guado
+      uSim: { value: null }, uSimC: { value: new V3(0, 0, WSIM.span) }, uSimOn: { value: 0 }, uNH: { value: 0 },
+      uHA: { value: [...Array(8)].map(() => new THREE.Vector4()) }, uHB: { value: [...Array(8)].map(() => new THREE.Vector4()) },
     },
-    vertexShader: `uniform float uTime;varying vec3 vW;varying vec2 vD;varying float vC;
+    vertexShader: WATER_GLSL.vert + `uniform float uTime,uSimOn;varying vec3 vW;varying vec2 vD;varying float vC;varying float vS;
     float amp(float z){return clamp((z+10.)/60.,.12,1.);}
     void main(){vec4 w=modelMatrix*vec4(position,1.);float a=amp(w.z);
       vec2 d1=vec2(.1,.995),d2=vec2(-.3,.954);
       float p1=.07*dot(d1,w.xz)+1.1*uTime,p2=.13*dot(d2,w.xz)+1.6*uTime+1.3;
       w.y+=a*(.32*sin(p1)+.14*sin(p2));
       vD=a*(.32*.07*cos(p1)*d1+.14*.13*cos(p2)*d2);
+      float hs=uSimOn>.5?simH(w.xz):0.;w.y+=hs;vS=hs;
       vC=sin(p1)*.5+.5;vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`,
-    fragmentShader: `uniform float uTime,uFogD;uniform vec3 uSunDir,uDeep,uShallow,uFog;uniform sampler2D tN;uniform samplerCube uSky;varying vec3 vW;varying vec2 vD;varying float vC;
+    fragmentShader: WATER_GLSL.frag + `uniform float uTime,uFogD,uSimOn;uniform vec3 uSunDir,uDeep,uShallow,uFog;uniform sampler2D tN;uniform samplerCube uSky;varying vec3 vW;varying vec2 vD;varying float vC;varying float vS;
     float bed(vec2 p){return p.y>90.?max(-9.,-.36-(p.y-90.)*.035):p.y>0.?-p.y*.004:min(-p.y,64.)*.04;}
     void main(){
       vec2 p=vW.xz;float t=uTime;
+      if(p.y<-15.||abs(p.x)>2200.||p.y>2290.)discard;
+      if(uSimOn>.5&&cameraPosition.y>vW.y&&inHull(p))discard;
+      vec3 sm=uSimOn>.5?simS(p):vec3(0.);
       vec3 n1=texture2D(tN,p*.045+vec2(t*.012,t*.021)).xyz*2.-1.;
       vec3 n2=texture2D(tN,p*.13-vec2(t*.023,t*.011)).xyz*2.-1.;
       vec3 n3=texture2D(tN,p*.4+vec2(t*.05,-t*.04)).xyz*2.-1.;
       // da lontano (e dall'alto) le onde lunghe si attenuano: niente bande regolari sul mare
       float fk=1.-smoothstep(120.,700.,length(cameraPosition-vW));
-      vec3 n=normalize(vec3(-vD.x*fk,1.,-vD.y*fk)+vec3(n1.x+n2.x*.7+n3.x*.3*fk,0.,n1.y+n2.y*.7+n3.y*.3*fk)*.32*(.35+.65*fk));
+      vec3 n=normalize(vec3(-vD.x*fk-sm.x*.45,1.,-vD.y*fk-sm.y*.45)+vec3(n1.x+n2.x*.7+n3.x*.3*fk,0.,n1.y+n2.y*.7+n3.y*.3*fk)*.32*(.35+.65*fk));
       vec3 v=normalize(cameraPosition-vW);
       float fr=.02+.98*pow(1.-max(dot(n,v),0.),5.);
       vec3 r=reflect(-v,n);r.y=abs(r.y);
@@ -370,16 +393,22 @@ function buildWater() {
       float foam=smoothstep(.5,.0,depth)*pat*.85;
       foam+=smoothstep(.86,.99,vC)*.22*pat*clamp((40.-vW.z)/40.,0.,1.);
       c=mix(c,vec3(.72,.74,.73),clamp(foam,0.,1.)*.75);
+      float sf=sm.z*(.6+.4*(n2.x*.5+.5));c=mix(c,vec3(.86,.89,.9),clamp(sf*1.5,0.,.9));
       float fd=length(cameraPosition-vW);c=mix(c,uFog,1.-exp(-uFogD*uFogD*fd*fd));
-      gl_FragColor=vec4(c,clamp(depth*.9+.18+fr*.6+foam*.5,0.,1.));
+      gl_FragColor=vec4(c,clamp(depth*.9+.18+fr*.6+foam*.5+sf,0.,1.));
       #include <tonemapping_fragment>
       #include <encodings_fragment>
     }`,
     transparent: true,
   });
-  const g = new THREE.PlaneGeometry(4400, 2300, 400, 230); g.rotateX(-PI / 2);
-  const m = new THREE.Mesh(g, waterMat); m.position.set(0, WATER_Y, 1135); m.renderOrder = 1; m.frustumCulled = false;
-  scene.add(m);
+  // maglia radiale che segue la camera: anelli fitti vicino (le increspature della simulazione hanno rilievo vero), larghi lontano
+  const rs = [0]; let r = 0, st = .7; while (r < 3600) { r += st; st *= 1.035; rs.push(r); }
+  const seg = 160, pos = [], idx = [];
+  for (let i = 0; i < rs.length; i++) for (let j = 0; j < seg; j++) { const a = j / seg * TAU; pos.push(Math.cos(a) * rs[i], 0, Math.sin(a) * rs[i]); }
+  for (let i = 0; i < rs.length - 1; i++) for (let j = 0; j < seg; j++) { const a = i * seg + j, b = i * seg + (j + 1) % seg, c = a + seg, d = b + seg; idx.push(a, b, c, b, d, c); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
+  const m = new THREE.Mesh(g, waterMat); m.position.set(0, WATER_Y, 0); m.renderOrder = 1; m.frustumCulled = false;
+  scene.add(m); WORLD.waterMesh = m;
 }
 
 // aggiunge un MB alla scena diviso in tasselli
@@ -393,62 +422,95 @@ function groupMesh(groups, cast = true) {
 // ---------- mezzo da sbarco LCVP ----------
 let LCVP_G, RAMP_G;
 function buildBoatGeos() {
-  const mb = new MB(), c = 0x4b574f, d = 0x3d4740;
-  // scafo sagomato: fondo a V che si alza verso la prua, fianchi leggermente svasati
+  // LCVP Higgins (1944): 11 × 3,3 m, scafo di compensato a spigolo vivo con fianchi dritti, fondo che
+  // si rialza verso la rampa d'acciaio, ponte di poppa sopra il diesel Gray 6-71, pozzetto del timoniere
+  // con scudi corazzati, due vasche con Browning M1919 .30, verricello della rampa con i cavi lungo le falchette.
+  // Grigio oceano della US Navy. Il davanti è verso -z (cerniera della rampa a z = -5,1).
+  const mb = new MB(), c = 0x5a676c, d = 0x4a565b, k = 0x2a2c2c, dk = 0x3f4a4f, inn = 0x66706f;
+  const B = (col, x, y, z, rx, ry, rz, w, h, l) => mb.add(U.box, col, x, y, z, rx, ry, rz, w, h, l);
+  const C = (col, x, y, z, rx, ry, rz, r, h, r2) => mb.add(U.cyl12, col, x, y, z, rx, ry, rz, r, h, r2 ?? r);
+  // scafo: sezioni a spigolo (fianco dritto, spigolo, fondo con leggera V) che si alzano verso prua
   const secs = [];
-  for (let i = 0; i <= 12; i++) {
-    const z = 5.1 - i * (10.2 / 12), t = i / 12, k = lerp(-.28, .12, t * t), sw = 1.66 + Math.sin(t * PI) * .06;
-    const ring = [[-sw - .04, 2.1], [-sw - .02, 1.3], [-sw + .04, .55], [-sw + .3, .12], [-.75, k + .06], [0, k], [.75, k + .06], [sw - .3, .12], [sw - .04, .55], [sw + .02, 1.3], [sw + .04, 2.1], [0, 2.1]];
+  for (let i = 0; i <= 14; i++) {
+    const t = i / 14, z = 5.2 - t * 10.3, kb = lerp(-.3, -.22, t) + Math.pow(Math.max(0, t - .7) / .3, 2) * .52, sw = 1.68 - Math.pow(Math.max(0, t - .92) / .08, 2) * .06;
+    const ring = [[-sw, 2.1], [-sw, 1.25], [-sw + .01, .5], [-sw + .14, kb + .3], [-.8, kb + .1], [0, kb], [.8, kb + .1], [sw - .14, kb + .3], [sw - .01, .5], [sw, 1.25], [sw, 2.1], [0, 2.1]];
     secs.push(ring.map(([x, y]) => new V3(x, y, z)));
   }
-  const hull = loftGeo(secs, (p) => col(p.y < .35 ? 0x3c4640 : p.y > 1.95 ? 0x4a564e : 0x56635a), false, 1, (x, y) => y > 2.05 && Math.abs(x) < 1.6);
-  mb.mat = 'paint'; mb.addG(hull);
+  mb.mat = 'paint';
+  mb.addG(loftGeo(secs, p => col(p.y < .3 ? 0x2f3638 : p.y > 2.0 ? d : c), false, 1, (x, y) => y > 2.05 && Math.abs(x) < 1.6));
   for (const sx of [-1, 1]) {
-    mb.add(U.box, d, sx * 1.53, 1.15, .1, 0, 0, 0, .1, 1.8, 10);          // fasciame interno
-    mb.add(U.box, 0x3a443e, sx * 1.74, 2.12, 0, 0, 0, 0, .3, .1, 10.3);   // capodibanda
-    mb.add(U.box, 0x3a443e, sx * 1.76, 1.3, 0, 0, 0, 0, .08, .12, 10.2);  // bottazzo
-    mb.add(U.box, d, sx * 1.6, 1.08, -5.05, 0, 0, 0, .34, 2.1, .3);       // montanti di prua
-    for (let i = -4.2; i <= 4.2; i += 1.05) mb.add(U.box, 0x3c4740, sx * 1.43, 1.15, i, 0, 0, 0, .12, 1.6, .1); // ordinate
-    for (const z of [-3.5, 0, 3.4]) { mb.add(U.cyl, 0x2a2a2a, sx * 1.7, 2.2, z, 0, 0, 0, .05, .1, .05); mb.add(U.box, 0x2a2a2a, sx * 1.7, 2.26, z, 0, 0, 0, .06, .04, .3); } // bitte
+    B(dk, sx * 1.705, .52, 0, 0, 0, 0, .06, .08, 10.2);                     // spigolo di prua (paraspruzzi)
+    B(k, sx * 1.73, 1.32, 0, 0, 0, 0, .1, .14, 10.3);                       // bottazzo
+    B(d, sx * 1.62, 2.13, 0, 0, 0, 0, .26, .08, 10.3);                      // falchetta
+    B(inn, sx * 1.5, 1.2, -1.1, 0, 0, 0, .08, 1.7, 7.8);                    // fasciame interno del vano truppe
+    for (let z = -4.6; z <= 2.4; z += .78) B(dk, sx * 1.44, 1.2, z, 0, 0, 0, .08, 1.65, .09);   // ordinate
+    for (const y of [.95, 1.6]) B(dk, sx * 1.45, y, -1.1, 0, 0, 0, .06, .08, 7.8);           // correnti
+    for (const z of [-4.4, -1.5, 1.4]) { C(k, sx * 1.6, 2.24, z, 0, 0, 0, .05, .14); B(k, sx * 1.6, 2.32, z, 0, 0, 0, .06, .04, .26); }   // bitte
+    B(d, sx * 1.6, 1.1, -5.05, 0, 0, 0, .36, 2.1, .3);                      // montanti della rampa
+    C(k, sx * 1.58, 2.25, -5.05, 0, 0, PI / 2, .1, .16);                    // pulegge dei cavi
+    // cavi del verricello lungo le falchette fino alla rampa
+    mb.between(new V3(sx * 1.5, 2.2, 3.7), new V3(sx * 1.58, 2.28, -5.0), .012, k, U.cyl);
+    // parabordi di corda
+    for (const z of [-3.2, 0, 3.2]) C(0x7a6a4a, sx * 1.78, 1.55, z, 0, 0, 0, .09, .5);
   }
-  mb.add(U.box, c, 0, 1.15, 5.05, 0, 0, 0, 3.4, 2.1, .14);
-  // postazione del timoniere con scudi corazzati
-  mb.add(U.box, d, 0, 1.3, 4.5, 0, 0, 0, 3.1, .12, 1.0);
-  mb.add(U.box, c, .9, 2.35, 4.15, 0, 0, 0, .9, .55, .08); mb.add(U.box, c, -.9, 2.35, 4.15, 0, 0, 0, .9, .55, .08);
-  mb.add(U.box, 0x2c2c2c, .9, 2.45, 4.2, 0, 0, 0, .3, .12, .1);
-  mb.add(U.cyl12, 0x1d1d1d, .9, 1.85, 4.55, PI / 2, 0, 0, .2, .04, .2); mb.add(U.cyl, 0x333333, .9, 1.6, 4.6, 0, 0, 0, .04, .5, .04);
-  // vano motore e scarico
-  mb.add(U.box, 0x4a564e, 0, .9, 3.6, 0, 0, 0, 1.3, .8, 1.4); mb.add(U.box, 0x3d4842, 0, 1.32, 3.6, 0, 0, 0, 1.36, .06, 1.46);
-  mb.add(U.cyl, 0x2b2622, -1.2, 2.1, 4.9, 0, 0, 0, .09, .7, .09);
-  // mitragliatrici Browning .30 sulle ralle di poppa
-  for (const sx of [-1, 1]) {
-    mb.add(U.cyl12, 0x2e2e2e, sx * 1.35, 2.2, 4.75, 0, 0, 0, .12, .05, .12); mb.add(U.cyl, 0x333333, sx * 1.35, 2.35, 4.75, 0, 0, 0, .03, .3, .03);
-    mb.add(U.box, 0x1e1e1e, sx * 1.35, 2.52, 4.6, 0, 0, 0, .1, .16, .4); mb.add(U.cyl, 0x1a1a1a, sx * 1.35, 2.56, 4.0, PI / 2 - .2, 0, 0, .03, 1.0, .03);
-    mb.add(U.cyl, 0x1a1a1a, sx * 1.35, 2.55, 4.25, PI / 2 - .2, 0, 0, .05, .45, .05); mb.add(U.box, 0x3d3a2a, sx * 1.42, 2.45, 4.6, 0, 0, 0, .1, .12, .18);
-  }
-  // pagliolato bagnato con acqua sul fondo
+  // pagliolato del vano truppe, sentina bagnata, rinforzi trasversali
   mb.mat = 'wood';
-  for (let x = -1.35; x <= 1.36; x += .3) mb.add(U.box, 0x6a5440, x, .44, -.4, 0, 0, 0, .27, .05, 8.6);
-  for (let i = -4 ; i <= 3; i += 1.4) mb.add(U.box, 0x5a4636, 0, .47, i, 0, 0, 0, 3, .03, .1);
+  for (let x = -1.3; x <= 1.31; x += .26) B(0x6b5a46, x, .44, -1.1, 0, 0, 0, .23, .05, 7.7);
+  for (let z = -4.6; z <= 2.3; z += 1.15) B(0x58483a, 0, .47, z, 0, 0, 0, 2.85, .03, .08);
   mb.mat = 'vc';
-  for (let i = 0; i < 7; i++) mb.add(U.cyl12, 0x1c2622, rnd(-1, 1), .472, rnd(-4.3, 2), 0, 0, 0, rnd(.3, .7), .005, rnd(.4, 1.1)); // pozze d'acqua
-  for (let i = 0; i < 6; i++) mb.add(U.box, R() < .5 ? 0x3a3a2a : 0x4a4230, rnd(-1.2, 1.2), .56, rnd(-4, 2.5), 0, R() * 3, 0, rnd(.3, .55), .2, rnd(.25, .45)); // casse e zaini
+  for (let i = 0; i < 7; i++) C(0x1c2624, rnd(-1, 1), .472, rnd(-4.3, 2), 0, 0, 0, rnd(.3, .7), .005, rnd(.4, 1.1));
+  for (let i = 0; i < 5; i++) B(R() < .5 ? 0x3a3a2a : 0x4a4230, rnd(-1.15, 1.15), .56, rnd(-4, 1.8), 0, R() * 3, 0, rnd(.3, .55), .2, rnd(.25, .45));
+  mb.mat = 'paint';
+  // paratia del vano motore e ponte di poppa
+  B(c, 0, 1.25, 2.72, 0, 0, 0, 3.05, 1.65, .08); B(d, 0, 2.08, 3.95, 0, 0, 0, 3.3, .08, 2.55);
+  B(c, 0, 1.15, 5.2, 0, 0, 0, 3.4, 2.05, .1);                                // specchio di poppa
+  // portello del motore con feritoie, due scarichi del diesel
+  B(dk, -.25, 2.14, 3.55, 0, 0, 0, 1.1, .05, 1.2); for (let i = 0; i < 6; i++) B(k, -.25, 2.17, 3.08 + i * .18, 0, 0, 0, .9, .02, .05);
+  for (const sx of [-1, 1]) { C(k, sx * .55 - .25, 2.28, 4.95, 0, 0, 0, .07, .35); C(k, sx * .55 - .25, 2.46, 5.05, PI / 2.6, 0, 0, .07, .25); }
+  // verricello della rampa
+  C(k, 0, 2.3, 2.95, 0, 0, PI / 2, .16, 1.1); for (const sx of [-1, 1]) B(dk, sx * .6, 2.22, 2.95, 0, 0, 0, .08, .25, .3);
+  // pozzetto del timoniere: scudi corazzati, timone, manette, bussola
+  B(0x2e3436, .55, 1.6, 4.45, 0, 0, 0, .9, .1, .9);
+  for (const [x, z, w, l] of [[.55, 3.98, .95, .06], [.1, 4.45, .06, .9], [1.0, 4.45, .06, .9]]) B(d, x, 2.45, z, 0, 0, 0, w, .7, l);
+  B(0x1a2226, .55, 2.62, 3.95, 0, 0, 0, .35, .1, .07);                       // feritoia di guida
+  C(k, .55, 2.25, 4.15, PI / 2 - .5, 0, 0, .19, .03); C(k, .55, 2.1, 4.25, -.5, 0, 0, .025, .4);
+  B(k, .9, 2.2, 4.4, 0, 0, 0, .08, .25, .08); C(0x8a7a50, .25, 2.3, 4.25, 0, 0, 0, .07, .1);
+  // vasche delle mitragliatrici con Browning M1919A4 su perno
+  for (const sx of [-1, 1]) {
+    const x = sx * 1.05, z = 3.25 + (sx > 0 ? .9 : 0);
+    if (sx > 0) continue;
+    C(d, x, 2.3, z, 0, 0, 0, .42, .4); C(0x2a3032, x, 2.31, z, 0, 0, 0, .38, .42);
+    C(k, x, 2.65, z, 0, 0, 0, .03, .4); B(k, x, 2.88, z - .1, 0, 0, 0, .1, .14, .35);
+    C(0x1a1a1a, x, 2.9, z - .6, PI / 2 - .12, 0, 0, .028, .9); C(0x1a1a1a, x, 2.9, z - .3, PI / 2 - .12, 0, 0, .045, .35); B(0x3d3a2a, x + .1, 2.82, z, 0, 0, 0, .1, .1, .16);
+  }
+  for (const x of [1.15]) { C(d, x, 2.3, 2.95, 0, 0, 0, .38, .4); C(0x2a3032, x, 2.31, 2.95, 0, 0, 0, .34, .42); C(k, x, 2.65, 2.95, 0, 0, 0, .03, .4); B(k, x, 2.88, 2.85, 0, 0, 0, .1, .14, .35); C(0x1a1a1a, x, 2.9, 2.35, PI / 2 - .12, 0, 0, .028, .9); C(0x1a1a1a, x, 2.9, 2.65, PI / 2 - .12, 0, 0, .045, .35); }
+  // bandiera di poppa
+  C(k, -1.3, 2.75, 5.1, 0, 0, 0, .015, 1.3);
   LCVP_G = mb.buildGroups();
-  // rampa: lamiera rinforzata, cerniere e cavi
+  // rampa d'acciaio: lamiera con rinforzi esterni a griglia, listelli antiscivolo, cerniere, golfari dei cavi
   const rb = new MB(); rb.mat = 'paint';
-  rb.add(U.box, 0x55625a, 0, 1.02, 0, 0, 0, 0, 3.2, 2.05, .12);
-  for (const y of [.3, .7, 1.1, 1.5, 1.85]) rb.add(U.box, 0x66726a, 0, y, -.1, 0, 0, 0, 3.1, .07, .09);
-  for (const x of [-1.25, -.6, 0, .6, 1.25]) rb.add(U.box, 0x66726a, x, 1, -.1, 0, 0, 0, .07, 1.95, .09);
-  for (const y of [.3, .7, 1.1, 1.5]) rb.add(U.box, 0x4f5a52, 0, y, .08, 0, 0, 0, 2.9, .04, .05); // listelli antiscivolo
-  rb.add(U.box, 0x555f58, 0, 2.05, -.02, 0, 0, 0, 3.25, .08, .22);
-  for (const x of [-1.2, -.4, .4, 1.2]) rb.add(U.cyl12, 0x30302c, x, .05, 0, 0, 0, PI / 2, .07, .3, .07); // cerniere
-  rb.mat = 'vcMetal';
-  for (const sx of [-1, 1]) for (let k = 0; k < 6; k++) rb.add(U.box, 0x22201e, sx * 1.45, 1.98 + k * .02, .12 + k * .1, 1.2, 0, 0, .025, .07, .04); // cavi del verricello
+  rb.add(U.box, 0x55625f, 0, 1.02, 0, 0, 0, 0, 3.22, 2.05, .1);
+  for (const y of [.25, .65, 1.05, 1.45, 1.85]) rb.add(U.box, 0x63706d, 0, y, -.11, 0, 0, 0, 3.12, .08, .1);
+  for (const x of [-1.3, -.78, -.26, .26, .78, 1.3]) rb.add(U.box, 0x63706d, x, 1.02, -.11, 0, 0, 0, .07, 1.98, .1);
+  for (let y = .2; y < 1.95; y += .22) rb.add(U.box, 0x4a5552, 0, y, .07, 0, 0, 0, 2.95, .035, .04);
+  rb.add(U.box, 0x4e5a57, 0, 2.06, -.02, 0, 0, 0, 3.26, .09, .24);
+  for (const x of [-1.2, -.4, .4, 1.2]) rb.add(U.cyl12, 0x30302c, x, .05, 0, 0, 0, PI / 2, .07, .3, .07);
+  for (const sx of [-1, 1]) { rb.add(U.box, 0x2a2c2c, sx * 1.45, 1.98, .1, 0, 0, 0, .08, .12, .12); rb.add(U.cyl12, 0x2a2c2c, sx * 1.45, 2.05, .16, PI / 2, 0, 0, .04, .03, .04); }
   RAMP_G = rb.buildGroups();
+}
+// numeri di scafo dipinti in bianco a prua (nave madre - numero del mezzo), come sugli LCVP dell'USS Samuel Chase (APA-26)
+const LCVP_MARK = {};
+function lcvpMarks(g, n) {
+  const id = 'PA26-' + (10 + (n * 7) % 30);
+  let m = LCVP_MARK[id];
+  if (!m) { const t = canvasTex(256, (c, S) => { c.clearRect(0, 0, S, S); c.fillStyle = 'rgba(235,235,225,.92)'; c.font = 'bold 50px Arial Narrow, Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(id, S / 2, S / 2); });
+    m = LCVP_MARK[id] = new THREE.MeshStandardMaterial({ map: t, transparent: true, roughness: .8, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }); }
+  for (const sx of [-1, 1]) decal(g, m, 1.5, 1.5, sx * 1.69, 1.68, -1.7, 0, sx * PI / 2, 0);
 }
 class Boat {
   constructor(x, z0, speed, stopZ) {
     this.g = groupMesh(LCVP_G);
+    lcvpMarks(this.g, WORLD.boats.length);
     this.pivot = new THREE.Group(); this.pivot.position.set(0, .25, -5.1); this.g.add(this.pivot);
     this.pivot.add(groupMesh(RAMP_G));
     this.x = x; this.z = z0; this.speed = speed; this.stopZ = stopZ; this.state = 'move'; this.ramp = 0; this.ph = R() * 10; this.sinkT = 0; this.y = 0;
@@ -504,15 +566,27 @@ class Boat {
       this.ramp = Math.min(1, this.ramp + dt * .85); this.pivot.rotation.x = -1.45 * smooth(this.ramp);
       if (this.ramp >= 1) { const p = new V3(this.x, WATER_Y, this.z - 7); fxImpact(p, 'water'); play('imp_water', p, { ref: 20, vol: 1.5, rate: .6 }); }
     }
-    let y = .32 + waveH(this.x, this.z, t) * (this.state === 'move' || this.state === 'return' ? 1 : .35);
-    const pitch = this.state === 'move' ? (waveH(this.x, this.z - 4, t) - waveH(this.x, this.z + 4, t)) * .1 : 0;
+    // galleggiamento: onda misurata a prua, a poppa e sui fianchi; lo scafo la insegue con inerzia (molla smorzata)
+    const ry = this.g.rotation.y, fx = -Math.sin(ry), fz = -Math.cos(ry), afloat = this.state === 'move' || this.state === 'return', kw = afloat ? 1 : .3;
+    const hB = waveH(this.x + fx * 4.6, this.z + fz * 4.6, t) * kw, hS = waveH(this.x - fx * 4.6, this.z - fz * 4.6, t) * kw;
+    const hL = waveH(this.x + fz * 1.6, this.z - fx * 1.6, t) * kw, hR = waveH(this.x - fz * 1.6, this.z + fx * 1.6, t) * kw;
+    const spd = this.state === 'move' ? this.speed : this.state === 'return' && this.ramp <= 0 ? this.speed * 1.1 : 0;
+    const ty = .32 + (hB + hS + hL + hR) * .25, tp = Math.atan2(hS - hB, 9.2) - spd * .006, tr = Math.atan2(hL - hR, 3.3) * .8;
+    const ph = this.phys || (this.phys = { y: ty, vy: 0, p: 0, vp: 0, r: 0, vr: 0 }), sd = Math.min(dt, .05);
+    ph.vy += ((ty - ph.y) * 9 - ph.vy * 3.2) * sd; ph.y += ph.vy * sd;
+    ph.vp += ((tp - ph.p) * 7 - ph.vp * 2.6) * sd; ph.p += ph.vp * sd;
+    ph.vr += ((tr - ph.r) * 6 - ph.vr * 1.4) * sd; ph.r += ph.vr * sd;
+    if (!afloat) { ph.y = Math.max(ph.y, .32 - .05); }
+    let y = ph.y;
     if (this.state === 'sunk') { this.sinkT += dt; y -= Math.min(1.7, this.sinkT * .25); this.g.rotation.z = Math.min(.35, this.sinkT * .05); }
     this.y = y;
     this.g.position.set(this.x, y, this.z);
-    if (this.state !== 'sunk') { this.g.rotation.x = pitch; this.g.rotation.z = Math.sin(t * 1.3 + this.ph) * .025 * (this.state === 'move' ? 1 : .2); }
+    if (this.state !== 'sunk') { this.g.rotation.x = -ph.p; this.g.rotation.z = -ph.r; }
     this.g.updateMatrixWorld();
   }
   toWorld(off, out) { return out.copy(off).applyMatrix4(this.g.matrixWorld); }
+  // esplosione vicina: l'onda d'urto solleva e fa rollare lo scafo
+  kick(p, size) { const ph = this.phys; if (!ph) return; const dx = this.x - p.x, dz = this.z - p.z, d = Math.hypot(dx, dz); if (d > 12 + size * 8) return; const k = size / (1 + d * .25); ph.vy += k * 1.6; ph.vr += Math.sign(dx || 1) * k * .25; ph.vp += Math.sign(-dz || 1) * k * .12; }
 }
 
 // ---------- bunker e cannoni da 88 ----------
@@ -1096,6 +1170,7 @@ function buildTobruks() {
 
 function updateWorld(dt, t) {
   waterMat.uniforms.uTime.value = t; waterMat.uniforms.uFogD.value = scene.fog.density;
+  if (WORLD.waterMesh && WORLD.waterMesh.visible) updateBeachWater(dt, t);
   if (WORLD.grassMat && WORLD.grassMat.userData.sh) WORLD.grassMat.userData.sh.uniforms.uTime.value = t;
   for (const b of WORLD.boats) b.update(dt, t);
   updateTrees(dt);
