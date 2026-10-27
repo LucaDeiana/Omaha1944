@@ -74,6 +74,7 @@
       <button class="mmb" data-go="sea">BATTAGLIE NAVALI<small>Pearl Harbor, Midway, la Manica</small></button>
       <button class="mmb" data-go="armor">GUERRA CORAZZATA<small>Sherman contro Tiger a Kasserine</small></button>
       <button class="mmb" data-go="air">CIELI D'EUROPA<small>Caccia, bombardieri, portaerei</small></button>
+      <button class="mmb" data-go="career">CARRIERA<small>Grado, medaglie e missioni completate</small></button>
       <button class="mmb" data-go="opts">IMPOSTAZIONI<small>Grafica, audio, comandi</small></button>
       <button class="mmb" data-go="models">MODELLI 3D<small>Navi, aerei, mezzi e armi da vicino</small></button>
       <button class="mmb" data-go="intro">RIVEDI L'INTRODUZIONE</button>
@@ -260,7 +261,7 @@
     if (map && map !== 'opts') { const sel = $('optMap'); if (sel && sel.value !== map) { sel.value = map; sel.dispatchEvent(new Event('change')); } }
     if (map === 'opts') { const q = $('optQuality'); if (q) q.scrollIntoView({ block: 'center' }); } else m.scrollTop = 0;
   }
-  mm.addEventListener('click', e => { const b = e.target.closest('.mmb'); if (!b) return; const go = b.dataset.go; if (go === 'models') { window.open('viewer.html', '_blank'); return; }
+  mm.addEventListener('click', e => { const b = e.target.closest('.mmb'); if (!b) return; const go = b.dataset.go; if (go === 'models') { window.open('viewer.html', '_blank'); return; } if (go === 'career') { if (window.CAREER || typeof CAREER !== 'undefined') CAREER.show(); return; }
     if (go === 'intro') return playIntro(); if (go === 'cred') { cr.style.display = 'flex'; return; } openSetup(go); });
   cr.addEventListener('click', () => cr.style.display = 'none');
   root.addEventListener('click', () => state === 'gate' ? startStudio() : skip());
