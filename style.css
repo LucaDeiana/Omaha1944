@@ -151,3 +151,6 @@ kbd { background: #2a2e2a; border: 1px solid #4a5040; padding: 1px 7px; border-r
 #endBoard{margin-top:12px;font:14px Oswald,sans-serif}#endBoard table{margin:6px auto}#endBoard .me{color:#ffd060}
 
 #tankSight .usR{display:none}#tankSight.us .usR{display:block}#tankSight.us .deR{display:none}#tankSight .usR{position:absolute;left:50%;top:50%;width:76vh;height:76vh;transform:translate(-50%,-50%)}
+/* in cabina: i dati di volo stanno sugli strumenti; in alto resta solo una riga piccola, niente aiuto sopra il cruscotto */
+#planehud.ck { bottom: auto; top: 62px; font-size: 12px; opacity: .8; }
+#planehud.ck small { display: none; }
