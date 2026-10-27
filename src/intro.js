@@ -85,6 +85,7 @@
       <button class="mmb" data-go="models">MODELLI 3D<small>Navi, aerei, mezzi e armi da vicino</small></button>
       <button class="mmb" data-go="intro">RIVEDI L'INTRODUZIONE</button>
       <button class="mmb" data-go="cred">RICONOSCIMENTI</button>
+      <button class="mmb" data-go="quit">ESCI DAL GIOCO</button>
     </div>
     <div class="ft">${LOGO}<span>UNA PRODUZIONE «LE PALLE DI LUCA SONO PICCINE PICCINE»</span></div>`;
   const cr = document.createElement('div'); cr.id = 'mmCredits';
@@ -254,6 +255,11 @@
   }
   function playIntro() { mm.style.display = 'none'; root.style.display = 'block'; state = 'gate'; last = 0; cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); if (AC) startStudio(); else { state = 'gate'; } }
 
+  // uscita: nel programma installato chiude la finestra; nel browser la scheda va chiusa a mano
+  function quitGame(b) {
+    try { window.close(); } catch (e) { }
+    setTimeout(() => { if (!window.closed) b.innerHTML = 'ESCI DAL GIOCO<small>Nel browser chiudi la scheda (Ctrl+W)</small>'; }, 300);
+  }
   // sfondo animato del menù: mare notturno con fari che frugano il cielo e una corazzata in lontananza
   let mmRaf = 0, MENUV = false;
   function menuBg() {
@@ -278,7 +284,7 @@
     if (map && map !== 'opts') { const sel = $('optMap'); if (sel && sel.value !== map) { sel.value = map; sel.dispatchEvent(new Event('change')); } }
     if (map === 'opts') { const q = $('optQuality'); if (q) q.scrollIntoView({ block: 'center' }); } else m.scrollTop = 0;
   }
-  mm.addEventListener('click', e => { const b = e.target.closest('.mmb'); if (!b) return; const go = b.dataset.go; if (go === 'models') { location.href = 'viewer.html'; return; } if (go === 'career') { if (window.CAREER || typeof CAREER !== 'undefined') CAREER.show(); return; }
+  mm.addEventListener('click', e => { const b = e.target.closest('.mmb'); if (!b) return; const go = b.dataset.go; if (go === 'models') { location.href = 'viewer.html'; return; } if (go === 'quit') { quitGame(b); return; } if (go === 'career') { if (window.CAREER || typeof CAREER !== 'undefined') CAREER.show(); return; }
     if (go === 'intro') return playIntro(); if (go === 'cred') { cr.style.display = 'flex'; return; } openSetup(go); });
   cr.addEventListener('click', () => cr.style.display = 'none');
   root.addEventListener('click', () => state === 'gate' ? startStudio() : skip());
