@@ -202,6 +202,7 @@ function snpBuilding(team) {
   // facciata: zoccolo in pietra e insegna
   mb.mat = 'plaster'; { const [x0, x1, z0, z1] = snpBoxW(team, -W2 - .1, W2 + .1, -.12, .1); mb.add(U.box, 0x8a8478, (x0 + x1) / 2, SNP.G + .35, (z0 + z1) / 2, 0, 0, 0, x1 - x0, .7, z1 - z0); }
   mb.mat = 'vc'; { const p = snpW(team, 0, -.08); mb.add(U.box, A ? 0x1e2a3a : 0x2a2420, p.x, SNP.G + FH - .65, p.z, 0, 0, 0, 9, .7, .06); }
+  snpFurnish(mb, team);
   // facciata: lesene, cornici delle finestre, bugnato al piano terra, cornicione e tetto a mansarda sul retro
   const RYt = 3 * FH, fx = (u, v, y, w, h, d, c, m) => { mb.mat = m; const p = snpW(team, u, v); mb.add(U.box, c, p.x, SNP.G + y, p.z, 0, 0, 0, w, h, d); };
   const pil = A ? 0xe4d8be : 0xc9bb9a, rust = A ? 0xb9ab8e : 0x9a8c72, sur = A ? 0xeee4cc : 0xd2c4a2;
@@ -416,7 +417,7 @@ function snpStreet() {
   for (let i = 0; i < 40; i++) { const x = srand(-60, 60), z = srand(zE + 4, zA - 4), y = snpH(x, z); mb.mat = SNP_RNG() < .5 ? 'brick' : 'stone'; const n = 3 + (SNP_RNG() * 6 | 0); for (let k = 0; k < n; k++) mb.add(U.box, spick([0x7d6a5a, 0x8a7766, 0x6a5a4c, 0x8a4a36, 0x9a8e7c]), x + srand(-1.5, 1.5), y + srand(.05, .5), z + srand(-1.5, 1.5), srand(-.6, .6), srand(0, 3), srand(-.6, .6), srand(.3, 1.1), srand(.2, .5), srand(.3, .9)); if (i % 3 === 0) addSolid(x - 1, G - 1, z - 1, x + 1, y + .6, z + 1, 'crate'); }
   // grandi cumuli dove sono crollate le case ai lati della strada
   for (const [x, z, r] of [[-52, -132, 7], [55, -166, 8], [-56, -172, 6], [50, -126, 5]]) { mb.mat = 'brick'; for (let k = 0; k < 40; k++) { const a = SNP_RNG() * TAU, d = Math.sqrt(SNP_RNG()) * r, h = (1 - d / r) * 2.4; mb.add(U.box, spick([0x7d6a5a, 0x8a7766, 0x6a5a4c, 0x8a4a36]), x + Math.cos(a) * d, G + h * SNP_RNG(), z + Math.sin(a) * d, srand(-.6, .6), srand(0, 3), srand(-.6, .6), srand(.5, 1.4), srand(.3, .7), srand(.5, 1.2)); } }
-  addTiled(mb, 60);
+  snpStreetProps(mb); addTiled(mb, 60);
   // case in rovina ai lati e fondali di città dietro i palazzi
   const ruins = new MB();
   const house = (cx, cz, w, d, ht, face, style, ruined, solid = true) => { cityHouseGeo(ruins, { cx, cz, w, d, ht, face, style, base: snpH(cx, cz) - .2 }, ruined); if (solid) addSolid(cx - w / 2, G - 1, cz - d / 2, cx + w / 2, G + ht, cz + d / 2, 'house'); };
