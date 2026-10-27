@@ -21,12 +21,12 @@ function updateNaval(dt) {
   if (Math.abs(camera.fov - fov) > .01) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 10)); camera.updateProjectionMatrix(); }
   camera.getWorldDirection(_nd);
   const t = rayTerrain(camera.position, _nd, 2800);
-  if (t > 0) { NAV.target = camera.position.clone().addScaledVector(_nd, t); NAV.range = NAV.target.distanceTo(T.g.position); }
+  if (t > 0) { NAV.target = camera.position.clone().addScaledVector(_nd, t); NAV.range = NAV.target.distanceTo(T.pos || T.g.position); }
   else { NAV.target = null; NAV.range = 0; }
   // la torretta insegue il puntamento con velocità di brandeggio limitata
-  const want = NAV.target ? Math.atan2(-(NAV.target.x - T.g.position.x), -(NAV.target.z - T.g.position.z)) : NAV.yaw;
+  const want = NAV.target ? Math.atan2(-(NAV.target.x - (T.pos || T.g.position).x), -(NAV.target.z - (T.pos || T.g.position).z)) : NAV.yaw;
   T.yaw = angLerpMax(T.yaw, want, .22 * dt);
-  T.g.rotation.y = T.yaw;
+  T.g.rotation.y = T.yaw - (T.base || 0);
   const wantEl = NAV.target ? clamp(Math.asin(clamp(NAV.range * 9.8 / (620 * 620), -1, 1)) / 2 + .02, .02, .5) : .05;
   T.elev = lerp(T.elev, wantEl, dt * .8); T.pitch.rotation.x = T.elev;
   NAV.reload = Math.max(0, NAV.reload - dt);

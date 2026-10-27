@@ -1010,12 +1010,23 @@ function buildGrass() {
 }
 
 // ---------- flotta (modelli dettagliati in models.js) ----------
+// le navi da guerra sono gli stessi modelli dettagliati delle battaglie navali (shipmodels.js):
+// USS Texas e Arkansas, incrociatori, cacciatorpediniere classe Fletcher, con le torrette brandeggiate verso la costa
+function placeShip2(key, x, z) {
+  const C = NCLS[key], m = buildShipModel2(C), g = m.g;
+  g.position.set(x, 0, z); g.rotation.y = PI / 2; scene.add(g);
+  for (const t of m.turrets) if (t.arc === 'fore' || t.arc === 'aft') { t.g.rotation.y = -PI / 2; if (t.pv) t.pv.rotation.x = t.S.cal >= 100 ? rnd(.06, .22) : .3; }
+  g.updateMatrixWorld(true);
+  let ng = 0; for (const t of m.turrets) if ((t.arc === 'fore' || t.arc === 'aft') && t.S.cal >= 100 && t.muzzles.length && ng++ < 3) WORLD.shipGuns.push({ p: t.muzzles[0].clone().applyMatrix4(t.pv.matrixWorld), big: C.type === 'bb', t: rnd(1, 9) });
+  addEmitter(new V3(0, C.F + (C.type === 'bb' ? 20 : C.type === 'cl' ? 15 : 9), -.04 * C.L).applyMatrix4(g.matrixWorld), 'stack', C.type === 'bb' ? 2 : 1.2);
+  return { g, m, C };
+}
 function buildFleet() {
-  const tx = placeShip('bb', -230, 780, { skipTurret: 1, rails: true });
-  placeShip('bb', 190, 840);
-  placeShip('cl', 470, 720); placeShip('cl', -470, 700);
-  placeShip('dd', -110, 430); placeShip('dd', 70, 390); placeShip('dd', 280, 460);
-  placeShip('bb', -1100, 820); placeShip('cl', 1050, 760); placeShip('dd', -800, 440); placeShip('dd', 750, 420); placeShip('dd', 1300, 480);
+  const tx = placeShip2('texas', -230, 780);
+  placeShip2('texas', 190, 840);
+  placeShip2('cleveland', 470, 720); placeShip2('cleveland', -470, 700);
+  placeShip2('fletcher', -110, 430); placeShip2('fletcher', 70, 390); placeShip2('fletcher', 280, 460);
+  placeShip2('texas', -1100, 820); placeShip2('cleveland', 1050, 760); placeShip2('fletcher', -800, 440); placeShip2('fletcher', 750, 420); placeShip2('fletcher', 1300, 480);
   for (let i = 0; i < 8; i++) placeShip('lst', srnd(-900, 900), srnd(1250, 1700));
   const mb = new MB(); mb.mat = 'paint';
   for (let i = 0; i < 22; i++) { const x = srnd(-700, 700), z = srnd(520, 1100); mb.add(U.box, 0x55625a, x, .5, z, 0, srnd(-.2, .2), 0, 4, 2, 11); }
@@ -1027,11 +1038,11 @@ function buildFleet() {
   }
   scene.add(groupMesh(mb.buildGroups(), false));
   // torretta B della USS Texas manovrabile dal giocatore
-  const sg = tx.g, tp = tx.o.turretPos, s = tx.o.turretS;
-  const pt = buildPlayerTurret(s), wp = tp.clone().applyMatrix4(sg.matrixWorld);
-  pt.g.position.copy(wp); scene.add(pt.g);
-  const cam = new V3(0, tp.y + 8.5, tp.z - 15).applyMatrix4(sg.matrixWorld);
-  WORLD.texas = { g: pt.g, pitch: pt.pitch, yaw: 0, elev: .1, muzzles: pt.muzzles, cam };
+  // torretta B (la seconda di prua) della Texas: è quella che il giocatore manovra
+  const tb = tx.m.turrets.filter(t => t.arc === 'fore' && !t.sec && t.S.cal >= 300)[1] || tx.m.turrets[0];
+  const cam = new V3(0, tb.y + 9, tb.z + 16).applyMatrix4(tx.g.matrixWorld);
+  WORLD.texas = { g: tb.g, pitch: tb.pv, yaw: 0, elev: .1, muzzles: tb.muzzles, cam, base: PI / 2, pos: new V3() };
+  tb.g.getWorldPosition(WORLD.texas.pos);
 }
 
 // ---------- costruzione ----------
