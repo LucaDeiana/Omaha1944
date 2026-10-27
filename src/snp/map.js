@@ -101,8 +101,8 @@ function snpCover(mb, team, u, v, y0, w, d, h, kind) {
 const SNP_S1 = [18.6, 20.2], SNP_S2 = [16.8, 18.4];
 function snpBuilding(team) {
   const mb = new MB(), FH = SNP.FH, W2 = SNP.W / 2, D = SNP.D, t = .4, A = team === 'A';
-  const ext = A ? 0xd9ccb0 : 0x9a5640, ext2 = A ? 0xc8b896 : 0x8a4a36, trim = A ? 0xb8a988 : 0xb9ad92, inn = A ? 0xcfc4a8 : 0xc4b9a0, floorC = A ? 0x6b4e33 : 0x5e4632, ceil = 0xd6cfbf;
-  const extMat = A ? 'plaster' : 'brick';
+  const ext = A ? 0xd9ccb0 : 0xc2a77e, ext2 = A ? 0xc8b896 : 0xae946c, trim = A ? 0xb8a988 : 0xb9ad92, inn = A ? 0xcfc4a8 : 0xc4b9a0, floorC = A ? 0x6b4e33 : 0x5e4632, ceil = 0xd6cfbf;
+  const extMat = 'plaster';
   const rooms = [-18, -6, 6, 18];
   // aperture della facciata per piano: due finestre per stanza; brecce e varianti diverse nei due palazzi
   const win = (cu, k) => ({ a: cu + k * 2.8 - .65, b: cu + k * 2.8 + .65, lo: .9, hi: 2.45, kind: 'win' });
@@ -123,7 +123,7 @@ function snpBuilding(team) {
   for (let L = 0; L < 3; L++) {
     const y0 = L * FH;
     // muri perimetrali
-    mb.mat = extMat; snpWallU(mb, team, 0, t, -W2, W2, y0, FH, facadeOps[L], ext);
+    mb.mat = extMat; snpWallU(mb, team, 0, t, -W2, W2, y0, FH, facadeOps[L], L === 0 ? (A ? 0xb9ab8e : 0xa08a66) : ext);
     const backOps = [{ a: -14.8, b: -13.6, lo: 1, hi: 2.4 }, { a: 13.6, b: 14.8, lo: 1, hi: 2.4 }, { a: -9.5, b: -8.3, lo: 1, hi: 2.4 }, { a: 8.3, b: 9.5, lo: 1, hi: 2.4 }];
     if (L === 0) backOps.push({ a: -18.7, b: -17.3, lo: 0, hi: 2.3 }, { a: 17.3, b: 18.7, lo: 0, hi: 2.3 });
     snpWallU(mb, team, D - t, D, -W2, W2, y0, FH, backOps, ext);
@@ -143,7 +143,7 @@ function snpBuilding(team) {
     // muri dell'atrio verso le stanze sul retro
     for (const u of [-6.3, 6.3]) snpWallV(mb, team, u - .15, u + .15, 11, D - t, y0, FH, [{ a: 12.4, b: 13.6, lo: 0, hi: 2.2 }], inn);
     // cornicione marcapiano esterno
-    mb.mat = 'stone'; { const [x0, x1, z0, z1] = snpBoxW(team, -W2 - .1, W2 + .1, -.18, 0); mb.add(U.box, trim, (x0 + x1) / 2, SNP.G + y0 + FH - .1, (z0 + z1) / 2, 0, 0, 0, x1 - x0, .22, z1 - z0); }
+    mb.mat = 'plaster'; { const [x0, x1, z0, z1] = snpBoxW(team, -W2 - .1, W2 + .1, -.18, 0); mb.add(U.box, trim, (x0 + x1) / 2, SNP.G + y0 + FH - .1, (z0 + z1) / 2, 0, 0, 0, x1 - x0, .22, z1 - z0); }
     // cornici delle finestre e persiane divelte (solo grafica)
     mb.mat = 'wood';
     for (const o of facadeOps[L]) {
@@ -200,8 +200,32 @@ function snpBuilding(team) {
   snpBox(mb, team, -W2, W2, D + Y, D + Y + .5, 0, 3.2, yardC); snpBox(mb, team, -W2 - .5, -W2, D, D + Y + .5, 0, 3.2, yardC); snpBox(mb, team, W2, W2 + .5, D, D + Y + .5, 0, 3.2, yardC);
   mb.mat = 'wood'; for (const u of [-10, 4, 15]) snpBox(mb, team, u, u + 1.4, D + 3 + (u % 3), D + 4.2 + (u % 3), 0, 1.1, 0x6b5434, true);
   // facciata: zoccolo in pietra e insegna
-  mb.mat = 'stone'; { const [x0, x1, z0, z1] = snpBoxW(team, -W2 - .1, W2 + .1, -.12, .1); mb.add(U.box, 0x8a8478, (x0 + x1) / 2, SNP.G + .35, (z0 + z1) / 2, 0, 0, 0, x1 - x0, .7, z1 - z0); }
+  mb.mat = 'plaster'; { const [x0, x1, z0, z1] = snpBoxW(team, -W2 - .1, W2 + .1, -.12, .1); mb.add(U.box, 0x8a8478, (x0 + x1) / 2, SNP.G + .35, (z0 + z1) / 2, 0, 0, 0, x1 - x0, .7, z1 - z0); }
   mb.mat = 'vc'; { const p = snpW(team, 0, -.08); mb.add(U.box, A ? 0x1e2a3a : 0x2a2420, p.x, SNP.G + FH - .65, p.z, 0, 0, 0, 9, .7, .06); }
+  // facciata: lesene, cornici delle finestre, bugnato al piano terra, cornicione e tetto a mansarda sul retro
+  const RYt = 3 * FH, fx = (u, v, y, w, h, d, c, m) => { mb.mat = m; const p = snpW(team, u, v); mb.add(U.box, c, p.x, SNP.G + y, p.z, 0, 0, 0, w, h, d); };
+  const pil = A ? 0xe4d8be : 0xc9bb9a, rust = A ? 0xb9ab8e : 0x9a8c72, sur = A ? 0xeee4cc : 0xd2c4a2;
+  for (const u of [-23.6, -12, 0, 12, 23.6]) fx(u, -.08, (RYt + .85) / 2, .8, RYt + .85, .18, pil, extMat);
+  for (let L = 0; L < 3; L++) for (const o of facadeOps[L]) {
+    if (o.kind === 'breach') { for (let k = 0; k < 5; k++) fx((o.a + o.b) / 2 + srand(-2.2, 2.2), -.11, L * FH + (o.lo + o.hi) / 2 + srand(-.4, 1.4), srand(.8, 2), srand(.6, 1.6), .04, 0x2a2622, 'vc'); continue; }
+    const cu = (o.a + o.b) / 2, w = o.b - o.a, y0 = L * FH;
+    fx(cu - w / 2 - .09, -.1, y0 + (o.lo + o.hi) / 2, .18, o.hi - o.lo + .2, .1, sur, extMat); fx(cu + w / 2 + .09, -.1, y0 + (o.lo + o.hi) / 2, .18, o.hi - o.lo + .2, .1, sur, extMat);
+    fx(cu, -.12, y0 + o.hi + .14, w + .5, .26, .14, sur, extMat); fx(cu, -.14, y0 + o.lo - .07, w + .35, .12, .22, sur, 'plaster');
+    if (SNP_RNG() < .3) fx(cu + srand(-.3, .3), -.13, y0 + o.hi + .6, srand(.6, 1.4), srand(.5, 1), .03, 0x3a3430, 'vc');   // fuliggine sopra la finestra
+  }
+  fx(0, -.3, RYt + .95, SNP.W + .6, .24, .6, sur, 'plaster'); fx(0, -.15, RYt + .76, SNP.W + .3, .14, .3, sur, 'plaster');
+  // mansarda sul retro (v 12,6–21,6): falda inclinata in ardesia, abbaini e comignoli
+  mb.mat = 'roof';
+  for (const s of [-1, 1]) { const uc = s * (W2 + 6.5) / 2, len = W2 - 6.5 - .4, p = snpW(team, uc, 17.1); mb.add(U.prism, 0x4a4e54, p.x, SNP.G + RYt, p.z, 0, PI / 2, 0, 9, 3.4, len); const [x0, x1, z0, z1] = snpBoxW(team, uc - len / 2, uc + len / 2, 14.4, 19.8); addSolid(x0, SNP.G + RYt, z0, x1, SNP.G + RYt + 2.2, z1, 'house'); }
+  for (const u of [-16, -8, 8, 16]) { fx(u, 13.6, RYt + 1.1, 1.4, 1.5, 1.2, ext, extMat); fx(u, 13.6, RYt + 1.95, 1.7, .2, 1.5, 0x4a4e54, 'roof'); fx(u, 12.98, RYt + 1.05, .8, .9, .04, 0x1c1c1e, 'vc'); }
+  // interni: carta da parati di colore diverso per stanza, zoccolatura scura, battiscopa
+  const papers = A ? [0x8f9a7e, 0xa38f72, 0x7d8a96, 0xb0a07c] : [0x9c8a6a, 0x7f8c7a, 0xa0907e, 0x8a7f92];
+  for (let L = 0; L < 3; L++) rooms.forEach((cu, i) => {
+    const y0 = L * FH, pc = papers[(i + L) % 4], dado = 0x4a3c30;
+    for (const [ua, ub] of [[cu - 5.65, cu - .6], [cu + .6, cu + 5.65]]) { fx((ua + ub) / 2, 7.38, y0 + 2.25, ub - ua, 2.1, .03, pc, 'plaster'); fx((ua + ub) / 2, 7.37, y0 + .6, ub - ua, 1.1, .04, dado, 'wood'); }
+    for (const su of [-1, 1]) { const u = cu + su * 5.8 - su * .02; if (Math.abs(u) > 23.4) continue; fx(u, 3.9, y0 + 2.25, .03, 2.1, 6.9, pc, 'plaster'); fx(u, 3.9, y0 + .6, .04, 1.1, 6.9, dado, 'wood'); }
+    for (let k = 0; k < 3; k++) fx(cu + srand(-4.5, 4.5), srand(1.5, 6.5), y0 + .06, srand(.3, .9), .12, srand(.2, .6), spick([0x6a5a4c, 0x8a7766, 0xd8d0c0]), 'vc');   // calcinacci
+  });
   addTiled(mb, 60);
   snpLabel(team);
   // nodi di navigazione e postazioni di tiro
@@ -368,7 +392,7 @@ function snpStreet() {
   // marciapiedi, carreggiata in pavé con binari del tram
   mb.mat = 'stone'; for (const z0 of [zA - 3.2, zE]) mb.add(U.box, 0x8e8a80, 0, G + .08, z0 + 1.6, 0, 0, 0, 150, .16, 3.2);
   mb.mat = 'cobble';
-  for (let x = -72; x < 72; x += 12) for (let z = zE + 3.2; z < zA - 3.2; z += 11.5) { const cx = x + 6, cz = Math.min(z + 5.75, zA - 3.2 - 5.75); if (SNP_CRATERS.some(([a, b, r]) => Math.hypot(cx - a, cz - b) < r + 6)) continue; mb.add(U.box, 0x7a756c, cx, snpH(cx, cz) + .03, cz, 0, 0, 0, 12, .06, 11.5); }
+  for (let x = -72; x < 72; x += 12) for (let z = zE + 3.2; z < zA - 3.2; z += 11.5) { const cx = x + 6, cz = Math.min(z + 5.75, zA - 3.2 - 5.75); if (SNP_CRATERS.some(([a, b, r]) => Math.hypot(cx - a, cz - b) < r + 1.5)) continue; mb.add(U.box, 0x7a756c, cx, snpH(cx, cz) + .03, cz, 0, 0, 0, 12, .06, 11.5); }
   mb.mat = 'paint'; for (const z of [C.z - .7, C.z + .7]) for (let x = -70; x < 70; x += 8) if (!SNP_CRATERS.some(([a, b, r]) => Math.hypot(x - a, z - b) < r + 3)) mb.add(U.box, 0x55524c, x + 4, G + .07, z, 0, 0, 0, 8, .05, .08);
   // carri distrutti: uno Sherman e un Panzer IV bruciati, di traverso nella strada
   addSherman(mb, -14, snpH(-14, -164), -164, .55, true); addSolid(-16.4, G - 1, -167.6, -11.6, G + 2.6, -160.4, 'tank');
