@@ -27,6 +27,8 @@
   #mainMenu button.mmb{display:block;width:min(340px,100%);text-align:left;background:linear-gradient(90deg,rgba(20,24,22,.78),rgba(20,24,22,0));border:0;border-left:3px solid transparent;color:#e9dfc4;font:600 clamp(16px,2.2vw,21px) Oswald,sans-serif;letter-spacing:.14em;padding:11px 16px;cursor:pointer;transition:border-color .2s,padding .2s,color .2s}
   #mainMenu button.mmb:hover,#mainMenu button.mmb:focus-visible{border-left-color:#e8c46a;padding-left:26px;color:#fff;outline:none}
   #mainMenu button.mmb small{display:block;font:400 11px Oswald,sans-serif;letter-spacing:.12em;opacity:.55;margin-top:2px}
+  @media (max-height:860px){#mainMenu .mm{gap:2px;padding-top:10px;padding-bottom:10px}#mainMenu button.mmb{padding-top:6px!important;padding-bottom:6px!important;font-size:17px}#mainMenu .mm h1{font-size:clamp(28px,5.2vh,54px)!important;margin:4px 0 10px!important}#mainMenu button.mmb small{font-size:10px}}
+  @media (max-height:640px){#mainMenu button.mmb small{display:none}}
   #mainMenu .ft{position:absolute;left:8vw;right:16px;bottom:14px;display:flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.15em;opacity:.55}
   #mainMenu .ft svg{width:30px;height:30px}
   #mmCredits{position:fixed;inset:0;z-index:45;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.82);padding:16px}
@@ -66,7 +68,7 @@
   const mm = document.createElement('div'); mm.id = 'mainMenu';
   mm.innerHTML = `<canvas id="mmC"></canvas><div class="mm">
       <img id="mmLogo" alt="" style="display:none;max-width:min(260px,60vw);max-height:120px;margin-bottom:8px;filter:drop-shadow(0 4px 18px rgba(0,0,0,.8))">
-      <div class="k">1941 · 1942 · 1944</div>
+      <div class="k">1941 · 1942 · 1943 · 1944</div>
       <h1>FRONTE<br>OCCIDENTALE 1944</h1>
       <button class="mmb" data-go="omaha">CAMPAGNA<small>Omaha Beach, Ardenne, Tunisia</small></button>
       <button class="mmb" data-go="sea">BATTAGLIE NAVALI<small>Pearl Harbor, Midway, la Manica</small></button>

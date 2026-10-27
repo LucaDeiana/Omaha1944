@@ -112,7 +112,7 @@
     for (const c of cardsEl.children) c.classList.toggle('on', c.dataset.v === v);
     const D = DESC[v] || ['', v, '']; sideEl.querySelector('.k').textContent = D[0]; sideEl.querySelector('h3').textContent = D[1]; sideEl.querySelector('.d').textContent = D[2];
     sideEl.querySelector('.mxHint').innerHTML = cur === 'sea' ? 'Nave: <kbd>W/S</kbd> macchine · <kbd>A/D</kbd> timone · <kbd>Shift</kbd> binocolo · click fuoco · <kbd>Z</kbd> segui il proiettile · <kbd>Y</kbd> attacco aereo · <kbd>P</kbd> pilota un aereo'
-      : cur === 'armor' ? 'Carro: <kbd>W/S</kbd> avanti e indietro · <kbd>A/D</kbd> sterzo · mouse torretta · click cannone · click dx ottica del cannoniere · <kbd>F</kbd> mitragliatrice. Mira ai fianchi: la corazza è più sottile'
+      : cur === 'armor' ? 'Carro: <kbd>W/S</kbd> avanti e indietro · <kbd>A/D</kbd> sterzo · mouse torretta · click cannone · click dx ottica del cannoniere · <kbd>F</kbd> mitragliatrice · <kbd>1</kbd> perforante · <kbd>2</kbd> esplosivo · <kbd>V</kbd> capocarro. Mira ai fianchi e alla torretta: la corazza è più sottile'
       : cur === 'air' ? 'Aereo: mouse direzione · <kbd>A/D</kbd> rollio · <kbd>W/S</kbd> manetta · <kbd>Spazio</kbd> bomba · <kbd>V</kbd> visuale · <kbd>M</kbd> comandi manuali'
       : '<kbd>W A S D</kbd> movimento · click fuoco · click dx mira · <kbd>G</kbd> granata · <kbd>B</kbd> cambia ruolo · <kbd>T</kbd> supporto aereo';
   }
