@@ -189,6 +189,7 @@ function enterTank(t) {
   $('stHud').style.display = 'block';
 }
 function leaveTank() {
+  if ($('drvSlit')) $('drvSlit').style.display = 'none';
   const t = TANKS.me; if (!t) return;
   t.player = false; TANKS.me = null; t.goal = null; P.mode = 'foot'; $('stHud').style.display = 'none'; $('tankAim').style.display = 'none'; $('tankSight').style.display = 'none';
   P.pos.set(t.pos.x + Math.cos(t.yaw) * 3, 0, t.pos.z - Math.sin(t.yaw) * 3); P.pos.y = Hf(P.pos.x, P.pos.z);
@@ -205,12 +206,15 @@ function updateTankMode(dt) {
   const ay = t.yaw + (P.adsHeld ? t.tyaw : t.ayaw), zoom = P.adsHeld;
   // mirino del cannoniere: sull'asse della canna e orientato come la canna (anche con lo scafo inclinato)
   if (zoom) { t.g.updateMatrixWorld(true); camera.position.set(0, .2, -2.3).applyMatrix4(t.gg.matrixWorld); camera.quaternion.setFromRotationMatrix(_am2.extractRotation(t.gg.matrixWorld)); }
+  else if (t.view === 2 && t.G) {   // pilota: bassa, davanti a sinistra, guarda dove punta lo scafo
+    t.g.updateMatrixWorld(true); camera.position.set(-.55, (t.T ? t.T.hullH : 1.9) - .25, -(t.T ? t.T.half[1] : 2.8) + .9).applyMatrix4(t.g.matrixWorld); camera.quaternion.setFromRotationMatrix(_am2.extractRotation(t.g.matrixWorld)); camera.rotateX(-.04);
+  }
   else if (t.view === 1 && t.G && t.G.cup) {   // capocarro con la testa fuori dalla cupola: guarda dove punta il mouse
     t.g.updateMatrixWorld(true); camera.position.set(...t.G.cup).applyMatrix4(t.tg.matrixWorld); camera.rotation.set(t.apitch, t.yaw + t.ayaw, 0, 'YXZ');
   }
   else { camera.position.set(t.pos.x + Math.sin(ay) * 10, t.pos.y + 5.2, t.pos.z + Math.cos(ay) * 10); camera.rotation.set(t.apitch - .2, ay, 0, 'YXZ'); }
   camera.position.x += rnd(-1, 1) * P.shake * .05; camera.position.y += rnd(-1, 1) * P.shake * .05; P.shake = Math.max(0, P.shake - dt * 2);
-  const fov = zoom ? 18 : t.view === 1 ? SETTINGS.fov : 70; if (Math.abs(camera.fov - fov) > .1) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 8)); camera.updateProjectionMatrix(); }
+  const fov = zoom ? 18 : t.view === 1 ? SETTINGS.fov : t.view === 2 ? 60 : 70; { let sl = $('drvSlit'); if (!sl) { sl = document.createElement('div'); sl.id = 'drvSlit'; sl.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:15;background:linear-gradient(180deg,#0b0b09 0,#0b0b09 39%,transparent 39.5%,transparent 58%,#0b0b09 58.5%,#0b0b09 100%);box-shadow:inset 0 0 0 9vw #0b0b09'; document.body.appendChild(sl); } sl.style.display = t.view === 2 && !zoom ? 'block' : 'none'; } if (Math.abs(camera.fov - fov) > .1) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 8)); camera.updateProjectionMatrix(); }
   // punto d'impatto del cannone proiettato sullo schermo
   const mo = t.muzzle(new V3()), md = t.aimDir(new V3()), rr = hitscan(mo.clone().addScaledVector(md, 1), md, 1200), ip = mo.addScaledVector(md, rr.t + 1);
   _hv.copy(ip).project(camera);

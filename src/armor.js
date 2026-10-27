@@ -68,6 +68,8 @@ function buildKasserine() {
     m.count = k; m.receiveShadow = true; scene.add(m); }
   // luce del deserto: foschia sabbiosa leggera, sole alto
   FOG_COL.setRGB(.88, .82, .7); scene.fog.color.copy(FOG_COL); FOG_K = .45; scene.fog.density = FOG_BASE * FOG_K; if (sun) sun.intensity *= 1.25;
+  // relitti in fiamme lontani: colonne di fumo nero sull'orizzonte
+  for (let i = 0; i < 5; i++) { const x = rnd(-450, 450), z = rnd(-1300, -200), p = new V3(x, kasH(x, z) + 1, z); const e = addEmitter(p, 'smoke', 2.2); e.life = 1e9; if (i < 2) { const f = addEmitter(p, 'fire', 1); f.life = 1e9; } }
   // bandiere sulle posizioni da conquistare
   for (const p of KAS_PTS) { const y = kasH(p.x, p.z), pole = new THREE.Mesh(new THREE.CylinderGeometry(.08, .08, 9, 6), MAT.vc); pole.position.set(p.x, y + 4.5, p.z); scene.add(pole);
     const fl = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.5), new THREE.MeshStandardMaterial({ color: 0xb02020, side: THREE.DoubleSide, roughness: .9 })); fl.position.set(p.x + 1.2, y + 8.2, p.z); scene.add(fl); p.flag = fl; }
