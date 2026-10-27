@@ -70,6 +70,7 @@
       <h1>FRONTE<br>OCCIDENTALE 1944</h1>
       <button class="mmb" data-go="omaha">CAMPAGNA<small>Omaha Beach, Ardenne, Tunisia</small></button>
       <button class="mmb" data-go="sea">BATTAGLIE NAVALI<small>Pearl Harbor, Midway, la Manica</small></button>
+      <button class="mmb" data-go="armor">GUERRA CORAZZATA<small>Sherman contro Tiger a Kasserine</small></button>
       <button class="mmb" data-go="air">CIELI D'EUROPA<small>Caccia, bombardieri, portaerei</small></button>
       <button class="mmb" data-go="opts">IMPOSTAZIONI<small>Grafica, audio, comandi</small></button>
       <button class="mmb" data-go="models">MODELLI 3D<small>Navi, aerei, mezzi e armi da vicino</small></button>

@@ -183,6 +183,7 @@ function tankInteractables() {
   return TANKS.list.filter(t => t.alive && !t.player).map(t => ({ pos: t.pos, r: 4, label: 'Premi E per salire sul Panzer IV', active: () => true, done: () => enterTank(t) }));
 }
 function enterTank(t) {
+  $('tankSight').classList.remove('us');
   t.player = true; TANKS.me = t; P.mode = 'tank'; t.ayaw = t.tyaw; t.apitch = t.gpitch;
   showMsg('Panzer IV — W/S/A/D guida · mouse torretta · click sx cannone · F mitragliatrice · E esci', 4);
   $('stHud').style.display = 'block';
@@ -198,7 +199,7 @@ const TANK_TRAVERSE = .55, TANK_ELEV = .3;
 function tankMouse(mx, my) { const t = TANKS.me; if (!t) return; const s = .0021 * SETTINGS.sens * (camera.fov / 60); t.ayaw -= mx * s; t.apitch = clamp(t.apitch - my * s, -.14, .35); }
 const _am2 = new THREE.Matrix4();
 function updateTankMode(dt) {
-  const t = TANKS.me; if (!t || !t.alive) { leaveTank(); return; }
+  const t = TANKS.me; if (!t || !t.alive) { if (SCEN === 'kas') return; leaveTank(); return; }
   P.pos.copy(t.pos); P.pos.y += 1.4;
   t.tyaw = angLerpMax(t.tyaw, t.ayaw, dt * TANK_TRAVERSE); t.gpitch += clamp(t.apitch - t.gpitch, -dt * TANK_ELEV, dt * TANK_ELEV);
   const ay = t.yaw + (P.adsHeld ? t.tyaw : t.ayaw), zoom = P.adsHeld;
@@ -214,11 +215,11 @@ function updateTankMode(dt) {
   ta.classList.toggle('ready', t.reload <= 0);
   $('tankSight').style.display = zoom ? 'block' : 'none';
   $('tankRange').textContent = Math.round(rr.t) + ' m';
-  $('stHud').innerHTML = `<b>Panzer IV</b> — scafo ${Math.max(0, Math.round(t.hp / 15))}% · ${Math.round(Math.abs(t.speed) * 3.6)} km/h · ${t.reload > 0 ? 'cannone in ricarica ' + t.reload.toFixed(1) + ' s' : '<b class="ok">CANNONE PRONTO</b>'}<br><small>W/S/A/D guida · mouse torretta · click sx cannone · click dx mirino · F mitragliatrice · E esci</small>`;
+  $('stHud').innerHTML = `<b>${t.name || 'Panzer IV'}</b> — scafo ${Math.max(0, Math.round(t.hp / (t.hpMax ? t.hpMax / 100 : 15)))}%${t.immob ? ' · <b style="color:#ff7a50">CINGOLO ROTTO</b>' : ''}${t.jam ? ' · <b style="color:#ff7a50">TORRETTA BLOCCATA</b>' : ''} · ${Math.round(Math.abs(t.speed) * 3.6)} km/h · ${t.reload > 0 ? 'cannone in ricarica ' + t.reload.toFixed(1) + ' s' : '<b class="ok">CANNONE PRONTO</b>'}<br><small>W/S/A/D guida · mouse torretta · click sx cannone · click dx mirino · F mitragliatrice${SCEN === 'kas' ? '' : ' · E esci'}</small>`;
 }
 // ---------- schieramento ----------
 function initTanks() {
-  if (NET.client) return;
+  if (NET.client) return; TANKS.inited = true;
   for (let i = 0; i < (PT === 'E' ? 3 : 2); i++) new Panzer(roadPathX(-520) + (i - 1) * 8, -520 - i * 12, PI);
   // mine anticarro posate dagli Americani sulle strade verso la costa
   const mg = new THREE.CylinderGeometry(.3, .3, .08, 12);
@@ -228,7 +229,7 @@ function initTanks() {
   }
 }
 function updateTanks(dt) {
-  if (NET.client) return;
+  if (NET.client || !TANKS.inited) return;   // solo dove i Panzer sono schierati (Omaha)
   TANKS.respawnT -= dt;
   const alive = TANKS.list.filter(t => t.alive).length, cap = PT === 'E' ? 3 : (MISSION.stage >= 3 ? 2 : 1);
   if (TANKS.respawnT <= 0 && alive < cap) { TANKS.respawnT = 90; new Panzer(roadPathX(-560) + rnd(-6, 6), -560, PI); if (P.mode === 'foot' && PT === 'A') say(N.radio, 'Attenzione: carri tedeschi in movimento dalla città!'); }

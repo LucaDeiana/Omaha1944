@@ -165,7 +165,27 @@ async function buildBank() {
     for (const [f, ty, v] of [[b, 'sawtooth', .25], [b / 2, 'triangle', .35], [b * 1.5, 'sawtooth', .08]]) { const o = oc.createOscillator(); o.type = ty; o.frequency.value = f; const g = oc.createGain(); g.gain.value = v; o.connect(g); g.connect(vca); o.start(0); }
     const am = oc.createOscillator(); am.frequency.value = cyl; const amg = oc.createGain(); amg.gain.value = .4; am.connect(amg); amg.connect(vca.gain); am.start(0);
   };
-  add('eng_p47', 1, engine(72, 18), 1); add('eng_fw', 1, engine(66, 22), 1); add('eng_boat', 1, engine(40, 10), 1); add('eng_bomber', 1, engine(56, 14), 1);
+  add('eng_p47', 1, engine(72, 18), 1); add('eng_fw', 1, engine(66, 22), 1); add('eng_boat', 1, engine(40, 10), 1);
+  // carri armati: motore radiale Continental dello Sherman, V12 Maybach del Panzer IV e del Tiger
+  add('eng_sherman', 1, engine(46, 11.5), 1); add('eng_pz4', 1, engine(38, 14), 1); add('eng_tiger', 1, engine(31, 16.5), 1);
+  // cingoli: maglie che sbattono sulle ruote, cigolii, rombo del rotolamento
+  add('tracks', 2, (oc, dst) => {
+    oN(oc, dst, 0, 2, { type: 'lowpass', f: 180, v: .55, a: .05, brown: true, lin: true, off: 0 });
+    for (let k = 0; k < 22; k++) { const t = k / 11 + (R() - .5) * .02; oN(oc, dst, t, .07, { type: 'bandpass', f: 1500 + R() * 900, q: 5, v: .55 + R() * .3, a: .002 }); oN(oc, dst, t, .12, { type: 'bandpass', f: 380, q: 3, v: .35, a: .003 }); }
+    for (const t of [.3, 1.25]) oT(oc, dst, t, .35, { type: 'sine', f: 1150 + R() * 300, f2: 1450 + R() * 300, v: .05, a: .05 });
+  }, 1);
+  // cannone del carro: schiocco della bocca, boato profondo e coda che rotola
+  add('tank_gun', 2.6, (oc, dst) => {
+    const sh = shaperN(oc, 3); sh.connect(dst);
+    oN(oc, sh, 0, .08, { type: 'highpass', f: 900, v: 2.2, a: .0005 });
+    oN(oc, sh, 0, .5, { type: 'lowpass', f: 900, f2: 200, v: 2, a: .002, brown: true });
+    oN(oc, dst, .02, 2.5, { type: 'lowpass', f: 260, f2: 70, v: 1.3, a: .01, brown: true });
+    oT(oc, sh, 0, .7, { type: 'sine', f: 62, f2: 28, v: 1.4, a: .002 });
+  });
+  add('reload_clank', .5, (oc, dst) => { oN(oc, dst, 0, .06, { type: 'bandpass', f: 950, q: 9, v: 1.4, a: .001 }); oN(oc, dst, .02, .22, { type: 'bandpass', f: 2600, q: 14, v: .5, a: .001 }); oT(oc, dst, 0, .15, { type: 'sine', f: 140, f2: 80, v: .6, a: .002 }); }, 2);
+  add('turret', 1, (oc, dst) => { oT(oc, dst, 0, 1, { type: 'sawtooth', f: 310, v: .12, a: .02, lin: true }); oT(oc, dst, 0, 1, { type: 'sine', f: 620, v: .1, a: .02, lin: true }); oN(oc, dst, 0, 1, { type: 'bandpass', f: 1800, q: 2, v: .15, a: .02, lin: true }); }, 1);
+  // rintocco del proiettile sulla corazza: parziali metalliche che risuonano
+  add('clang', 1.4, (oc, dst) => { oN(oc, dst, 0, .05, { type: 'highpass', f: 1500, v: 1.6, a: .0005 }); for (const [f, v, d] of [[430, .5, 1.2], [1170, .35, .9], [2050, .25, .6], [3320, .15, .4]]) oT(oc, dst, 0, d, { type: 'sine', f: f * (.95 + R() * .1), v, a: .001 }); }, 3); add('eng_bomber', 1, engine(56, 14), 1);
   add('surf', 12, (oc, dst) => {
     oN(oc, dst, 0, 12, { type: 'lowpass', f: 420, v: .5, a: .5, brown: true, lin: true, off: 0 });
     for (const t0 of [.6, 4.6, 8.4]) { oN(oc, dst, t0, 3.4, { type: 'bandpass', f: 1500, f2: 700, q: .5, v: .9, a: .9 }); oN(oc, dst, t0 + .9, 2.5, { type: 'highpass', f: 3500, v: .25, a: .3 }); }

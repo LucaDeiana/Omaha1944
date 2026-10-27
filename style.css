@@ -149,3 +149,5 @@ kbd { background: #2a2e2a; border: 1px solid #4a5040; padding: 1px 7px; border-r
 #mini{position:absolute;left:18px;bottom:64px;width:180px;height:180px;border-radius:50%;background:rgba(10,14,12,.45);box-shadow:0 0 0 2px rgba(233,228,212,.35),inset 0 0 18px rgba(0,0,0,.6);pointer-events:none}
 #hud.cineHud #mini{visibility:hidden}
 #endBoard{margin-top:12px;font:14px Oswald,sans-serif}#endBoard table{margin:6px auto}#endBoard .me{color:#ffd060}
+
+#tankSight .usR{display:none}#tankSight.us .usR{display:block}#tankSight.us .deR{display:none}#tankSight .usR{position:absolute;left:50%;top:50%;width:76vh;height:76vh;transform:translate(-50%,-50%)}

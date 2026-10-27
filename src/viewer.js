@@ -29,8 +29,12 @@
     if (g.userData.glass) g.userData.glass.visible = false; if (g.userData.pilot) g.userData.pilot.visible = false;
     PL.me = { vel: new V3(0, 3, -120), pos: new V3(0, 900, 0), q: new THREE.Quaternion(), parts: { eng: 1, wl: 1, wr: 1, tail: 1 } }; PL.throttle = .8; PL.G = 1.2; PL.gearK = 0;
     g.userData.eye = (PLANE_SPECS[t].eye || [0, 1.12, -.5]); return g; });
-  add('Mezzi', 'Panzer IV', 'veh', () => { if (!TANKS.hull) buildPanzerGeo(); const g = groupMesh(TANKS.hull), tg = groupMesh(TANKS.tur), gg = groupMesh(TANKS.gun); tg.position.y = 1.67; gg.position.set(0, .48, -1.4); tg.add(gg); g.add(tg); return g; });
-  add('Mezzi', 'M4 Sherman', 'veh', () => { const mb = new MB(); addSherman(mb, 0, 0, 0, 0, false); return groupMesh(mb.buildGroups()); });
+  // carri armati: scafo, torretta e cannone assemblati come in gioco
+  const tankAsm = geoF => () => { const G = geoF(), g = groupMesh(G.hull), tg = groupMesh(G.tur), gg = groupMesh(G.gun); tg.position.set(0, G.turY, G.turZ); gg.position.set(0, G.gunY, G.gunZ); tg.add(gg); g.add(tg); return g; };
+  add('Carri armati', 'M4A1 Sherman', 'veh', tankAsm(kasShermanGeo), 'carro medio USA, 75 mm M3, corazza frontale 76 mm');
+  add('Carri armati', 'Panzer IV Ausf. G', 'veh', tankAsm(kasPz4Geo), 'carro medio tedesco, 7,5 cm KwK 40, corazza frontale 80 mm');
+  add('Carri armati', 'Tiger I', 'veh', tankAsm(kasTigerGeo), 'carro pesante tedesco, 8,8 cm KwK 36, corazza frontale 100 mm');
+  add('Carri armati', 'Pak 40', 'veh', () => { const G = kasPakGeo(), g = groupMesh(G.base), gg = groupMesh(G.gun); gg.position.set(0, 1.05, -.2); g.add(gg); return g; }, 'cannone anticarro da 7,5 cm');
   add('Mezzi', 'Mezzo da sbarco LCVP (Higgins)', 'ship', () => { if (!LCVP_G) buildBoatGeos(); const g = groupMesh(LCVP_G); if (RAMP_G) g.add(groupMesh(RAMP_G)); return g; });
   add('Strutture', 'Bunker (WN 62)', 'veh', () => { if (!BUNKER_G) buildBunkerGeo(); return groupMesh(BUNKER_G); });
   const GN = { garand: 'M1 Garand', springfield: 'Springfield M1903', thompson: 'Thompson M1A1', bar: 'BAR M1918', colt: 'Colt M1911', bazooka: 'Bazooka M1', kar98: 'Kar98k', kar98zf: 'Kar98k con ottica', mp40: 'MP 40' };

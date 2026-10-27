@@ -59,7 +59,7 @@ function initInput() {
     if (P.spawnMenu) { deployKey(c); return; }
     if (P.mode === 'naval' && c === 'KeyE') { leaveTurretToDeck(); return; }
     if ((P.mode === 'mg' || P.mode === 'mortar' || P.mode === 'flak') && stationKey(c)) return;
-    if (P.mode === 'tank') { if (c === 'KeyE') leaveTank(); return; }
+    if (P.mode === 'tank') { if (c === 'KeyE' && SCEN !== 'kas') leaveTank(); return; }
     if (P.mode === 'airmark') { if (c === 'KeyT' || c === 'KeyE') closeAirMark(); return; }
     if (c === 'KeyT' && P.mode === 'foot') { openAirMark(); return; }
     if (c === 'KeyX' && P.mode === 'foot' && PT === 'A') { cycleOrder(); return; }

@@ -45,6 +45,7 @@
   const DESC = {
     omaha: ['6 GIUGNO 1944', 'Omaha Beach', 'Sbarca sotto il fuoco delle mitragliatrici del WN 62, apri un varco nel filo spinato e libera Colleville. Oppure difendi il bunker con la Wehrmacht.'],
     ard: ['DICEMBRE 1944', 'Ardenne — Bois Jacques', 'Tieni le buche nel bosco innevato di Bastogne, ferma i Panzer e riprendi Foy.'],
+    kas: ['FEBBRAIO 1943', 'Passo di Kasserine', 'Al comando di uno Sherman, con tre carri della tua brigata, conquista la cresta, il villaggio di Sidi Bou Zid e il passo. Panzer IV, Tiger I e cannoni Pak 40: corazza vera davanti e ai fianchi, rimbalzi, cingoli spezzati, munizioni che esplodono. Infine tieni il passo contro il contrattacco.'],
     tun: ['1943', 'Tunisia — Medjez el-Bab', 'Deathmatch nel villaggio tunisino: tutti contro tutti o USA contro Afrika Korps.'],
     dd: ['MANICA 1944', 'Caccia nella Manica', 'Con il cacciatorpediniere Fletcher, intercetta le siluranti tedesche prima che colpiscano il convoglio.'],
     pt: ['MANICA 1944', 'Siluri sul convoglio', 'Una PT boat veloce e fragile contro un convoglio scortato: avvicinati di notte e lancia i siluri.'],
@@ -61,6 +62,7 @@
   const SEC = {
     omaha: { title: 'CAMPAGNA', k: 'FANTERIA · 1943–1944', sel: 'optMap', opts: ['omaha', 'ard', 'tun'], start: 'INIZIA LA BATTAGLIA', show: ['optSide', 'modeL', 'tunModeL', 'planeL', 'optDiff', 'mp'] },
     sea: { title: 'BATTAGLIE NAVALI', k: 'MARE · 1941–1944', sel: 'optNavMis', start: 'SALPA', show: ['navL', 'planeL', 'optDiff'] },
+    armor: { title: 'GUERRA CORAZZATA', k: 'CARRI ARMATI · 1943', sel: 'optMap', opts: ['kas'], start: 'AVANTI, CARRI!', show: ['optDiff'] },
     air: { title: 'CIELI D’EUROPA', k: 'AVIAZIONE · 1944–1945', sel: 'optAirMap', start: 'DECOLLA', show: ['airMapL', 'planeL', 'optDiff'] },
   };
 
@@ -83,7 +85,7 @@
     build(); const S = SEC[sec] || SEC.omaha; cur = sec;
     W.querySelector('.mxTop .k').textContent = S.k; W.querySelector('.mxTop .t').textContent = S.title; $('startBtn').textContent = S.start;
     // la mappa giusta per la sezione
-    const map = $('optMap'); const want = sec === 'omaha' ? (['omaha', 'ard', 'tun'].includes(map.value) ? map.value : 'omaha') : sec;
+    const map = $('optMap'); const want = sec === 'omaha' ? (['omaha', 'ard', 'tun'].includes(map.value) ? map.value : 'omaha') : sec === 'armor' ? 'kas' : sec;
     if (map.value !== want) { map.value = want; map.dispatchEvent(new Event('change')); }
     // opzioni della sezione
     // i controlli della sezione precedente tornano nel deposito nascosto (non vanno distrutti)
@@ -109,6 +111,7 @@
     for (const c of cardsEl.children) c.classList.toggle('on', c.dataset.v === v);
     const D = DESC[v] || ['', v, '']; sideEl.querySelector('.k').textContent = D[0]; sideEl.querySelector('h3').textContent = D[1]; sideEl.querySelector('.d').textContent = D[2];
     sideEl.querySelector('.mxHint').innerHTML = cur === 'sea' ? 'Nave: <kbd>W/S</kbd> macchine · <kbd>A/D</kbd> timone · <kbd>Shift</kbd> binocolo · click fuoco · <kbd>Z</kbd> segui il proiettile · <kbd>Y</kbd> attacco aereo · <kbd>P</kbd> pilota un aereo'
+      : cur === 'armor' ? 'Carro: <kbd>W/S</kbd> avanti e indietro · <kbd>A/D</kbd> sterzo · mouse torretta · click cannone · click dx ottica del cannoniere · <kbd>F</kbd> mitragliatrice. Mira ai fianchi: la corazza è più sottile'
       : cur === 'air' ? 'Aereo: mouse direzione · <kbd>A/D</kbd> rollio · <kbd>W/S</kbd> manetta · <kbd>Spazio</kbd> bomba · <kbd>V</kbd> visuale · <kbd>M</kbd> comandi manuali'
       : '<kbd>W A S D</kbd> movimento · click fuoco · click dx mira · <kbd>G</kbd> granata · <kbd>B</kbd> cambia ruolo · <kbd>T</kbd> supporto aereo';
   }
