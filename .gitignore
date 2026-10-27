@@ -6,3 +6,4 @@ node_modules/
 *.lnk
 assets/music/personali/*
 !assets/music/personali/LEGGIMI.txt
+versione.txt
