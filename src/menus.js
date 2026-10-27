@@ -45,7 +45,8 @@
   const DESC = {
     omaha: ['6 GIUGNO 1944', 'Omaha Beach', 'Sbarca sotto il fuoco delle mitragliatrici del WN 62, apri un varco nel filo spinato e libera Colleville. Oppure difendi il bunker con la Wehrmacht.'],
     ard: ['DICEMBRE 1944', 'Ardenne — Bois Jacques', 'Tieni le buche nel bosco innevato di Bastogne, ferma i Panzer e riprendi Foy.'],
-    kas: ['FEBBRAIO 1943', 'Passo di Kasserine', 'Al comando di uno Sherman, con tre carri della tua brigata, conquista la cresta, il villaggio di Sidi Bou Zid e il passo. Panzer IV, Tiger I e cannoni Pak 40: corazza vera davanti e ai fianchi, rimbalzi, cingoli spezzati, munizioni che esplodono. Infine tieni il passo contro il contrattacco.'],
+    E: ['FEBBRAIO 1943 · ASSE', 'Difesa del passo', 'Al comando di un Tiger I, con due Panzer IV, tieni il passo di Kasserine contro quattro ondate di Sherman che risalgono la valle. Il cannone da 8,8 cm perfora a distanze enormi, ma il Tiger è lento e i fianchi sono il suo punto debole: non farti aggirare.'],
+    A: ['FEBBRAIO 1943 · ALLEATI', 'Passo di Kasserine', 'Al comando di uno Sherman, con tre carri della tua brigata, conquista la cresta, il villaggio di Sidi Bou Zid e il passo. Panzer IV, Tiger I e cannoni Pak 40: corazza vera davanti e ai fianchi, rimbalzi, cingoli spezzati, munizioni che esplodono. Infine tieni il passo contro il contrattacco.'],
     tun: ['1943', 'Tunisia — Medjez el-Bab', 'Deathmatch nel villaggio tunisino: tutti contro tutti o USA contro Afrika Korps.'],
     dd: ['MANICA 1944', 'Caccia nella Manica', 'Con il cacciatorpediniere Fletcher, intercetta le siluranti tedesche prima che colpiscano il convoglio.'],
     pt: ['MANICA 1944', 'Siluri sul convoglio', 'Una PT boat veloce e fragile contro un convoglio scortato: avvicinati di notte e lancia i siluri.'],
@@ -62,7 +63,7 @@
   const SEC = {
     omaha: { title: 'CAMPAGNA', k: 'FANTERIA · 1943–1944', sel: 'optMap', opts: ['omaha', 'ard', 'tun'], start: 'INIZIA LA BATTAGLIA', show: ['optSide', 'modeL', 'tunModeL', 'planeL', 'optDiff', 'mp'] },
     sea: { title: 'BATTAGLIE NAVALI', k: 'MARE · 1941–1944', sel: 'optNavMis', start: 'SALPA', show: ['navL', 'planeL', 'optDiff'] },
-    armor: { title: 'GUERRA CORAZZATA', k: 'CARRI ARMATI · 1943', sel: 'optMap', opts: ['kas'], start: 'AVANTI, CARRI!', show: ['optDiff'] },
+    armor: { title: 'GUERRA CORAZZATA', k: 'CARRI ARMATI · 1943', sel: 'optKasSide', start: 'AVANTI, CARRI!', show: ['optDiff'] },
     air: { title: 'CIELI D’EUROPA', k: 'AVIAZIONE · 1944–1945', sel: 'optAirMap', start: 'DECOLLA', show: ['airMapL', 'planeL', 'optDiff'] },
   };
 
@@ -93,7 +94,7 @@
     while (optEl.firstChild) stash.appendChild(optEl.firstChild);
     for (const id of S.show) { const w = wrapOf(id); if (w) optEl.appendChild(w); }
     // le schede sostituiscono i menù a tendina di missione e mappa
-    for (const id of ['optNavMis', 'optAirMap']) if ($(id)) $(id).style.display = 'none';
+    for (const id of ['optNavMis', 'optAirMap', 'optKasSide']) if ($(id)) $(id).style.display = 'none';
     const rel = (id, t) => { const l = $(id); if (l && l.firstChild && l.firstChild.nodeType === 3) l.firstChild.textContent = t + ' '; };
     rel('navL', 'Nave e tiro'); rel('airMapL', 'Modalità');
     // schede

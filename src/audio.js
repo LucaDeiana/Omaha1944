@@ -171,7 +171,7 @@ async function buildBank() {
   // cingoli: maglie che sbattono sulle ruote, cigolii, rombo del rotolamento
   add('tracks', 2, (oc, dst) => {
     oN(oc, dst, 0, 2, { type: 'lowpass', f: 180, v: .55, a: .05, brown: true, lin: true, off: 0 });
-    for (let k = 0; k < 22; k++) { const t = k / 11 + (R() - .5) * .02; oN(oc, dst, t, .07, { type: 'bandpass', f: 1500 + R() * 900, q: 5, v: .55 + R() * .3, a: .002 }); oN(oc, dst, t, .12, { type: 'bandpass', f: 380, q: 3, v: .35, a: .003 }); }
+    for (let k = 0; k < 22; k++) { const t = Math.max(0, k / 11 + (R() - .5) * .02); oN(oc, dst, t, .07, { type: 'bandpass', f: 1500 + R() * 900, q: 5, v: .55 + R() * .3, a: .002 }); oN(oc, dst, t, .12, { type: 'bandpass', f: 380, q: 3, v: .35, a: .003 }); }
     for (const t of [.3, 1.25]) oT(oc, dst, t, .35, { type: 'sine', f: 1150 + R() * 300, f2: 1450 + R() * 300, v: .05, a: .05 });
   }, 1);
   // cannone del carro: schiocco della bocca, boato profondo e coda che rotola

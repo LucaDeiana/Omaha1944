@@ -229,7 +229,7 @@ class KasTank {
     const e = addEmitter(p, 'fire', 1.4); e.life = 150; addEmitter(p.clone().add(new V3(0, 2, 0)), 'smoke', 1.6).life = 220;
     if (this.eng) this.eng.at(this.pos, 0, 0, 1); if (this.trk) this.trk.at(this.pos, 0, 0, 1); if (this.tur) this.tur.set(0);
     if (byPlayer) { STATS.kills += 5; KAS.killed++; feed(this.name + ' distrutto!'); }
-    else if (this.team === 'E') { KAS.killed += 0; feed(this.name + ' nemico distrutto'); }
+    else if (this.team !== (KAS.side || 'A')) feed(this.name + ' nemico distrutto');
     else if (!this.player) feed(this.name + ' alleato perduto');
     if (this.player) kasPlayerKilled();
   }
@@ -281,8 +281,9 @@ class KasTank {
       const rel = Math.atan2(-(tp.x - this.pos.x), -(tp.z - this.pos.z)) - this.yaw;
       if (!this.jam) this.tyaw = angLerpMax(this.tyaw, rel, dt * this.T.trav);
       const hd = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z), mz = this.muzzle(new V3()), want = Math.atan2(tp.y - mz.y, hd) + .5 * Math.asin(clamp(9.8 * hd / (this.T.v * this.T.v), -1, 1));
-      this.gpitch += clamp(want - this.gpitch, -dt * this.T.elev, dt * this.T.elev);
-      if (Math.abs(angDiff(this.tyaw, rel)) < .012 && Math.abs(this.speed) < 3.5 && tdist < 1300) this.fireMain(false);
+      const wel = Math.asin(clamp(this.aimDir(new V3()).y, -1, 1));   // alzo reale della canna nel mondo (lo scafo può essere inclinato)
+      this.gpitch = clamp(this.gpitch + clamp(want - wel, -dt * this.T.elev, dt * this.T.elev), -.2, .35);
+      if (Math.abs(angDiff(this.tyaw, rel)) < .012 && Math.abs(want - wel) < .003 && Math.abs(this.speed) < 3.5 && tdist < 1300) this.fireMain(false);
     } else if (!this.jam) this.tyaw = angLerpMax(this.tyaw, 0, dt * this.T.trav * .5);
   }
   drive(dt) {
@@ -342,12 +343,12 @@ function kasUpdateShells(dt) {
     const steps = Math.max(1, Math.ceil(s.v.length() * dt / 2.5)), h = dt / steps;
     for (let k = 0; k < steps && !hit; k++) {
       s.v.y -= 9.8 * h; tmp.copy(s.v).multiplyScalar(h); s.p.add(tmp); s.travel += tmp.length();
-      if (s.p.y < Hf(s.p.x, s.p.z)) { hit = true; const p = s.p.clone(); p.y = Hf(p.x, p.z) + .2; if (s.he) { explode(p, 7, 260, { byPlayer: !!(s.owner && s.owner.player), bomb: true }); for (const g of KAS.guns) if (g.alive && g.pos.distanceTo(p) < 8) g.damage(30 * (1 - g.pos.distanceTo(p) / 9), s.owner && s.owner.player); break; } fxImpact(p, 'dirt'); for (let j = 0; j < 16; j++) PS_GRAIN.emit(p.x, p.y, p.z, rnd(-3, 3), rnd(3, 8), rnd(-3, 3), 1, .08, .08, .9, ...C_DIRT, .5, 9.8); PS_SMOKE.emit(p.x, p.y + .5, p.z, 0, 1.5, 0, 3, 1, 3, .7, .8, .72, .58, .9); sfxBoom(p, .6); for (const g of KAS.guns) if (g.alive && g.pos.distanceTo(p) < 3) g.damage(25, s.owner && s.owner.player); break; }
+      if (s.p.y < Hf(s.p.x, s.p.z)) { hit = true; KAS.st = KAS.st || {}; KAS.st.ground = (KAS.st.ground || 0) + 1; if (s.owner && s.owner.target) { const e = s.p.distanceTo(s.owner.target.pos); KAS.st.err = (KAS.st.err || 0) + e; KAS.st.short = (KAS.st.short || 0) + (s.owner.pos.distanceTo(s.p) < s.owner.pos.distanceTo(s.owner.target.pos) - 10 ? 1 : 0); } const p = s.p.clone(); p.y = Hf(p.x, p.z) + .2; if (s.he) { explode(p, 7, 260, { byPlayer: !!(s.owner && s.owner.player), bomb: true }); for (const g of KAS.guns) if (g.alive && g.pos.distanceTo(p) < 8) g.damage(30 * (1 - g.pos.distanceTo(p) / 9), s.owner && s.owner.player); break; } fxImpact(p, 'dirt'); for (let j = 0; j < 16; j++) PS_GRAIN.emit(p.x, p.y, p.z, rnd(-3, 3), rnd(3, 8), rnd(-3, 3), 1, .08, .08, .9, ...C_DIRT, .5, 9.8); PS_SMOKE.emit(p.x, p.y + .5, p.z, 0, 1.5, 0, 3, 1, 3, .7, .8, .72, .58, .9); sfxBoom(p, .6); for (const g of KAS.guns) if (g.alive && g.pos.distanceTo(p) < 3) g.damage(25, s.owner && s.owner.player); break; }
       for (const t of KAS.tanks) {
         if (t === s.owner || !t.alive) continue;
         const dx = s.p.x - t.pos.x, dz = s.p.z - t.pos.z; if (dx * dx + dz * dz > 16) continue;
         t.g.updateMatrixWorld(true); const lp = s.p.clone().applyMatrix4(new THREE.Matrix4().copy(t.g.matrixWorld).invert()), hh = t.T.half;
-        if (Math.abs(lp.x) < hh[0] && Math.abs(lp.z) < hh[1] && lp.y > 0 && lp.y < t.T.hullH + 1) { hit = true; t.hit(s.p.clone(), s.v.clone().normalize(), s); break; }
+        if (Math.abs(lp.x) < hh[0] && Math.abs(lp.z) < hh[1] && lp.y > 0 && lp.y < t.T.hullH + 1) { hit = true; KAS.st = KAS.st || {}; KAS.st.tank = (KAS.st.tank || 0) + 1; t.hit(s.p.clone(), s.v.clone().normalize(), s); break; }
       }
       if (!hit) for (const g of KAS.guns) if (g.alive && g !== s.owner && g.pos.distanceTo(s.p) < 1.6) { hit = true; g.hit(s.p, s.v, s); break; }
     }
@@ -370,6 +371,12 @@ function kasCounterattack() {
   say(N.radio, 'Contrattacco! Tigri e Panzer dal passo, tenete la posizione!'); showMsg('CONTRATTACCO TEDESCO — tieni il passo per 2 minuti', 4);
 }
 function kasSpawnPlayer() {
+  if (KAS.side === 'E') {   // difesa: Tiger sul passo, fronte a sud
+    const C = KAS_PTS[2], me = new KasTank('tiger', 'E', C.x + rnd(-15, 15), C.z - 30, PI); me.player = true; TANKS.me = me; P.mode = 'tank'; P.dead = false; me.ayaw = 0; me.apitch = 0; $('stHud').style.display = 'block'; $('tankSight').classList.remove('us');
+    const al = KAS.tanks.filter(t => t.alive && t.team === 'E' && !t.player).length;
+    for (let i = al; i < 2; i++) { const t = new KasTank('pz4', 'E', C.x + (i ? 40 : -40), C.z - 10, PI); t.defend = new V3(t.pos.x, 0, t.pos.z); }
+    return;
+  }
   const base = KAS.stage === 0 ? new V3(kasRoadX(300), 0, 300) : new V3(KAS_PTS[KAS.stage - 1].x, 0, KAS_PTS[KAS.stage - 1].z + 40);
   const me = new KasTank('sherman', 'A', base.x, base.z, 0); me.player = true; TANKS.me = me; P.mode = 'tank'; P.dead = false;
   me.ayaw = 0; me.apitch = 0; $('stHud').style.display = 'block'; $('tankSight').classList.add('us');
@@ -379,19 +386,20 @@ function kasSpawnPlayer() {
 }
 function kasPlayerKilled() {
   KAS.lives--; KAS.respawnT = 6; TANKS.me = null; $('stHud').style.display = 'none'; $('tankAim').style.display = 'none'; $('tankSight').style.display = 'none';
-  if (KAS.lives <= 0) { KAS.over = true; GAME.endTitle = 'LA BRIGATA È STATA RESPINTA'; GAME.endText = `Carri nemici distrutti: ${KAS.killed}<br>Posizioni conquistate: ${KAS.stage} su 3`; after(4, () => GAME.end(false)); showMsg('Tutti i carri perduti', 4); }
-  else showMsg('Carro distrutto! L’equipaggio si salva — nuovo Sherman fra 6 secondi (' + KAS.lives + ' rimasti)', 5);
+  if (KAS.lives <= 0) { KAS.over = true; GAME.endTitle = KAS.side === 'E' ? 'IL PASSO È PERDUTO' : 'LA BRIGATA È STATA RESPINTA'; GAME.endText = `Carri nemici distrutti: ${KAS.killed}<br>Posizioni conquistate: ${KAS.stage} su 3`; after(4, () => GAME.end(false)); showMsg('Tutti i carri perduti', 4); }
+  else showMsg('Carro distrutto! L’equipaggio si salva — nuovo ' + (KAS.side === 'E' ? 'Tiger' : 'Sherman') + ' fra 6 secondi (' + KAS.lives + ' rimasti)', 5);
 }
 function initArmor() {
   KAS.tanks = []; KAS.guns = []; KAS.shells = []; KAS_TRK.mesh = null; KAS_TRK.n = 0; KAS.stage = 0; KAS.lives = D && D.label && /veterano/i.test(D.label) ? 2 : 3; KAS.over = false; KAS.killed = 0; KAS.holdT = 0; KAS.wave = 0; KAS.cap = 0;
   P.inBoat = false; P.boat = null; MISSION.stage = 0; MISSION.stageT = 0;
-  MISSION.title = 'Passo di Kasserine — febbraio 1943'; MISSION.objText = 'Conquista la cresta di Djebel Ksaira';
-  kasSpawnWave(0); kasSpawnPlayer();
+  KAS.side = $('optKasSide') ? $('optKasSide').value : 'A';
+  if (KAS.side === 'E') { MISSION.title = 'Difesa del passo — Kasserine, febbraio 1943'; MISSION.objText = 'Respingi quattro ondate di Sherman'; KAS.stage = 2; KAS.wave = 0; KAS.waveT = 25; kasSpawnPlayer(); }
+  else { MISSION.title = 'Passo di Kasserine — febbraio 1943'; MISSION.objText = 'Conquista la cresta di Djebel Ksaira'; kasSpawnWave(0); kasSpawnPlayer(); }
   if (!KAS.el) { KAS.el = document.createElement('div'); KAS.el.id = 'kasHud'; KAS.el.style.cssText = 'position:fixed;top:44px;left:50%;transform:translateX(-50%);pointer-events:none;z-index:18;font:600 15px/1.35 Oswald,sans-serif;color:#efe6cf;text-align:center;text-shadow:0 1px 3px #000;background:rgba(10,12,10,.55);padding:6px 16px;border-radius:3px;min-width:320px'; document.body.appendChild(KAS.el); }
   if (!KAS.radar) { KAS.radar = document.createElement('canvas'); KAS.radar.width = KAS.radar.height = 200; KAS.radar.style.cssText = 'position:fixed;left:16px;bottom:16px;width:200px;height:200px;pointer-events:none;z-index:18;border-radius:50%;background:rgba(18,16,10,.55);box-shadow:0 0 0 1px rgba(232,196,106,.35)'; document.body.appendChild(KAS.radar); KAS.rctx = KAS.radar.getContext('2d'); }
   KAS.el.style.display = KAS.radar.style.display = 'block';
-  say(N.radio, 'Qui comando di brigata: la valle è vostra. Prendete la cresta, poi Sidi Bou Zid e il passo.');
-  showMsg('Sherman — W/S/A/D guida · mouse torretta · click sx cannone · click dx ottica · F mitragliatrice', 6);
+  if (KAS.side === 'E') { say(N.radio, 'Hier Abteilung: die Amerikaner kommen durch das Tal. Haltet den Pass!'); showMsg('Tiger I — W/S/A/D guida · mouse torretta · click sx cannone · click dx ottica · 1/2 munizioni · V capocarro', 6); }
+  else { say(N.radio, 'Qui comando di brigata: la valle è vostra. Prendete la cresta, poi Sidi Bou Zid e il passo.'); showMsg('Sherman — W/S/A/D guida · mouse torretta · click sx cannone · click dx ottica · 1/2 munizioni · V capocarro', 6); }
 }
 function updateArmor(dt) {
   MISSION.stageT += dt; updateSubs(dt);
@@ -405,6 +413,10 @@ function updateArmor(dt) {
     if (KAS.respawnT <= 0) { if (w) w.player = false; kasSpawnPlayer(); }
   }
   if (KAS.over) return kasHud();
+  if (KAS.side === 'E') { kasDefense(dt); return kasHud(); }
+  // rinforzi della brigata: un nuovo Sherman dalle retrovie finché i carri alleati sono meno di tre
+  KAS.reinfT = (KAS.reinfT ?? 75) - dt;
+  if (KAS.reinfT <= 0 && KAS.stage < 3) { KAS.reinfT = 75; if (KAS.tanks.filter(t => t.alive && t.team === 'A' && !t.player).length < 3) { const b = KAS.stage === 0 ? new V3(kasRoadX(330), 0, 330) : new V3(KAS_PTS[KAS.stage - 1].x, 0, KAS_PTS[KAS.stage - 1].z + 60); new KasTank('sherman', 'A', b.x + rnd(-20, 20), b.z, 0); feed('Rinforzi: uno Sherman raggiunge la brigata'); } }
   // conquista della posizione corrente
   if (KAS.stage < 3) {
     const C = KAS_PTS[KAS.stage], inside = t => t.alive && Math.hypot(t.pos.x - C.x, t.pos.z - C.z) < C.r;
@@ -423,12 +435,29 @@ function updateArmor(dt) {
   }
   kasHud();
 }
+// difesa del passo: ondate di Sherman che risalgono la valle; gli Americani prendono il passo se restano dentro senza Tedeschi
+function kasDefense(dt) {
+  const C = KAS_PTS[2], alive = KAS.tanks.filter(t => t.alive && t.team === 'A').length;
+  KAS.waveT -= dt;
+  if (KAS.wave < 4 && (KAS.waveT <= 0 || (alive === 0 && KAS.waveT < 100))) {
+    KAS.wave++; KAS.waveT = 170; const n = 2 + KAS.wave;
+    for (let i = 0; i < n; i++) { const t = new KasTank('sherman', 'A', C.x + (i - n / 2) * 30 + rnd(-8, 8), -380 - i * 25 - rnd(0, 60), 0); t.goalOff.set(rnd(-50, 50), 0, rnd(-30, 30)); }
+    showMsg('Ondata ' + KAS.wave + ' di 4: ' + n + ' Sherman risalgono la valle', 4); say(N.radio, 'Feindpanzer im Anmarsch! ' + n + ' Shermans!');
+    if (KAS.wave === 4) for (let i = 0; i < 2; i++) new KasTank('pz4', 'E', C.x + (i ? 70 : -70), C.z + 20, PI).defend = new V3(C.x + (i ? 70 : -70), 0, C.z + 10);   // rinforzi per l'ultima ondata
+  }
+  const inside = t => t.alive && Math.hypot(t.pos.x - C.x, t.pos.z - C.z) < C.r, a = KAS.tanks.filter(t => t.team === 'A' && inside(t)).length, e = KAS.tanks.filter(t => t.team === 'E' && inside(t)).length;
+  if (a && !e) KAS.cap = Math.min(1, KAS.cap + dt / 25); else if (e) KAS.cap = Math.max(0, KAS.cap - dt / 15); KAS.contested = a && e;
+  if (C.flag) C.flag.material.color.setHex(KAS.cap > .5 ? 0x3050b0 : 0xb02020);
+  if (KAS.cap >= 1) { KAS.over = true; GAME.endTitle = 'GLI AMERICANI HANNO PRESO IL PASSO'; GAME.endText = `Sherman distrutti da te: ${KAS.killed}<br>Ondate respinte: ${KAS.wave - 1} su 4`; after(4, () => GAME.end(false)); }
+  else if (KAS.wave >= 4 && alive === 0) { KAS.over = true; GAME.endTitle = 'IL PASSO È TENUTO'; GAME.endText = `Sherman distrutti da te: ${KAS.killed}<br>Tiger di riserva: ${KAS.lives}`; after(4, () => GAME.end(true)); say(N.radio, 'Der Pass ist gehalten. Gut gemacht!'); }
+}
 function kasHud() {
   if (!KAS.el) return;
   const st = Math.min(KAS.stage, 2), C = KAS_PTS[st], me = TANKS.me;
   const dist = me ? Math.round(Math.hypot(me.pos.x - C.x, me.pos.z - C.z)) : 0;
   const foes = KAS.tanks.filter(t => t.alive && t.team === 'E').length, guns = KAS.guns.filter(g => g.alive).length;
-  KAS.el.innerHTML = KAS.stage < 3 ? `OBIETTIVO ${KAS.stage + 1}/3 · ${C.name.toUpperCase()} · ${dist} m<div style="height:6px;margin:5px 0 3px;background:rgba(255,255,255,.12)"><div style="height:100%;width:${Math.round(KAS.cap * 100)}%;background:${KAS.contested ? '#d9b443' : '#6aa0e8'}"></div></div><span style="font-size:12px">carri nemici ${foes} · Pak ${guns} · carri di riserva ${KAS.lives} · distrutti ${KAS.killed}</span>`
+  if (KAS.side === 'E') { const foes = KAS.tanks.filter(t => t.alive && t.team === 'A').length; KAS.el.innerHTML = `DIFESA DEL PASSO · ONDATA ${KAS.wave}/4${KAS.wave < 4 ? ' · prossima fra ' + Math.max(0, Math.ceil(KAS.waveT)) + ' s' : ''}<div style="height:6px;margin:5px 0 3px;background:rgba(255,255,255,.12)"><div style="height:100%;width:${Math.round(KAS.cap * 100)}%;background:#6aa0e8"></div></div><span style="font-size:12px">Sherman in arrivo ${foes} · Tiger di riserva ${KAS.lives} · distrutti ${KAS.killed}</span>`; }
+  else KAS.el.innerHTML = KAS.stage < 3 ? `OBIETTIVO ${KAS.stage + 1}/3 · ${C.name.toUpperCase()} · ${dist} m<div style="height:6px;margin:5px 0 3px;background:rgba(255,255,255,.12)"><div style="height:100%;width:${Math.round(KAS.cap * 100)}%;background:${KAS.contested ? '#d9b443' : '#6aa0e8'}"></div></div><span style="font-size:12px">carri nemici ${foes} · Pak ${guns} · carri di riserva ${KAS.lives} · distrutti ${KAS.killed}</span>`
     : `TIENI IL PASSO · ${Math.max(0, Math.ceil(KAS.holdT))} s<br><span style="font-size:12px">carri nemici ${foes} · carri di riserva ${KAS.lives} · distrutti ${KAS.killed}</span>`;
   // radar: carri e cannoni attorno al proprio, ruotato sulla torretta
   const x = KAS.rctx; if (!x) return; x.clearRect(0, 0, 200, 200);
@@ -436,7 +465,7 @@ function kasHud() {
   const pt = (px, pz) => { const dx = px - c.pos.x, dz = pz - c.pos.z; return [100 + (dx * co - dz * si) * S, 100 + (dx * si + dz * co) * S]; };
   x.strokeStyle = 'rgba(232,196,106,.25)'; for (const r of [33, 66, 99]) { x.beginPath(); x.arc(100, 100, r, 0, TAU); x.stroke(); }
   for (const p of KAS_PTS) { const [a, b] = pt(p.x, p.z); x.strokeStyle = p === KAS_PTS[st] ? '#e8c46a' : 'rgba(232,196,106,.4)'; x.lineWidth = 2; x.beginPath(); x.arc(a, b, p.r * S, 0, TAU); x.stroke(); }
-  for (const t of KAS.tanks) { if (!t.alive) continue; const [a, b] = pt(t.pos.x, t.pos.z); if (Math.hypot(a - 100, b - 100) > 98) continue; x.fillStyle = t.player ? '#ffffff' : t.team === 'A' ? '#6aa0e8' : '#e05a4a'; x.save(); x.translate(a, b); x.rotate(t.yaw - yaw); x.fillRect(-3, -5, 6, 10); x.restore(); }
+  for (const t of KAS.tanks) { if (!t.alive) continue; const [a, b] = pt(t.pos.x, t.pos.z); if (Math.hypot(a - 100, b - 100) > 98) continue; x.fillStyle = t.player ? '#ffffff' : t.team === (KAS.side || 'A') ? '#6aa0e8' : '#e05a4a'; x.save(); x.translate(a, b); x.rotate(t.yaw - yaw); x.fillRect(-3, -5, 6, 10); x.restore(); }
   for (const g of KAS.guns) { if (!g.alive || !g.spotted) continue; const [a, b] = pt(g.pos.x, g.pos.z); x.fillStyle = '#e05a4a'; x.beginPath(); x.arc(a, b, 3, 0, TAU); x.fill(); }
   x.fillStyle = '#e8c46a'; x.beginPath(); x.moveTo(100, 88); x.lineTo(95, 98); x.lineTo(105, 98); x.fill();
   // i Pak si vedono sul radar solo quando sparano o sono vicini
