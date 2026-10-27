@@ -38,8 +38,8 @@ function screw(p, mat, x, y, z) { const m = new THREE.Mesh(new THREE.CylinderGeo
 
 function buildGun(id) {
   const g = new THREE.Group(); let i = {};
-  if (id === 'garand' || id === 'kar98' || id === 'springfield' || id === 'kar98zf') {
-    const K = id === 'kar98' || id === 'kar98zf', W = K ? VM.wood2 : VM.wood, Mt = id === 'garand' ? VM.metal : VM.blue;
+  if (id === 'garand' || id === 'kar98' || id === 'springfield' || id === 'kar98zf' || id === 'enfield' || id === 'mosin' || id === 'g43') {
+    const K = id === 'kar98' || id === 'kar98zf' || id === 'mosin' || id === 'g43', SC = id === 'springfield' || id === 'kar98zf' || id === 'enfield' || id === 'mosin' || id === 'g43', W = K ? VM.wood2 : VM.wood, Mt = id === 'garand' ? VM.metal : VM.blue;
     // calcio e cassa: calciolo, nasello, impugnatura a pistola, astina
     prof(g, [[.44, -.042, 1], [.436, .03, 1], [.3, .036], [.18, .024], [.1, .01], [.055, 0, 1], [-.02, 0, 1], [-.05, .012, 1], [-.3, .012], [-.6, .008], [-.625, -.003, 1],
       [-.6, -.022], [-.3, -.028], [-.1, -.032], [-.02, -.035, 1], [.03, -.04], [.06, -.066], [K ? .075 : .08, -.086], [.11, -.086], [.14, -.064], [.28, -.084], [.43, -.107, 1], [.442, -.094, 1]], .044, W);
@@ -70,6 +70,12 @@ function buildGun(id) {
       mag = new THREE.Group(); mag.position.set(0, .052, -.045); g.add(mag);
       rbox(mag, VM.brass, 0, 0, 0, .022, .012, .062);
       for (let k = 0; k < 4; k++) turn(mag, VM.brass, k % 2 ? .005 : -.005, .008, -.02 + k * .015, [[0, -.012], [.005, -.012], [.005, .006], [.0025, .012], [0, .014]], 8);
+    } else if (id === 'g43') {
+      // Gewehr 43: semiautomatico, cilindro del gas sopra la canna, caricatore staccabile da 10, leva d'armamento a sinistra
+      prof(g, [[.07, 0, 1], [.07, .036], [.05, .048], [-.1, .048], [-.13, .03, 1], [-.13, 0, 1]], .03, Mt);
+      turn(g, Mt, 0, .052, -.12, [[0, 0], [.009, 0], [.009, .5], [.006, .52], [0, .52]], 12);
+      rbox(g, Mt, -.02, .03, -.02, .012, .012, .02);
+      mag = new THREE.Group(); mag.position.set(0, -.07, -.03); g.add(mag); rbox(mag, Mt, 0, 0, 0, .026, .09, .07);
     } else {
       // castello cilindrico, otturatore girevole con manubrio piegato e pomolo
       turn(g, Mt, 0, .028, .07, [[0, 0], [.016, 0], [.017, .02], [.017, .22], [.0155, .24], [0, .24]]);
@@ -84,7 +90,11 @@ function buildGun(id) {
       for (let k = 0; k < 5; k++) turn(mag, VM.brass, 0, 0, -.02 + k * .01, [[0, -.015], [.005, -.015], [.005, .008], [.0025, .015], [0, .017]], 8);
       if (id === 'kar98') { addSights(g, 'notch', .06, -.17, -.86, Mt, true); rbox(g, Mt, 0, .044, -.17, .02, .012, .05); }
       if (id === 'springfield') { rbox(g, Mt, 0, .04, .1, .018, .02, .03); }
-      if (id === 'springfield' || id === 'kar98zf') {
+      if (id === 'enfield') { prof(g, [[-.32, .012, 1], [-.33, .03], [-.86, .026], [-.88, .012, 1]], .034, W); rbox(g, Mt, 0, -.07, -.02, .028, .08, .075); rbox(g, W, .0, .05, .26, .03, .028, .14); }
+      if (id === 'mosin') { turn(g, Mt, 0, .03, -.95, [[0, 0], [.011, 0], [.011, .1], [0, .1]]); rbox(g, Mt, 0, .03, .02, .03, .028, .12); }
+    }
+    if (SC) {
+      {
         // cannocchiale con oculare, obiettivo, attacchi e torrette
         turn(g, VM.blue, 0, .085, .17, [[0, 0], [.019, 0], [.019, .06], [.013, .08], [.013, .3], [.018, .33], [.018, .38], [0, .38]], 20);
         rbox(g, VM.blue, 0, .062, .04, .014, .03, .018); rbox(g, VM.blue, 0, .062, -.12, .014, .03, .018);
@@ -94,7 +104,8 @@ function buildGun(id) {
       }
     }
     i = { mag, bolt, muzzle: new V3(0, .03, -1.01), port: new V3(.02, .05, -.04), hip: new V3(.16, -.17, -.32), ads: new V3(0, -.068, -.17), grip: new V3(0, -.045, .065), fore: new V3(0, -.014, -.38), magOut: new V3(0, .2, 0) };
-    if (id === 'springfield' || id === 'kar98zf') i.ads = new V3(0, -.085, -.12);
+    if (SC) i.ads = new V3(0, -.085, -.12);
+    if (id === 'g43') i.port = new V3(.02, .045, -.02);
     if (id === 'kar98') i.ads = new V3(0, -.06, -.16);
   } else if (id === 'thompson') {
     // calcio, castello arrotondato, impugnatura e astina verticale con scanalature, canna alettata e compensatore

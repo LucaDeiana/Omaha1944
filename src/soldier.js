@@ -74,7 +74,7 @@ class Soldier {
 
   damage(a, from, byPlayer, zone, imp) {
     if (!this.alive) return false;
-    if (this.remote) { if (byPlayer || NET.host) netHit(this, a, zone === 'blast', !byPlayer); this.flinch = 1; return false; }
+    if (this.remote) { if (byPlayer || NET.host) netHit(this, a, zone === 'blast', !byPlayer, zone); this.flinch = 1; return false; }
     if (this.proxy) { if (byPlayer) netProxyHit(this, a, zone, from || P.pos, (imp && imp.dir) || new V3(0, 0, -1)); this.flinch = 1; return byPlayer ? false : false; }
     if (this.vip) { this.supp = 1; this.flinch = 1; return false; }
     this.hp -= a; this.supp = Math.min(1, this.supp + .6); this.flinch = 1;

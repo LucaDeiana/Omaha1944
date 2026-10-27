@@ -43,6 +43,7 @@ const P = {
   die() {
     if (this.dead) return;
     if (SCEN === 'tun') tunPlayerDied();
+    if (SCEN === 'snp') snpPlayerDied();
     this.dead = true; this.deathT = 0; STATS.deaths++;
     this.trigger = false; mouseL = false; this.adsHeld = false;
     showMsg('Sei stato colpito', 2.5);
@@ -61,11 +62,11 @@ function initInput() {
     if ((P.mode === 'mg' || P.mode === 'mortar' || P.mode === 'flak') && stationKey(c)) return;
     if (P.mode === 'tank') { if (c === 'KeyE' && SCEN !== 'kas') leaveTank(); if ((c === 'Digit1' || c === 'Digit2') && TANKS.me && SCEN === 'kas') { TANKS.me.ammo = c === 'Digit2' ? 'he' : 'ap'; TANKS.me.reload = Math.max(TANKS.me.reload, 2); showMsg(c === 'Digit2' ? 'Granata esplosiva M48 (contro cannoni e serventi)' : 'Perforante M61 (contro i carri)', 1.6); play('reload_clank', null, { vol: .8 }); } if (c === 'KeyV' && TANKS.me) { const t = TANKS.me, n = SCEN === 'kas' ? 3 : 2; t.view = ((t.view || 0) + 1) % n; showMsg(['Visuale esterna', 'Capocarro fuori dalla cupola', 'Pilota: feritoia di visione'][t.view] + ' (V per cambiare)', 1.5); } return; }
     if (P.mode === 'airmark') { if (c === 'KeyT' || c === 'KeyE') closeAirMark(); return; }
-    if (c === 'KeyT' && P.mode === 'foot') { openAirMark(); return; }
-    if (c === 'KeyX' && P.mode === 'foot' && PT === 'A') { cycleOrder(); return; }
+    if (c === 'KeyT' && P.mode === 'foot' && SCEN !== 'snp') { openAirMark(); return; }
+    if (c === 'KeyX' && P.mode === 'foot' && PT === 'A' && SCEN !== 'snp') { cycleOrder(); return; }
     if (c === 'KeyH' && P.mode === 'foot' && !P.dead) { if (P.bandages <= 0) showMsg('Nessuna benda rimasta', 1.5); else if (P.hp >= 95) showMsg('Non sei ferito', 1.5); else if (P.bandT <= 0) { P.bandT = 3; P.bandages--; sfxMech('pick'); showMsg('Ti stai bendando…', 3); } return; }
     if (P.mode === 'ship') { navyKey(c); return; }
-    if (c === 'KeyB') { openSpawnMenu(); return; }
+    if (c === 'KeyB' && SCEN !== 'snp') { openSpawnMenu(); return; }
     if (P.mode === 'plane' && SCEN === 'sea' && c === 'KeyP') { navyTakePlane(); return; }
     if (P.mode === 'plane') { if (c === 'KeyF' || c === 'Space') planeDropBomb(); if (c === 'KeyV') togglePlaneView(); if (c === 'KeyM') togglePlaneAssist(); if (c === 'KeyG') togglePlaneGear(); if (c === 'KeyT') planeLockToggle(); if (c === 'KeyR' && PL.me && PL.me.crash) { const alive = PL.wreck && PL.wreck.done && !PL.wreck.lethal; exitPlane(); P.mode = 'foot'; if (alive) openSpawnMenu(); else P.die(); } return; }
     if (P.mode === 'naval') return;
@@ -78,7 +79,7 @@ function initInput() {
     else if (c === 'Digit1') selectSlot(0);
     else if (c === 'Digit2') selectSlot(1);
     else if (c === 'Digit3') selectSlot(2);
-    else if (c === 'KeyQ') selectSlot(P.prevSlot);
+    else if (c === 'KeyQ' && SCEN !== 'snp') selectSlot(P.prevSlot);
     else if (c === 'KeyE') P.ePressed = true;
   });
   addEventListener('keyup', e => { KEYS[e.code] = false; });
@@ -223,6 +224,7 @@ function updatePlayer(dt) {
   else { P.pos.x = clamp(P.pos.x, -MAPX + 20, MAPX - 20); P.pos.z = clamp(P.pos.z, -MAPX + 60, 115); }
   let ground = Math.max(Hf(P.pos.x, P.pos.z), boatFloor, bunkerStep(P.pos.x, P.pos.z), P.onShip ? Math.max(shipFloor, shipDeckY(P.pos.x, P.pos.z)) : -99);
   if (P.swim) ground = Math.max(ground, wl - 1.4);
+  if (SCEN === 'snp') { snpClamp(PT, P.pos); ground = Math.max(ground, snpFloor(P.pos.x, P.pos.z, P.pos.y)); }
   if (KEYS.Space && P.grounded && P.stance === 0 && !P.swim && P.depth < .6) { P.vy = 4.8; P.grounded = false; }
   P.vy -= 18 * dt; P.pos.y += P.vy * dt;
   if (P.pos.y <= ground) { if (!P.grounded && P.vy < -7) { P.shake += .25; play('bodyfall', null, { vol: .4 }); } P.pos.y = ground; P.vy = 0; P.grounded = true; }
@@ -294,12 +296,14 @@ function updateCamera(dt) {
   let fov = SETTINGS.fov + P.sprintK * 6;
   if (w && P.adsK > 0) fov = lerp(fov, w.fov, P.adsK * P.adsK);
   if (Math.abs(camera.fov - fov) > .01) { camera.fov = fov; camera.updateProjectionMatrix(); }
+  if (SCEN === 'snp') snpCamera(dt, w);
 }
 
 function resetPlayerState() {
   P.hp = 100; P.dead = false; P.downed = false; P.deathT = 0; P.vel.set(0, 0, 0); P.vy = 0; P.stance = 0; P.hurt = 0; P.supp = 0; P.shake = 0; P.shock = 0; P.pitch = 0;
   for (const s of P.inv) if (s) { const w = WEAPONS[s.id]; s.res = Math.max(s.res, w.mag * 3); if (s.mag === 0) s.mag = Math.min(w.mag, s.res); }
   P.nades = Math.max(P.nades, 3); P.charges = Math.max(P.charges, MISSION.minCharges || 0); P.bandages = Math.max(P.bandages, 2); P.bandT = 0;
+  if (SCEN === 'snp') { P.nades = 0; P.charges = 0; }
   P.carry = null; P.reloadT = 0; P.switchT = .5;
   for (let i = projectiles.length - 1; i >= 0; i--) if (projectiles[i].team !== PT && projectiles[i].type === 'nade') { scene.remove(projectiles[i].m); projectiles.splice(i, 1); }
   MISSION.godT = 3.5; $('fade').style.opacity = 0;

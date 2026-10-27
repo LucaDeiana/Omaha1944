@@ -37,12 +37,15 @@ function broadcast(obj, except) { for (const c of clients.values()) if (c !== ex
 function drop(c) {
   if (c.dead) return; c.dead = true; clients.delete(c.id); try { c.sock.destroy(); } catch (e) { }
   for (const [k, v] of stations) if (v === c.id) { stations.delete(k); broadcast({ t: 'occ', i: k, by: 0 }); }
-  if (c.joined && c.id === hostId) { hostId = 0; broadcast({ t: 'hostgone' }); console.log("! l'host ha lasciato: la battaglia condivisa termina"); }
+  if (c.joined && c.id === hostId && c.map === 'snp') { const nx = [...clients.values()].find(x => x.joined && !x.dead); hostId = nx ? nx.id : 0; if (nx) { broadcast({ t: 'newhost', id: nx.id }); console.log(`! nuovo host: ${nx.name}`); } }
+  else if (c.joined && c.id === hostId) { hostId = 0; broadcast({ t: 'hostgone' }); console.log("! l'host ha lasciato: la battaglia condivisa termina"); }
   if (c.joined) { broadcast({ t: 'leave', id: c.id }); console.log(`- ${c.name} ha lasciato la partita (${clients.size} connessi)`); }
 }
 function onMessage(c, txt) {
   let m; try { m = JSON.parse(txt); } catch (e) { return; }
   if (m.t === 'join') {
+    const h0 = hostId && clients.get(hostId); if (h0 && h0.map && m.map && h0.map !== m.map) { send(c, { t: 'mapdiff', map: h0.map }); return; }
+    c.map = String(m.map || '');
     c.joined = true; if (!hostId || !clients.get(hostId)) hostId = c.id; c.name = String(m.name || 'Soldato').slice(0, 20); c.side = m.side === 'E' ? 'E' : 'A';
     send(c, { t: 'welcome', id: c.id, host: hostId, peers: [...clients.values()].filter(x => x !== c && x.joined).map(x => ({ id: x.id, name: x.name, side: x.side })), occ: [...stations] });
     broadcast({ t: 'join', id: c.id, name: c.name, side: c.side }, c);

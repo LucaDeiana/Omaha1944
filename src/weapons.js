@@ -179,6 +179,7 @@ function playerFire() {
   P.bloom = Math.min(.04, P.bloom + (w.auto ? .0035 : .008));
   _d.x += rnd(-1, 1) * spread; _d.y += rnd(-1, 1) * spread; _d.z += rnd(-1, 1) * spread; _d.normalize();
   const r = hitscan(_o, _d, w.range || 600), p = _r.copy(_o).addScaledVector(_d, r.t);
+  if (SCEN === 'snp') { snpShotSound(_o, PT, P); snpNearMiss(_o, p, PT, r.obj); }
   netShot(_o, p, w.snd);
   if (w.auto && (w.snd === 'bar' || w.snd === 'mg42' || w.snd === 'thompson' || w.snd === 'mp40') ? STATS.shots % (w.snd === 'bar' ? 2 : 3) === 0 : r.t > 30 && R() < .25) fxTracer(vmCur ? vmCur.group.localToWorld(vmCur.muzzle.clone()) : _o.clone().addScaledVector(_d, 3), p, w.auto ? 1.2 : .7, true);
   if (_o.y > WATER_Y && _d.y < 0) {
@@ -186,7 +187,7 @@ function playerFire() {
     if (tw < r.t && wz > -9 && Hf(_o.x + _d.x * tw, wz) < WATER_Y) { fxImpact(new V3(_o.x + _d.x * tw, WATER_Y, wz), 'water'); if (r.type !== 'enemy') return; }
   }
   if (r.type === 'enemy') {
-    let dm = w.dmg * (r.zone === 'head' ? 3.2 : r.zone === 'legs' ? .65 : r.zone === 'arms' ? .5 : 1);
+    let dm = SCEN === 'snp' ? snpDamage(w, r.zone) : w.dmg * (r.zone === 'head' ? 3.2 : r.zone === 'legs' ? .65 : r.zone === 'arms' ? .5 : 1);
     if (w.falloff && r.t > w.falloff) dm *= clamp(1 - (r.t - w.falloff) / (w.range || 200), .45, 1);
     const killed = r.obj.damage(dm, _o, true, r.zone, { dir: _d.clone(), power: w.dmg > 100 ? 3.4 : w.dmg > 60 ? 2.6 : 1.8, joint: r.joint });
     STATS.hits++; if (killed && r.zone === 'head') STATS.heads++;

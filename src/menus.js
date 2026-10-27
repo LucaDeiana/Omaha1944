@@ -54,6 +54,7 @@
     escort: ['ATLANTICO 1944', 'Scorta al convoglio', 'Al comando dell’incrociatore Cleveland, porta i mercantili Liberty in salvo.'],
     line: ['1943', 'Battaglia di linea', 'La corazzata Texas contro lo Scharnhorst, nella burrasca del Mare del Nord.'],
     midway: ['4 GIUGNO 1942', 'Midway', 'Guida i Dauntless della Enterprise in picchiata sulle portaerei di Nagumo: Akagi, Kaga e Soryu.'],
+    snp: ['LUGLIO 1944', 'Saint-Lô — solo cecchini', 'Due palazzi affacciati su una strada distrutta: l’Hôtel de la Gare contro le Poste. Solo fucili di precisione, nessun radar, nessuna traversata. Vince la prima squadra a 50 uccisioni o chi è in vantaggio dopo 15 minuti.'],
     pearl: ['7 DICEMBRE 1941', 'Pearl Harbor', 'Domenica mattina, 7:55: tre ondate di aerei giapponesi su Battleship Row. Difendi la flotta in rada, o prendi un P-40.'],
     maine: ['IMMAGINARIA', 'Il mostro d’acciaio', 'La super corazzata Maine, sedici cannoni da 600 mm, contro una flotta intera.'],
     free: ['LIBERA', 'Battaglia libera', 'Ondate di navi nemiche sempre più grandi, con meteo casuale.'],
@@ -65,6 +66,7 @@
     omaha: { title: 'CAMPAGNA', k: 'FANTERIA · 1943–1944', sel: 'optMap', opts: ['omaha', 'ard', 'tun'], start: 'INIZIA LA BATTAGLIA', show: ['optSide', 'modeL', 'tunModeL', 'planeL', 'optDiff', 'mp'] },
     sea: { title: 'BATTAGLIE NAVALI', k: 'MARE · 1941–1944', sel: 'optNavMis', start: 'SALPA', show: ['navL', 'planeL', 'optDiff'] },
     armor: { title: 'GUERRA CORAZZATA', k: 'CARRI ARMATI · 1943', sel: 'optKasSide', start: 'AVANTI, CARRI!', show: ['kasTankL', 'optDiff'] },
+    snp: { title: 'SOLO CECCHINI', k: 'MULTIGIOCATORE · BOT', sel: 'optMap', opts: ['snp'], start: 'IN POSIZIONE', show: ['snpSideL', 'snpGunL', 'snpBotsL', 'snpDiffL', 'snpProfL', 'snpRespL', 'snpFillL', 'mp'] },
     air: { title: 'CIELI D’EUROPA', k: 'AVIAZIONE · 1944–1945', sel: 'optAirMap', start: 'DECOLLA', show: ['airMapL', 'planeL', 'optDiff'] },
   };
 
@@ -87,7 +89,7 @@
     build(); const S = SEC[sec] || SEC.omaha; cur = sec;
     W.querySelector('.mxTop .k').textContent = S.k; W.querySelector('.mxTop .t').textContent = S.title; $('startBtn').textContent = S.start;
     // la mappa giusta per la sezione
-    const map = $('optMap'); const want = sec === 'omaha' ? (['omaha', 'ard', 'tun'].includes(map.value) ? map.value : 'omaha') : sec === 'armor' ? 'kas' : sec;
+    const map = $('optMap'); const want = sec === 'omaha' ? (['omaha', 'ard', 'tun'].includes(map.value) ? map.value : 'omaha') : sec === 'armor' ? 'kas' : sec === 'snp' ? 'snp' : sec;
     if (map.value !== want) { map.value = want; map.dispatchEvent(new Event('change')); }
     // opzioni della sezione
     // i controlli della sezione precedente tornano nel deposito nascosto (non vanno distrutti)
@@ -115,6 +117,7 @@
     const D = DESC[v] || ['', v, '']; sideEl.querySelector('.k').textContent = D[0]; sideEl.querySelector('h3').textContent = D[1]; sideEl.querySelector('.d').textContent = D[2];
     sideEl.querySelector('.mxHint').innerHTML = cur === 'sea' ? 'Nave: <kbd>W/S</kbd> macchine · <kbd>A/D</kbd> timone · <kbd>Shift</kbd> binocolo · click fuoco · <kbd>Z</kbd> segui il proiettile · <kbd>Y</kbd> attacco aereo · <kbd>P</kbd> pilota un aereo'
       : cur === 'armor' ? 'Carro: <kbd>W/S</kbd> avanti e indietro · <kbd>A/D</kbd> sterzo · mouse torretta · click cannone · click dx ottica del cannoniere · <kbd>F</kbd> mitragliatrice · <kbd>1</kbd> perforante · <kbd>2</kbd> esplosivo · <kbd>V</kbd> capocarro. Mira ai fianchi e alla torretta: la corazza è più sottile'
+      : cur === 'snp' ? '<kbd>W A S D</kbd> movimento · click dx cannocchiale · click fuoco · <kbd>C</kbd> accovacciato · <kbd>Z</kbd> prono · <kbd>R</kbd> ricarica · <kbd>Tab</kbd> punteggi. Muoviti piano: chi corre davanti a una finestra si fa vedere'
       : cur === 'air' ? 'Aereo: mouse direzione · <kbd>A/D</kbd> rollio · <kbd>W/S</kbd> manetta · <kbd>Spazio</kbd> bomba · <kbd>V</kbd> visuale · <kbd>M</kbd> comandi manuali'
       : '<kbd>W A S D</kbd> movimento · click fuoco · click dx mira · <kbd>G</kbd> granata · <kbd>B</kbd> cambia ruolo · <kbd>T</kbd> supporto aereo';
   }

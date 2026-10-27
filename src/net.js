@@ -11,7 +11,7 @@ function connectNet(name, side) {
   return new Promise(res => {
     let done = false; const fin = ok => { if (!done) { done = true; res(ok); } };
     try { NET.ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws'); } catch (e) { return fin(false); }
-    NET.ws.onopen = () => { NET.on = true; netSend({ t: 'join', name, side }); fin(true); };
+    NET.ws.onopen = () => { NET.on = true; netSend({ t: 'join', name, side, map: SCEN }); fin(true); };
     NET.ws.onerror = () => fin(false);
     NET.ws.onclose = () => { if (NET.on) { NET.on = false; feed('Connessione al server persa'); for (const p of NET.peers.values()) netRemovePuppet(p); NET.peers.clear(); } fin(false); };
     NET.ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (x) { return; } netOnMessage(m); };
@@ -26,13 +26,14 @@ function netPeer(id, name, side) {
   return p;
 }
 function netOnMessage(m) {
+  if (SCEN === 'snp' && snpOnNet(m)) return;
   if (m.t === 'snap') { netApplySnapshot(m); return; }
   if (m.t === 'aihit') { if (NET.host) netOnAIHit(m); return; }
   if (m.t === 'aikill') { STATS.kills++; if (m.head) STATS.heads++; hitMarker(true, m.head); feed(m.head ? 'Nemico eliminato — colpo alla testa' : 'Nemico eliminato'); return; }
   if (m.t === 'hostgone') { feed("L'host ha lasciato la partita"); if (NET.client) { showMsg("L'host ha chiuso la partita", 4); after(4, () => GAME.end(false)); } return; }
   if (m.t === 'welcome') { NET.id = m.id; NET.hostId = m.host; if (m.host === m.id) NET.host = true; else netBecomeClient(); for (const x of m.peers) netPeer(x.id, x.name, x.side); for (const [i, by] of m.occ) if (STATIONS[i]) STATIONS[i].occupant = by; feed(`Connesso al server — giocatori presenti: ${m.peers.length + 1}`); return; }
-  if (m.t === 'join') { netPeer(m.id, m.name, m.side); feed(`${m.name} è entrato (${m.side === 'E' ? 'Asse' : 'Alleati'})`); return; }
-  if (m.t === 'leave') { const p = NET.peers.get(m.id); if (p) { feed(`${p.name} ha lasciato la partita`); netRemovePuppet(p); if (p.tag) p.tag.remove(); NET.peers.delete(m.id); } for (const s of STATIONS) if (s.occupant === m.id) s.occupant = null; return; }
+  if (m.t === 'join') { netPeer(m.id, m.name, m.side); if (SCEN === 'snp' && !NET.client) { snpRow(m.name, m.side); snpBalance(); } feed(`${m.name} è entrato (${m.side === 'E' ? 'Asse' : 'Alleati'})`); return; }
+  if (m.t === 'leave') { const p = NET.peers.get(m.id); if (p) { feed(`${p.name} ha lasciato la partita`); if (SCEN === 'snp' && !NET.client) { SNP.board.delete(p.name); NET.peers.delete(m.id); snpBalance(); } netRemovePuppet(p); if (p.tag) p.tag.remove(); NET.peers.delete(m.id); } for (const s of STATIONS) if (s.occupant === m.id) s.occupant = null; return; }
   if (m.t === 'feed') { feed(m.text); return; }
   if (m.t === 'occ') { const s = STATIONS[m.i]; if (!s) return; if (m.denied) { if (STN.cur === s) { leaveStation(); showMsg('Postazione già occupata', 2); } s.occupant = m.by; return; } if (STN.cur !== s) s.occupant = m.by ? m.by : null; return; }
   const p = netPeer(m.id);
@@ -44,7 +45,7 @@ function netOnMessage(m) {
     if (p.puppet && p.puppet.team !== p.side) { netRemovePuppet(p); if (p.a) netSpawnPuppet(p); }
   } else if (m.t === 'shot') {
     const o = new V3(m.o[0], m.o[1], m.o[2]), e = new V3(m.e[0], m.e[1], m.e[2]);
-    if (R() < .5) fxTracer(o, e, .9); sfxShot(m.snd || 'garand', o);
+    if (SCEN === 'snp') { if (!NET.client) { snpShotSound(o, p.side, p.puppet); snpNearMiss(o, e, p.side, null); } } else if (R() < .5) fxTracer(o, e, .9); sfxShot(m.snd || 'garand', o);
     if (P.targetable() && P.mode === 'foot' && p.side !== PT) P.nearMiss(o, e);
   } else if (m.t === 'air') {
     if (NET.host) { const t = new V3(m.p[0], m.p[1], m.p[2]); if (m.side === 'A') raidP47(t); else strikeFw(t); }
@@ -53,6 +54,7 @@ function netOnMessage(m) {
   } else if (m.t === 'hit') {
     if (!P.targetable()) return;
     const from = p.puppet ? p.puppet.pos.clone().add(new V3(0, 1.4, 0)) : P.pos.clone();
+    if (SCEN === 'snp') { SNP.killBy = { name: m.by || p.name, team: m.bt || p.side, zone: m.zone }; P.damage(m.dm, from); return; }
     P.damage(m.dm * (m.blast ? 1 : P.hitMul() / .6), from, !!m.blast);
     if (P.dead && !NET.killedSent) { NET.killedSent = true; if (!m.ai) netSend({ t: 'kill', to: m.id }); else feed('Ucciso dal nemico'); }
   }
@@ -86,7 +88,7 @@ function netSendState(dt) {
   netSend({ t: 's', p: [+P.pos.x.toFixed(2), +P.pos.y.toFixed(2), +P.pos.z.toFixed(2)], y: +P.yaw.toFixed(3), pi: +P.pitch.toFixed(3), st: P.mode === 'mortar' ? 1 : P.stance, w: s ? s.id : 'garand', m: P.mode, a });
 }
 function netShot(o, e, snd) { if (NET.on) netSend({ t: 'shot', o: [+o.x.toFixed(1), +o.y.toFixed(1), +o.z.toFixed(1)], e: [+e.x.toFixed(1), +e.y.toFixed(1), +e.z.toFixed(1)], snd }); }
-function netHit(s, dm, blast, ai) { if (NET.on && s.remote) netSend({ t: 'hit', to: s.remote.id, dm: Math.round(dm), blast: !!blast, ai: !!ai }); }
+function netHit(s, dm, blast, ai, zone) { if (NET.on && s.remote) netSend({ t: 'hit', to: s.remote.id, dm: Math.round(dm), blast: !!blast, ai: !!ai, zone, by: SCEN === 'snp' ? SNP.hitBy || SNP.me : undefined, bt: SCEN === 'snp' ? (SNP.hitBy ? (s.team === 'A' ? 'E' : 'A') : PT) : undefined }); }
 function updateNet(dt) {
   if (!NET.on) return;
   netSendState(dt);
@@ -134,7 +136,7 @@ function netHostSnapshot(dt) {
 }
 function netOnAIHit(m) {
   for (const list of [allies, enemies]) for (const s of list) if (s.nid === m.nid && s.alive) {
-    const from = new V3(m.f[0], m.f[1], m.f[2]);
+    const from = new V3(m.f[0], m.f[1], m.f[2]); s.lastHitPeer = m.id;
     const killed = s.damage(m.dm, from, false, m.zone, { dir: new V3(m.d[0], m.d[1], m.d[2]), power: 2.6, joint: 15 });
     if (killed) netSend({ t: 'aikill', to: m.id, head: m.zone === 'head' });
     return;

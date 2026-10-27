@@ -11,6 +11,7 @@ const CUT_SHOTS = [
 function startCutscene() {
   if (SCEN === 'air') { airIntro(); return; }
   if (SCEN === 'sea') { showMsg('1944 — La Manica', 4); return; }
+  if (SCEN === 'snp') { showMsg('Luglio 1944 — Saint-Lô, Normandia', 4); return; }
   if (SCEN === 'tun') { showMsg('Aprile 1943 — Medjez el-Bab, Tunisia', 4); return; }
   if (SCEN === 'kas') { showMsg('Febbraio 1943 — Passo di Kasserine, Tunisia', 4); return; }
   if (PARA.on) { showMsg('Notte del 5–6 giugno 1944 — Normandia', 4); return; }

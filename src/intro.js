@@ -79,6 +79,7 @@
       <button class="mmb" data-go="omaha">CAMPAGNA<small>Omaha Beach, Ardenne, Tunisia</small></button>
       <button class="mmb" data-go="sea">BATTAGLIE NAVALI<small>Pearl Harbor, Midway, la Manica</small></button>
       <button class="mmb" data-go="armor">GUERRA CORAZZATA<small>Sherman contro Tiger a Kasserine</small></button>
+      <button class="mmb" data-go="snp">SOLO CECCHINI<small>Due palazzi, una strada in rovina, bot e multigiocatore</small></button>
       <button class="mmb" data-go="air">CIELI D'EUROPA<small>Caccia, bombardieri, portaerei</small></button>
       <button class="mmb" data-go="career">CARRIERA<small>Grado, medaglie e missioni completate</small></button>
       <button class="mmb" data-go="opts">IMPOSTAZIONI<small>Grafica, audio, comandi</small></button>

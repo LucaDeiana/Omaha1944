@@ -9,6 +9,7 @@ function deployPoints() {
   if (SCEN === 'ard') return ardDeployPoints();
   if (SCEN === 'air') return airDeployPoints();
   if (SCEN === 'tun') return tunDeployPoints();
+  if (SCEN === 'snp') return snpDeployPoints();
   if (SCEN === 'sea') return navyDeployPoints();
   const st = MISSION.stage, pts = [];
   if (PT === 'E') {
@@ -32,7 +33,7 @@ function deployPoints() {
 }
 function openSpawnMenu() {
   P.spawnMenu = true; DEP.pts = deployPoints(); DEP.sel = Math.min(DEP.sel, DEP.pts.length - 1);
-  DEP.wait = P.dead ? (SCEN === 'air' ? 1.5 : SCEN === 'tun' ? 3 : 5) : 0;
+  DEP.wait = P.dead ? (SCEN === 'air' ? 1.5 : SCEN === 'tun' ? 3 : SCEN === 'snp' ? SNPCFG.respawn : 5) : 0;
   $('spawn').classList.remove('hidden'); drawDeploy();
 }
 function deployKey(c) {
@@ -47,6 +48,7 @@ function deploy(p) {
   if (p.kind === 'navy') { closeSpawnMenu(); return; }
   if (p.kind === 'plane') PL.spawnCarrier = p.carrier !== false;
   if (p.kind === 'plane') PL.spawnCarrier = p.carrier !== false;
+  if (p.kind === 'snp') { closeSpawnMenu(); leaveMode(); resetPlayerState(); snpPlacePlayer(p); return; }
   if (p.kind === 'point') { closeSpawnMenu(); leaveMode(); resetPlayerState(); P.inBoat = false; const x = p.pos.x + rnd(-3, 3), z = p.pos.z + rnd(-2, 2); P.pos.set(x, Hf(x, z), z); P.yaw = p.yaw || 0; showMsg('Schierato: ' + p.label, 2.5); return; }
   if (p.kind === 'tank') { closeSpawnMenu(); leaveMode(); resetPlayerState(); P.inBoat = false; const t = p.tank; if (!t.alive) { respawn(); return; } P.pos.set(t.pos.x + 3, Hf(t.pos.x + 3, t.pos.z), t.pos.z); if (!t.player) enterTank(t); return; }
   chooseSpawn(p.kind);

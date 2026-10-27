@@ -72,6 +72,7 @@ function initMission() {
   if (SCEN === 'ard') { initArdennes(); return; }
   if (SCEN === 'air') { initAirMode(); return; }
   if (SCEN === 'tun') { initTunisia(); return; }
+  if (SCEN === 'snp') { initSniper(); return; }
   if (SCEN === 'kas') { initArmor(); return; }
   if (SCEN === 'sea') { initNavy(); return; }
   if (PARA.on) { initPara(); return; }
@@ -544,6 +545,7 @@ function victory() {
 
 function onSoldierDeath(s, byPlayer, zone) {
   if (SCEN === 'tun') { tunOnDeath(s, byPlayer); return; }
+  if (SCEN === 'snp') { snpOnDeath(s, byPlayer, zone); return; }
   if (s.team !== PT && byPlayer) { if (PT === 'E') { STATS.kills++; feed(zone === 'head' ? 'Americano eliminato — colpo alla testa' : 'Americano eliminato'); } }
   if (s.team === PT && PT === 'E') { MISSION.alliesLost++; if (R() < .1 && P.pos.distanceTo(s.pos) < 25 && SUBQ.length < 2) say('', pick(['Sanitäter!', 'Er ist tot!', 'Mein Gott, Hans!'])); return; }
   if (PT === 'E') return;
@@ -657,10 +659,12 @@ function suppressBunker(b, tobruk) {
 }
 function updateMission(dt) {
   MISSION.dt = dt;
+  if (NET.client && SCEN === 'snp') { snpClientTick(dt); return; }
   if (NET.client) { updateSubs(dt); for (const v of MISSION.vehicles) v.update(dt); return; }
   if (SCEN === 'ard') { updateArdennes(dt); return; }
   if (SCEN === 'air') { updateAirMode(dt); return; }
   if (SCEN === 'tun') { updateTunisia(dt); return; }
+  if (SCEN === 'snp') { updateSniper(dt); return; }
   if (SCEN === 'kas') { updateArmor(dt); return; }
   if (PARA.on && SCEN === 'omaha') { updatePara(dt); return; }
   if (SCEN === 'sea') { updateNavy(dt); return; }

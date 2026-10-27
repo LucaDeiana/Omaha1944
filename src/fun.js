@@ -87,7 +87,7 @@ function updateFun(dt) {
 // ---------- avvistamento: il nemico mirato viene marcato, la squadra lo prende di mira ----------
 const SPOT = { cd: 0, els: [] };
 function spotEnemy() {
-  if (SPOT.cd > 0 || P.dead) return; SPOT.cd = .6;
+  if (SPOT.cd > 0 || P.dead || SCEN === 'snp') return; SPOT.cd = .6;
   const dir = camera.getWorldDirection(new V3()), fx = dir.x, fy = dir.y, fz = dir.z, eye = camera.position;
   let best = null, bs = .1;
   for (const e of FOES()) {
@@ -125,7 +125,7 @@ function updateSpots(dt) {
 // ---------- giocatore a terra: 15 s per essere soccorso da un medico o da un compagno ----------
 const DOWNED = { t: 0, rescueT: 0, msgT: 0, who: null };
 function downPlayer() {
-  if (P.downed || P.mode !== 'foot' || P.swim || P.inBoat || (SCEN === 'tun' && TUN.ffa)) return false;
+  if (P.downed || P.mode !== 'foot' || P.swim || P.inBoat || (SCEN === 'tun' && TUN.ffa) || SCEN === 'snp') return false;
   P.downed = true; P.hp = 1; P.stance = 2; P.trigger = false; mouseL = false; P.adsHeld = false;
   DOWNED.t = 15; DOWNED.rescueT = 0; DOWNED.msgT = 0; DOWNED.who = null;
   FUN.streak = 0;
