@@ -158,7 +158,7 @@ function buildOcean() {
         // colore dell'acqua che varia a chiazze (correnti, profondità) e si schiarisce sulle creste
         float patchy = texture2D(uN, vW.xz/900.).x;
         vec3 deep = mix(uDeep, uDeep * vec3(1.25, 1.45, 1.4), patchy * .8) + vec3(.02, .05, .05) * clamp(vH * .6, 0., 1.) * vF;
-        vec3 c = mix(deep, sky, fr * .7);
+        vec3 c = mix(deep, sky, fr * .58);
         // riflesso del sole: lama stretta più un bagliore largo
         float sd = max(dot(R, uSun), 0.);
         c += vec3(1., .95, .85) * (pow(sd, 420.) * 1.6 + pow(sd, 40.) * .08) * (.35 + .65*df);
@@ -1044,8 +1044,10 @@ function applyNavyWeather(kind, sunDir) {
 function buildNavyClouds(n) {
   const cv = document.createElement('canvas'); cv.width = cv.height = 128; const g = cv.getContext('2d');
   for (let i = 0; i < 16; i++) { const x = 64 + rnd(-32, 32), y = 64 + rnd(-18, 18), r = rnd(16, 40), gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); }
+  // bordi morbidi: maschera radiale, così la nuvola non ha contorni ovali netti
+  g.globalCompositeOperation = 'destination-in'; { const m = g.createRadialGradient(64, 64, 10, 64, 64, 63); m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(.6, 'rgba(0,0,0,.8)'); m.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = m; g.fillRect(0, 0, 128, 128); } g.globalCompositeOperation = 'source-over';
   const tex = new THREE.CanvasTexture(cv), shade = 1 - (NV.wxW ? NV.wxW.gray * .62 : 0);
-  const mats = [new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: .92, color: new THREE.Color(shade, shade, shade * 1.01) }), new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: .85, color: new THREE.Color(shade * .82, shade * .84, shade * .87) })];
+  const mats = [new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: true, opacity: .92, color: new THREE.Color(shade, shade, shade * 1.01) }), new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: true, opacity: .85, color: new THREE.Color(shade * .82, shade * .84, shade * .87) })];
   const grp = new THREE.Group();
   for (let c = 0; c < n; c++) {
     const cx = rnd(-26000, 26000), cz = rnd(-26000, 26000), cy = rnd(800, 1700);
