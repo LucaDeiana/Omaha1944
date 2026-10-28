@@ -447,7 +447,7 @@ function propSpinner(mb, r, len, hex) {
 }
 function makePlaneModel(type) {
   const d = buildPlaneData(type), I = insignia(), g = new THREE.Group();
-  if (!PLANE_MAT.paint) { PLANE_MAT.paint = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .62, metalness: .15 }); PLANE_MAT.vc = PLANE_MAT.paint; }
+  if (!PLANE_MAT.paint) { PLANE_MAT.paint = wearMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .62, metalness: .15 }), { grime: .18, chips: .25, rust: 0, soot: .5, low: .2, scale: .8 }); PLANE_MAT.vc = PLANE_MAT.paint; }
   for (const k in d.paint) { const m = new THREE.Mesh(d.paint[k], PLANE_MAT[k] || MAT[k] || PLANE_MAT.paint); m.castShadow = true; g.add(m); }
   const gl = new THREE.Mesh(d.glass, I.glass); gl.renderOrder = 2; g.add(gl); g.userData.glass = gl;
   const props = [];

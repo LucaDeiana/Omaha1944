@@ -188,7 +188,7 @@ class KasTank {
     this.type = type; this.team = team; this.name = T.name;
     this.g = groupMesh(G.hull); this.tg = groupMesh(G.tur); this.gg = groupMesh(G.gun);
     this.tg.position.set(0, G.turY, G.turZ); this.gg.position.set(0, G.gunY, G.gunZ); this.tg.add(this.gg); this.g.add(this.tg); scene.add(this.g); this.G = G;
-    if (typeof shipPlateMat === 'function') { KAS.mat = KAS.mat || shipPlateMat(); this.g.traverse(o => { if (o.isMesh && o.material && o.material.vertexColors) o.material = KAS.mat; }); }   // lamiera e getti d'acciaio con giunti, rivetti e ruggine
+    if (typeof shipPlateMat === 'function') { KAS.mat = KAS.mat || wearMaterial(shipPlateMat(), { grime: .6, chips: .3, rust: .05, low: 1.3, scale: 1 }); this.g.traverse(o => { if (o.isMesh && o.material && o.material.vertexColors) o.material = KAS.mat; }); }   // lamiera e getti d'acciaio con giunti, rivetti e ruggine
     this.pos = this.g.position; this.pos.set(x, Hf(x, z), z); this.yaw = yaw; this.tyaw = 0; this.gpitch = 0; this.ayaw = 0; this.apitch = 0;
     this.alive = true; this.hp = this.hpMax = T.hp; this.speed = 0; this.reload = rnd(1, T.reload); this.mgT = 0; this.player = false; this.tank = true;
     this.immob = false; this.jam = false; this.crew = { cmd: 1, gun: 1, load: 1, drv: 1, bow: 1 }; this.engDmg = 0; this.fire = 0; this.drvT = 0; this.box = { min: new V3(), max: new V3() }; this.aiT = rnd(0, .5); this.target = null; this.goalOff = new V3(rnd(-30, 30), 0, rnd(-30, 30)); this.err = new V3();

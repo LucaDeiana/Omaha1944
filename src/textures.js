@@ -226,6 +226,47 @@ function triMaterial(tex, scale, o = {}) {
   };
   return m;
 }
+// usura procedurale dei mezzi (nessuna texture in più): sporco più fitto in basso, vernice scheggiata
+// con metallo nudo sugli spigoli, macchie di ruggine, annerimento. Calcolata in coordinate dell'oggetto.
+// o: { grime, chips, rust, soot, low (quota sotto cui lo sporco cresce), scale }
+const WEAR_GLSL = `
+float wh(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+float wn(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);
+  return mix(mix(mix(wh(i),wh(i+vec3(1,0,0)),f.x),mix(wh(i+vec3(0,1,0)),wh(i+vec3(1,1,0)),f.x),f.y),mix(mix(wh(i+vec3(0,0,1)),wh(i+vec3(1,0,1)),f.x),mix(wh(i+vec3(0,1,1)),wh(i+vec3(1,1,1)),f.x),f.y),f.z);}
+float wf(vec3 p){return wn(p)*.55+wn(p*2.07+3.1)*.3+wn(p*4.3+7.7)*.15;}`;
+function wearMaterial(m, o = {}) {
+  if (!Q || Q.tex < 512) return m;   // preset basso: nessun costo in più
+  const prev = m.onBeforeCompile;
+  m.onBeforeCompile = (sh, r) => {
+    if (prev) prev(sh, r);
+    sh.uniforms.uWear = { value: new THREE.Vector4(o.grime ?? .5, o.chips ?? .35, o.rust ?? .2, o.soot ?? 0) };
+    sh.uniforms.uWearL = { value: new THREE.Vector2(o.low ?? 1.2, o.scale ?? 1) };
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP;varying vec3 vWN;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWP=position;vWN=normal;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec4 uWear;uniform vec2 uWearL;varying vec3 vWP;varying vec3 vWN;' + WEAR_GLSL)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+        vec3 wp=vWP*uWearL.y; float big=wf(wp*.35), mid=wf(wp*1.7), fine=wn(wp*17.);
+        float low=1.-smoothstep(0.,uWearL.x,wp.y);
+        float grime=clamp((big*.7+mid*.5-.42)*1.7+low*.7,0.,1.)*uWear.x;
+        vec3 dirt=vec3(.30,.27,.22);
+        diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*.55+dirt*.25,grime*.75);
+        float up=clamp(vWN.y,0.,1.); diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(1.06,1.04,.98),up*.15*(1.-grime));
+        float streak=wf(vec3(wp.x*3.,wp.y*.25,wp.z*3.));
+        float rust=smoothstep(.62,.8,streak*.6+mid*.5)*uWear.z;
+        diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.33,.17,.08),rust*.7);
+        float chip=smoothstep(.84,.9,fine*.55+mid*.6)*uWear.y;
+        diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.22,.22,.21),chip*.85);
+        float soot=uWear.w*smoothstep(.45,.8,big)*clamp(1.-abs(vWN.y),0.,1.);
+        diffuseColor.rgb*=1.-soot*.5;
+        float wearR=grime*.15+rust*.2-chip*.35; float wearM=chip*.5-rust*.2;`)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor=clamp(roughnessFactor+wearR,.2,1.);')
+      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor=clamp(metalnessFactor+wearM,0.,1.);');
+  };
+  const key = 'wear' + [o.grime, o.chips, o.rust, o.soot, o.low, o.scale].join(','), pk = m.customProgramCacheKey && m.customProgramCacheKey.bind(m);
+  m.customProgramCacheKey = () => (pk ? pk() : '') + key;
+  m.needsUpdate = true;
+  return m;
+}
 // materiale con mappa UV scalata (soldati, armi)
 function uvMaterial(tex, scale, o = {}) {
   const m = new THREE.MeshStandardMaterial({ vertexColors: o.vc !== false, map: tex.map, normalMap: tex.normal, roughness: o.rough ?? 1, metalness: o.metal || 0, color: col(o.color || 0xffffff) });

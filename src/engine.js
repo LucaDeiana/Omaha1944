@@ -159,8 +159,8 @@ function initEngine() {
   }
   buildTextures();
   MAT.vc = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .88, metalness: .02 });
-  MAT.vcMetal = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .55, metalness: .45 });
-  MAT.paint = triMaterial(TEX.metal, .5, { metal: 0, rough: 1, nStr: .5 });
+  MAT.vcMetal = wearMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .62, metalness: .4 }), { grime: .3, chips: .2, rust: .35, low: 2, scale: .35 });
+  MAT.paint = wearMaterial(triMaterial(TEX.metal, .5, { metal: 0, rough: 1, nStr: .5 }), { grime: .55, chips: .3, rust: .12, low: 1.3 });
   MAT.concrete = triMaterial(TEX.concrete, .3, { nStr: 1.2 });
   MAT.stone = triMaterial(TEX.stone, .42, { nStr: 1.4 });
   MAT.brick = triMaterial(TEX.brick, .55, { nStr: 1.3 }); MAT.plaster = triMaterial(TEX.plaster, .38, { nStr: 1 }); MAT.cobble = triMaterial(TEX.cobble, .5, { nStr: 1.4 });
