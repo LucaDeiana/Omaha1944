@@ -279,7 +279,7 @@ function buildTerrain() {
     pos[k * 3] = x; pos[k * 3 + 1] = SCEN === 'air' && y < WATER_Y - .2 ? Math.min(y, WATER_Y - 45) : y; pos[k * 3 + 2] = z; uv[k * 2] = x / 3; uv[k * 2 + 1] = z / 3;  // in volo: fondale lontano dal pelo dell'acqua (niente trasparenze da lontano)
     const n2 = fbm(x * .03, z * .03, 3);
     if (SCEN === 'kas') { const s = kasSplat(x, z, n2); sp.set(s.sp, k * 4); ax[k * 2] = 0; ax[k * 2 + 1] = 0; cl.set(s.cl, k * 3); continue; }
-    if (SCEN === 'snp') { const s = snpSplat(x, z, n2); sp.set(s.sp, k * 4); ax[k * 2] = 0; ax[k * 2 + 1] = 0; cl.set(s.cl, k * 3); continue; }
+    if (SCEN === 'snp') { const s = snpSplat(x, z, n2); sp.set(s.sp, k * 4); ax[k * 2] = 0; ax[k * 2 + 1] = s.sc || 0; cl.set(s.cl, k * 3); continue; }
     if (SCEN === 'tun') { const s = tunSplat(x, z, n2); sp.set(s.sp, k * 4); ax[k * 2] = 0; ax[k * 2 + 1] = 0; cl.set(s.cl, k * 3); continue; }
     if (SCEN === 'air') { const s = airSplat(x, z, n2); sp.set(s.sp, k * 4); ax[k * 2] = 0; ax[k * 2 + 1] = 0; cl.set(s.cl, k * 3); continue; }
     if (SCEN === 'ard') { const s = ardSplat(x, z, n2); sp.set(s.sp, k * 4); ax[k * 2] = 0; ax[k * 2 + 1] = s.sc; cl.set(s.cl, k * 3); continue; }

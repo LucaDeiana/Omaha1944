@@ -22,8 +22,8 @@ function stlH(x, z) {
 }
 function stlSplat(x, z, n2) {
   const rail = STL_RAILS.some(rz => Math.abs(z - rz) < 1.8) && Math.abs(x) < 80, cr = STL_CRATERS.some(([cx, cz, r]) => Math.hypot(x - cx, z - cz) < r * 1.15);
-  const snow = 1.5 + n2 * .5, dirt = cr ? 1.4 : rail ? 1.1 : .25 + (1 - n2) * .3, peb = rail ? .8 : .1, tot = snow + dirt + peb, t = 1.28 + .12 * n2;
-  return { sp: [snow / tot, peb / tot, 0, dirt / tot], cl: [t * .97, t * 1.0, t * 1.08] };
+  const snow = 1.6 + n2 * .5, dirt = cr ? 1.2 : rail ? .9 : .12 + (1 - n2) * .2, peb = rail ? .6 : 0, tot = snow + dirt + peb, t = 1.5 + .12 * n2;
+  return { sp: [snow / tot, peb / tot, 0, dirt / tot], sc: cr ? .5 : 0, cl: [t * .98, t * 1.06, t * 1.3] };
 }
 function stlSmoke(dt) {
   SNP.smokeT = (SNP.smokeT || 0) - dt; if (SNP.smokeT > 0) return; SNP.smokeT = .3;
@@ -32,14 +32,16 @@ function stlSmoke(dt) {
 
 // ---------- mattoni costruttivi ----------
 const STL_MAT = { brick: 0x8a3e2c, brick2: 0x7a3626, brickDk: 0x4e2a22, conc: 0x8c8a84, conc2: 0x75736e, steel: 0x3c3b38, rust: 0x6a4030, snow: 0xe6ebf0, plank: 0x5a4632 };
+// muri grandi: intonaco colorato (i materiali mattone e cemento a grande scala danno strisce)
+const STL_WM = m => m === 'brick' || m === 'concrete' ? 'plaster' : m;
 function stlWallU(mb, team, v0, v1, u0, u1, L, h, ops, c, mat, y0) {
-  mb.mat = mat; const y = y0 !== undefined ? y0 : L * SNP.FH;
+  mb.mat = STL_WM(mat); const y = y0 !== undefined ? y0 : L * SNP.FH;
   snpWallU(mb, team, v0, v1, u0, u1, y, h, ops, c);
   for (const o of ops) if (o.lo < .05 && o.hi >= 2) STL.doors.push({ team, u: (o.a + o.b) / 2, v: (v0 + v1) / 2, L, ax: 'u' });
   for (const o of ops) if (o.lo < .05 && L > 0 && y0 === undefined) stlSill(team, o.a, o.b, v0 - .05, v1 + .05, y);
 }
 function stlWallV(mb, team, u0, u1, v0, v1, L, h, ops, c, mat, y0) {
-  mb.mat = mat; const y = y0 !== undefined ? y0 : L * SNP.FH;
+  mb.mat = STL_WM(mat); const y = y0 !== undefined ? y0 : L * SNP.FH;
   snpWallV(mb, team, u0, u1, v0, v1, y, h, ops, c);
   for (const o of ops) if (o.lo < .05 && o.hi >= 2) STL.doors.push({ team, u: (u0 + u1) / 2, v: (o.a + o.b) / 2, L, ax: 'v' });
   for (const o of ops) if (o.lo < .05 && L > 0 && y0 === undefined) stlSill(team, u0 - .05, u1 + .05, o.a, o.b, y);
@@ -53,10 +55,10 @@ function stlSlab(mb, team, u0, u1, v0, v1, L, kind, holes) {
     const [x0, x1, z0, z1] = snpBoxW(team, r[0], r[1], r[2], r[3]), cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, d = z1 - z0;
     const th = kind === 'conc' ? .35 : kind === 'grate' ? .08 : .12;
     if (L > 0 || kind !== 'conc') {
-      mb.mat = kind === 'conc' ? 'concrete' : kind === 'grate' ? 'paint' : 'wood';
+      mb.mat = kind === 'conc' ? 'plaster' : kind === 'grate' ? 'paint' : 'wood';
       mb.add(U.box, kind === 'conc' ? STL_MAT.conc2 : kind === 'grate' ? STL_MAT.steel : STL_MAT.plank, cx, G + y + .01 - th / 2, cz, 0, 0, 0, w, th, d);
       if (kind === 'grate') { mb.mat = 'paint'; for (const zz of [z0 + .1, z1 - .1]) mb.add(U.box, STL_MAT.rust, cx, G + y - .2, zz, 0, 0, 0, w, .25, .12); }
-    } else { mb.mat = 'concrete'; mb.add(U.box, STL_MAT.conc2, cx, G + .02, cz, 0, 0, 0, w, .06, d); }
+    } else { mb.mat = 'plaster'; mb.add(U.box, STL_MAT.conc2, cx, G + .02, cz, 0, 0, 0, w, .06, d); }
     if (L > 0) { const s = addSolid(x0, G + y - th, z0, x1, G + y, z1, 'floor'); s.walk = true; }
     SNP.floors.push({ x0, x1, z0, z1, y: G + y });
   }
@@ -84,7 +86,7 @@ function stlStairs(mb, team, uLo, uHi, S1, S2, L0, L1, metal) {
     const endU = up ? uLo : uHi; snpBox(mb, team, endU - .05, endU + .05, s[0], s[1], (L + 1) * FH, (L + 1) * FH + 1, STL_MAT.rust);
   }
   const sp = S1[0] > S2[0] ? [S2[1], S1[0]] : [S1[1], S2[0]];
-  mb.mat = metal ? 'paint' : 'brick'; snpBox(mb, team, uLo, uHi, sp[0], sp[1], L0 * FH, L1 * FH + 1, metal ? STL_MAT.steel : STL_MAT.brick2);
+  mb.mat = metal ? 'paint' : 'plaster'; snpBox(mb, team, uLo, uHi, sp[0], sp[1], L0 * FH, L1 * FH + 1, metal ? STL_MAT.steel : STL_MAT.brick2);
   return holes;
 }
 // apertura della facciata: tipi diversi per forma e protezione
@@ -196,7 +198,7 @@ function stlSoviet() {
   for (const v of [9.8, 24.6]) snpBox(mb, T, -15.5, 15.5, v - .2, v + .2, 11.3, 11.8, STL_MAT.steel, false);
   { const p = snpW(T, 2, 17); mb.mat = 'paint'; mb.add(U.box, STL_MAT.rust, p.x, SNP.G + 5, p.z, .5, .3, .9, .5, .6, 15); }   // carroponte crollato
   // colonne di cemento e macchinari al piano terra
-  for (const u of [-8, 0, 8]) for (const v of [9.4, 17.5]) { mb.mat = 'concrete'; snpBox(mb, T, u - .35, u + .35, v - .35, v + .35, 0, 3 * FH, STL_MAT.conc); }
+  for (const u of [-8, 0, 8]) for (const v of [9.4, 17.5]) { mb.mat = 'plaster'; snpBox(mb, T, u - .35, u + .35, v - .35, v + .35, 0, 3 * FH, STL_MAT.conc); }
   for (const [u, v, k, r] of [[-12, 13, 'lathe', 0], [-4, 13.5, 'lathe', 0], [5, 21, 'press', 0], [11, 14, 'lathe', 0], [-11, 21, 'press', .2], [-3, 21.5, 'crates', .3], [12, 21, 'drums', 0], [3.5, 12.5, 'beam', .7], [-14, 4, 'crates', 0], [6, 3.6, 'sandbags', 0], [-7, 4.5, 'rubble', 0], [1, 5.5, 'snowdrift', 0], [-2, 17, 'rubble', 0]]) stlMachine(mb, T, u, v, 0, k, r);
   for (const [u, v, k, r] of [[-9, 5.2, 'crates', 0], [8.5, 5, 'drums', 0], [3, 4, 'sandbags', 0], [-14, 6.6, 'rubble', 0]]) stlMachine(mb, T, u, v, 1, k, r);
   for (const [u, v, k, r] of [[-12.5, 4.5, 'crates', 0], [0, 6.5, 'snowdrift', 0], [13, 4, 'sandbags', 0]]) stlMachine(mb, T, u, v, 3, k, r);
@@ -229,7 +231,7 @@ function stlSoviet() {
   stlWallV(mb, T, -16.25, -15.75, t, 9.5, 3, FH, [{ a: 3, b: 4.4, lo: 0, hi: 2.3 }], B2, 'brick');
   // --- cortile interno sul retro, ciminiera spezzata, muro di cinta ---
   stlYard(mb, T, B2);
-  { const p = snpW(T, 25, D + 6); mb.mat = 'brick'; mb.add(U.cyl12, B2, p.x, SNP.G + 12, p.z, 0, 0, 0, 2.2, 24, 2.2); mb.add(U.cyl12, B, p.x, SNP.G + 26, p.z, 0, 0, .06, 1.8, 6, 1.8); mb.add(U.cyl12, STL_MAT.brickDk, p.x + .4, SNP.G + 29.5, p.z, .3, 0, .2, 1.6, 2, 1.6); addSolid(p.x - 2.2, SNP.G, p.z - 2.2, p.x + 2.2, SNP.G + 32, p.z + 2.2, 'tower'); STL.smokes.push([p.x, SNP.G + 31, p.z, 1.2]); }
+  { const p = snpW(T, 25, D + 6); mb.mat = 'plaster'; mb.add(U.cyl12, B2, p.x, SNP.G + 12, p.z, 0, 0, 0, 2.2, 24, 2.2); mb.add(U.cyl12, B, p.x, SNP.G + 26, p.z, 0, 0, .06, 1.8, 6, 1.8); mb.add(U.cyl12, STL_MAT.brickDk, p.x + .4, SNP.G + 29.5, p.z, .3, 0, .2, 1.6, 2, 1.6); addSolid(p.x - 2.2, SNP.G, p.z - 2.2, p.x + 2.2, SNP.G + 32, p.z + 2.2, 'tower'); STL.smokes.push([p.x, SNP.G + 31, p.z, 1.2]); }
   // insegna dipinta sul fronte
   stlSign(T, 0, 'КРАСНЫЙ ОКТЯБРЬ', '#e8dcc0', '#5a2418', 3 * FH + .5);
   addTiled(mb, 50);
@@ -246,7 +248,7 @@ function stlFlight(mb, team, uA, uB, s, L, metal) {
 }
 function stlYard(mb, team, c) {
   const W2 = SNP.W / 2, D = SNP.D, Y = SNP.YARD;
-  mb.mat = 'brick'; snpBox(mb, team, -W2, W2, D + Y, D + Y + .5, 0, 3.4, c); snpBox(mb, team, -W2 - .5, -W2, D, D + Y + .5, 0, 3.4, c); snpBox(mb, team, W2, W2 + .5, D, D + Y + .5, 0, 3.4, c);
+  mb.mat = 'plaster'; snpBox(mb, team, -W2, W2, D + Y, D + Y + .5, 0, 3.4, c); snpBox(mb, team, -W2 - .5, -W2, D, D + Y + .5, 0, 3.4, c); snpBox(mb, team, W2, W2 + .5, D, D + Y + .5, 0, 3.4, c);
   for (const [u, v, k] of [[-20, D + 4, 'crates'], [-6, D + 8, 'drums'], [8, D + 3.5, 'rubble'], [14, D + 9, 'snowdrift'], [-26, D + 9, 'snowdrift']]) stlMachine(mb, team, u, v, 0, k, srand(0, 1));
   for (const u of [-24, -12, 0, 12]) STL.spawnSpots.push([team, u, D + 6, 0]);
 }
@@ -297,7 +299,7 @@ function stlGerman() {
     stlSlab(mb, T, -11.75, 1.75, t, D - t, L, 'conc', tHoles[L]);
   }
   // tetto della torre non praticabile (stesso numero di livelli dei sovietici)
-  mb.mat = 'concrete'; snpBox(mb, T, -12, 2, 0, D, 4 * FH, 4 * FH + .4, C1); snpBox(mb, T, -12.2, 2.2, -.2, .3, 4 * FH + .4, 4 * FH + 1.2, C2);
+  mb.mat = 'plaster'; snpBox(mb, T, -12, 2, 0, D, 4 * FH, 4 * FH + .4, C1); snpBox(mb, T, -12.2, 2.2, -.2, .3, 4 * FH + .4, 4 * FH + 1.2, C2);
   { const p = snpW(T, -5, 14); mb.mat = 'paint'; mb.add(U.cyl12, 0x5a5650, p.x, SNP.G + 4 * FH + 2, p.z, 0, 0, 0, 2.6, 4, 2.6); addSolid(p.x - 2.6, SNP.G + 4 * FH, p.z - 2.6, p.x + 2.6, SNP.G + 4 * FH + 4, p.z + 2.6, 'tower'); }
   for (let L = 0; L < 4; L++) stlMachine(mb, T, [-9, -3, -8, -2][L], [5, 4.5, 5.5, 6][L], L, ['crates', 'sandbags', 'rubble', 'drums'][L], 0);
   // --- sala turbine (u 2…32): turbine, carroponte al 1°, passerella delle lunette al 2°, tetto in cemento ---
@@ -387,11 +389,11 @@ function stlRailyard() {
   const far = new MB();
   for (let i = 0; i < 14; i++) for (const side of [-1, 1]) {
     const x = side * srand(42, 80), z = srand(zE - 30, zA + 30); if (Math.abs(x) < 40) continue;
-    cityHouseGeo(far, { cx: x, cz: z, w: srand(10, 18), d: srand(10, 16), ht: spick([9.3, 12.4, 15.5]), face: side, style: 2, base: stlH(x, z) - .2 }, true);
+    cityHouseGeo(far, { cx: x, cz: z, w: srand(10, 18), d: srand(10, 16), ht: spick([9.3, 12.4, 15.5]), face: side, style: 1, base: stlH(x, z) - .2 }, true);
     addSolid(x - 5, SNP.G - 1, z - 5, x + 5, SNP.G + 9, z + 5, 'house');
   }
-  for (let i = 0; i < 10; i++) { const x = srand(-90, 90), z = SNP.C.z + (i % 2 ? 1 : -1) * srand(100, 140); cityHouseGeo(far, { cx: x, cz: z, w: srand(12, 22), d: 12, ht: spick([12.4, 15.5, 18.6]), face: i % 2 ? -1 : 1, style: 2, base: stlH(x, z) - .2 }, SNP_RNG() < .7); }
-  for (const [x, z, h] of [[-70, -230, 26], [80, -60, 30], [-90, -90, 22], [60, -250, 28]]) { far.mat = 'brick'; far.add(U.cyl12, 0x5a3026, x, SNP.G + h / 2, z, 0, 0, 0, 1.6, h, 1.6); STL.smokes.push([x, SNP.G + h, z, 1.4]); }
+  for (let i = 0; i < 10; i++) { const x = srand(-90, 90), z = SNP.C.z + (i % 2 ? 1 : -1) * srand(100, 140); cityHouseGeo(far, { cx: x, cz: z, w: srand(12, 22), d: 12, ht: spick([12.4, 15.5, 18.6]), face: i % 2 ? -1 : 1, style: 1, base: stlH(x, z) - .2 }, SNP_RNG() < .7); }
+  for (const [x, z, h] of [[-70, -230, 26], [80, -60, 30], [-90, -90, 22], [60, -250, 28]]) { far.mat = 'plaster'; far.add(U.cyl12, 0x5a3026, x, SNP.G + h / 2, z, 0, 0, 0, 1.6, h, 1.6); STL.smokes.push([x, SNP.G + h, z, 1.4]); }
   for (const [x, z] of [[-48, -120], [52, -178], [-20, -95], [30, -205], [64, -150], [-66, -160]]) STL.smokes.push([x, SNP.G + 3, z, 1]);
   addTiled(far, 80);
 }
