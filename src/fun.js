@@ -176,7 +176,7 @@ function pickPriority() {
   return best;
 }
 function updatePriority(dt) {
-  if (P.mode === 'plane' || P.mode === 'naval' || P.dead) { if (PRIO.el) PRIO.el.style.display = 'none'; return; }
+  if (SCEN !== 'omaha' || P.mode === 'plane' || P.mode === 'naval' || P.dead) { if (PRIO.el) PRIO.el.style.display = 'none'; return; }
   const t = PRIO.target;
   if (!t) {
     PRIO.t -= dt; if (PRIO.el) PRIO.el.style.display = 'none';

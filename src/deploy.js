@@ -60,6 +60,7 @@ function updateDeploy(dt) {
 }
 function drawDeploy() {
   const cv = $('depMap'); if (!cv) return; const g = cv.getContext('2d'), W = cv.width, Hh = cv.height;
+  if (SCEN !== 'omaha') { drawDeployGeneric(g, W, Hh); return; }
   // area dei combattimenti: x -360..360, z 140..-340; ciò che è fuori viene fissato al bordo
   const mx = x => clamp((x + 360) / 720, .03, .97) * W, mz = z => clamp((140 - z) / 480, .04, .97) * Hh;
   g.fillStyle = '#26333a'; g.fillRect(0, 0, W, Hh);
@@ -75,6 +76,26 @@ function drawDeploy() {
     const x = mx(p.pos.x), y = mz(p.pos.z), sel = i === DEP.sel;
     g.fillStyle = sel ? '#ffd060' : '#e8e3d0'; g.beginPath(); g.arc(x, y, sel ? 9 : 6, 0, TAU); g.fill();
     g.fillStyle = '#111'; g.font = 'bold 11px Oswald, sans-serif'; g.textAlign = 'center'; g.fillText(i + 1, x, y + 4);
+  });
+  $('depList').innerHTML = DEP.pts.map((p, i) => `<div class="sp ${i === DEP.sel ? 'on' : ''}"><kbd>${i + 1}</kbd> ${p.label} <small>${p.sub}</small></div>`).join('') +
+    `<div class="spHint">${DEP.wait > 0 ? 'Rientro tra ' + Math.ceil(DEP.wait) + ' s' : 'Premi <kbd>Spazio</kbd> per schierarti'} · <kbd>1-9</kbd> scegli${P.dead ? '' : ' · <kbd>B</kbd> annulla'}</div>`;
+}
+// altre modalità: mappa neutra centrata sui punti di schieramento e sulle truppe
+function drawDeployGeneric(g, W, Hh) {
+  const xs = [], zs = [], fr = (typeof FRIENDS === 'function' ? FRIENDS() : []).filter(a => a.alive), fo = (typeof FOES === 'function' ? FOES() : []).filter(e => e.alive);
+  for (const o of [...DEP.pts.filter(p => p.kind !== 'plane' && p.kind !== 'naval'), ...fr, ...(SCEN === 'snp' ? [] : fo)]) if (o.pos) { xs.push(o.pos.x); zs.push(o.pos.z); }
+  if (!xs.length) { xs.push(0); zs.push(0); }
+  let x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
+  const s = Math.max(x1 - x0, z1 - z0, 60) * 1.15, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, k = Math.min(W, Hh) / s;
+  const mx = x => clamp(W / 2 + (x - cx) * k, 10, W - 10), mz = z => clamp(Hh / 2 + (z - cz) * k, 10, Hh - 10);
+  g.fillStyle = SCEN === 'sea' || SCEN === 'air' ? '#22323d' : SCEN === 'tun' || SCEN === 'kas' ? '#7a6a4c' : SCEN === 'ard' ? '#c9ccc9' : '#3d4236'; g.fillRect(0, 0, W, Hh);
+  g.strokeStyle = 'rgba(255,255,255,.08)'; g.lineWidth = 1; for (let i = 1; i < 8; i++) { g.beginPath(); g.moveTo(W * i / 8, 0); g.lineTo(W * i / 8, Hh); g.stroke(); g.beginPath(); g.moveTo(0, Hh * i / 8); g.lineTo(W, Hh * i / 8); g.stroke(); }
+  for (const a of fr) { g.fillStyle = '#6cf'; g.fillRect(mx(a.pos.x) - 1, mz(a.pos.z) - 1, 3, 3); }
+  if (SCEN !== 'snp') for (const e of fo) if (R() < .5) { g.fillStyle = '#f66'; g.fillRect(mx(e.pos.x) - 1, mz(e.pos.z) - 1, 3, 3); }
+  (SCEN === 'snp' ? [DEP.pts[DEP.sel]] : DEP.pts).forEach((p) => {
+    const i = DEP.pts.indexOf(p), x = mx(p.pos.x), y = mz(p.pos.z), sel = i === DEP.sel;
+    g.fillStyle = sel ? '#ffd060' : '#e8e3d0'; g.beginPath(); g.arc(x, y, sel ? 9 : 6, 0, TAU); g.fill();
+    g.fillStyle = '#111'; g.font = 'bold 11px Oswald, sans-serif'; g.textAlign = 'center'; g.fillText(SCEN === 'snp' ? '★' : i + 1, x, y + 4);
   });
   $('depList').innerHTML = DEP.pts.map((p, i) => `<div class="sp ${i === DEP.sel ? 'on' : ''}"><kbd>${i + 1}</kbd> ${p.label} <small>${p.sub}</small></div>`).join('') +
     `<div class="spHint">${DEP.wait > 0 ? 'Rientro tra ' + Math.ceil(DEP.wait) + ' s' : 'Premi <kbd>Spazio</kbd> per schierarti'} · <kbd>1-9</kbd> scegli${P.dead ? '' : ' · <kbd>B</kbd> annulla'}</div>`;
