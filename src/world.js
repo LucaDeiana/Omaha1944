@@ -243,6 +243,48 @@ function routeWaypoint(from, dest, out) {
 }
 function addCover(x, z, kind) { covers.push({ x, z, kind, occ: 0 }); }
 
+function beachDebris(S) {
+  const om = S.mat;
+  const put = (x, z, ry, parts) => { const y = H(x, z); S.setBase(x, y, z, 0, ry, 0); for (const q of parts) { S.mat = q[0]; S.add(q[1] || U.box, q[2], q[3], q[4], q[5], q[6] || 0, q[7] || 0, q[8] || 0, q[9], q[10], q[11]); } S.clearBase(); };
+  const items = [
+    () => [['paint', U.sph, 0x4a5236, 0, .05, 0, 0, 0, srnd(-.4, .4), .17, .1, .2]],                                                          // elmetto M1
+    () => [['sack', 0, 0x6e6a4c, 0, .12, 0, 0, 0, srnd(-.3, .3), .4, .24, .3], ['sack', 0, 0x5c583e, .05, .27, -.05, 0, 0, 0, .3, .1, .2]],      // zaino
+    () => [['sack', U.cyl12, 0x56603e, 0, .06, 0, PI / 2, 0, srnd(-.2, .2), .09, .7, .09], ['sack', U.cyl12, 0x56603e, .2, .06, .1, PI / 2, 1.2, 0, .09, .6, .09]],   // salvagente M1926
+    () => [['wood', 0, 0x5a4230, 0, .04, 0, 0, 0, 0, .05, .05, 1.0], ['paint', U.cyl, 0x2a2a28, 0, .05, -.55, PI / 2, 0, 0, .012, .5, .012]],   // fucile
+    () => [['paint', 0, 0x4a5236, 0, .22, 0, 0, 0, srnd(-.2, .2) + (srnd(0, 1) < .5 ? PI / 2 : 0), .17, .45, .33]],                                // tanica
+    () => [['wood', 0, 0x6a5638, 0, .15, 0, 0, 0, 0, .55, .3, .3], ['paint', 0, 0x3e4430, 0, .31, 0, 0, 0, 0, .56, .02, .31]],                     // cassa di munizioni
+    () => [['wood', 0, 0x7a6a50, 0, .03, 0, 0, 0, srnd(-.1, .1), .25, .05, srnd(1.4, 2.8)], ['wood', 0, 0x6a5a44, .3, .05, .4, 0, .6, 0, .2, .05, srnd(.8, 1.6)]],   // assi rotte
+    () => [['paint', U.cyl12, 0x3a3a34, 0, .2, 0, PI / 2, 0, 0, .28, .9, .28]],                                                                 // fusto
+  ];
+  for (let i = 0; i < 260; i++) { const x = srnd(-195, 195), z = srnd(-46, 40); put(x, z, srnd(0, TAU), items[(srnd(0, 1) * items.length) | 0]()); }
+  // linea della marea: alghe scure, legni e corde lungo la battigia
+  for (let i = 0; i < 300; i++) {
+    const x = srnd(-200, 200), z = -9 + Math.sin(x * .045) * 1.5 + srnd(-1.2, 1.2), y = H(x, z);
+    S.mat = 'sack'; S.add(U.box, [0x5a5238, 0x4e4a34, 0x625a40][i % 3], x, y + .008, z, 0, srnd(-.4, .4), 0, srnd(.3, 1.1), .015, srnd(.06, .18));
+    if (i % 7 === 0) { S.mat = 'wood'; S.add(U.box, 0x6e6250, x + .4, y + .04, z, 0, srnd(0, TAU), 0, .12, .08, srnd(.6, 2)); }
+  }
+  S.mat = om;
+}
+// riccio ceco: tre travi d'acciaio a L unite al centro da piastre rivettate, ruggine di tonalità diverse
+const _hhE = new THREE.Euler(), _hhV = new V3();
+function hedgehog(S, x, y, z, ry) {
+  const om = S.mat; S.mat = 'paint';
+  S.setBase(x, y + .62, z, 0, ry, 0);
+  const rust = [0x6a4434, 0x5a4034, 0x704a36, 0x4e4038][(Math.abs(x * 7 + z * 3) | 0) % 4];
+  for (const [rx, ryy, rz, sx, sy, sz] of [[PI / 4, 0, 0, 0, 0, 1], [-PI / 4, 0, 0, 0, 0, 1], [0, PI / 2, PI / 4, 0, 1, 0]]) {
+    // trave a L: due ali sottili ad angolo retto lungo l'asse della trave
+    const len = 2.3, w = .16, t = .025, ax = sz ? 'z' : 'y';
+    for (const [ox, oy, bw, bh] of [[0, w / 2 - t / 2, w, t], [-(w / 2 - t / 2), 0, t, w]]) {
+      _hhE.set(rx, ryy, rz); _hhV.set(ox, oy, 0);
+      if (ax === 'y') _hhV.set(ox, 0, oy);
+      _hhV.applyEuler(_hhE);
+      S.add(U.box, rust, _hhV.x, _hhV.y, _hhV.z, rx, ryy, rz, ax === 'z' ? bw : bw, ax === 'z' ? bh : len, ax === 'z' ? len : bh);
+    }
+  }
+  S.add(U.box, 0x4a3a30, 0, 0, 0, PI / 4, 0, 0, .3, .3, .05); S.add(U.box, 0x4a3a30, 0, 0, 0, 0, 0, PI / 4, .05, .3, .3);
+  for (const s of [-1, 1]) S.add(U.cyl12, 0x3a3028, s * .04, .08, 0, 0, 0, PI / 2, .025, .04, .025);   // bulloni
+  S.clearBase(); S.mat = om;
+}
 // ---------- terreno con texture multiple ----------
 function axisSteps(a0, a1, f) { const r = []; let a = a0; while (a < a1) { r.push(a); a += f(a); } r.push(a1); return r; }
 function terrainMaterial() {
@@ -822,9 +864,7 @@ function buildStatic() {
   S.mat = 'paint';
   for (let i = 0; i < 450; i++) {
     const x = i < 250 ? srnd(-195, 195) : srnd(-MAPX + 40, MAPX - 40), z = srnd(-49, 78), y = H(x, z), ry = srnd(0, PI);
-    S.add(U.box, 0x6a5a4c, x, y + .7, z, PI / 4, ry, 0, .17, .17, 2.4);
-    S.add(U.box, 0x6a5a4c, x, y + .7, z, -PI / 4, ry, 0, .17, .17, 2.4);
-    S.add(U.box, 0x705e50, x, y + .7, z, 0, ry + PI / 2, PI / 4, .17, 2.4, .17);
+    hedgehog(S, x, y, z, ry);
     addCover(x + rnd(-.3, .3), z + 1.35, 'hh'); OBST.push({ x, z, r: .9 });
   }
   for (let i = 0; i < 34; i++) {
@@ -862,6 +902,8 @@ function buildStatic() {
     S.clearBase(); addSolid(x - 2, y - .5, z - .35, x + 2, y + .8, z + .35, 'sand');
     addCover(x - .8, z + 1, 'sand'); addCover(x + .8, z + 1, 'sand');
   }
+  // detriti dello sbarco: elmetti, zaini, salvagenti, fucili, taniche, casse, assi; linea della marea con alghe e legni
+  beachDebris(S);
   // dettagli della spiaggia lungo tutta la costa
   const farX = () => srnd(205, MAPX - 40) * (R() < .5 ? -1 : 1);
   for (let i = 0; i < 120; i++) {
@@ -1072,6 +1114,9 @@ function buildGrass() {
   const mat = new THREE.MeshStandardMaterial({ map: tex, alphaTest: .45, side: THREE.DoubleSide, roughness: 1, color: col(0x8d9560) });
   mat.onBeforeCompile = sh => {
     sh.uniforms.uTime = { value: 0 }; mat.userData.sh = sh;
+    // le versioni ridotte della texture mescolano i fili col fondo trasparente nero: si ripristina il colore dividendo per l'alfa
+    sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', 'vec4 texelColor=texture2D(map,vUv);texelColor.rgb/=max(texelColor.a,.08);texelColor=mapTexelToLinear(texelColor);diffuseColor*=texelColor;')
+      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal=normalize((viewMatrix*vec4(0.,1.,0.,0.)).xyz);');   // anche il retro dei ciuffi è illuminato dall'alto
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uTime;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\n vec4 ip=instanceMatrix*vec4(0.,0.,0.,1.); float sw=sin(uTime*1.7+ip.x*.3+ip.z*.2)*.12+sin(uTime*3.1+ip.x)*.04; transformed.x+=sw*position.y; transformed.z+=sw*.6*position.y;');
   };

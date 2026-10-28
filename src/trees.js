@@ -38,7 +38,16 @@ function buildTrees() {
   const N = TREES.list.length;
   const trunkG = new THREE.CylinderGeometry(.14, .24, 1, 7); trunkG.translate(0, .5, 0);
   const mb = new MB(); mb.mat = 'vc';
-  for (let i = 0; i < 6; i++) mb.add(U.ico1, pick([0x3f5228, 0x4a5e2c, 0x37481f, 0x55662f, 0x44562a]), rnd(-.25, .25), rnd(-.15, .2), rnd(-.25, .25), R(), R(), R(), rnd(.3, .45), rnd(.25, .38), rnd(.3, .45));
+  // chioma di latifoglia: ciuffi irregolari distribuiti su una forma schiacciata, più scuri sotto e all'interno
+  const nb = Q.tex >= 1024 ? 18 : Q.tex >= 512 ? 12 : 6, rr = seeded(31);
+  for (let i = 0; i < nb; i++) {
+    const a = rr() * TAU, d = Math.sqrt(rr()) * .34, y = (rr() - .35) * .38, out = d / .34;
+    const c = new THREE.Color(pick([0x3f5228, 0x4a5e2c, 0x37481f, 0x55662f, 0x44562a, 0x5a6a34])).multiplyScalar(.75 + .35 * out + (y > 0 ? .1 : -.1));
+    const s = .16 + rr() * .14;
+    mb.add(U.ico1, c.getHex(), Math.cos(a) * d, y, Math.sin(a) * d, rr() * 3, rr() * 3, rr() * 3, s * (1 + rr() * .3), s * (.75 + rr() * .3), s * (1 + rr() * .3));
+  }
+  // rami che escono dal tronco verso i ciuffi
+  for (let i = 0; i < 4; i++) { const a = i * TAU / 4 + rr() * .6; mb.add(U.cyl, 0x4a3a2a, Math.cos(a) * .12, -.32, Math.sin(a) * .12, Math.sin(a) * .7, 0, -Math.cos(a) * .7, .018, .32, .018); }
   const crownG = SCEN === 'ard' ? ardTreeCrown() : mb.build();
   const cells = new Map(), CS = 160;
   for (const t of TREES.list) { const k = Math.floor(t.x / CS) + ',' + Math.floor(t.z / CS); let c = cells.get(k); if (!c) cells.set(k, c = []); c.push(t); }
