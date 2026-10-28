@@ -56,7 +56,7 @@ function buildTrees() {
     const bb = new THREE.Box3(); for (const t of list) bb.expandByPoint(new V3(t.x, t.y, t.z)); bb.max.y += 16; bb.expandByScalar(9);
     const sph = bb.getBoundingSphere(new THREE.Sphere());
     const tgc = trunkG.clone(), cgc = crownG.clone(); tgc.boundingSphere = sph; cgc.boundingSphere = sph.clone();
-    const c = { trunk: new THREE.InstancedMesh(tgc, MAT.wood, list.length), crown: new THREE.InstancedMesh(cgc, MAT.vc, list.length), dirty: false };
+    const c = { trunk: new THREE.InstancedMesh(tgc, MAT.wood, list.length), crown: new THREE.InstancedMesh(cgc, MAT.vcTree || (MAT.vcTree = MAT.vc.clone()), list.length), dirty: false };
     for (const m of [c.trunk, c.crown]) { m.castShadow = Q.shadows > 0; m.receiveShadow = true; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); }
     list.forEach((t, i) => { t.cell = c; t.i = i; treeMatrix(t); const v = .78 + R() * .4; c.crown.setColorAt(i, _tc.setRGB(v * (.92 + R() * .12), v, v * (.9 + R() * .14))); });
     if (c.crown.instanceColor) c.crown.instanceColor.needsUpdate = true;
