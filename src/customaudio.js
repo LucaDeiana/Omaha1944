@@ -35,7 +35,24 @@ async function loadCustomAudio() {
     } catch (e) { CA.report.bad.push(g.f); }   // file corrotto o formato non supportato: resta l'originale
   }));
   CA.n = Object.keys(CA.buf).length; CA.ready = true;
+  // suoni continui già avviati (vento, mare, motori): passano al file personale senza interrompersi
+  for (const h of AU.loopHandles || []) {
+    if (h.dead || !h.src) continue; const l = caResolve(h.name, h.cx); if (!l) continue;
+    try { const ns = AU.ctx.createBufferSource(); ns.buffer = l[0]; ns.loop = true; ns.playbackRate.value = h.src.playbackRate.value; ns.connect(h.g); ns.start(); h.src.stop(); h.src = ns; } catch (e) { }
+  }
   if (CA.n) console.info(`Audio personali: ${CA.report.loaded.length} file per ${CA.n} eventi` + (CA.report.bad.length ? ` · non validi: ${CA.report.bad.join(', ')}` : '') + (CA.report.unknown.length ? ` · non riconosciuti: ${CA.report.unknown.join(', ')}` : ''));
+}
+// carica alcuni eventi in un altro contesto audio (introduzione e menù): restituisce { id: [buffer] }
+async function caLoadInto(ctx, ids) {
+  const MF = window.AUDIO_MANIFEST, out = {}; if (!MF || !ctx || !netAvailable()) return out;
+  let files; try { const r = await fetch('custom-audio/index', { cache: 'no-store' }); if (!r.ok) return out; files = await r.json(); } catch (e) { return out; }
+  const want = new Set(ids);
+  for (const f of files) {
+    const m = /^(.*?)(?:_(\d{1,3}))?\.(flac|wav|ogg|mp3)$/i.exec(f); if (!m) continue;
+    const e = MF.list.find(x => x.path === m[1].toLowerCase()); if (!e || !want.has(e.id)) continue;
+    try { const r = await fetch('custom-audio/file/' + f.split('/').map(encodeURIComponent).join('/')); const b = await ctx.decodeAudioData(await r.arrayBuffer()); if (b && b.duration > .01) (out[e.id] = out[e.id] || []).push(b); } catch (x) { }
+  }
+  return out;
 }
 // sceglie la variante successiva senza ripetere subito la stessa
 function caVariant(id) {

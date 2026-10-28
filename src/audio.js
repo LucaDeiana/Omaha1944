@@ -211,6 +211,7 @@ async function buildBank() {
   // suoni reali di guerra (CC0): sostituiscono quelli sintetici con lo stesso nome; picco portato a 0,9
   if (window.SFX_WAR) for (const k in SFX_WAR) { const arr = []; for (const b64 of SFX_WAR[k]) { try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); const b = await c.decodeAudioData(u.buffer); const d = b.getChannelData(0); let mx = 0; for (let i = 0; i < d.length; i += 2) mx = Math.max(mx, Math.abs(d[i])); if (mx > 0) { const g = .9 / mx; for (let i = 0; i < d.length; i++) d[i] *= g; } arr.push(k === 'imp_metal' ? trimBuf(c, b, .09) : b); } catch (e) { } } if (arr.length) AU.buf[k] = arr; }
   AU.ready = true;
+  for (const h of AU.loopHandles || []) if (!h.dead && !h.src) h.build();   // loop chiesti durante il caricamento
   startAmbience();
 }
 
@@ -277,24 +278,32 @@ function play(name, pos, o = {}) {
   }
   return src;
 }
+// suono continuo. Se l'audio non è ancora pronto (mezzi creati durante il caricamento) il loop resta
+// in attesa e parte da solo appena i suoni sono pronti, con l'ultimo volume impostato.
 function loopSound(name, vol = 0, cx) {
-  const cl = typeof caResolve === 'function' ? caResolve(name, cx) : null;
-  if (!AU.ready || !(cl || AU.buf[name])) return null;
-  const c = AU.ctx, src = c.createBufferSource(); src.buffer = (cl || AU.buf[name])[0]; src.loop = true;
-  const g = c.createGain(); g.gain.value = vol; const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 20000;
-  let last = f; src.connect(g); g.connect(f);
-  let pan = null; if (c.createStereoPanner) { pan = c.createStereoPanner(); f.connect(pan); last = pan; }
-  last.connect(AU.out); src.start();
   const h = {
-    src, g, f, pan,
+    src: null, g: null, f: null, pan: null, name, cx, pend: [vol, 0, 1, 20000],
+    build() {
+      const cl = typeof caResolve === 'function' ? caResolve(name, cx) : null, list = cl || AU.buf[name];
+      if (!list) return false;
+      const c = AU.ctx, src = this.src = c.createBufferSource(); src.buffer = list[0]; src.loop = true;
+      const g = this.g = c.createGain(); g.gain.value = this.pend[0]; const f = this.f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 20000;
+      let last = f; src.connect(g); g.connect(f);
+      if (c.createStereoPanner) { this.pan = c.createStereoPanner(); f.connect(this.pan); last = this.pan; }
+      last.connect(AU.out); src.start(); this.set(...this.pend); return true;
+    },
     set(v, p = 0, rate = 1, lp = 20000) {
       if (!fin(v) || !fin(p) || !fin(rate) || !fin(lp)) return;
-      const t = c.currentTime; g.gain.setTargetAtTime(clamp(v, 0, 2), t, .08); if (pan) pan.pan.setTargetAtTime(clamp(p, -1, 1), t, .08);
-      src.playbackRate.setTargetAtTime(clamp(rate, .3, 3), t, .1); f.frequency.setTargetAtTime(clamp(lp, 80, 20000), t, .1);
+      if (!this.src) { this.pend = [v, p, rate, lp]; return; }
+      const t = AU.ctx.currentTime; this.g.gain.setTargetAtTime(clamp(v, 0, 2), t, .08); if (this.pan) this.pan.pan.setTargetAtTime(clamp(p, -1, 1), t, .08);
+      this.src.playbackRate.setTargetAtTime(clamp(rate, .3, 3), t, .1); this.f.frequency.setTargetAtTime(clamp(lp, 80, 20000), t, .1);
     },
-    at(pos, v, rate = 1, ref = 120) { const sp = spatial(pos, ref); this.set(v * sp.vol, sp.pan, rate, sp.lp); },
-    stop() { try { src.stop(); } catch (e) { } }
+    at(pos, v, rate = 1, ref = 120) { if (!this.src) { this.pend = [v * .5, 0, rate, 20000]; return; } const sp = spatial(pos, ref); this.set(v * sp.vol, sp.pan, rate, sp.lp); },
+    stop() { this.dead = true; try { if (this.src) this.src.stop(); } catch (e) { } }
   };
+  if (AU.ready) { if (!h.build()) return null; }
+  else if (!AU.ctx && typeof initAudio !== 'function') return null;
+  AU.loopHandles = (AU.loopHandles || []).filter(x => !x.dead); AU.loopHandles.push(h);
   return h;
 }
 

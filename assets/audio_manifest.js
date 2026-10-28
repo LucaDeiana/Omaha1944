@@ -134,8 +134,9 @@
   for (const [s, name] of SHIPS) {
     add(`naval.${s}.main_cannon_fire`, `naval/${s}/main_cannon_fire`, 'naval', `${name}: cannoni principali (nave del giocatore)`, 'ship_near');
     add(`naval.${s}.main_cannon_distant`, `naval/${s}/main_cannon_distant`, 'naval', `${name}: cannoni principali sentiti da fuori`, 'ship_far');
-    add(`naval.${s}.secondary_fire`, `naval/${s}/secondary_fire`, 'naval', `${name}: artiglieria secondaria e cannoncini (20 mm e oltre)`, 'flak');
-    add(`naval.${s}.aa_fire`, `naval/${s}/aa_fire`, 'naval', `${name}: mitragliere antiaeree leggere`, 'm2');
+    add(`naval.${s}.secondary_fire`, `naval/${s}/secondary_fire`, 'naval', `${name}: artiglieria secondaria (es. 127 mm della Texas), nave del giocatore`, 'ship_near');
+    add(`naval.${s}.secondary_distant`, `naval/${s}/secondary_distant`, 'naval', `${name}: artiglieria secondaria sentita da fuori`, 'ship_far');
+    add(`naval.${s}.aa_fire`, `naval/${s}/aa_fire`, 'naval', `${name}: contraerea e mitragliere (sotto i 100 mm)`, 'flak o m2');
   }
 
   // ---------- modalità cecchini: annunci e conferme (solo se presenti i file) ----------
@@ -146,6 +147,10 @@
   // ---------- grida dei soldati: sostituiscono la sintesi vocale per quella categoria ----------
   for (const [lang, cats] of [['en', 'move medic cover grenade reload kill fire mortar plane'], ['de', 'fire spot grenade reload medic retreat hold plane']])
     for (const c of cats.split(' ')) add(`shout.${lang}.${c}`, `voices/shouts/${lang}/${c}`, 'voices', `Grida ${lang === 'en' ? 'americane' : 'tedesche'}: ${c}`, 'sintesi vocale del browser');
+
+  // ---------- introduzione e menù iniziale: prima intro/<suono>, poi il suono generico, poi l'originale ----------
+  for (const [s, d] of [['air_raid', 'sirena (Pearl Harbor)'], ['boom_big', 'grande esplosione'], ['boom_far', 'esplosioni lontane'], ['dive', 'picchiata'], ['flyby', 'passaggio di aerei'],
+    ['ship_far', 'cannoni navali'], ['flak_far', 'contraerea'], ['surf', 'mare (Omaha)'], ['whistle', 'fischio d\'artiglieria'], ['eng_bomber', 'bombardieri']]) add(`intro.${s}`, `intro/${s}`, 'intro', `Introduzione: ${d}`, s);
 
   // ---------- interfaccia (solo se presenti i file) ----------
   add('ui.click', 'ui/click', 'ui', 'Clic sui pulsanti dei menù', 'nessuno: solo se presente il file');

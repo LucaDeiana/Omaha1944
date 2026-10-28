@@ -45,7 +45,7 @@ Gli eventi con suono originale «nessuno» (mira, annunci dei cecchini, interfac
 - Le **musiche**: hanno già il loro sistema (cartella `musiche`, vedi LEGGIMI.txt).
 - I suoni dell'**introduzione** e del **menù iniziale**, che hanno un sistema separato.
 
-## Elenco degli eventi (339)
+## Elenco degli eventi (363)
 
 ### Armi (144)
 | File | Descrizione | Originale | Id |
@@ -341,7 +341,7 @@ Gli eventi con suono originale «nessuno» (mira, annunci dei cecchini, interfac
 | `aircraft/b26/engine` | B-26 Marauder: motore (loop, segue manetta e velocità) | motore generico della nazione | `aircraft.b26.engine` |
 | `aircraft/b26/guns_fire` | B-26 Marauder: mitragliatrici o cannoni di bordo | colpo dell'arma di bordo | `aircraft.b26.guns_fire` |
 
-### Navi (61)
+### Navi (75)
 | File | Descrizione | Originale | Id |
 |---|---|---|---|
 | `naval/common/main_cannon_fire` | Cannoni principali della propria nave | ship_near | `naval.common.main_cannon_fire` |
@@ -351,60 +351,74 @@ Gli eventi con suono originale «nessuno» (mira, annunci dei cecchini, interfac
 | `naval/common/torpedo` | Siluro in corsa | torpedo_run | `naval.common.torpedo` |
 | `naval/texas/main_cannon_fire` | USS Texas: cannoni principali (nave del giocatore) | ship_near | `naval.texas.main_cannon_fire` |
 | `naval/texas/main_cannon_distant` | USS Texas: cannoni principali sentiti da fuori | ship_far | `naval.texas.main_cannon_distant` |
-| `naval/texas/secondary_fire` | USS Texas: artiglieria secondaria e cannoncini (20 mm e oltre) | flak | `naval.texas.secondary_fire` |
-| `naval/texas/aa_fire` | USS Texas: mitragliere antiaeree leggere | m2 | `naval.texas.aa_fire` |
+| `naval/texas/secondary_fire` | USS Texas: artiglieria secondaria (es. 127 mm della Texas), nave del giocatore | ship_near | `naval.texas.secondary_fire` |
+| `naval/texas/secondary_distant` | USS Texas: artiglieria secondaria sentita da fuori | ship_far | `naval.texas.secondary_distant` |
+| `naval/texas/aa_fire` | USS Texas: contraerea e mitragliere (sotto i 100 mm) | flak o m2 | `naval.texas.aa_fire` |
 | `naval/fletcher/main_cannon_fire` | Cacciatorpediniere Fletcher: cannoni principali (nave del giocatore) | ship_near | `naval.fletcher.main_cannon_fire` |
 | `naval/fletcher/main_cannon_distant` | Cacciatorpediniere Fletcher: cannoni principali sentiti da fuori | ship_far | `naval.fletcher.main_cannon_distant` |
-| `naval/fletcher/secondary_fire` | Cacciatorpediniere Fletcher: artiglieria secondaria e cannoncini (20 mm e oltre) | flak | `naval.fletcher.secondary_fire` |
-| `naval/fletcher/aa_fire` | Cacciatorpediniere Fletcher: mitragliere antiaeree leggere | m2 | `naval.fletcher.aa_fire` |
+| `naval/fletcher/secondary_fire` | Cacciatorpediniere Fletcher: artiglieria secondaria (es. 127 mm della Texas), nave del giocatore | ship_near | `naval.fletcher.secondary_fire` |
+| `naval/fletcher/secondary_distant` | Cacciatorpediniere Fletcher: artiglieria secondaria sentita da fuori | ship_far | `naval.fletcher.secondary_distant` |
+| `naval/fletcher/aa_fire` | Cacciatorpediniere Fletcher: contraerea e mitragliere (sotto i 100 mm) | flak o m2 | `naval.fletcher.aa_fire` |
 | `naval/cleveland/main_cannon_fire` | Incrociatore Cleveland: cannoni principali (nave del giocatore) | ship_near | `naval.cleveland.main_cannon_fire` |
 | `naval/cleveland/main_cannon_distant` | Incrociatore Cleveland: cannoni principali sentiti da fuori | ship_far | `naval.cleveland.main_cannon_distant` |
-| `naval/cleveland/secondary_fire` | Incrociatore Cleveland: artiglieria secondaria e cannoncini (20 mm e oltre) | flak | `naval.cleveland.secondary_fire` |
-| `naval/cleveland/aa_fire` | Incrociatore Cleveland: mitragliere antiaeree leggere | m2 | `naval.cleveland.aa_fire` |
+| `naval/cleveland/secondary_fire` | Incrociatore Cleveland: artiglieria secondaria (es. 127 mm della Texas), nave del giocatore | ship_near | `naval.cleveland.secondary_fire` |
+| `naval/cleveland/secondary_distant` | Incrociatore Cleveland: artiglieria secondaria sentita da fuori | ship_far | `naval.cleveland.secondary_distant` |
+| `naval/cleveland/aa_fire` | Incrociatore Cleveland: contraerea e mitragliere (sotto i 100 mm) | flak o m2 | `naval.cleveland.aa_fire` |
 | `naval/elco/main_cannon_fire` | PT boat Elco: cannoni principali (nave del giocatore) | ship_near | `naval.elco.main_cannon_fire` |
 | `naval/elco/main_cannon_distant` | PT boat Elco: cannoni principali sentiti da fuori | ship_far | `naval.elco.main_cannon_distant` |
-| `naval/elco/secondary_fire` | PT boat Elco: artiglieria secondaria e cannoncini (20 mm e oltre) | flak | `naval.elco.secondary_fire` |
-| `naval/elco/aa_fire` | PT boat Elco: mitragliere antiaeree leggere | m2 | `naval.elco.aa_fire` |
+| `naval/elco/secondary_fire` | PT boat Elco: artiglieria secondaria (es. 127 mm della Texas), nave del giocatore | ship_near | `naval.elco.secondary_fire` |
+| `naval/elco/secondary_distant` | PT boat Elco: artiglieria secondaria sentita da fuori | ship_far | `naval.elco.secondary_distant` |
+| `naval/elco/aa_fire` | PT boat Elco: contraerea e mitragliere (sotto i 100 mm) | flak o m2 | `naval.elco.aa_fire` |
 | `naval/satsuma/main_cannon_fire` | Satsuma: cannoni principali (nave del giocatore) | ship_near | `naval.satsuma.main_cannon_fire` |
 | `naval/satsuma/main_cannon_distant` | Satsuma: cannoni principali sentiti da fuori | ship_far | `naval.satsuma.main_cannon_distant` |
-| `naval/satsuma/secondary_fire` | Satsuma: artiglieria secondaria e cannoncini (20 mm e oltre) | flak | `naval.satsuma.secondary_fire` |
-| `naval/satsuma/aa_fire` | Satsuma: mitragliere antiaeree leggere | m2 | `naval.satsuma.aa_fire` |
+| `naval/satsuma/secondary_fire` | Satsuma: artiglieria secondaria (es. 127 mm della Texas), nave del giocatore | ship_near | `naval.satsuma.secondary_fire` |
+| `naval/satsuma/secondary_distant` | Satsuma: artiglieria secondaria sentita da fuori | ship_far | `naval.satsuma.secondary_distant` |
+| `naval/satsuma/aa_fire` | Satsuma: contraerea e mitragliere (sotto i 100 mm) | flak o m2 | `naval.satsuma.aa_fire` |
 | `naval/akagi/main_cannon_fire` | Portaerei Akagi: cannoni principali (nave del giocatore) | ship_near | `naval.akagi.main_cannon_fire` |
 | `naval/akagi/main_cannon_distant` | Portaerei Akagi: cannoni principali sentiti da fuori | ship_far | `naval.akagi.main_cannon_distant` |
-| `naval/akagi/secondary_fire` | Portaerei Akagi: artiglieria secondaria e cannoncini (20 mm e oltre) | flak | `naval.akagi.secondary_fire` |
-| `naval/akagi/aa_fire` | Portaerei Akagi: mitragliere antiaeree leggere | m2 | `naval.akagi.aa_fire` |
+| `naval/akagi/secondary_fire` | Portaerei Akagi: artiglieria secondaria (es. 127 mm della Texas), nave del giocatore | ship_near | `naval.akagi.secondary_fire` |
+| `naval/akagi/secondary_distant` | Portaerei Akagi: artiglieria secondaria sentita da fuori | ship_far | `naval.akagi.secondary_distant` |
+| `naval/akagi/aa_fire` | Portaerei Akagi: contraerea e mitragliere (sotto i 100 mm) | flak o m2 | `naval.akagi.aa_fire` |
 | `naval/kaga/main_cannon_fire` | Portaerei Kaga: cannoni principali (nave del giocatore) | ship_near | `naval.kaga.main_cannon_fire` |
 | `naval/kaga/main_cannon_distant` | Portaerei Kaga: cannoni principali sentiti da fuori | ship_far | `naval.kaga.main_cannon_distant` |
-| `naval/kaga/secondary_fire` | Portaerei Kaga: artiglieria secondaria e cannoncini (20 mm e oltre) | flak | `naval.kaga.secondary_fire` |
-| `naval/kaga/aa_fire` | Portaerei Kaga: mitragliere antiaeree leggere | m2 | `naval.kaga.aa_fire` |
+| `naval/kaga/secondary_fire` | Portaerei Kaga: artiglieria secondaria (es. 127 mm della Texas), nave del giocatore | ship_near | `naval.kaga.secondary_fire` |
+| `naval/kaga/secondary_distant` | Portaerei Kaga: artiglieria secondaria sentita da fuori | ship_far | `naval.kaga.secondary_distant` |
+| `naval/kaga/aa_fire` | Portaerei Kaga: contraerea e mitragliere (sotto i 100 mm) | flak o m2 | `naval.kaga.aa_fire` |
 | `naval/soryu/main_cannon_fire` | Portaerei Soryu: cannoni principali (nave del giocatore) | ship_near | `naval.soryu.main_cannon_fire` |
 | `naval/soryu/main_cannon_distant` | Portaerei Soryu: cannoni principali sentiti da fuori | ship_far | `naval.soryu.main_cannon_distant` |
-| `naval/soryu/secondary_fire` | Portaerei Soryu: artiglieria secondaria e cannoncini (20 mm e oltre) | flak | `naval.soryu.secondary_fire` |
-| `naval/soryu/aa_fire` | Portaerei Soryu: mitragliere antiaeree leggere | m2 | `naval.soryu.aa_fire` |
+| `naval/soryu/secondary_fire` | Portaerei Soryu: artiglieria secondaria (es. 127 mm della Texas), nave del giocatore | ship_near | `naval.soryu.secondary_fire` |
+| `naval/soryu/secondary_distant` | Portaerei Soryu: artiglieria secondaria sentita da fuori | ship_far | `naval.soryu.secondary_distant` |
+| `naval/soryu/aa_fire` | Portaerei Soryu: contraerea e mitragliere (sotto i 100 mm) | flak o m2 | `naval.soryu.aa_fire` |
 | `naval/kirishima/main_cannon_fire` | Corazzata Kirishima: cannoni principali (nave del giocatore) | ship_near | `naval.kirishima.main_cannon_fire` |
 | `naval/kirishima/main_cannon_distant` | Corazzata Kirishima: cannoni principali sentiti da fuori | ship_far | `naval.kirishima.main_cannon_distant` |
-| `naval/kirishima/secondary_fire` | Corazzata Kirishima: artiglieria secondaria e cannoncini (20 mm e oltre) | flak | `naval.kirishima.secondary_fire` |
-| `naval/kirishima/aa_fire` | Corazzata Kirishima: mitragliere antiaeree leggere | m2 | `naval.kirishima.aa_fire` |
+| `naval/kirishima/secondary_fire` | Corazzata Kirishima: artiglieria secondaria (es. 127 mm della Texas), nave del giocatore | ship_near | `naval.kirishima.secondary_fire` |
+| `naval/kirishima/secondary_distant` | Corazzata Kirishima: artiglieria secondaria sentita da fuori | ship_far | `naval.kirishima.secondary_distant` |
+| `naval/kirishima/aa_fire` | Corazzata Kirishima: contraerea e mitragliere (sotto i 100 mm) | flak o m2 | `naval.kirishima.aa_fire` |
 | `naval/z1934/main_cannon_fire` | Zerstörer 1934: cannoni principali (nave del giocatore) | ship_near | `naval.z1934.main_cannon_fire` |
 | `naval/z1934/main_cannon_distant` | Zerstörer 1934: cannoni principali sentiti da fuori | ship_far | `naval.z1934.main_cannon_distant` |
-| `naval/z1934/secondary_fire` | Zerstörer 1934: artiglieria secondaria e cannoncini (20 mm e oltre) | flak | `naval.z1934.secondary_fire` |
-| `naval/z1934/aa_fire` | Zerstörer 1934: mitragliere antiaeree leggere | m2 | `naval.z1934.aa_fire` |
+| `naval/z1934/secondary_fire` | Zerstörer 1934: artiglieria secondaria (es. 127 mm della Texas), nave del giocatore | ship_near | `naval.z1934.secondary_fire` |
+| `naval/z1934/secondary_distant` | Zerstörer 1934: artiglieria secondaria sentita da fuori | ship_far | `naval.z1934.secondary_distant` |
+| `naval/z1934/aa_fire` | Zerstörer 1934: contraerea e mitragliere (sotto i 100 mm) | flak o m2 | `naval.z1934.aa_fire` |
 | `naval/nurnberg/main_cannon_fire` | Incrociatore Nürnberg: cannoni principali (nave del giocatore) | ship_near | `naval.nurnberg.main_cannon_fire` |
 | `naval/nurnberg/main_cannon_distant` | Incrociatore Nürnberg: cannoni principali sentiti da fuori | ship_far | `naval.nurnberg.main_cannon_distant` |
-| `naval/nurnberg/secondary_fire` | Incrociatore Nürnberg: artiglieria secondaria e cannoncini (20 mm e oltre) | flak | `naval.nurnberg.secondary_fire` |
-| `naval/nurnberg/aa_fire` | Incrociatore Nürnberg: mitragliere antiaeree leggere | m2 | `naval.nurnberg.aa_fire` |
+| `naval/nurnberg/secondary_fire` | Incrociatore Nürnberg: artiglieria secondaria (es. 127 mm della Texas), nave del giocatore | ship_near | `naval.nurnberg.secondary_fire` |
+| `naval/nurnberg/secondary_distant` | Incrociatore Nürnberg: artiglieria secondaria sentita da fuori | ship_far | `naval.nurnberg.secondary_distant` |
+| `naval/nurnberg/aa_fire` | Incrociatore Nürnberg: contraerea e mitragliere (sotto i 100 mm) | flak o m2 | `naval.nurnberg.aa_fire` |
 | `naval/scharnhorst/main_cannon_fire` | Scharnhorst: cannoni principali (nave del giocatore) | ship_near | `naval.scharnhorst.main_cannon_fire` |
 | `naval/scharnhorst/main_cannon_distant` | Scharnhorst: cannoni principali sentiti da fuori | ship_far | `naval.scharnhorst.main_cannon_distant` |
-| `naval/scharnhorst/secondary_fire` | Scharnhorst: artiglieria secondaria e cannoncini (20 mm e oltre) | flak | `naval.scharnhorst.secondary_fire` |
-| `naval/scharnhorst/aa_fire` | Scharnhorst: mitragliere antiaeree leggere | m2 | `naval.scharnhorst.aa_fire` |
+| `naval/scharnhorst/secondary_fire` | Scharnhorst: artiglieria secondaria (es. 127 mm della Texas), nave del giocatore | ship_near | `naval.scharnhorst.secondary_fire` |
+| `naval/scharnhorst/secondary_distant` | Scharnhorst: artiglieria secondaria sentita da fuori | ship_far | `naval.scharnhorst.secondary_distant` |
+| `naval/scharnhorst/aa_fire` | Scharnhorst: contraerea e mitragliere (sotto i 100 mm) | flak o m2 | `naval.scharnhorst.aa_fire` |
 | `naval/sboot/main_cannon_fire` | Schnellboot S-100: cannoni principali (nave del giocatore) | ship_near | `naval.sboot.main_cannon_fire` |
 | `naval/sboot/main_cannon_distant` | Schnellboot S-100: cannoni principali sentiti da fuori | ship_far | `naval.sboot.main_cannon_distant` |
-| `naval/sboot/secondary_fire` | Schnellboot S-100: artiglieria secondaria e cannoncini (20 mm e oltre) | flak | `naval.sboot.secondary_fire` |
-| `naval/sboot/aa_fire` | Schnellboot S-100: mitragliere antiaeree leggere | m2 | `naval.sboot.aa_fire` |
+| `naval/sboot/secondary_fire` | Schnellboot S-100: artiglieria secondaria (es. 127 mm della Texas), nave del giocatore | ship_near | `naval.sboot.secondary_fire` |
+| `naval/sboot/secondary_distant` | Schnellboot S-100: artiglieria secondaria sentita da fuori | ship_far | `naval.sboot.secondary_distant` |
+| `naval/sboot/aa_fire` | Schnellboot S-100: contraerea e mitragliere (sotto i 100 mm) | flak o m2 | `naval.sboot.aa_fire` |
 | `naval/cargo/main_cannon_fire` | Mercantile: cannoni principali (nave del giocatore) | ship_near | `naval.cargo.main_cannon_fire` |
 | `naval/cargo/main_cannon_distant` | Mercantile: cannoni principali sentiti da fuori | ship_far | `naval.cargo.main_cannon_distant` |
-| `naval/cargo/secondary_fire` | Mercantile: artiglieria secondaria e cannoncini (20 mm e oltre) | flak | `naval.cargo.secondary_fire` |
-| `naval/cargo/aa_fire` | Mercantile: mitragliere antiaeree leggere | m2 | `naval.cargo.aa_fire` |
+| `naval/cargo/secondary_fire` | Mercantile: artiglieria secondaria (es. 127 mm della Texas), nave del giocatore | ship_near | `naval.cargo.secondary_fire` |
+| `naval/cargo/secondary_distant` | Mercantile: artiglieria secondaria sentita da fuori | ship_far | `naval.cargo.secondary_distant` |
+| `naval/cargo/aa_fire` | Mercantile: contraerea e mitragliere (sotto i 100 mm) | flak o m2 | `naval.cargo.aa_fire` |
 
 ### Ambiente (5)
 | File | Descrizione | Originale | Id |
@@ -427,6 +441,20 @@ Gli eventi con suono originale «nessuno» (mira, annunci dei cecchini, interfac
 | `sniper/effects/hitmarker` | Colpo a segno | nessuno: solo se presente il file | `sniper.effects.hitmarker` |
 | `sniper/effects/headshot_confirm` | Conferma colpo alla testa | nessuno: solo se presente il file | `sniper.effects.headshot_confirm` |
 | `sniper/effects/kill_confirm` | Conferma uccisione | nessuno: solo se presente il file | `sniper.effects.kill_confirm` |
+
+### Introduzione e menù (10)
+| File | Descrizione | Originale | Id |
+|---|---|---|---|
+| `intro/air_raid` | Introduzione: sirena (Pearl Harbor) | air_raid | `intro.air_raid` |
+| `intro/boom_big` | Introduzione: grande esplosione | boom_big | `intro.boom_big` |
+| `intro/boom_far` | Introduzione: esplosioni lontane | boom_far | `intro.boom_far` |
+| `intro/dive` | Introduzione: picchiata | dive | `intro.dive` |
+| `intro/flyby` | Introduzione: passaggio di aerei | flyby | `intro.flyby` |
+| `intro/ship_far` | Introduzione: cannoni navali | ship_far | `intro.ship_far` |
+| `intro/flak_far` | Introduzione: contraerea | flak_far | `intro.flak_far` |
+| `intro/surf` | Introduzione: mare (Omaha) | surf | `intro.surf` |
+| `intro/whistle` | Introduzione: fischio d'artiglieria | whistle | `intro.whistle` |
+| `intro/eng_bomber` | Introduzione: bombardieri | eng_bomber | `intro.eng_bomber` |
 
 ### Interfaccia (2)
 | File | Descrizione | Originale | Id |

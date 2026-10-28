@@ -104,9 +104,16 @@
     const W = window.SFX_WAR || {};
     for (const k of ['air_raid', 'boom_big', 'boom_far', 'dive', 'flyby', 'ship_far', 'flak_far', 'surf', 'whistle', 'eng_bomber']) {
       const v = W[k]; if (!v) continue; const b64 = Array.isArray(v) ? v[0] : v;
-      try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); AC.decodeAudioData(u.buffer, b => BUF[k] = b, () => {}); } catch (e) {}
+      try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); AC.decodeAudioData(u.buffer, b => { if (!CUST[k]) BUF[k] = b; }, () => {}); } catch (e) {}
+    }
+    // audio personali (CUSTOM_AUDIO_GUIDE.md): intro/<suono>, poi il suono generico del gioco, poi l'originale
+    if (typeof caLoadInto === 'function' && window.AUDIO_MANIFEST) {
+      const keys = ['air_raid', 'boom_big', 'boom_far', 'dive', 'flyby', 'ship_far', 'flak_far', 'surf', 'whistle', 'eng_bomber'];
+      const ids = keys.flatMap(k => ['intro.' + k, AUDIO_MANIFEST.bySample[k]]).concat(['ui.click']);
+      caLoadInto(AC, ids).then(got => { for (const k of keys) { const l = got['intro.' + k] || got[AUDIO_MANIFEST.bySample[k]]; if (l) { CUST[k] = true; BUF[k] = l[0]; } } if (got['ui.click']) BUF._click = got['ui.click'][0]; });
     }
   }
+  const CUST = {};
   // filmati dell'introduzione: usati solo se esistono (assets/media)
   const VID = {};
   for (const k of ['intro_pearl', 'intro_midway', 'intro_omaha', 'intro_ardenne']) { const v = document.createElement('video'); v.preload = 'metadata'; v.muted = true; v.onloadedmetadata = () => VID[k] = 'assets/media/' + k + '.mp4'; v.src = 'assets/media/' + k + '.mp4'; }
@@ -285,7 +292,7 @@
     if (map && map !== 'opts') { const sel = $('optMap'); if (sel && sel.value !== map) { sel.value = map; sel.dispatchEvent(new Event('change')); } }
     if (map === 'opts') { const q = $('optQuality'); if (q) q.scrollIntoView({ block: 'center' }); } else m.scrollTop = 0;
   }
-  mm.addEventListener('click', e => { const b = e.target.closest('.mmb'); if (!b) return; const go = b.dataset.go; if (go === 'models') { location.href = 'viewer.html'; return; } if (go === 'quit') { quitGame(b); return; } if (go === 'career') { if (window.CAREER || typeof CAREER !== 'undefined') CAREER.show(); return; }
+  mm.addEventListener('click', e => { const b = e.target.closest('.mmb'); if (!b) return; if (BUF._click) snd('_click', .8); const go = b.dataset.go; if (go === 'models') { location.href = 'viewer.html'; return; } if (go === 'quit') { quitGame(b); return; } if (go === 'career') { if (window.CAREER || typeof CAREER !== 'undefined') CAREER.show(); return; }
     if (go === 'intro') return playIntro(); if (go === 'cred') { cr.style.display = 'flex'; return; } openSetup(go); });
   cr.addEventListener('click', () => cr.style.display = 'none');
   root.addEventListener('click', () => state === 'gate' ? startStudio() : skip());
