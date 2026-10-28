@@ -109,13 +109,28 @@ function updateSnowfall(dt) {
   s.position.set(cp.x, cp.y - 8, cp.z);
 }
 // abeti: palchi conici scuri con la neve sopra
+// abete rosso: palchi di rami a gonna frastagliata e cadente, neve sopra ogni palco, cima a punta.
+// Il numero di palchi segue il preset grafico (le Ardenne hanno migliaia di alberi istanziati).
 function ardTreeCrown() {
   const mb = new MB(); mb.mat = 'vc';
-  for (let k = 0; k < 4; k++) {
-    const y = -1.25 + k * .4, r = .4 - k * .075, h = .62 - k * .06;
-    const cg = new THREE.ConeGeometry(r, h, 9); mb.add(cg, pick([0x1d3322, 0x22392a, 0x1a2e1f]), 0, y + h / 2, 0);
-    const sg = new THREE.ConeGeometry(r * .82, h * .45, 9); mb.add(sg, 0xe9eef2, 0, y + h * .78, 0);
+  const T = Q.tex >= 1024 ? 9 : Q.tex >= 512 ? 7 : 4, seg = Q.tex >= 512 ? 13 : 9, rr = seeded(77);
+  const skirt = (r, h, droop, jag, ry) => {
+    const g = new THREE.ConeGeometry(r, h, seg, 1, true), pa = g.attributes.position;
+    for (let i = 0; i < pa.count; i++) {
+      const y = pa.getY(i); if (y > 0) continue;   // anello basso: punte dei rami irregolari e cadenti
+      const x = pa.getX(i), z = pa.getZ(i), k = 1 + (rr() - .5) * jag, d = droop * (.6 + rr() * .8);
+      pa.setXYZ(i, x * k, y - d, z * k);
+    }
+    g.rotateY(ry); g.computeVertexNormals(); return g;
+  };
+  const greens = [0x1b3020, 0x203826, 0x182a1c, 0x24402a];
+  for (let k = 0; k < T; k++) {
+    const t = k / (T - 1), y = -1.35 + t * 1.55 + (rr() - .5) * .05, r = .46 * (1 - t * .82) + .03, h = .5 - t * .18;
+    mb.add(skirt(r, h, .07 + (1 - t) * .06, .45, rr() * 6), greens[k % 4], 0, y + h / 2, 0);
+    // neve: gonna più corta e stretta sopra il palco, così le punte verdi restano visibili
+    mb.add(skirt(r * .74, h * .42, .02, .5, rr() * 6), k % 3 === 2 ? 0xd8e0e6 : 0xeef2f5, 0, y + h * .74, 0);
   }
+  mb.add(new THREE.ConeGeometry(.035, .32, 6), 0x1d3322, 0, .36, 0);   // cima
   return mb.build();
 }
 function ardTreeSpot(x, z) {

@@ -49,13 +49,15 @@ function buildTrees() {
     const tgc = trunkG.clone(), cgc = crownG.clone(); tgc.boundingSphere = sph; cgc.boundingSphere = sph.clone();
     const c = { trunk: new THREE.InstancedMesh(tgc, MAT.wood, list.length), crown: new THREE.InstancedMesh(cgc, MAT.vc, list.length), dirty: false };
     for (const m of [c.trunk, c.crown]) { m.castShadow = Q.shadows > 0; m.receiveShadow = true; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); }
-    list.forEach((t, i) => { t.cell = c; t.i = i; treeMatrix(t); });
+    list.forEach((t, i) => { t.cell = c; t.i = i; treeMatrix(t); const v = .78 + R() * .4; c.crown.setColorAt(i, _tc.setRGB(v * (.92 + R() * .12), v, v * (.9 + R() * .14))); });
+    if (c.crown.instanceColor) c.crown.instanceColor.needsUpdate = true;
     for (const m of [c.trunk, c.crown]) FOGCULL.push({ obj: m, s: sph });
     TREES.cells.push(c);
   }
   TREES.trunk = true;
   TREES.list.forEach((t, i) => { if (i % 3 === 0) addCover(t.x, t.z + .9, 'tree'); OBST.push({ x: t.x, z: t.z, r: .35 * t.s, tree: t }); });
 }
+const _tc = new THREE.Color();
 function treeMatrix(t) {
   const i = t.i, c = t.cell; c.dirty = true;
   _te.set(t.ax * t.fall, t.ry, t.az * t.fall, 'XZY'); _tq.setFromEuler(_te);
