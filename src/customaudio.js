@@ -19,10 +19,10 @@ async function loadCustomAudio() {
   const byPath = {}; for (const e of MF.list) byPath[e.path] = e.id;
   const groups = {};
   for (const f of files) {
-    const m = /^(.*?)(?:_(\d{1,3}))?\.(ogg|mp3|wav)$/i.exec(f); if (!m) continue;
+    const m = /^(.*?)(?:_(\d{1,3}))?\.(flac|wav|ogg|mp3)$/i.exec(f); if (!m) continue;
     const id = byPath[m[1].toLowerCase()]; if (!id) { CA.report.unknown.push(f); continue; }
     const key = id + '#' + (m[2] || '0'), g = groups[key];
-    // stesso nome in più formati: vale la priorità ogg > mp3 > wav
+    // stesso nome in più formati: vale la priorità flac > wav > ogg > mp3 (prima la qualità piena)
     const pr = MF.formats.indexOf(m[3].toLowerCase());
     if (!g || pr < g.pr) groups[key] = { id, f, pr };
   }

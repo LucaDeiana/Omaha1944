@@ -13,7 +13,7 @@ Ogni suono di Fronte Occidentale 1944 può essere sostituito con un tuo file aud
 La cartella `local-assets/` è esclusa da Git e dal pacchetto di installazione: i tuoi file restano solo sul tuo PC. Il server li serve solo a questo PC (gli altri giocatori in rete non possono vederli né scaricarli). In multigiocatore ognuno sente i propri file.
 
 ## Nomi dei file
-- Formati: **.ogg, .mp3, .wav**. Se lo stesso suono esiste in più formati, vale la priorità ogg → mp3 → wav.
+- Formati: **.flac, .wav, .ogg, .mp3**. Se lo stesso suono esiste in più formati, vale la priorità flac → wav → ogg → mp3 (prima la qualità piena).
 - Il nome è quello della colonna «File» qui sotto, con l'estensione che vuoi. Esempio: `weapons/rifles/kar98zf/fire.mp3`.
 - **Varianti:** aggiungi `_01`, `_02`, … prima dell'estensione (`fire_01.mp3`, `fire_02.mp3`). Il gioco le alterna senza ripetere subito la stessa.
 - I file vengono letti **all'inizio di ogni partita**: dopo averne aggiunto uno, avvia una nuova partita.

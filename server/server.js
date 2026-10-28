@@ -7,7 +7,7 @@
 // ============================================================
 const http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto'), os = require('os');
 const ROOT = path.join(__dirname, '..'), PORT = +process.argv[2] || 8080;
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.wav': 'audio/wav', '.png': 'image/png', '.jpg': 'image/jpeg', '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.glb': 'model/gltf-binary' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.wav': 'audio/wav', '.flac': 'audio/flac', '.png': 'image/png', '.jpg': 'image/jpeg', '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.glb': 'model/gltf-binary' };
 
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/index.html';
@@ -29,7 +29,7 @@ const server = http.createServer((req, res) => {
 
 // ---------- audio personali ----------
 // cartella: FO_AUDIO (programma installato: Documenti\Fronte Occidentale 1944\audio) oppure local-assets/audio nel progetto
-const AUDIO_EXT = /\.(ogg|mp3|wav)$/i;
+const AUDIO_EXT = /\.(flac|wav|ogg|mp3)$/i;
 function audioRoot() { return path.resolve(process.env.FO_AUDIO || path.join(ROOT, 'local-assets', 'audio')); }
 function listAudio(dir, rel, out, depth) {
   if (depth > 6 || out.length > 4000) return;

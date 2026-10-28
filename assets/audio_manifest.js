@@ -151,6 +151,6 @@
   add('ui.click', 'ui/click', 'ui', 'Clic sui pulsanti dei menù', 'nessuno: solo se presente il file');
   add('ui.start', 'ui/start', 'ui', 'Inizio della battaglia', 'nessuno: solo se presente il file');
 
-  const api = { list: M, byId: Object.fromEntries(M.map(e => [e.id, e])), bySample: GEN_BY_SAMPLE, formats: ['ogg', 'mp3', 'wav'] };
+  const api = { list: M, byId: Object.fromEntries(M.map(e => [e.id, e])), bySample: GEN_BY_SAMPLE, formats: ['flac', 'wav', 'ogg', 'mp3'] };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.AUDIO_MANIFEST = api;
 })(typeof window !== 'undefined' ? window : globalThis);
