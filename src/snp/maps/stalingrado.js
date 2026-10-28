@@ -31,9 +31,8 @@ function stlSmoke(dt) {
 }
 
 // ---------- mattoni costruttivi ----------
-const STL_MAT = { brick: 0x8a3e2c, brick2: 0x7a3626, brickDk: 0x4e2a22, conc: 0x8c8a84, conc2: 0x75736e, steel: 0x3c3b38, rust: 0x6a4030, snow: 0xe6ebf0, plank: 0x5a4632 };
-// muri grandi: intonaco colorato (i materiali mattone e cemento a grande scala danno strisce)
-const STL_WM = m => m === 'brick' || m === 'concrete' ? 'plaster' : m;
+const STL_MAT = { brick: 0xd8c0b0, brick2: 0xc0a898, brickDk: 0x4e2a22, conc: 0x8c8a84, conc2: 0x75736e, steel: 0x3c3b38, rust: 0x6a4030, snow: 0xe6ebf0, plank: 0x5a4632 };
+const STL_WM = m => m;
 function stlWallU(mb, team, v0, v1, u0, u1, L, h, ops, c, mat, y0) {
   mb.mat = STL_WM(mat); const y = y0 !== undefined ? y0 : L * SNP.FH;
   snpWallU(mb, team, v0, v1, u0, u1, y, h, ops, c);
@@ -55,10 +54,10 @@ function stlSlab(mb, team, u0, u1, v0, v1, L, kind, holes) {
     const [x0, x1, z0, z1] = snpBoxW(team, r[0], r[1], r[2], r[3]), cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, d = z1 - z0;
     const th = kind === 'conc' ? .35 : kind === 'grate' ? .08 : .12;
     if (L > 0 || kind !== 'conc') {
-      mb.mat = kind === 'conc' ? 'plaster' : kind === 'grate' ? 'paint' : 'wood';
+      mb.mat = kind === 'conc' ? 'concrete' : kind === 'grate' ? 'paint' : 'wood';
       mb.add(U.box, kind === 'conc' ? STL_MAT.conc2 : kind === 'grate' ? STL_MAT.steel : STL_MAT.plank, cx, G + y + .01 - th / 2, cz, 0, 0, 0, w, th, d);
       if (kind === 'grate') { mb.mat = 'paint'; for (const zz of [z0 + .1, z1 - .1]) mb.add(U.box, STL_MAT.rust, cx, G + y - .2, zz, 0, 0, 0, w, .25, .12); }
-    } else { mb.mat = 'plaster'; mb.add(U.box, STL_MAT.conc2, cx, G + .02, cz, 0, 0, 0, w, .06, d); }
+    } else { mb.mat = 'concrete'; mb.add(U.box, STL_MAT.conc2, cx, G + .02, cz, 0, 0, 0, w, .06, d); }
     if (L > 0) { const s = addSolid(x0, G + y - th, z0, x1, G + y, z1, 'floor'); s.walk = true; }
     SNP.floors.push({ x0, x1, z0, z1, y: G + y });
   }
@@ -389,10 +388,10 @@ function stlRailyard() {
   const far = new MB();
   for (let i = 0; i < 14; i++) for (const side of [-1, 1]) {
     const x = side * srand(42, 80), z = srand(zE - 30, zA + 30); if (Math.abs(x) < 40) continue;
-    cityHouseGeo(far, { cx: x, cz: z, w: srand(10, 18), d: srand(10, 16), ht: spick([9.3, 12.4, 15.5]), face: side, style: 1, base: stlH(x, z) - .2 }, true);
+    cityHouseGeo(far, { cx: x, cz: z, w: srand(10, 18), d: srand(10, 16), ht: spick([9.3, 12.4, 15.5]), face: side, style: 2, base: stlH(x, z) - .2 }, true);
     addSolid(x - 5, SNP.G - 1, z - 5, x + 5, SNP.G + 9, z + 5, 'house');
   }
-  for (let i = 0; i < 10; i++) { const x = srand(-90, 90), z = SNP.C.z + (i % 2 ? 1 : -1) * srand(100, 140); cityHouseGeo(far, { cx: x, cz: z, w: srand(12, 22), d: 12, ht: spick([12.4, 15.5, 18.6]), face: i % 2 ? -1 : 1, style: 1, base: stlH(x, z) - .2 }, SNP_RNG() < .7); }
+  for (let i = 0; i < 10; i++) { const x = srand(-90, 90), z = SNP.C.z + (i % 2 ? 1 : -1) * srand(100, 140); cityHouseGeo(far, { cx: x, cz: z, w: srand(12, 22), d: 12, ht: spick([12.4, 15.5, 18.6]), face: i % 2 ? -1 : 1, style: 2, base: stlH(x, z) - .2 }, SNP_RNG() < .7); }
   for (const [x, z, h] of [[-70, -230, 26], [80, -60, 30], [-90, -90, 22], [60, -250, 28]]) { far.mat = 'plaster'; far.add(U.cyl12, 0x5a3026, x, SNP.G + h / 2, z, 0, 0, 0, 1.6, h, 1.6); STL.smokes.push([x, SNP.G + h, z, 1.4]); }
   for (const [x, z] of [[-48, -120], [52, -178], [-20, -95], [30, -205], [64, -150], [-66, -160]]) STL.smokes.push([x, SNP.G + 3, z, 1]);
   addTiled(far, 80);

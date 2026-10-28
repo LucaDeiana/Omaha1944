@@ -218,7 +218,7 @@ function triMaterial(tex, scale, o = {}) {
         vec2 tx=vTriP.zy*uTri,ty=vTriP.xz*uTri,tz=vTriP.xy*uTri;
         vec4 tcol=mapTexelToLinear(texture2D(map,tx))*bw.x+mapTexelToLinear(texture2D(map,ty))*bw.y+mapTexelToLinear(texture2D(map,tz))*bw.z;
         diffuseColor*=vec4(tcol.rgb,1.);`)
-      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor*=tcol.a;')
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor*=mix(.72,1.,tcol.a);')
       .replace('#include <normal_fragment_maps>', `
         vec3 nx=texture2D(normalMap,tx).xyz*2.-1.,ny=texture2D(normalMap,ty).xyz*2.-1.,nz=texture2D(normalMap,tz).xyz*2.-1.;
         vec3 wn=normalize(vTriN+uTriN*(bw.x*vec3(0.,nx.y,nx.x)+bw.y*vec3(ny.x,0.,ny.y)+bw.z*vec3(nz.x,nz.y,0.)));
