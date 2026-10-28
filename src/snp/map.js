@@ -305,7 +305,7 @@ function snpNavBuild(team, facadeOps, breaches, holes) {
   snpNavFinish(team, nodes, add, grid, n => n.L === 0 && (n.tag === 'yard' || (n.tag === 'room' && snpL(team, n.pos.x, n.pos.z).v > 12)));
 }
 // parte comune a tutte le mappe: griglia di punti, scarto dei punti nei solidi, archi, isole, rinascite
-function snpNavFinish(team, nodes, add, grid, isSpawn) {
+function snpNavFinish(team, nodes, add, grid, isSpawn, extra) {
   for (const g of grid) for (let u = g.u0; u <= g.u1; u += 1.5) for (let v = g.v0; v <= g.v1; v += 1.5) add(u, v, g.L, 'g');
   // punti dentro un mobile o troppo vicini a un muro: spostati di poco, altrimenti scartati
   const free = n => { for (const [ox, oz] of [[0, 0], [.3, 0], [-.3, 0], [0, .3], [0, -.3]]) { _snpO.set(n.pos.x + ox, n.pos.y + .45, n.pos.z + oz); if (pointInSolid(_snpO)) return false; _snpO.y = n.pos.y + 1.3; if (pointInSolid(_snpO)) return false; } return Math.abs(snpFloor(n.pos.x, n.pos.z, n.pos.y + .1) - n.pos.y) < .2; };
@@ -325,6 +325,7 @@ function snpNavFinish(team, nodes, add, grid, isSpawn) {
     if (a.dead) continue; const ci = Math.floor(a.pos.x / cell), cj = Math.floor(a.pos.z / cell);
     for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) for (const b of buck.get(key(a.L, ci + di, cj + dj)) || []) if (b.id > a.id && (a.tag === 'g' || b.tag === 'g') && a.pos.distanceTo(b.pos) < 2.2) link(a, b);
   }
+  if (extra) extra();
   // punti isolati (schegge tra muri e fori): esclusi
   { const st = nodes.find(n => n.tag === 'yard' && !n.dead), seen = new Set([st.id]), q = [st.id]; while (q.length) { const c = q.shift(); for (const k of nodes[c].e) if (!seen.has(k)) { seen.add(k); q.push(k); } } for (const n of nodes) if (!seen.has(n.id)) n.dead = true; }
   // punti di rinascita: cortile e stanze sul retro del piano terra

@@ -38,8 +38,8 @@ function screw(p, mat, x, y, z) { const m = new THREE.Mesh(new THREE.CylinderGeo
 
 function buildGun(id) {
   const g = new THREE.Group(); let i = {};
-  if (id === 'garand' || id === 'kar98' || id === 'springfield' || id === 'kar98zf' || id === 'enfield' || id === 'mosin' || id === 'g43') {
-    const K = id === 'kar98' || id === 'kar98zf' || id === 'mosin' || id === 'g43', SC = id === 'springfield' || id === 'kar98zf' || id === 'enfield' || id === 'mosin' || id === 'g43', W = K ? VM.wood2 : VM.wood, Mt = id === 'garand' ? VM.metal : VM.blue;
+  if (id === 'garand' || id === 'kar98' || id === 'springfield' || id === 'kar98zf' || id === 'enfield' || id === 'mosin' || id === 'g43' || id === 'svt40') {
+    const K = id === 'kar98' || id === 'kar98zf' || id === 'mosin' || id === 'g43' || id === 'svt40', SC = id === 'springfield' || id === 'kar98zf' || id === 'enfield' || id === 'mosin' || id === 'g43' || id === 'svt40', W = K ? VM.wood2 : VM.wood, Mt = id === 'garand' ? VM.metal : VM.blue;
     // calcio e cassa: calciolo, nasello, impugnatura a pistola, astina
     prof(g, [[.44, -.042, 1], [.436, .03, 1], [.3, .036], [.18, .024], [.1, .01], [.055, 0, 1], [-.02, 0, 1], [-.05, .012, 1], [-.3, .012], [-.6, .008], [-.625, -.003, 1],
       [-.6, -.022], [-.3, -.028], [-.1, -.032], [-.02, -.035, 1], [.03, -.04], [.06, -.066], [K ? .075 : .08, -.086], [.11, -.086], [.14, -.064], [.28, -.084], [.43, -.107, 1], [.442, -.094, 1]], .044, W);
@@ -70,7 +70,7 @@ function buildGun(id) {
       mag = new THREE.Group(); mag.position.set(0, .052, -.045); g.add(mag);
       rbox(mag, VM.brass, 0, 0, 0, .022, .012, .062);
       for (let k = 0; k < 4; k++) turn(mag, VM.brass, k % 2 ? .005 : -.005, .008, -.02 + k * .015, [[0, -.012], [.005, -.012], [.005, .006], [.0025, .012], [0, .014]], 8);
-    } else if (id === 'g43') {
+    } else if (id === 'g43' || id === 'svt40') {
       // Gewehr 43: semiautomatico, cilindro del gas sopra la canna, caricatore staccabile da 10, leva d'armamento a sinistra
       prof(g, [[.07, 0, 1], [.07, .036], [.05, .048], [-.1, .048], [-.13, .03, 1], [-.13, 0, 1]], .03, Mt);
       turn(g, Mt, 0, .052, -.12, [[0, 0], [.009, 0], [.009, .5], [.006, .52], [0, .52]], 12);

@@ -78,6 +78,7 @@ const WEAPONS = {
   enfield: { name: 'Lee-Enfield No.4 Mk I (T)', cal: '.303 British (ottica No.32 3,5×)', mag: 10, res: 40, dmg: 165, rate: 1.0, auto: false, reload: 3.8, hip: .05, ads: 0, kick: .065, climb: 0, fov: 20, snd: 'springfield', scope: true, bolt: true, range: 900 },
   mosin: { name: 'Mosin-Nagant 91/30 PU', cal: '7,62×54 mmR (ottica PU 3,5×)', mag: 5, res: 40, dmg: 175, rate: 1.35, auto: false, reload: 3.4, hip: .05, ads: 0, kick: .07, climb: 0, fov: 20, snd: 'kar98', scope: true, bolt: true, range: 900 },
   g43: { name: 'Gewehr 43 ZF4', cal: '7,92×57 mm (ottica ZF4 4×)', mag: 10, res: 40, dmg: 150, rate: .34, auto: false, reload: 3.0, hip: .05, ads: .0007, kick: .075, climb: 0, fov: 18, snd: 'kar98', scope: true, range: 800 },
+  svt40: { name: 'SVT-40 con ottica PU', cal: '7,62×54 mmR (ottica PU 3,5×)', mag: 10, res: 40, dmg: 150, rate: .34, auto: false, reload: 3.1, hip: .05, ads: .0008, kick: .08, climb: 0, fov: 20, snd: 'kar98', scope: true, range: 800 },
   kar98: { name: 'Karabiner 98k', cal: '7,92×57 mm Mauser', mag: 5, res: 40, dmg: 130, rate: 1.1, auto: false, reload: 3.0, hip: .03, ads: .0012, kick: .05, climb: 0, fov: 50, snd: 'kar98', bolt: true, range: 700 },
 };
 

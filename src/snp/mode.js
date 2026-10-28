@@ -58,7 +58,8 @@ function snpPlacePlayer(dp) {
 }
 function snpSpawnBot(team, name) {
   const used = new Set(snpTeamBots(team).map(b => b.name));
-  name = name || SNP_NAMES[team].find(n => !used.has(n) && !SNP.board.has(n + '#x')) || SNP_NAMES[team].find(n => !used.has(n)) || 'Bot';
+  const NL = (SNP.M.names && SNP.M.names[team]) || SNP_NAMES[team];
+  name = name || NL.find(n => !used.has(n) && !SNP.board.has(n + '#x')) || NL.find(n => !used.has(n)) || 'Bot';
   const prev = SNP.board.get(name), lvl = prev ? prev.lvl : snpLevel(), prof = prev ? prev.prof : snpProfile();
   const n = snpSpawnNode(team, prev && prev.deathPos);
   const b = new SnpBot(team, n.pos.x + rnd(-.4, .4), n.pos.y, n.pos.z + rnd(-.4, .4), { name, lvl, prof });
@@ -100,7 +101,7 @@ function snpDeployPoints() {
 }
 
 function updateSniper(dt) {
-  MISSION.stageT += dt; updateSubs(dt); snpSmoke(dt);
+  MISSION.stageT += dt; updateSubs(dt); snpSmoke(dt); if (SNP.map === 'stalingrado' && ARD.snow) updateSnowfall(dt);
   while (SNP.sounds.length && GAME.time - SNP.sounds[0].t > 3) SNP.sounds.shift();
   snpHud();
   if (SNP.over) return;
@@ -186,7 +187,7 @@ function snpOnNet(m) {
   if (m.t === 'mapdiff') { feed('Sul server si gioca un\'altra mappa: partita in solitario'); try { NET.ws.close(); } catch (e) { } NET.on = false; return true; }
   return false;
 }
-function snpClientTick(dt) { MISSION.stageT += dt; updateSubs(dt); snpSmoke(dt); snpHud(); }
+function snpClientTick(dt) { MISSION.stageT += dt; updateSubs(dt); snpSmoke(dt); if (SNP.map === 'stalingrado' && ARD.snow) updateSnowfall(dt); snpHud(); }
 function snpBoardHTML(end) {
   const rows = [...SNP.board.entries()].map(([n, r]) => ({ n, ...r }));
   const col = team => rows.filter(r => r.team === team).sort((a, b) => b.kills - a.kills || a.deaths - b.deaths)
