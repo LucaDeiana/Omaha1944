@@ -23,7 +23,7 @@ class Plane {
     this.crash = false; this.age = 0; this.roll = 0;
     this.g.traverse(o => { if (o.isMesh) o.castShadow = true; });
     scene.add(this.g); PLANES.push(this);
-    this.eng = loopSound(type === 'fw190' || (spc && spc.nation === 'de') ? 'eng_fw' : type === 'b26' ? 'eng_bomber' : 'eng_p47', 0);
+    this.eng = loopSound(type === 'fw190' || (spc && spc.nation === 'de') ? 'eng_fw' : type === 'b26' ? 'eng_bomber' : 'eng_p47', 0, 'aircraft.' + type + '.engine');
     if (spc && spc.jet) this.jet = true;
     this.orient(0);
   }
@@ -626,7 +626,7 @@ function updatePlane(dt) {
 const _vbA = new V3(), _vbB = new V3();
 function playerPlaneGuns(me, G = (PL.spec || PLANE_SPECS.p47).guns) {
   const f = _a1.set(0, 0, -1).applyQuaternion(me.q), r = _a2.set(1, 0, 0).applyQuaternion(me.q), heavy = G.cal >= 30;
-  if (!G.rotary || (PL.rotN = (PL.rotN || 0) + 1) % 3 === 0) sfxShot(G.snd, null, true); if (heavy) play('boom', null, { vol: .25, rate: 2.2 }); P.shake = Math.min(.8, P.shake + (heavy ? .25 : .05));
+  if (!G.rotary || (PL.rotN = (PL.rotN || 0) + 1) % 3 === 0) sfxShot(G.snd, null, true, 0, 'aircraft.' + PL.type + '.guns_fire'); if (heavy) play('boom', null, { vol: .25, rate: 2.2 }); P.shake = Math.min(.8, P.shake + (heavy ? .25 : .05));
   // armi leggere: due fasci (ala sinistra e destra) col danno di tutte le armi; cannoni pesanti: un colpo per arma
   const pts = heavy ? G.pos : [-1, 1].map(s => { const l = G.pos.filter(p => Math.sign(p[0] || s) === s); const n = l.length || 1; return [l.reduce((a, p) => a + p[0], 0) / n, l.reduce((a, p) => a + p[1], 0) / n, l.reduce((a, p) => a + p[2], 0) / n, n]; });
   for (const gp of pts) {

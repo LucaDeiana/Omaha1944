@@ -29,6 +29,8 @@ let win = null;
 app.whenReady().then(async () => {
   const port = await freePort(8080);
   process.env.FO_PERSONALI = personalDir();
+  // audio personali: Documenti\Fronte Occidentale 1944\audio (vedi CUSTOM_AUDIO_GUIDE.md)
+  process.env.FO_AUDIO = path.join(app.getPath('documents'), 'Fronte Occidentale 1944', 'audio'); try { fs.mkdirSync(process.env.FO_AUDIO, { recursive: true }); } catch (e) { }
   process.argv[2] = String(port);
   require(path.join(__dirname, '..', 'server', 'server.js'));
   Menu.setApplicationMenu(null);
@@ -41,12 +43,13 @@ app.whenReady().then(async () => {
   win.loadURL(`http://localhost:${port}/`);
   // collegamenti esterni nel browser normale; il visualizzatore resta nella finestra
   win.webContents.setWindowOpenHandler(({ url }) => { if (url.startsWith(`http://localhost:${port}`)) { win.loadURL(url); return { action: 'deny' }; } shell.openExternal(url); return { action: 'deny' }; });
-  // F11 schermo intero, F12 strumenti per sviluppatori, Ctrl+M apre la cartella delle musiche
+  // F11 schermo intero, F12 strumenti per sviluppatori, Ctrl+M apre la cartella delle musiche, Ctrl+U quella degli audio personali
   win.webContents.on('before-input-event', (e, i) => {
     if (i.type !== 'keyDown') return;
     if (i.key === 'F11') { win.setFullScreen(!win.isFullScreen()); e.preventDefault(); }
     else if (i.key === 'F12') { win.webContents.toggleDevTools(); e.preventDefault(); }
     else if (i.control && (i.key === 'm' || i.key === 'M')) { shell.openPath(process.env.FO_PERSONALI); e.preventDefault(); }
+    else if (i.control && (i.key === 'u' || i.key === 'U')) { shell.openPath(process.env.FO_AUDIO); e.preventDefault(); }   // Ctrl+U apre la cartella degli audio personali
   });
   // aggiornamenti automatici
   try {

@@ -60,7 +60,7 @@ function initInput() {
     if (P.spawnMenu) { deployKey(c); return; }
     if (P.mode === 'naval' && c === 'KeyE') { leaveTurretToDeck(); return; }
     if ((P.mode === 'mg' || P.mode === 'mortar' || P.mode === 'flak') && stationKey(c)) return;
-    if (P.mode === 'tank') { if (c === 'KeyE' && SCEN !== 'kas') leaveTank(); if ((c === 'Digit1' || c === 'Digit2') && TANKS.me && SCEN === 'kas') { TANKS.me.ammo = c === 'Digit2' ? 'he' : 'ap'; TANKS.me.reload = Math.max(TANKS.me.reload, 2); showMsg(c === 'Digit2' ? 'Granata esplosiva M48 (contro cannoni e serventi)' : 'Perforante M61 (contro i carri)', 1.6); play('reload_clank', null, { vol: .8 }); } if (c === 'KeyV' && TANKS.me) { const t = TANKS.me, n = SCEN === 'kas' ? 3 : 2; t.view = ((t.view || 0) + 1) % n; showMsg(['Visuale esterna', 'Capocarro fuori dalla cupola', 'Pilota: feritoia di visione'][t.view] + ' (V per cambiare)', 1.5); } return; }
+    if (P.mode === 'tank') { if (c === 'KeyE' && SCEN !== 'kas') leaveTank(); if ((c === 'Digit1' || c === 'Digit2') && TANKS.me && SCEN === 'kas') { TANKS.me.ammo = c === 'Digit2' ? 'he' : 'ap'; TANKS.me.reload = Math.max(TANKS.me.reload, 2); showMsg(c === 'Digit2' ? 'Granata esplosiva M48 (contro cannoni e serventi)' : 'Perforante M61 (contro i carri)', 1.6); play('reload_clank', null, { vol: .8, cx: TANKS.me && TANKS.me.type ? 'vehicle.' + TANKS.me.type + '.cannon_reload' : null }); } if (c === 'KeyV' && TANKS.me) { const t = TANKS.me, n = SCEN === 'kas' ? 3 : 2; t.view = ((t.view || 0) + 1) % n; showMsg(['Visuale esterna', 'Capocarro fuori dalla cupola', 'Pilota: feritoia di visione'][t.view] + ' (V per cambiare)', 1.5); } return; }
     if (P.mode === 'airmark') { if (c === 'KeyT' || c === 'KeyE') closeAirMark(); return; }
     if (c === 'KeyT' && P.mode === 'foot' && SCEN !== 'snp') { openAirMark(); return; }
     if (c === 'KeyX' && P.mode === 'foot' && PT === 'A' && SCEN !== 'snp') { cycleOrder(); return; }
@@ -165,6 +165,7 @@ function updatePlayer(dt) {
   const s = P.slot(), w = s ? WEAPONS[s.id] : null;
   const canAds = !P.sprint && !P.swim && !P.carry && P.reloadT <= 0 && P.switchT <= 0 && !P.inBoat;
   P.adsK = clamp(P.adsK + (P.adsHeld && canAds ? 1 : -1) * dt * 7, 0, 1);
+  { const on = P.adsHeld && canAds; if (on !== !!P.aimWas && s && typeof caPlay === 'function') caPlay('weapon.' + s.id + (on ? '.aim_in' : '.aim_out'), null, { vol: .7 }); P.aimWas = on; }
 
   if (P.inBoat) {
     P.boat.toWorld(_pp.set(P.seat ? P.seat.x : 0, .47, P.seat ? P.seat.z : 2.2), P.pos);

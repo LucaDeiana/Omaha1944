@@ -8,3 +8,4 @@ assets/music/personali/*
 !assets/music/personali/LEGGIMI.txt
 versione.txt
 dist/
+/local-assets/

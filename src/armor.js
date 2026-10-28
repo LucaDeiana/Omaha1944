@@ -192,7 +192,7 @@ class KasTank {
     this.pos = this.g.position; this.pos.set(x, Hf(x, z), z); this.yaw = yaw; this.tyaw = 0; this.gpitch = 0; this.ayaw = 0; this.apitch = 0;
     this.alive = true; this.hp = this.hpMax = T.hp; this.speed = 0; this.reload = rnd(1, T.reload); this.mgT = 0; this.player = false; this.tank = true;
     this.immob = false; this.jam = false; this.crew = { cmd: 1, gun: 1, load: 1, drv: 1, bow: 1 }; this.engDmg = 0; this.fire = 0; this.drvT = 0; this.box = { min: new V3(), max: new V3() }; this.aiT = rnd(0, .5); this.target = null; this.goalOff = new V3(rnd(-30, 30), 0, rnd(-30, 30)); this.err = new V3();
-    this.eng = loopSound(type === 'sherman' ? 'eng_sherman' : type === 'tiger' ? 'eng_tiger' : 'eng_pz4', 0); if (this.eng && type === 'pz3') this.rateK = 1.15; this.trk = loopSound('tracks', 0);
+    this.eng = loopSound(type === 'sherman' ? 'eng_sherman' : type === 'tiger' ? 'eng_tiger' : 'eng_pz4', 0, 'vehicle.' + type + '.engine'); if (this.eng && type === 'pz3') this.rateK = 1.15; this.trk = loopSound('tracks', 0, 'vehicle.' + type + '.tracks');
     MISSION.vehicles.push(this); KAS.tanks.push(this);
   }
   muzzle(o) { this.g.updateMatrixWorld(true); return o.set(0, 0, -this.G.len).applyMatrix4(this.gg.matrixWorld); }
@@ -205,12 +205,12 @@ class KasTank {
     PS_FIRE.emit(o.x, o.y, o.z, d.x * 6, d.y * 6, d.z * 6, .2, 2.4, 4, 1, 4, 2.5, 1.2);
     for (let i = 0; i < 8; i++) PS_SMOKE.emit(o.x, o.y, o.z, d.x * rnd(2, 6) + rnd(-1, 1), rnd(0, 1.5), d.z * rnd(2, 6) + rnd(-1, 1), rnd(2, 3.5), .8, 3.5, .62, .58, .5, .55, .8, -.05);
     for (let i = 0; i < 14; i++) PS_GRAIN.emit(this.pos.x + rnd(-3, 3), this.pos.y + .2, this.pos.z + rnd(-3, 3), rnd(-3, 3), rnd(1, 3), rnd(-3, 3), .8, .05, .05, .6, ...C_DIRT, .4, 9.8);
-    play('tank_gun', byPlayer ? null : o, { vol: byPlayer ? 1.3 : 1.6, ref: 60, rate: this.T.cal >= 88 ? .82 : 1, revMul: 1.4 }); sfxBoom(o, this.T.cal >= 88 ? 1.2 : .9); flashLight(o, 0xffb060, 40, .1);
+    play('tank_gun', byPlayer ? null : o, { vol: byPlayer ? 1.3 : 1.6, ref: 60, rate: this.T.cal >= 88 ? .82 : 1, revMul: 1.4, cx: 'vehicle.' + this.type + '.cannon_fire' }); sfxBoom(o, this.T.cal >= 88 ? 1.2 : .9); flashLight(o, 0xffb060, 40, .1);
     if (byPlayer) { P.shake += .6; this.kick = 1; }
   }
   fireMG(byPlayer) {   // mitragliatrice coassiale: utile contro i serventi dei Pak
     if (this.mgT > 0) return; this.mgT = .09; const o = this.muzzle(new V3()), d = this.aimDir(new V3()); d.x += rnd(-.006, .006); d.y += rnd(-.004, .004); d.normalize();
-    const r = hitscan(o.clone().addScaledVector(d, 2), d, 700), p = o.clone().addScaledVector(d, r.t + 2); if (R() < .5) fxTracer(o, p, 1.3, byPlayer); sfxShot('mg42', o, byPlayer);
+    const r = hitscan(o.clone().addScaledVector(d, 2), d, 700), p = o.clone().addScaledVector(d, r.t + 2); if (R() < .5) fxTracer(o, p, 1.3, byPlayer); sfxShot('mg42', o, byPlayer, 0, 'vehicle.' + this.type + '.machinegun_fire');
     for (const g of KAS.guns) if (g.alive && g.pos.distanceTo(p) < 3) g.damage(1.5, byPlayer); if (r.type === 'terrain' || r.type === 'solid') fxImpact(p, 'dirt');
   }
   // colpo perforante: faccia colpita, inclinazione, perforazione o rimbalzo
@@ -288,7 +288,7 @@ class KasTank {
     const sp = Math.abs(this.speed) / this.T.vmax;
     if (this.eng) this.player ? this.eng.set(.55 + sp * .35, 0, .75 + sp * .55 + (KEYS.KeyW || KEYS.KeyS ? .12 : 0), 2500) : this.eng.at(this.pos, .55 + sp * .4, .75 + sp * .5, 170);
     if (this.trk) this.player ? this.trk.set(sp * .7, 0, .6 + sp * .9, 4000) : this.trk.at(this.pos, sp * .8, .6 + sp * .9, 90);
-    if (this.player) { if (!this.tur) this.tur = loopSound('turret', 0); const tv = Math.abs(angDiff(this.tyaw, this.tyawPrev ?? this.tyaw)) / Math.max(dt, 1e-3); this.tyawPrev = this.tyaw; if (this.tur) this.tur.set(clamp(tv * .6, 0, .35), 0, .8 + tv * .5); if (this.reload <= 0 && this.reloadPrev > 0) play('reload_clank', null, { vol: .9 }); this.reloadPrev = this.reload; }
+    if (this.player) { if (!this.tur) this.tur = loopSound('turret', 0, 'vehicle.' + this.type + '.turret_rotate'); const tv = Math.abs(angDiff(this.tyaw, this.tyawPrev ?? this.tyaw)) / Math.max(dt, 1e-3); this.tyawPrev = this.tyaw; if (this.tur) this.tur.set(clamp(tv * .6, 0, .35), 0, .8 + tv * .5); if (this.reload <= 0 && this.reloadPrev > 0) play('reload_clank', null, { cx: 'vehicle.' + this.type + '.cannon_reload',  vol: .9 }); this.reloadPrev = this.reload; }
     if (Math.abs(this.speed) > 1 && R() < dt * 9) PS_SMOKE.emit(this.pos.x + rnd(-1.8, 1.8) - fx * 3, this.pos.y + .3, this.pos.z + rnd(-1.8, 1.8) - fz * 3, 0, .7, 0, 2.2, .9, 3.5, .7, .82, .74, .6, 1);   // polvere del deserto
   }
   // IA: verso la posizione da conquistare (o da difendere), ingaggio del nemico visibile più minaccioso

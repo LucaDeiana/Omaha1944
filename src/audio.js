@@ -25,7 +25,7 @@ function initAudio() {
   AU.rev = c.createConvolver(); AU.rev.buffer = ir;
   const rg = c.createGain(); rg.gain.value = .55; AU.rev.connect(rg); rg.connect(AU.out);
   initSpeech();
-  return buildBank();
+  return buildBank().then(r => { if (typeof loadCustomAudio === 'function') loadCustomAudio(); return r; });
 }
 
 // ---------- sintesi offline ----------
@@ -246,7 +246,8 @@ function voiceSlot(vol) {
 }
 function play(name, pos, o = {}) {
   if (!AU.ready || AU.ctx.state !== 'running') return null;
-  const list = AU.buf[name]; if (!list) return null;
+  // file personale dell'evento (contesto o generico) se presente e valido, altrimenti il campione originale
+  const list = o.list || (typeof caResolve === 'function' && caResolve(name, o.cx)) || AU.buf[name]; if (!list) return null;
   if (pos && !(fin(pos.x) && fin(pos.y) && fin(pos.z))) return null;
   const sp = o.sp || spatial(pos, o.ref || 30), vol = (o.vol ?? 1) * sp.vol;
   if (!fin(vol) || !fin(sp.pan) || !fin(sp.lp) || !fin(sp.delay) || vol < .004) return null;
@@ -276,9 +277,10 @@ function play(name, pos, o = {}) {
   }
   return src;
 }
-function loopSound(name, vol = 0) {
-  if (!AU.ready || !AU.buf[name]) return null;
-  const c = AU.ctx, src = c.createBufferSource(); src.buffer = AU.buf[name][0]; src.loop = true;
+function loopSound(name, vol = 0, cx) {
+  const cl = typeof caResolve === 'function' ? caResolve(name, cx) : null;
+  if (!AU.ready || !(cl || AU.buf[name])) return null;
+  const c = AU.ctx, src = c.createBufferSource(); src.buffer = (cl || AU.buf[name])[0]; src.loop = true;
   const g = c.createGain(); g.gain.value = vol; const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 20000;
   let last = f; src.connect(g); g.connect(f);
   let pan = null; if (c.createStereoPanner) { pan = c.createStereoPanner(); f.connect(pan); last = pan; }
@@ -299,34 +301,41 @@ function loopSound(name, vol = 0) {
 // ---------- API usate dal gioco ----------
 const FARMAP = { garand: 'rifle_far', kar98: 'rifle_far', springfield: 'rifle_far', bar: 'rifle_far', thompson: 'smg_far', mp40: 'smg_far', colt: 'smg_far', mg42: 'mg_far', m2: 'mg_far', flak: 'flak_far' };
 // spari: campione reale + rimbombo all'aperto; passaggio graduale da vicino a lontano; .50 cal più pesanti
-function sfxShot(kind, pos, isPlayer, extraDelay = 0) {
+// cx: evento personalizzabile di contesto per lo sparo vicino (es. 'weapon.kar98zf.fire'); il lontano usa '.fire_distant'
+function sfxShot(kind, pos, isPlayer, extraDelay = 0, cx) {
+  const cxF = cx && /\.fire$/.test(cx) ? cx.replace(/\.fire$/, '.fire_distant') : null;
   const heavy = kind === 'm2', rate = kind === 'mp40' ? 1.12 : 1, near = heavy ? 'bar' : kind, nr = heavy ? .74 : rate, far = FARMAP[kind] || 'rifle_far', rv = SCEN === 'ard' ? 1.45 : 1;
   if (isPlayer) {
-    play(near, null, { vol: 1, delay: extraDelay, revMul: 1.5 * rv, rate: nr });
+    play(near, null, { vol: 1, delay: extraDelay, revMul: 1.5 * rv, rate: nr, cx });
     if (heavy) play('m2', null, { vol: .75, delay: extraDelay });
     // rimbombo che rotola nella campagna subito dopo il colpo
-    play(far, null, { vol: heavy ? .3 : .42, delay: extraDelay + .05 + R() * .05, rate: .88 + R() * .14, revMul: rv });
+    play(far, null, { vol: heavy ? .3 : .42, delay: extraDelay + .05 + R() * .05, rate: .88 + R() * .14, revMul: rv, cx: cxF });
     return;
   }
   const d = pos.distanceTo(camera.position);
-  if (d < 90) play(near, pos, { ref: 25, delay: extraDelay, echo: true, rate: nr, revMul: rv });
+  if (d < 90) play(near, pos, { ref: 25, delay: extraDelay, echo: true, rate: nr, revMul: rv, cx });
   else if (d < 260) {
     const k = (d - 90) / 170;
-    play(near, pos, { ref: 25, delay: extraDelay, echo: true, rate: nr, vol: 1 - k * .85, revMul: rv });
-    play(far, pos, { ref: 70, delay: extraDelay, vol: .35 + k * .85, revMul: rv });
+    play(near, pos, { ref: 25, delay: extraDelay, echo: true, rate: nr, vol: 1 - k * .85, revMul: rv, cx });
+    play(far, pos, { ref: 70, delay: extraDelay, vol: .35 + k * .85, revMul: rv, cx: cxF });
   }
-  else play(far, pos, { ref: 70, delay: extraDelay, echo: true, vol: 1.2, revMul: rv });
+  else play(far, pos, { ref: 70, delay: extraDelay, echo: true, vol: 1.2, revMul: rv, cx: cxF });
 }
 function sfxBoom(pos, size = 1, water = false) {
   const d = pos.distanceTo(camera.position);
   if (d < 220) play(water ? 'boom_water' : 'boom', pos, { ref: 55 * size, vol: Math.min(1.6, .6 + size * .4), echo: true });
   else play('boom_far', pos, { ref: 160 * size, vol: 1.3, echo: true });
 }
-function sfxShip(pos) { const sp = spatial(pos, 600); sp.vol = Math.max(sp.vol, .3); sp.delay = Math.min(sp.delay, 3); play('ship_far', pos, { sp, vol: 1.1 }); }
-function sfxShipNear() { play('ship_near', null, { vol: 1.3, revMul: 2 }); }
+function sfxShip(pos, cx) { const sp = spatial(pos, 600); sp.vol = Math.max(sp.vol, .3); sp.delay = Math.min(sp.delay, 3); play('ship_far', pos, { sp, vol: 1.1, cx }); }
+function sfxShipNear(cx) { play('ship_near', null, { vol: 1.3, revMul: 2, cx }); }
 function sfxPing() { play('ping', null, { vol: .45, delay: .03 }); }
 const MECH = { out: 'mag_out', in: 'mag_in', bolt: 'bolt_open', boltc: 'bolt_close', dry: 'dry', pick: 'mag_in', pin: 'pin', clip: 'clip_in' };
-function sfxMech(kind, delay = 0) { play(MECH[kind] || kind, null, { vol: .55, delay }); }
+// azioni dell'arma del giocatore: evento personalizzabile per l'arma impugnata, poi generico, poi originale
+const MECH_EV = { out: 'reload_start', in: 'reload_end', clip: 'reload', bolt: 'bolt', boltc: 'bolt_close', dry: 'empty', pick: 'equip' };
+function sfxMech(kind, delay = 0, cx) {
+  if (!cx && MECH_EV[kind] && typeof P !== 'undefined' && P.slot && P.slot()) cx = 'weapon.' + P.slot().id + '.' + MECH_EV[kind];
+  play(MECH[kind] || kind, null, { vol: .55, delay, cx });
+}
 function sfxWhiz(from) { const sp = spatial(from, 1e9); sp.vol = 1; sp.delay = 0; sp.rev = .04; sp.lp = 20000; play('whiz', null, { sp, vol: .55 }); if (R() < .7) play('crack', null, { sp, vol: .9 }); }
 function sfxCrack() { play('crack', null, { vol: .8 }); }
 function sfxRicochet(pos) { }   // il fischio di rimbalzo sintetico è stato tolto: restano solo i colpi sordi
@@ -432,6 +441,8 @@ function shout(lang, cat, pos, o = {}) {
   const vol = clamp(1 - d / (o.range || 70), 0, 1) * (o.vol ?? 1);
   if (vol < .06) return;
   if (o.sub && d < 40) subLine(lang === 'en' ? 'Soldato USA' : 'Soldato tedesco', text, IT[text]);
+  // grida registrate dall'utente (voices/shouts/<lingua>/<categoria>) al posto della sintesi vocale
+  if (SETTINGS.voices && typeof caHas === 'function' && caHas('shout.' + lang + '.' + cat)) { caPlay('shout.' + lang + '.' + cat, pos, { ref: 18, vol: vol * .9, revMul: 1.4 }); return; }
   if (!SETTINGS.voices || !window.speechSynthesis) return;
   if (!SPEECH.good[lang]) { if (pos && !o.priority) sfxVoice(pos, lang === 'en' ? 'yell' : 'yell'); return; }
   // niente code: una voce alla volta, mai la stessa frase ripetuta a breve, niente voci a gioco fermo o in mare/cielo

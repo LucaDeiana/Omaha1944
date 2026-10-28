@@ -15,6 +15,10 @@ const server = http.createServer((req, res) => {
   const PERS = process.env.FO_PERSONALI, PP = '/assets/music/personali/';
   if (PERS && p.startsWith(PP)) { const pf = path.normalize(path.join(PERS, p.slice(PP.length))); if (!pf.startsWith(path.normalize(PERS))) { res.writeHead(403); return res.end(); }
     return fs.readFile(pf, (err, data) => { if (err) { res.writeHead(404); return res.end('404'); } res.writeHead(200, { 'Content-Type': MIME[path.extname(pf).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(data); }); }
+  // audio personali: elenco dei file e file singoli dalla cartella locale (mai fuori da essa)
+  // solo da questo PC: gli altri giocatori in rete non vedono né scaricano i tuoi file
+  const local = /^(::1|127\.|::ffff:127\.)/.test(req.socket.remoteAddress || '');
+  if (p.startsWith('/custom-audio/') || p.startsWith('/local-assets/')) { if (!local || !(p === '/custom-audio/index' || p.startsWith('/custom-audio/file/'))) { res.writeHead(403); return res.end(); } return customAudio(p, res); }
   const f = path.normalize(path.join(ROOT, p));
   if (!f.startsWith(ROOT) || f.includes(`${path.sep}.git`) || f.includes(`${path.sep}server${path.sep}`)) { res.writeHead(403); return res.end(); }
   fs.readFile(f, (err, data) => {
@@ -22,6 +26,31 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(data);
   });
 });
+
+// ---------- audio personali ----------
+// cartella: FO_AUDIO (programma installato: Documenti\Fronte Occidentale 1944\audio) oppure local-assets/audio nel progetto
+const AUDIO_EXT = /\.(ogg|mp3|wav)$/i;
+function audioRoot() { return path.resolve(process.env.FO_AUDIO || path.join(ROOT, 'local-assets', 'audio')); }
+function listAudio(dir, rel, out, depth) {
+  if (depth > 6 || out.length > 4000) return;
+  let ents; try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
+  for (const e of ents) {
+    if (e.name.startsWith('.')) continue;
+    const r = rel ? rel + '/' + e.name : e.name;
+    if (e.isDirectory()) listAudio(path.join(dir, e.name), r, out, depth + 1);
+    else if (e.isFile() && AUDIO_EXT.test(e.name)) out.push(r);
+  }
+}
+function customAudio(p, res) {
+  const root = audioRoot();
+  if (p === '/custom-audio/index') { const out = []; listAudio(root, '', out, 0); res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' }); return res.end(JSON.stringify(out)); }
+  const rel = p.slice('/custom-audio/file/'.length), f = path.resolve(root, rel);
+  if (!AUDIO_EXT.test(f) || (f !== root && !f.startsWith(root + path.sep))) { res.writeHead(403); return res.end(); }
+  fs.readFile(f, (err, data) => {
+    if (err) { res.writeHead(404); return res.end('404'); }
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(f).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(data);
+  });
+}
 
 // ---------- WebSocket ----------
 const clients = new Map(); let nextId = 1;

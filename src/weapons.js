@@ -154,7 +154,7 @@ function playerFire() {
   P.recoil = 1; P.kickP += w.kick * (P.adsK > .5 ? .55 : 1) * (P.stance === 2 ? .5 : 1); P.kickY += rnd(-1, 1) * w.kick * .35;
   P.pitch += w.kick * .18 + (w.climb || 0) * (P.stance === 2 ? .5 : 1);
   if (!w.auto) P.trigger = false;
-  sfxShot(w.snd, null, true);
+  sfxShot(w.snd, null, true, 0, 'weapon.' + s.id + '.fire');
   vmFlash.visible = true; vmFlash.scale.setScalar(w.rocket ? .35 : rnd(.08, .13)); vmFlash.rotation.z = R() * PI; P.flashT = .045;
   camera.getWorldPosition(_o); camera.getWorldDirection(_d);
   flashLight(_o.clone().addScaledVector(_d, 1.5), 0xffb060, w.rocket ? 30 : 10, .06);
@@ -192,6 +192,7 @@ function playerFire() {
     const killed = r.obj.damage(dm, _o, true, r.zone, { dir: _d.clone(), power: w.dmg > 100 ? 3.4 : w.dmg > 60 ? 2.6 : 1.8, joint: r.joint });
     STATS.hits++; if (killed && r.zone === 'head') STATS.heads++;
     bloodHit(p.clone(), _d, r.zone === 'head' ? 1.5 : 1); hitMarker(killed, r.zone === 'head');
+    if (SCEN === 'snp' && typeof caSniperHit === 'function') caSniperHit();
   } else if (r.type === 'vehicle') { r.obj.damage(w.dmg * .15, true); fxImpact(p.clone(), 'metal'); sfxImpact(p, 'metal'); if (R() < .4) sfxRicochet(p); }
   else if (r.type === 'vgunner') { r.obj.killGunner(true); STATS.hits++; hitMarker(true, true); bloodHit(p.clone(), _d, 1.2); }
   else if (r.type === 'plane') { r.obj.damage(w.dmg * .3, true); fxImpact(p.clone(), 'metal'); hitMarker(false, false); }

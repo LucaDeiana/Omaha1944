@@ -344,7 +344,7 @@ class SnpBot extends Soldier {
     const dir = new V3(-Math.sin(this.lookY + this.errY + this.nzY) * Math.cos(this.lookP + this.errP + this.nzP), Math.sin(this.lookP + this.errP + this.nzP), -Math.cos(this.lookY + this.errY + this.nzY) * Math.cos(this.lookP + this.errP + this.nzP)).normalize();
     this.mag--; this.fireCD = this.W.rate; this.boltT = this.mag > 0 ? this.W.rate : 0; this.shotsHere++; this.set('FIRE');
     const hit = snpTrace(from, dir, this.W.range, this.team), end = from.clone().addScaledVector(dir, hit.t);
-    sfxShot(this.snd, from); if (dist2Cam(from) < 180 * 180) fxMuzzle(this.muzzle(T1), dir, false);
+    sfxShot(this.snd, from, false, 0, 'weapon.' + this.wid + '.fire'); if (dist2Cam(from) < 180 * 180) fxMuzzle(this.muzzle(T1), dir, false);
     snpShotSound(from, this.team, this);
     snpNearMiss(from, end, this.team, hit.obj);
     if (NET.host) netAIShot(this, from, end, false);

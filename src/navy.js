@@ -450,8 +450,8 @@ class NavShip {
       if (this === NV.me && !tu.sec) NV.lastShell = sh;
       if (big) { PS_FIRE.emit(o.x, o.y, o.z, d.x * .02, 1, d.z * .02, .25, S.cal / 25, S.cal / 12, 1, 4, 2.6, 1.2); for (let i = 0; i < 4; i++) PS_SMOKE.emit(o.x, o.y, o.z, d.x * rnd(.01, .03), rnd(1, 3), d.z * rnd(.01, .03), rnd(4, 9), S.cal / 30, S.cal / 6, .6, .7, .7, .7, .5, -.05); }
     }
-    if (big) { if (this === NV.me) { sfxShipNear(); P.shake = Math.max(P.shake, Math.min(.35, .08 + S.cal / 2500)); } else sfxShip(tu.pv.getWorldPosition(_nvc)); }
-    else if (dist2Cam(this.pos) < 1500 * 1500) sfxShot(S.cal >= 20 ? 'flak' : 'm2', this === NV.me ? null : this.pos, this === NV.me);
+    if (big) { if (this === NV.me) { sfxShipNear('naval.' + this.cls + '.main_cannon_fire'); P.shake = Math.max(P.shake, Math.min(.35, .08 + S.cal / 2500)); } else sfxShip(tu.pv.getWorldPosition(_nvc), 'naval.' + this.cls + '.main_cannon_distant'); }
+    else if (dist2Cam(this.pos) < 1500 * 1500) sfxShot(S.cal >= 20 ? 'flak' : 'm2', this === NV.me ? null : this.pos, this === NV.me, 0, 'naval.' + this.cls + (S.cal >= 20 ? '.secondary_fire' : '.aa_fire'));
     if (this === NV.me) STATS.shots++;
     return true;
   }

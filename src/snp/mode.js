@@ -75,7 +75,8 @@ function snpCredit(kName, kTeam, vName, vTeam, zone) {
   if (kName && kTeam !== vTeam) { snpRow(kName, kTeam).kills++; SNP.score[kTeam]++; }
   const head = zone === 'head' ? ' — colpo alla testa' : '';
   const txt = !kName ? vName + ' è caduto' : kName === SNP.me ? 'Hai eliminato ' + vName + head : vName === SNP.me ? kName + ' ti ha eliminato' + head : kName + ' ha eliminato ' + vName + head;
-  feed(txt); if (kName === SNP.me && kTeam !== vTeam) STATS.kills++;
+  feed(txt); if (kName === SNP.me && kTeam !== vTeam) { STATS.kills++; caSniperKill(zone === 'head'); }
+  if (vName === SNP.me) caSniperDied();
   if (NET.on && NET.host) netSend({ t: 'snpfeed', k: kName, v: vName, zone });
 }
 function snpOnDeath(s, byPlayer, zone) {
@@ -172,7 +173,8 @@ function snpOnNet(m) {
     if (!NET.client) return true;
     const head = m.zone === 'head' ? ' — colpo alla testa' : '';
     feed(!m.k ? m.v + ' è caduto' : m.k === SNP.me ? 'Hai eliminato ' + m.v + head : m.v === SNP.me ? m.k + ' ti ha eliminato' + head : m.k + ' ha eliminato ' + m.v + head);
-    if (m.k === SNP.me) STATS.kills++;
+    if (m.k === SNP.me) { STATS.kills++; caSniperKill(m.zone === 'head'); }
+    if (m.v === SNP.me) caSniperDied();
     return true;
   }
   if (m.t === 'newhost') {

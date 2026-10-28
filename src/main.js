@@ -81,7 +81,7 @@ async function startGame() {
     $('loadT').innerHTML = 'Errore durante il caricamento:<br><small>' + e.message + '</small>'; console.error(e); return;
   }
   $('loading').classList.add('hidden');
-  GAME.started = true; STATS.start = performance.now();
+  GAME.started = true; STATS.start = performance.now(); if (typeof caStart === 'function') caStart();
   lockPointer();
   startCutscene();
 }

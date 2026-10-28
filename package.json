@@ -5,7 +5,8 @@
   "scripts": {
     "server": "node server/server.js",
     "app": "electron .",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win",
+    "audio:scaffold": "node scripts/audio-scaffold.js"
   },
   "productName": "Fronte Occidentale 1944",
   "author": "Luca Deiana",
@@ -34,7 +35,8 @@
       "server/**",
       "electron/**",
       "!assets/music/personali/*.mp3",
-      "!assets/music/personali/*.png"
+      "!assets/music/personali/*.png",
+      "!local-assets/**"
     ],
     "asarUnpack": [
       "assets/music/personali/LEGGIMI.txt"
