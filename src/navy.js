@@ -139,18 +139,23 @@ function buildOcean() {
     vertexShader: WATER_GLSL.vert + `uniform float uSimOn; uniform float uT; uniform vec4 uW[3]; varying vec3 vW; varying vec3 vN; varying float vF; varying float vH;
       void main(){ vec4 w = modelMatrix * vec4(position,1.); float d = length(w.xz - cameraPosition.xz); float f = 1. - smoothstep(500., 2600., d); vF = f;
         float h = 0.; vec2 g = vec2(0.);
-        for (int i=0;i<3;i++){ float k = 6.2831853/uW[i].w; float ph = k*dot(uW[i].xy, w.xz) - sqrt(9.81*k)*uT; h += uW[i].z*sin(ph); g += uW[i].z*k*cos(ph)*uW[i].xy; }
+        // rilievo vero solo dove gli anelli della maglia sono abbastanza fitti per quell'onda (niente archi che scorrono)
+        for (int i=0;i<3;i++){ float k = 6.2831853/uW[i].w; float ph = k*dot(uW[i].xy, w.xz) - sqrt(9.81*k)*uT; float fw = 1. - smoothstep(uW[i].w*2.2, uW[i].w*3.8, d); h += uW[i].z*sin(ph)*fw; }
         float hs = uSimOn > .5 ? simH(w.xz) : 0.; h += hs;
-        w.y += h*f + hs*(1.-f); vH = h; vN = normalize(vec3(-g.x*f, 1., -g.y*f)); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
-    fragmentShader: WATER_GLSL.frag + `uniform float uSimOn; uniform float uT, uFogD, uZoom; uniform sampler2D uN; uniform vec3 uSun, uFog, uSky, uDeep; varying vec3 vW; varying vec3 vN; varying float vF; varying float vH;
+        w.y += h*f + hs*(1.-f); vH = h; vN = vec3(0., 1., 0.); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: WATER_GLSL.frag + `uniform float uSimOn; uniform float uT, uFogD, uZoom; uniform sampler2D uN; uniform vec3 uSun, uFog, uSky, uDeep; uniform vec4 uW[3]; varying vec3 vW; varying float vF;
       void main(){ vec3 V = normalize(cameraPosition - vW); float dist = length(cameraPosition - vW);
         // il dettaglio dipende da quanto è grande un pixel (distanza diviso ingrandimento): col binocolo le increspature lontane restano
         float pd = dist / uZoom, df = 1. - smoothstep(250., 3500., pd), dn = 1. - smoothstep(60., 600., pd);
-        vec2 a = texture2D(uN, vW.xz/38. + vec2(uT*.012, uT*.007)).xy*2.-1.;
-        vec2 b = texture2D(uN, vW.xz/11. - vec2(uT*.02, -uT*.013)).xy*2.-1.;
+        vec2 a = (texture2D(uN, vW.xz/38. + vec2(uT*.012, uT*.007)).xy + texture2D(uN, mat2(.6, .8, -.8, .6) * vW.xz/57. - vec2(uT*.008, uT*.01)).xy) - 1.;   // due trame incrociate: niente macchie a griglia
+        vec2 b = texture2D(uN, mat2(.8, -.6, .6, .8) * vW.xz/11.3 - vec2(uT*.02, -uT*.013)).xy*2.-1.;   // ruotata: le due trame non si ripetono insieme
         vec2 c3 = texture2D(uN, vW.xz/3.7 + vec2(-uT*.035, uT*.028)).xy*2.-1.;          // increspature fini, solo vicino o al binocolo
         vec2 big = texture2D(uN, vW.xz/260. + vec2(uT*.002, -uT*.0015)).xy*2.-1.;       // onda lunga di fondo: rompe l'uniformità anche da lontano
         if (uSimOn > .5 && cameraPosition.y > vW.y && inHull(vW.xz)) discard;
+        // pendenza delle onde lunghe calcolata per ogni pixel; sfuma con la distanza vera (dall'alto la somma delle tre onde regolari disegnerebbe un reticolo di macchie)
+        float fo = 1. - smoothstep(90., 520., length(vW - cameraPosition)); vec2 gw = vec2(0.); float hw = 0.;
+        for (int i=0;i<3;i++){ float k = 6.2831853/uW[i].w; float ph = k*dot(uW[i].xy, vW.xz) - sqrt(9.81*k)*uT; gw += uW[i].z*k*cos(ph)*uW[i].xy; hw += uW[i].z*sin(ph); }
+        vec3 vN = normalize(vec3(-gw.x*fo, 1., -gw.y*fo)); float vH = hw*fo;
         vec3 sm = uSimOn > .5 ? simS(vW.xz) : vec3(0.);
         vec3 N = normalize(vN + vec3(-sm.x * .35, 0., -sm.y * .35) + vec3(a.x + b.x*.6 + c3.x*.4*dn + big.x*.5, 0., a.y + b.y*.6 + c3.y*.4*dn + big.y*.5) * (.22 + .4*df));
         float fr = .02 + .98*pow(1. - max(dot(N, V), 0.), 5.);
@@ -163,7 +168,7 @@ function buildOcean() {
         float sd = max(dot(R, uSun), 0.);
         c += vec3(1., .95, .85) * (pow(sd, 420.) * 1.6 + pow(sd, 40.) * .08) * (.35 + .65*df);
         // creste di schiuma sparse dove le increspature si sommano
-        float fm = smoothstep(.66, .97, (a.x*.5+.5)*.55 + (b.y*.5+.5)*.45 + clamp(vH*.25, 0., .2)) * (.25 + .75*df) * smoothstep(.25, .75, patchy + big.x * .3);
+        float fm = smoothstep(.66, .97, (a.x*.5+.5)*.55 + (b.y*.5+.5)*.45 + clamp(vH*.25, 0., .2)) * (.25 + .75*df) * smoothstep(.25, .75, patchy + big.x * .3) * (.25 + .75*dn);
         c = mix(c, vec3(.82, .86, .88), fm * .55);
         // schiuma della simulazione: scie, colpi, schianti (spezzata dalle increspature)
         float sf = sm.z * (.65 + .35 * (b.x * .5 + .5)); c = mix(c, vec3(.9, .93, .94), clamp(sf * 1.4, 0., .92));
@@ -1101,7 +1106,7 @@ function updateNavyWeather(dt) {
 function buildNavyWorld() {
   WORLD.mortarPits = []; WORLD.aaSites = []; WORLD.tobruks = []; WORLD.bombard = 'off';
   buildWater(); scene.traverse(o => { if (o.material === waterMat) o.visible = false; });
-  buildOcean();
+  buildOcean(); if (WORLD.waterMesh) WORLD.waterMesh.visible = false;   // l'acqua della spiaggia non serve in mare aperto (si sovrapporrebbe all'oceano)
 }
 function initNavy() {
   const M = NAVY_MIS[NV.misKey] || NAVY_MIS.dd; NV.mis = M;

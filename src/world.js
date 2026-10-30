@@ -408,14 +408,19 @@ function buildWater() {
     void main(){vec4 w=modelMatrix*vec4(position,1.);float a=amp(w.z);
       vec2 d1=vec2(.1,.995),d2=vec2(-.3,.954);
       float p1=.07*dot(d1,w.xz)+1.1*uTime,p2=.13*dot(d2,w.xz)+1.6*uTime+1.3;
-      w.y+=a*(.32*sin(p1)+.14*sin(p2));
-      vD=a*(.32*.07*cos(p1)*d1+.14*.13*cos(p2)*d2);
+      // il rilievo sparisce dove gli anelli della maglia si diradano (niente archi che scorrono dall'aereo)
+      float gk=1.-smoothstep(150.,700.,length(cameraPosition.xz-w.xz));
+      w.y+=a*gk*(.32*sin(p1)+.14*sin(p2));
+      vD=vec2(0.);
       float hs=uSimOn>.5?simH(w.xz):0.;w.y+=hs;vS=hs;
       vC=sin(p1)*.5+.5;vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`,
-    fragmentShader: WATER_GLSL.frag + `uniform float uTime,uFogD,uSimOn;uniform vec3 uSunDir,uDeep,uShallow,uFog;uniform sampler2D tN;uniform samplerCube uSky;varying vec3 vW;varying vec2 vD;varying float vC;varying float vS;
+    fragmentShader: WATER_GLSL.frag + `uniform float uTime,uFogD,uSimOn;uniform vec3 uSunDir,uDeep,uShallow,uFog;uniform sampler2D tN;uniform samplerCube uSky;varying vec3 vW;varying float vS;
     float bed(vec2 p){return p.y>90.?max(-9.,-.36-(p.y-90.)*.035):p.y>0.?-p.y*.004:min(-p.y,64.)*.04;}
     void main(){
       vec2 p=vW.xz;float t=uTime;
+      // pendenza e cresta delle onde lunghe calcolate qui, punto per punto, e non sui vertici della maglia
+      vec2 vD,d1=vec2(.1,.995),d2=vec2(-.3,.954);float aw=clamp((p.y+10.)/60.,.12,1.),q1=.07*dot(d1,p)+1.1*t,q2=.13*dot(d2,p)+1.6*t+1.3;
+      vD=aw*(.32*.07*cos(q1)*d1+.14*.13*cos(q2)*d2);float vC=sin(q1)*.5+.5;
       if(p.y<-15.||abs(p.x)>2200.||p.y>2290.)discard;
       if(uSimOn>.5&&cameraPosition.y>vW.y&&inHull(p))discard;
       vec3 sm=uSimOn>.5?simS(p):vec3(0.);
