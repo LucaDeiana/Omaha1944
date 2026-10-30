@@ -69,6 +69,19 @@ function buildArdennes() {
     mb.mat = 'wood';
     for (let k = 0; k < 3; k++) mb.add(U.cyl, 0x4a3a2a, f.x + rnd(-.3, .3), y + .25 + k * .05, f.z + 1.3 + k * .32, 0, rnd(-.15, .15), PI / 2, .12, 2.8, .12);
     addCover(f.x, f.z, 'trench'); addCover(f.x + .9, f.z + .2, 'trench');
+    // terra scavata ammucchiata davanti e ai lati, con la neve sopra
+    mb.mat = 'dirt'; mb.add(U.sph, 0x7a6a56, f.x, H(f.x, f.z - 2.6) - .3, f.z - 2.6, 0, rnd(-.2, .2), 0, 2.5, .55, 1.15);
+    for (const sd of [-1, 1]) mb.add(U.sph, 0x7a6a56, f.x + sd * 2, H(f.x + sd * 2, f.z - .3) - .3, f.z - .3, 0, 0, 0, .9, .45, 1.7);
+    mb.mat = 'vc'; mb.add(U.sph, 0xc9d0d6, f.x, H(f.x, f.z - 2.6) - .2, f.z - 2.62, 0, 0, 0, 2.35, .5, 1.05);
+    for (const sd of [-1, 1]) mb.add(U.sph, 0xc9d0d6, f.x + sd * 2, H(f.x + sd * 2, f.z - .3) - .22, f.z - .3, 0, 0, 0, .82, .4, 1.6);
+    // una buca su due ha il tetto di tronchi coperto di neve (contro le schegge degli alberi colpiti)
+    if (ARD.foxes.indexOf(f) % 2 === 0) { mb.mat = 'wood'; for (let k = 0; k < 4; k++) mb.add(U.cyl, 0x4a3a2a, f.x, y + .62, f.z + .15 + k * .28, rnd(-.05, .05), 0, PI / 2, .13, 2.6, .13);
+      mb.mat = 'vc'; mb.add(U.box, 0xe9edf0, f.x, y + .78, f.z + .55, 0, 0, 0, 2.4, .1, 1.05); }
+    // rami di abete sul bordo, cassette, elmetto, pala piantata
+    mb.mat = 'vc'; for (let k = 0; k < 3; k++) mb.add(U.cone, 0x23331f, f.x + rnd(-1.2, 1.2), y + .12, f.z - 1.25 + rnd(-.2, .2), PI / 2, rnd(0, PI), 0, .45, 1.3, .12);
+    if (R() < .6) { mb.add(U.box, 0x4a4a32, f.x + rnd(-1, 1), y + .2, f.z + 1.45, 0, rnd(-.4, .4), 0, .32, .2, .2); mb.add(U.box, 0xe6eaee, f.x, y + .31, f.z + 1.45, 0, 0, 0, .001, .001, .001); }
+    if (R() < .35) mb.add(U.hemi, 0x4a5236, f.x + rnd(-1, 1), y + .14, f.z - 1.6, 0, 0, 0, .14, .12, .16);
+    if (R() < .4) { const sx = f.x + rnd(-1.4, 1.4); mb.mat = 'wood'; mb.add(U.cyl, 0x6b5132, sx, y + .45, f.z + 1.7, .2, 0, 0, .025, .8, .025); mb.mat = 'paint'; mb.add(U.box, 0x3a3e38, sx, y + .05, f.z + 1.62, .2, 0, 0, .18, .22, .02); }
   }
   // tronchi abbattuti nel campo come ripari
   for (let i = 0; i < 40; i++) {
