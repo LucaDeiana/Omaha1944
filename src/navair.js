@@ -234,7 +234,7 @@ function navyPlayerTorpedo() {
   const me = PL.me; if (!me || PL.bombs <= 0) return false;
   const kmh = me.vel.length() * 3.6, alt = me.pos.y - WATER_Y;
   if (alt > TORP_LIM.alt || kmh > TORP_LIM.kmh) { showMsg(`Troppo ${alt > TORP_LIM.alt ? 'alto' : 'veloce'}: il siluro si spezzerebbe (sotto ${TORP_LIM.alt} m e ${TORP_LIM.kmh} km/h)`, 2); return true; }
-  PL.bombs--; const d = me.vel.clone().setY(0).normalize(), o = me.pos.clone().add(new V3(0, -1.3, 0));
+  PL.bombs--; if (PL.rearm <= 0) PL.rearm = 40; const d = me.vel.clone().setY(0).normalize(), o = me.pos.clone().add(new V3(0, -1.3, 0));
   const mesh = makeTorp(5.5, .28); mesh.position.copy(o);
   NV.torps.push({ p: o, d, v: 33 * KN, left: TORP_LIM.run, dmg: 1300, by: NV.me, mesh, arm: 0, w: 0, fall: { y: Math.min(0, me.vel.y), h: me.vel.clone().setY(0).length() * .9 } });
   showMsg('Siluro sganciato!', 1.5); sfxMech('pick');
@@ -244,9 +244,8 @@ function navyPlayerTorpedo() {
 function navyToggleOrdnance() {
   if (SCEN !== 'sea' || P.mode !== 'plane' || !PL.spec) return;
   const full = Math.max(1, PL.spec.bombs || 1);
-  if (!PL.torpedo && PL.bombs < full) { showMsg('Si cambia armamento solo con il carico completo', 1.6); return; }
-  if (!PL.spec.bombs && NA_ROLE[PL.type] !== 'torpedo') { showMsg('Questo aereo non porta carichi', 1.6); return; }
-  PL.torpedo = !PL.torpedo; PL.bombs = PL.torpedo ? 1 : full;
+  if (PL.spec.jet) { showMsg('I jet non portano siluri', 1.6); return; }
+  PL.torpedo = !PL.torpedo; PL.bombs = PL.torpedo ? 1 : (PL.spec.bombs || 0);
   showMsg(PL.torpedo ? `Armamento: SILURO · sgancio sotto ${TORP_LIM.alt} m e ${TORP_LIM.kmh} km/h` : 'Armamento: BOMBE', 2.2);
 }
 // mirino del siluro: punto d'intercettazione sulla nave nemica, rotta del siluro e limiti di sgancio
