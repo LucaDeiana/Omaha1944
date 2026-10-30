@@ -1141,7 +1141,7 @@ function buildGrass() {
 function placeShip2(key, x, z) {
   const C = NCLS[key], m = buildShipModel2(C), g = m.g;
   g.position.set(x, 0, z); g.rotation.y = PI / 2; scene.add(g);
-  for (const t of m.turrets) if (t.arc === 'fore' || t.arc === 'aft') { t.g.rotation.y = -PI / 2; if (t.pv) t.pv.rotation.x = t.S.cal >= 100 ? rnd(.06, .22) : .3; }
+  for (const t of m.turrets) if (t.arc === 'fore' || t.arc === 'aft' || t.arc === 'side') { t.g.rotation.y = -PI / 2; if (t.pv) t.pv.rotation.x = t.S.cal >= 100 ? rnd(.06, .22) : .3; }
   g.updateMatrixWorld(true);
   let ng = 0; for (const t of m.turrets) if ((t.arc === 'fore' || t.arc === 'aft') && t.S.cal >= 100 && t.muzzles.length && ng++ < 3) WORLD.shipGuns.push({ p: t.muzzles[0].clone().applyMatrix4(t.pv.matrixWorld), big: C.type === 'bb', t: rnd(1, 9) });
   addEmitter(new V3(0, C.F + (C.type === 'bb' ? 20 : C.type === 'cl' ? 15 : 9), -.04 * C.L).applyMatrix4(g.matrixWorld), 'stack', C.type === 'bb' ? 2 : 1.2);

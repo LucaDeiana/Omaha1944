@@ -549,10 +549,10 @@ function shipSuper(mb, C, hg) {
   const zb = -L * .2;
   mb.add(U.cyl12, u, 0, F + 3, zb + 4, 0, 0, 0, 4, 6, 4);
   mb.add(U.box, u, 0, F + 4, zb, 0, 0, 0, B * .45, 8, L * .08); mb.add(U.box, u, 0, F + 9.5, zb - 1, 0, 0, 0, B * .35, 3, L * .05); mb.add(U.box, 0x223040, 0, F + 10, zb - L * .025 - 1, 0, 0, 0, B * .33, .8, .1);
-  shTripod(mb, 0, F + 11, zb + 3, 18, u, u); shDirector(mb, 0, F + 34, zb + 3, 2.2, u);
+  shTripod(mb, 0, F + 8, zb + 3, 21, u, u); shDirector(mb, 0, F + 34, zb + 3, 2.2, u);
   shFunnel(mb, 0, F + 2, -L * .06, B * .26, B * .34, 13, u, dk);
   mb.add(U.box, u, 0, F + 2.5, -L * .02, 0, 0, 0, B * .62, 5, L * .12);   // tuga del ponte lance
-  shTripod(mb, 0, F + 5, L * .065, 14, u, u); shDirector(mb, 0, F + 24, L * .065, 1.8, u);
+  shTripod(mb, 0, F, L * .065, 19, u, u); shDirector(mb, 0, F + 24, L * .065, 1.8, u);   // le gambe scendono fino al ponte
   for (const sd of [-1, 1]) { for (const z of [-L * .09, -L * .035, L * .01]) shBoat(mb, sd * B * .22, F + 5, z, 9, F); shAA(mb, sd * B * .38, F + 5, -L * .12, u); shAA(mb, sd * B * .4, F, L * .2, u); }
   mb.add(U.cyl, mt, 0, F + 5, -L * .01, 0, 0, 0, .6, 3, .6); mb.between(new V3(0, F + 6.5, -L * .01), new V3(-B * .3, F + 14, L * .01), .3, mt);   // gru delle lance
 }
