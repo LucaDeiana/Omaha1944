@@ -511,7 +511,9 @@ function updatePlane(dt) {
   let Cl = (.15 + flap + 4.8 * alpha) * (me.wingLost ? .45 : 1); const st = .3;
   if (Math.abs(alpha) > st) Cl = Math.sign(alpha) * (.15 + flap + 4.8 * st) * Math.max(.25, 1 - (Math.abs(alpha) - st) * 3.5);
   let lift = q * S * Cl; if (SP.gLim) lift = clamp(lift, -3 * m * 9.8, SP.gLim * m * 9.8);   // limite strutturale e del pilota
-  const drag = q * S * (.024 * cdM + .065 * (lift / Math.max(1, q * S)) ** 2 + .012 * (PL.gearK || 0));
+  // aerofreni (X tenuto): si aprono in mezzo secondo e aggiungono resistenza come i freni di picchiata
+  PL.abK = lerp(PL.abK || 0, KEYS.KeyX && !PL.onDeck ? 1 : 0, Math.min(1, dt * 4));
+  const drag = q * S * (.024 * cdM + .065 * (lift / Math.max(1, q * S)) ** 2 + .012 * (PL.gearK || 0) + .11 * PL.abK);
   const pt = me.parts || { eng: 1, wl: 1, wr: 1, tail: 1 };
   const thrust = me.crash ? 0 : SP.thrustN ? PL.throttle * SP.thrustN * Math.pow(rho / 1.225, .7) * (1 + .35 * Mach) * (.3 + .7 * pt.eng) : PL.throttle * (SP.jet ? 17000 : Math.min(32000, 1.6e6 / Math.max(V, 35))) * planeThrustK(SP, PL.type) * (m / 6000) * (.3 + .7 * pt.eng);
   if (me.engFire && !me.crash) { me.hp -= dt * 14; if (me.hp <= 0) playerPlaneHit(me, 1, false); }

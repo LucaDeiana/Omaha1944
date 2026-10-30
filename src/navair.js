@@ -284,8 +284,8 @@ function torpSight() {
   g.fillStyle = okA ? '#7bd88f' : '#ff7a6a'; g.fillText('QUOTA ' + Math.round(alt) + ' m  (max ' + TORP_LIM.alt + ')', x0 + 12, y0 + 22);
   g.fillStyle = okS ? '#7bd88f' : '#ff7a6a'; g.fillText('VELOCITÀ ' + Math.round(kmh) + ' km/h  (max ' + TORP_LIM.kmh + ')', x0 + 12, y0 + 42);
   g.textAlign = 'right'; g.font = '700 15px Oswald, sans-serif'; g.fillStyle = ready ? '#7bd88f' : okA && okS ? '#ffcf5a' : '#ff7a6a';
-  g.fillText(ready ? 'SGANCIA!' : okA && okS ? (T ? 'ALLINEA' : 'NESSUN BERSAGLIO') : 'SCENDI E RALLENTA', x0 + 288, y0 + 34);
-  g.textAlign = 'left'; g.font = '400 11px Oswald, sans-serif'; g.fillStyle = 'rgba(239,230,207,.7)'; g.fillText('SILURO · Spazio sgancia · N bombe/siluro', x0 + 12, y0 + 58);
+  g.fillText(ready ? 'SGANCIA!' : okA && okS ? (T ? 'ALLINEA' : 'NESSUN BERSAGLIO') : !okS ? 'RALLENTA (X)' : 'SCENDI', x0 + 288, y0 + 34);
+  g.textAlign = 'left'; g.font = '400 11px Oswald, sans-serif'; g.fillStyle = 'rgba(239,230,207,.7)'; g.fillText('SILURO · Spazio sgancia · X aerofreni · N bombe/siluro', x0 + 12, y0 + 58);
 }
 // in volo: segnalini sulle navi (rosse le nemiche, azzurre le amiche) con nome e distanza
 const _nmk = { els: [], v: new V3() };
