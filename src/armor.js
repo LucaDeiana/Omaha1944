@@ -145,6 +145,9 @@ function kasTigerGeo() {
   for (const sx of [-1, 1]) { h.add(U.cyl12, d, sx * .95, 1.55, 3.2, 0, 0, 0, .28, .9, .28); h.add(U.cyl12, k, sx * .45, 1.95, 3.0, 0, 0, 0, .09, .7, .09); h.add(U.box, d, sx * .45, 2.0, 3.06, 0, 0, 0, .3, .55, .05);
     h.add(U.cyl, 0x3a3630, sx * 1.6, 1.95, 0, PI / 2, 0, 0, .025, 4.5, .025); h.add(U.box, 0x6b5132, sx * 1.55, 2.09, -1.0, 0, 0, 0, .06, .05, 1.3); h.add(U.box, d, sx * 1.64, 1.1, -2.9, -.2, 0, 0, .4, .03, .5); }
   h.add(U.cyl12, k, -.95, 2.15, -2.3, PI / 2 - .3, 0, 0, .1, .14, .1); h.add(U.box, d, -.95, 2.13, -2.2, 0, 0, 0, .05, .1, .06);
+  for (const sx of [-1, 1]) { h.add(U.cyl12, d, sx * .75, 2.1, -1.65, 0, 0, 0, .34, .06, .34); h.add(U.box, k, sx * .75, 2.15, -1.65, 0, 0, 0, .3, .03, .04); h.add(U.box, k, sx * .3, 2.11, -2.0, 0, 0, 0, .1, .06, .16); }   // portelli di pilota e marconista, periscopi
+  h.add(U.box, 0x6b5132, 0, 2.14, 1.0, 0, 0, 0, 1.3, .08, .12); h.add(U.cyl12, k, -1.25, 2.15, .5, PI / 2, 0, 0, .1, .8, .1);   // trave del cric e martinetto
+  for (const sx of [-1, 1]) h.add(U.box, k, sx * .5, 1.3, -3.0, 0, 0, 0, .14, .22, .16);   // ganci di traino
   h.mat = 'vc'; for (const sx of [-1, 1]) { h.add(U.box, 0x1a1a1a, sx * 1.73, 1.75, -1.0, 0, 0, 0, .01, .5, .5); h.add(U.box, 0xe8e6dc, sx * 1.735, 1.75, -1.0, 0, 0, 0, .01, .12, .5); h.add(U.box, 0xe8e6dc, sx * 1.735, 1.75, -1.0, 0, 0, 0, .01, .5, .12); }
   // torretta a ferro di cavallo, cupola del capocarro, mantelletto e 8,8 cm KwK 36 col freno di bocca
   const sh = new THREE.Shape(); sh.moveTo(-1.45, -1.3); sh.lineTo(1.45, -1.3); sh.absarc(0, .2, 1.5, 0, PI, false); sh.lineTo(-1.45, -1.3);
@@ -153,6 +156,8 @@ function kasTigerGeo() {
   for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) t.add(U.cyl12, k, sx * .9 + i * .12 * sx, .75, -1.0, PI / 2 - .4, 0, 0, .05, .2, .05);   // lanciafumogeni
   for (const sx of [-1, 1]) for (let i = 0; i < 4; i++) t.add(U.box, k, sx * 1.48, .5, -.2 + i * .32, 0, 0, 0, .06, .5, .28);   // maglie di cingolo di scorta sui fianchi della torretta
   t.add(U.box, d, .55, .99, .3, 0, 0, 0, .55, .05, .7); t.add(U.cyl, k, 0, .98, -.4, 0, 0, 0, .05, .06, .05);   // portello del servente, periscopio
+  t.add(U.box, d, 0, .5, 1.85, 0, 0, 0, 1.5, .55, .5); t.add(U.box, k, 0, .78, 1.85, 0, 0, 0, 1.52, .03, .52);   // cassetta sul retro della torretta
+  for (let i = 0; i < 7; i++) { const a = i / 7 * TAU; t.add(U.box, k, -.65 + Math.cos(a) * .37, 1.18, .7 + Math.sin(a) * .37, 0, -a, 0, .04, .08, .12); }   // blocchi di visione della cupola
   t.mat = 'vc'; t.add(U.box, 0x1a1a1a, 1.5, .6, .2, 0, 0, 0, .01, .4, .6);
   gn.add(U.box, c, 0, 0, 0, 0, 0, 0, 1.25, .75, .35); gn.add(U.cyl12, d, 0, 0, -2.6, PI / 2, 0, 0, .1, 5.0, .1); gn.add(U.cyl12, k, 0, 0, -5.2, PI / 2, 0, 0, .17, .4, .17); gn.add(U.box, k, 0, 0, -5.2, 0, 0, 0, .5, .14, .3);
   return KAS_GEO.tiger = { hull: h.buildGroups(), tur: t.buildGroups(), gun: gn.buildGroups(), turY: 2.08, turZ: .2, gunY: .45, gunZ: -1.35, len: 5.4, cup: [-.65, 1.95, .7] };
@@ -171,10 +176,18 @@ function kasPz3Geo() {
     for (let i = 0; i < 42; i++) { const zz = -2.65 + i * .127; h.add(U.box, tr, sx * 1.22, .09, zz, 0, 0, 0, .4, .07, .1); h.add(U.box, tr, sx * 1.22, 1.13, zz + .05, 0, 0, 0, .4, .06, .1); }
     h.add(U.cyl, 0x3a3630, sx * 1.36, 1.5, .2, PI / 2, 0, 0, .02, 3.6, .02); h.add(U.box, 0x6b5132, sx * 1.36, 1.42, 1.3, 0, 0, 0, .05, .05, 1.1); }
   h.mat = 'vc'; for (const sx of [-1, 1]) { h.add(U.box, 0x1a1a1a, sx * 1.46, 1.6, -.3, 0, 0, 0, .01, .4, .4); h.add(U.box, 0xe8e6dc, sx * 1.465, 1.6, -.3, 0, 0, 0, .01, .1, .4); h.add(U.box, 0xe8e6dc, sx * 1.465, 1.6, -.3, 0, 0, 0, .01, .4, .1); }
+  // Afrika Korps: ruote di scorta sullo spalto, taniche e cassette degli attrezzi sui parafanghi, portelli di manutenzione dei freni
+  h.mat = 'paint';
+  for (const sx of [-1, 1]) { h.add(U.cyl12, d, sx * .55, 1.42, -2.42, PI / 2 - .55, 0, 0, .27, .14, .27); h.add(U.cyl12, k, sx * .55, 1.44, -2.44, PI / 2 - .55, 0, 0, .1, .16, .1);
+    h.add(U.box, 0x8a7c54, sx * 1.36, 1.5, 2.2, 0, 0, 0, .18, .44, .34); h.add(U.box, 0x8a7c54, sx * 1.36, 1.5, 1.84, 0, 0, 0, .18, .44, .34);
+    h.add(U.box, d, sx * 1.36, 1.43, -1.4, 0, 0, 0, .2, .26, .7); h.add(U.box, k, sx * .45, 1.89, -1.75, 0, 0, 0, .55, .04, .4); }
   // torretta con fianchi inclinati, portelli laterali, cupola posteriore e mantelletto
   t.add(slabGeo([[-1.0, -1.05], [1.0, -1.05], [1.05, 1.1], [-1.05, 1.1]], [[-.8, -.85], [.8, -.85], [.85, .95], [-.85, .95]], .78), c, 0, 0, 0);
   t.add(U.box, c, 0, .35, 1.3, 0, 0, 0, 1.4, .5, .4); t.add(U.cyl12, c, 0, .9, .75, 0, 0, 0, .32, .26, .32); t.add(U.cyl12, k, 0, 1.04, .75, 0, 0, 0, .3, .04, .3);
   for (const sx of [-1, 1]) { t.add(U.box, d, sx * .96, .38, 0, 0, 0, sx * .17, .04, .42, .5); t.add(U.box, k, sx * .97, .5, -.6, 0, 0, sx * .17, .02, .06, .12); }
+  t.add(U.box, d, 0, .38, 1.72, 0, 0, 0, 1.25, .5, .5); t.add(U.box, k, 0, .64, 1.72, 0, 0, 0, 1.27, .03, .52);   // cassetta «Rommelkiste»
+  for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; t.add(U.box, k, Math.cos(a) * .31, .98, .75 + Math.sin(a) * .31, 0, -a, 0, .04, .06, .1); }   // blocchi di visione della cupola
+  t.add(U.cyl, k, -.6, 1.3, .9, 0, 0, 0, .012, 1.6, .012);
   gn.add(U.box, c, 0, 0, 0, 0, 0, 0, .95, .5, .3); gn.add(U.cyl12, d, 0, 0, -1.6, PI / 2, 0, 0, .06, 3.0, .06); gn.add(U.cyl12, k, 0, 0, -3.1, PI / 2, 0, 0, .08, .15, .08); gn.add(U.cyl12, k, .3, .05, -.35, PI / 2, 0, 0, .03, .3, .03);
   return KAS_GEO.pz3 = { hull: h.buildGroups(), tur: t.buildGroups(), gun: gn.buildGroups(), turY: 1.88, turZ: -.1, gunY: .38, gunZ: -1.05, len: 3.2, cup: [0, 1.6, .75] };
 }
