@@ -555,6 +555,20 @@ function shipSuper(mb, C, hg) {
   shTripod(mb, 0, F, L * .065, 19, u, u); shDirector(mb, 0, F + 24, L * .065, 1.8, u);   // le gambe scendono fino al ponte
   for (const sd of [-1, 1]) { for (const z of [-L * .09, -L * .035, L * .01]) shBoat(mb, sd * B * .22, F + 5, z, 9, F); shAA(mb, sd * B * .38, F + 5, -L * .12, u); shAA(mb, sd * B * .4, F, L * .2, u); }
   mb.add(U.cyl, mt, 0, F + 5, -L * .01, 0, 0, 0, .6, 3, .6); mb.between(new V3(0, F + 6.5, -L * .01), new V3(-B * .3, F + 14, L * .01), .3, mt);   // gru delle lance
+  mb.between(new V3(0, F + 6.5, -L * .01), new V3(B * .3, F + 13, L * .015), .3, mt);
+  // plancia a più piani con le finestre e le alette, davanti al tripode di prua
+  for (let i = 0; i < 3; i++) { const y = F + 12.1 + i * 2.2, w = B * (.42 - i * .08), d = L * (.06 - i * .012), z = zb - 2.5 - i * .5;
+    mb.add(U.box, u, 0, y, z, 0, 0, 0, w, 2.2, d); mb.add(U.box, 0x1c2228, 0, y + .35, z - d / 2 - .03, 0, 0, 0, w * .86, .6, .06);
+    for (const sd of [-1, 1]) mb.add(U.box, 0x1c2228, sd * (w / 2 + .03), y + .35, z, 0, 0, 0, .06, .6, d * .7); }
+  for (const sd of [-1, 1]) { mb.add(U.box, u, sd * B * .27, F + 16.6, zb - 4.5, 0, 0, 0, B * .14, .22, 2.6); mb.add(U.box, u, sd * B * .33, F + 17.1, zb - 4.5, 0, 0, 0, .1, 1, 2.6); }
+  // coffe di direzione del tiro: fascia delle finestre e telemetro sopra
+  for (const [y, z, r] of [[F + 29, zb + 3, 2.9], [F + 19, L * .065, 2.9]]) { mb.add(U.cyl12, 0x1c2228, 0, y + 1.5, z, 0, 0, 0, r, .55, r); mb.add(U.box, mt, 0, y + 4.8, z, 0, 0, 0, 5.6, .35, .35); for (const sd of [-1, 1]) mb.add(U.cyl12, mt, sd * 2.8, y + 4.8, z, 0, 0, PI / 2, .35, .4, .35); }
+  // piattaforma dei proiettori attorno al fumaiolo
+  mb.add(U.box, u, 0, F + 11.4, -L * .06, 0, 0, 0, B * .52, .25, 8.5);
+  for (const [sx, dz] of [[-1, -2.6], [1, -2.6], [-1, 2.6], [1, 2.6]]) { const x = sx * B * .22, z = -L * .06 + dz; mb.add(U.cyl12, 0x3a3e42, x, F + 11.9, z, 0, 0, 0, .25, .8, .25); mb.add(U.cyl12, 0x8e9396, x, F + 12.7, z, PI / 2, 0, 0, .6, .9, .6); mb.add(U.cyl12, 0xdfe4e6, x, F + 12.7, z - .46, PI / 2, 0, 0, .5, .03, .5); }
+  // contraerea del 1944: vasche dei Bofors quadrinati e Oerlikon da 20 mm lungo i ponti
+  for (const sd of [-1, 1]) { shAA(mb, sd * B * .3, F + 11, zb + 6, u); shAA(mb, sd * B * .3, F + 5, L * .045, u); shAA(mb, sd * B * .36, F, -L * .4, u); shAA(mb, sd * B * .36, F, L * .41, u);
+    for (const z of [-38, -26, -4, 6, 30, 46]) clut(mb, () => shOerlikon(mb, sd * B * .42, F, z, sd > 0 ? -PI / 2 : PI / 2)); }
 }
 // torre: barbetta, casa con fronte inclinata, telemetro a orecchie (grossi calibri) o impianto chiuso (127 mm)
 function shTurret(tm, S, sz, c, nat, drop = 0, n = 2, casemate = false) {
@@ -734,6 +748,15 @@ function buildShipModel2(C) {
     const sz = S.cal >= 300 ? Math.min(3.2, S.cal / 356) * (n >= 4 ? 1.15 : 1) : S.cal >= 200 ? .9 : S.cal >= 140 ? .72 : .5, tm = new MB();
     const cas = C.type === 'bb' && S.cal < 140 && Math.abs(x) > C.B * .4;
     shTurret(tm, S, sz, pal.upper, C.nat, Math.abs(x) < C.B * .3 ? tg.position.y - deckY + .3 : 0, n, cas);
+    if (C === NCLS.texas && arc === 'side' && S.cal >= 300) {   // catapulta sulla torre centrale con l'idrovolante Kingfisher
+      const cy = 2.5 * sz; tm.add(U.box, 0x3a3e42, 0, cy, 1.5, 0, 0, 0, .9, .45, 20); for (const sd of [-1, 1]) tm.add(U.box, 0x2c3034, sd * .35, cy + .3, 1.5, 0, 0, 0, .08, .15, 20);
+      const k = 0x6f7a82, pz = 2.5, py = cy + 1.6; tm.add(U.cyl12, k, 0, py, pz, PI / 2, 0, 0, .55, 8, .55); tm.add(U.cone, k, 0, py, pz + 5.2, PI / 2, 0, 0, .5, 2.4, .5);
+      tm.add(U.box, k, 0, py + .55, pz - .8, 0, 0, 0, 10.9, .14, 1.7); tm.add(U.box, 0x1c2228, 0, py + .65, pz - 1.6, 0, 0, 0, .9, .45, 1.6);
+      tm.add(U.box, k, 0, py + .3, pz + 5.7, 0, 0, 0, 3.8, .1, 1.1); tm.add(U.box, k, 0, py + 1.1, pz + 5.9, 0, 0, 0, .1, 1.5, 1.2);
+      tm.add(U.sph, k, 0, py - 1.25, pz - .3, 0, 0, 0, .5, .45, 3.6); tm.add(U.box, 0x2c3034, 0, py - .6, pz - .3, 0, 0, 0, .12, .8, .5);
+      for (const sd of [-1, 1]) { tm.add(U.sph, k, sd * 4.6, py - .25, pz - .6, 0, 0, 0, .18, .16, .8); tm.add(U.box, 0x2c3034, sd * 4.6, py + .15, pz - .6, 0, 0, 0, .05, .7, .1); }
+      tm.add(U.cyl12, 0x2a2c2e, 0, py, pz - 4.1, PI / 2, 0, 0, .3, .3, .3); tm.add(U.box, 0x2a2c2e, 0, py, pz - 4.3, 0, 0, 0, 2.6, .12, .05);
+    }
     tg.add(groupMesh(tm.buildGroups(), true));
     const pv = new THREE.Group(); pv.position.set(0, S.cal >= 140 ? .4 * sz : S.cal >= 100 ? .6 : .2, S.cal >= 140 ? -2.8 * sz : S.cal >= 100 ? -2.2 : 0); tg.add(pv);
     const bl = new MB(), len = S.cal >= 100 ? Math.min(62, S.cal / 1000 * (S.cal >= 300 ? 45 : 40)) : S.cal > 15 ? 2.4 : 1.5, muzzles = [], rad = Math.max(.05, S.cal / 2000 * 1.5);
