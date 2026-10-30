@@ -98,7 +98,7 @@ function snpPlayerDied() {
 }
 function snpDeployPoints() {
   const pos = snpSpawnNode(PT, SNP.deathPos).pos.clone(), cur = P.inv[0] ? P.inv[0].id : SNP_GUNS[PT][0];
-  return SNP_GUNS[PT].slice().sort((a, b) => (b === cur) - (a === cur)).map(id => ({ label: WEAPONS[id].name, sub: (id === cur ? 'arma attuale · ' : '') + WEAPONS[id].cal + ' · ' + WEAPONS[id].mag + ' colpi', kind: 'snp', gun: id, pos }));
+  return [{ label: PT === 'A' ? SNP.M.sideA : SNP.M.sideE, sub: 'posizione sicura nel tuo edificio', kind: 'snp', gun: cur, pos }];
 }
 
 function updateSniper(dt) {

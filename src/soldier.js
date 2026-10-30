@@ -440,7 +440,7 @@ class Soldier {
     if (dist2Cam(from) < 180 * 180) fxMuzzle(from, dir, this.kind === 'mg');
     if (hit) {
       const dm = rnd(this.w.dmg[0], this.w.dmg[1]);
-      if (t === P) P.damage(dm * D.dmg, from);
+      if (t === P) P.damage(dm * D.dmg, from, false, depSoldierSrc(this));
       else { const zone = R() < .12 ? 'head' : R() < .2 ? 'legs' : 'body'; const hp = zone === 'head' ? t.head(T5) : tp.clone(); t.lastHit = this; t.damage(dm * (zone === 'head' ? 4 : 1.8), from, false, zone); if (dist2Cam(tp) < 130 * 130) bloodHit(hp, dir, zone === 'head' ? 1.4 : 1); }
     } else {
       if (t === P) P.nearMiss(from, end);

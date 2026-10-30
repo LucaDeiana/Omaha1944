@@ -161,3 +161,39 @@ kbd { background: #2a2e2a; border: 1px solid #4a5040; padding: 1px 7px; border-r
 /* in cabina: i dati di volo stanno sugli strumenti; in alto resta solo una riga piccola, niente aiuto sopra il cruscotto */
 #planehud.ck { bottom: auto; top: 62px; font-size: 12px; opacity: .8; }
 #planehud.ck small { display: none; }
+
+/* ---------- schermata di rientro ---------- */
+#spawn { background: radial-gradient(ellipse at 50% 45%, rgba(10,12,10,.93), rgba(4,5,4,.985)); z-index: 25; }
+.depS { width: min(1240px, 96vw); max-height: 96vh; display: flex; flex-direction: column; gap: 14px; color: #e9dfc4; font-family: Oswald, sans-serif; }
+.depTop { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; border-bottom: 1px solid rgba(232,196,106,.35); padding-bottom: 8px; }
+.depTop h3 { font-family: 'Special Elite', serif; font-weight: normal; letter-spacing: .25em; margin: 0; color: var(--accent); font-size: 26px; }
+#depLife { font-size: 13px; letter-spacing: .12em; opacity: .8; } #depLife b { color: #fff; }
+.depCols { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(0, min(62vh, 560px)) minmax(220px, 1fr); gap: 18px; align-items: start; }
+.depMapW { aspect-ratio: 1; border: 1px solid rgba(233,223,196,.25); box-shadow: 0 10px 40px rgba(0,0,0,.6); }
+#depMap { width: 100%; height: 100%; display: block; }
+#depList { display: flex; flex-direction: column; gap: 6px; }
+.dp { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: rgba(20,24,22,.75); border-left: 3px solid transparent; }
+.dp.on { border-left-color: #ffd060; background: linear-gradient(90deg, rgba(232,196,106,.22), rgba(20,24,22,.75)); }
+.dp kbd { min-width: 18px; text-align: center; }
+.dp div { flex: 1; } .dp b { display: block; font-size: 17px; font-weight: 600; letter-spacing: .06em; } .dp small { display: block; font-size: 12px; opacity: .65; }
+.dg { width: 10px; height: 10px; border-radius: 50%; flex: none; } .dg.d0 { background: #7bd88f; } .dg.d1 { background: #e8c46a; } .dg.d2 { background: #ff5a4a; box-shadow: 0 0 8px #ff5a4a; }
+#depLoad h4, .depS h4 { margin: 0 0 8px; font-size: 12px; font-weight: 500; letter-spacing: .45em; color: var(--accent); }
+.cl { padding: 9px 12px; margin-bottom: 6px; background: rgba(20,24,22,.75); border: 1px solid transparent; }
+.cl b { font-size: 15px; letter-spacing: .1em; opacity: .7; } .cl.on { border-color: rgba(232,196,106,.7); background: rgba(48,44,30,.85); } .cl.on b { opacity: 1; font-size: 18px; }
+.cl small { display: block; font-size: 12px; opacity: .7; margin-top: 3px; }
+.cl .wp { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; } .cl .wp span { font-size: 11px; letter-spacing: .08em; padding: 2px 8px; border: 1px solid rgba(233,223,196,.35); }
+.kh { font-size: 12px; opacity: .6; margin-top: 4px; }
+.depBot { display: grid; grid-template-columns: 1fr auto; gap: 8px 18px; align-items: center; }
+.depBarW { grid-column: 1 / -1; height: 4px; background: rgba(233,223,196,.15); } #depBar { height: 100%; width: 0; background: linear-gradient(90deg, #a8893f, #ffd060); }
+#depGo { grid-column: 2; grid-row: 2; font-size: 22px; font-weight: 600; letter-spacing: .2em; padding: 10px 26px; border: 1px solid rgba(233,223,196,.3); opacity: .6; }
+#depGo.ok { opacity: 1; background: #ffd060; color: #15140f; border-color: #ffd060; } #depGo.ok kbd { border-color: #15140f; color: #15140f; }
+#depHint { grid-column: 1; grid-row: 2; font-size: 13px; opacity: .7; }
+.depS kbd { display: inline-block; border: 1px solid rgba(233,223,196,.6); border-radius: 3px; padding: 0 6px; font-size: 12px; margin: 0 2px; }
+@media (max-width: 900px) { .depCols { grid-template-columns: 1fr; } .depMapW { max-width: 360px; } }
+@media (max-height: 760px) { .depCols { grid-template-columns: minmax(200px, 1fr) minmax(0, 54vh) minmax(200px, 1fr); } .dp { padding: 7px 10px; } }
+#killCard { position: fixed; left: 50%; bottom: 27vh; transform: translate(-50%, 12px); z-index: 30; text-align: center; color: #efe6cf; font-family: Oswald, sans-serif; opacity: 0; transition: opacity .5s, transform .5s; pointer-events: none; text-shadow: 0 2px 10px #000; }
+#killCard.on { opacity: 1; transform: translate(-50%, 0); }
+#killCard small { display: block; font-size: 13px; letter-spacing: .5em; color: #ff8a7a; }
+#killCard b { display: block; font-family: 'Special Elite', serif; font-weight: normal; font-size: 40px; letter-spacing: .06em; margin: 4px 0; }
+#killCard span { font-size: 16px; letter-spacing: .15em; opacity: .85; }
+body.pDead #gl { filter: saturate(.15) contrast(1.1); transition: filter 1.2s; }

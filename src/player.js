@@ -24,7 +24,8 @@ const P = {
     if (this.swim) m *= .6;
     return m;
   },
-  damage(a, from, blast) {
+  damage(a, from, blast, src) {
+    if (src) this.lastSrc = Object.assign({ t: GAME.time }, src);
     if (this.dead || MISSION.godT > 0 || !(this.mode === 'foot' || this.mode === 'mg' || this.mode === 'mortar' || this.mode === 'flak')) return;
     this.hp -= a; this.regenT = 5.5;
     this.hurt = Math.min(1, this.hurt + a / 45); this.shake = Math.min(1.5, this.shake + a / 50);
@@ -46,7 +47,8 @@ const P = {
     if (SCEN === 'snp') snpPlayerDied();
     this.dead = true; this.deathT = 0; STATS.deaths++;
     this.trigger = false; mouseL = false; this.adsHeld = false;
-    showMsg('Sei stato colpito', 2.5);
+    this.deathPos = this.pos.clone(); this.killer = this.lastSrc && GAME.time - this.lastSrc.t < 4 ? this.lastSrc : null; this.lastSrc = null;
+    this.hurt = Math.min(this.hurt, .35); showKillCard();
   },
 };
 
@@ -154,7 +156,7 @@ function updatePlayer(dt) {
   if (P.dead) {
     P.deathT += dt;
     $('fade').style.opacity = clamp((P.deathT - 1) / 1.4, 0, .85);
-    if (P.deathT > 2.6 && !P.spawnMenu) openSpawnMenu();
+    deathCam(dt); if (P.deathT > 2.6 && !P.spawnMenu) openSpawnMenu();
     updateCamera(dt); updateViewmodel(dt); return;
   }
   P.fireCD -= dt; P.switchT = Math.max(0, P.switchT - dt); P.throwT = Math.max(0, P.throwT - dt); P.meleeT = Math.max(0, P.meleeT - dt);

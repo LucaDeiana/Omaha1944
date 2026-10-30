@@ -104,7 +104,7 @@ class Panzer {
     this.g.updateMatrixWorld(true); const o = new V3(.28, .42, -1.8).applyMatrix4(this.tg.matrixWorld), d = this.aimDir(new V3());
     PS_FIRE.emit(o.x, o.y, o.z, d.x * 3, d.y * 3, d.z * 3, .04, .25, .4, 1, 4, 2.6, 1.2);
     d.x += rnd(-.01, .01); d.y += rnd(-.008, .008); d.normalize();
-    if (!byPlayer) { const t = this.target; if (!t) return; const tp = t === P ? P.chest(new V3()) : t.chest(new V3()); if (R() < .4) fxTracer(o, tp.clone().add(new V3(rnd(-2, 2), rnd(-1, 1), rnd(-2, 2))), 1.2); sfxShot('mg42', o); if (R() < .12) { if (t === P) P.damage(rnd(20, 35) * D.dmg, o); else t.damage(rnd(30, 60), o, false, 'body'); } else if (t === P) P.nearMiss(o, tp); return; }
+    if (!byPlayer) { const t = this.target; if (!t) return; const tp = t === P ? P.chest(new V3()) : t.chest(new V3()); if (R() < .4) fxTracer(o, tp.clone().add(new V3(rnd(-2, 2), rnd(-1, 1), rnd(-2, 2))), 1.2); sfxShot('mg42', o); if (R() < .12) { if (t === P) P.damage(rnd(20, 35) * D.dmg, o, false, { name: 'Panzer IV', weapon: 'mitragliatrice MG 34', pos: o.clone() }); else t.damage(rnd(30, 60), o, false, 'body'); } else if (t === P) P.nearMiss(o, tp); return; }
     const r = hitscan(o.clone().addScaledVector(d, 3), d, 600), p = o.clone().addScaledVector(d, r.t + 3); // parte fuori dallo scafo
     if (R() < .5) fxTracer(o, p, 1.3, byPlayer); sfxShot('mg42', o, byPlayer, 0, 'vehicle.pz4.machinegun_fire'); if (byPlayer) P.shake += .04;
     if (r.type === 'enemy') { const killed = r.obj.damage(70, o, byPlayer, r.zone, { dir: d, power: 2.4, joint: r.joint }); if (byPlayer) hitMarker(killed, r.zone === 'head'); bloodHit(p, d, 1); }

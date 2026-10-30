@@ -349,7 +349,7 @@ class SnpBot extends Soldier {
     snpNearMiss(from, end, this.team, hit.obj);
     if (NET.host) netAIShot(this, from, end, false);
     if (hit.type === 'player') {
-      const dm = snpDamage(this.W, hit.zone); SNP.killBy = { name: this.name, team: this.team, zone: hit.zone }; P.damage(dm, from);
+      const dm = snpDamage(this.W, hit.zone); SNP.killBy = { name: this.name, team: this.team, zone: hit.zone }; P.damage(dm, from, false, { name: this.name, weapon: this.W.name + (hit.zone === 'head' ? ' · colpo alla testa' : ''), pos: from.clone() });
     } else if (hit.type === 'soldier') {
       const e = hit.obj, dm = snpDamage(this.W, hit.zone); e.lastHit = this;
       if (dist2Cam(end) < 130 * 130) bloodHit(end.clone(), dir, hit.zone === 'head' ? 1.4 : 1);

@@ -110,7 +110,7 @@ class Plane {
       if (dist2Cam(p) < 30 * 30) sfxImpact(p, wet ? 'water' : 'sand');
       const victims = this.team === 'A' ? enemies : allies;
       for (const s of victims) if (s.alive && s.state !== 'boat' && !s.inBunker && Math.abs(s.pos.x - p.x) < 1.4 && Math.abs(s.pos.z - p.z) < 1.4) s.damage(rnd(60, 120), o, this.player === true, 'body', { dir: d.clone(), power: 3, joint: 15 });
-      if (this.team !== PT && P.targetable() && P.pos.distanceTo(p) < 1.6) P.damage(rnd(40, 70) * D.dmg, o);
+      if (this.team !== PT && P.targetable() && P.pos.distanceTo(p) < 1.6) P.damage(rnd(40, 70) * D.dmg, o, false, { name: 'Aereo nemico', weapon: 'mitragliamento', pos: o.clone() });
       else if (this.team !== PT && P.targetable() && P.pos.distanceTo(p) < 6) P.nearMiss(o, p);
     }
   }

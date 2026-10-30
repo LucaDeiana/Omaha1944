@@ -54,8 +54,8 @@ function netOnMessage(m) {
   } else if (m.t === 'hit') {
     if (!P.targetable()) return;
     const from = p.puppet ? p.puppet.pos.clone().add(new V3(0, 1.4, 0)) : P.pos.clone();
-    if (SCEN === 'snp') { SNP.killBy = { name: m.by || p.name, team: m.bt || p.side, zone: m.zone }; P.damage(m.dm, from); return; }
-    P.damage(m.dm * (m.blast ? 1 : P.hitMul() / .6), from, !!m.blast);
+    if (SCEN === 'snp') { SNP.killBy = { name: m.by || p.name, team: m.bt || p.side, zone: m.zone }; P.damage(m.dm, from, false, { name: m.by || p.name, weapon: m.zone === 'head' ? 'colpo alla testa' : '', pos: from }); return; }
+    P.damage(m.dm * (m.blast ? 1 : P.hitMul() / .6), from, !!m.blast, { name: m.ai ? 'Nemico' : (p.name || 'Giocatore'), weapon: m.blast ? 'esplosione' : '', pos: from });
     if (P.dead && !NET.killedSent) { NET.killedSent = true; if (!m.ai) netSend({ t: 'kill', to: m.id }); else feed('Ucciso dal nemico'); }
   }
 }

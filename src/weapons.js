@@ -358,7 +358,7 @@ function explode(p, radius, dmg, o = {}) {
       let dm = dmg * .55 * Math.pow(1 - d / r2, 1.2);
       if (!losClear(new V3(p.x, p.y + .6, p.z), _ex)) dm *= .3;
       if (P.stance === 2) dm *= .7;
-      P.damage(dm * (o.byPlayer ? .8 : D.dmg), p, true);
+      P.damage(dm * (o.byPlayer ? .8 : D.dmg), p, true, o.byPlayer ? { name: 'La tua esplosione', weapon: '' } : { name: 'Esplosione', weapon: o.bomb ? 'bomba' : 'artiglieria o granata', pos: p.clone() });
     }
     if (d < radius * 4) P.shake = Math.min(1.6, P.shake + (1 - d / (radius * 4)) * 1.3);
     if (d < radius * 2.2) { muffle(clamp(3.5 - d / radius, 1.2, 3.5)); if (d < radius * 1.6) P.shellShock(clamp(1.6 - d / radius, .4, 1)); }
