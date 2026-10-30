@@ -101,14 +101,33 @@ function kasShermanGeo() {
   h.add(U.box, 0x6b5132, -.95, 1.86, 1.1, 0, 0, 0, .06, .05, .9); h.add(U.box, 0x3a3a34, -.95, 1.86, .62, 0, 0, 0, .04, .12, .16);   // ascia
   h.add(U.box, k, 0, .95, 2.85, -.5, 0, 0, 1.8, .03, .45);
   h.mat = 'vc'; for (const sx of [-1, 1]) { h.add(U.cyl12, 0xe8e6dc, sx * 1.26, 1.45, .2, 0, 0, PI / 2, .3, .01, .3); h.add(U.cyl, c, sx * 1.27, 1.45, .2, 0, 0, PI / 2, .2, .01, .2); }
+  // dettagli aggiunti: maglie di scorta sullo spalto, anelli di sollevamento, rulli di ritorno, denti delle ruote motrici, carico sul retro
+  h.mat = 'paint';
+  for (let i = 0; i < 4; i++) h.add(U.box, tr, -.62 + i * .3, 1.5, -2.2, -.98, 0, 0, .26, .06, .4);
+  for (const sx of [-1, 1]) for (const sz of [-1.75, 1.8]) { h.add(U.cyl12, k, sx * .95, 1.86, sz, PI / 2, 0, 0, .07, .03, .07); h.add(U.box, k, sx * .95, 1.84, sz, 0, 0, 0, .05, .04, .14); }
+  for (const sx of [-1, 1]) {
+    for (let b = 0; b < 3; b++) { const bz = -1.55 + b * 1.6; h.add(U.cyl12, k, sx * 1.24, .98, bz + .12, 0, 0, PI / 2, .1, .26, .1); h.add(U.box, d, sx * 1.12, .86, bz + .12, 0, 0, 0, .08, .2, .1); h.add(U.cyl12, d, sx * 1.1, .42, bz, 0, 0, PI / 2, .12, .1, .12); }
+    for (let i = 0; i < 13; i++) { const a = i / 13 * TAU; h.add(U.box, k, sx * 1.24, .62 + Math.sin(a) * .29, -2.7 + Math.cos(a) * .29, a, 0, 0, .3, .05, .06); }
+    h.add(U.box, 0x4d5236, sx * .62, 1.42, 2.93, 0, 0, 0, .17, .46, .32); h.add(U.box, k, sx * .62, 1.67, 2.93, 0, 0, 0, .06, .04, .14);   // taniche sulla piastra posteriore
+  }
+  h.add(U.cyl12, 0x7a7356, 0, 1.99, 2.42, 0, 0, PI / 2, .16, 1.7, .16); h.add(U.cyl12, 0x5e6648, .1, 2.0, 2.12, 0, 0, PI / 2, .13, 1.5, .13);   // coperte arrotolate
+  h.add(U.box, 0x6e6a50, -.35, 1.97, 1.62, 0, .08, 0, .95, .12, .55);   // telo piegato
+  for (const bx of [-.6, .6]) h.add(U.box, k, bx, 2.02, 2.27, 0, 0, 0, .04, .05, .62);   // cinghie
   // torretta fusa (perno a quota 1.81, centro .3 dietro il centro scafo)
   t.add(lath([[0, .85], [.55, .82], [.85, .65], [.98, .35], [1.0, 0], [.95, -.05], [0, -.05]], 18), c, 0, 0, 0); t.add(U.box, c, 0, .36, .65, 0, 0, 0, .9, .5, .7);
   t.add(U.cyl12, d, -.4, .91, .15, 0, 0, 0, .32, .14, .32); t.add(U.cyl12, k, -.4, .99, .15, 0, 0, 0, .3, .03, .3); t.add(U.cyl12, k, .42, 1.14, 0, 0, 0, 0, .025, .45, .025); t.add(U.box, k, .42, 1.34, -.15, 0, 0, 0, .07, .12, .55);
   t.add(U.cyl12, d, .35, .9, -.25, 0, 0, 0, .14, .1, .14); t.add(U.cyl, k, -.2, 1.5, .85, 0, 0, 0, .01, 2.4, .01); t.add(U.cyl12, k, -.2, .85, .85, 0, 0, 0, .05, .1, .05);   // ventilatore, antenna
   t.add(U.cyl12, k, .98, .45, .3, 0, 0, PI / 2, .06, .04, .06); t.add(U.box, d, -.3, .88, -.45, 0, 0, 0, .14, .08, .12); t.add(U.box, 0x20262a, -.3, .9, -.52, 0, 0, 0, .1, .04, .01);   // feritoia, periscopio del cannoniere
+  // .50 contraerea sul supporto della cupola, ganci di sollevamento, sportellino per la pistola, coperta sul retro della torretta
+  t.add(U.cyl12, k, -.4, 1.12, .32, 0, 0, 0, .03, .3, .03); t.add(U.box, k, -.4, 1.29, .2, 0, 0, 0, .12, .13, .38); t.add(U.cyl12, k, -.4, 1.31, -.55, PI / 2, 0, 0, .028, 1.15, .028);
+  t.add(U.cyl12, k, -.4, 1.31, -.24, PI / 2, 0, 0, .05, .35, .05); t.add(U.box, 0x4d5236, -.24, 1.24, .25, 0, 0, 0, .1, .14, .2);
+  for (const sx of [-1, 1]) t.add(U.box, k, sx * .78, .78, -.1, 0, 0, 0, .06, .1, .16);
+  t.add(U.cyl12, d, -.97, .45, .15, 0, 0, PI / 2, .1, .03, .1);
+  t.add(U.cyl12, 0x7a7356, 0, .42, .98, 0, 0, PI / 2, .14, 1.2, .14);
   t.mat = 'vc'; t.add(U.cyl12, 0xe8e6dc, 0, .5, .2, 0, 0, 0, .5, .01, .5);
   // cannone M3 da 75 mm con mantelletto (perno all'altezza dell'orecchione)
-  gn.add(U.box, d, 0, 0, 0, 0, 0, 0, .75, .45, .25); gn.add(U.cyl12, d, 0, 0, -1.25, PI / 2, 0, 0, .075, 2.5, .075); gn.add(U.cyl12, k, 0, 0, -2.47, PI / 2, 0, 0, .09, .12, .09);
+  gn.add(U.box, d, 0, 0, 0, 0, 0, 0, .75, .45, .25); gn.add(U.cyl12, d, 0, 0, -1.25, PI / 2, 0, 0, .075, 2.5, .075);
+  gn.add(U.cyl12, d, 0, 0, -.12, 0, 0, PI / 2, .27, .8, .27); gn.add(U.cyl12, k, .27, .02, -.45, PI / 2, 0, 0, .022, .5, .022); gn.add(U.cyl12, d, 0, 0, -.32, PI / 2, 0, 0, .11, .25, .11);   // mantelletto curvo, coassiale, collare gn.add(U.cyl12, k, 0, 0, -2.47, PI / 2, 0, 0, .09, .12, .09);
   return KAS_GEO.sherman = { hull: h.buildGroups(), tur: t.buildGroups(), gun: gn.buildGroups(), turY: 1.81, turZ: .3, gunY: .37, gunZ: -1.05, len: 2.55, cup: [-.4, 1.65, .15] };
 }
 function kasTigerGeo() {
