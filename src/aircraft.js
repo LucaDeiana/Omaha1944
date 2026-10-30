@@ -6,7 +6,7 @@
 const PLANES = [];
 const PL = { me: null, stickX: 0, stickY: 0, rudder: 0, throttle: .85, gunT: 0, bombs: 2, rearm: 0, cockpit: null, gauges: null, gT: 0, G: 1, firing: false };
 const PGEO = {};
-const _a1 = new V3(), _a2 = new V3(), _a3 = new V3(), _aq = new THREE.Quaternion(), _am = new THREE.Matrix4();
+const _a1 = new V3(), _a2 = new V3(), _a3 = new V3(), _a4 = new V3(), _aq = new THREE.Quaternion(), _am = new THREE.Matrix4();
 
 function lathe(pts, seg) { const g = new THREE.LatheGeometry(pts.map(p => new THREE.Vector2(p[1], p[0])), seg); g.rotateX(PI / 2); return g; }
 function planform(pts, thick) { const s = new THREE.Shape(); s.moveTo(pts[0][0], pts[0][1]); for (const p of pts.slice(1)) s.lineTo(p[0], p[1]); const g = new THREE.ExtrudeGeometry(s, { depth: thick, bevelEnabled: true, bevelThickness: thick * .3, bevelSize: thick * .3, bevelSegments: 1 }); g.translate(0, 0, -thick / 2); g.rotateX(-PI / 2); return g; }
@@ -563,7 +563,7 @@ function updatePlane(dt) {
     PL.gunT = (PL.spec || PLANE_SPECS.p47).guns.int; me.fireT = 0;
     playerPlaneGuns(me);
   }
-  PL.rearm -= dt; if (PL.bombs < PL.spec.bombs && PL.rearm <= 0) { PL.bombs = PL.spec.bombs; feed('Bombe riarmate'); }
+  PL.rearm -= dt; { const full = PL.torpedo ? 1 : PL.spec.bombs; if (PL.bombs < full && PL.rearm <= 0) { PL.bombs = full; feed(PL.torpedo ? 'Siluro riarmato' : 'Bombe riarmate'); } if (PL.torpedo && PL.bombs > 1) PL.bombs = 1; }
   // contraerea e collisione
   if (me.exploded) { showMsg('Il tuo aereo è esploso in volo!', 3); exitPlane(); P.mode = 'foot'; P.die(); return; }
   const dkY = landSurfY(me.pos.x, me.pos.z), gy = Math.max(Hf(me.pos.x, me.pos.z), me.pos.z > -9 || SCEN === 'sea' ? WATER_Y : -99, dkY);
@@ -587,17 +587,21 @@ function updatePlane(dt) {
   hr.r = lerp(hr.r, clamp(-PL.av.z * .09, -.22, .22), k); hr.p = lerp(hr.p, clamp(-PL.av.x * .05 - (PL.G - 1) * .012, -.12, .1), k);
   hr.y = lerp(hr.y, clamp(-PL.av.y * .12, -.1, .1), k); hr.dy = lerp(hr.dy, clamp(-(PL.G - 1) * .018, -.09, .03), k);
   const shake = (PL.gunT > -.05 ? .002 : 0) + Math.min(.004, V * .00002), hitS = Math.min(P.shake, .6) * .004;
+  if (!PL.free) { const k = Math.exp(-dt * 5); P.lookYaw = (P.lookYaw || 0) * k; P.lookPitch = (P.lookPitch || 0) * k; }
   if (PL.wreck) wreckCam(me, dt);
   else if (PL.ext) {
     // visuale esterna: inseguimento morbido dietro e sopra l'aereo
     if (PL.assist) {
       const fw = _a1.set(0, 0, -1).applyQuaternion(me.q).lerp(planeAimDir(), .55).normalize();
       PL.camD = PL.camD || fw.clone(); PL.camD.lerp(fw, Math.min(1, dt * 3.5)).normalize();
-      const ad = PL.camD, want = _a3.copy(me.pos).addScaledVector(ad, -15); want.y += 3.2;
+      // visuale libera (tasto destro): la telecamera gira attorno all'aereo senza toccare la mira
+      const ly = P.lookYaw || 0, lp = P.lookPitch || 0, fl = Math.min(1, (Math.abs(ly) + Math.abs(lp)) * 3);
+      const ad = _a4.copy(PL.camD).applyAxisAngle(_a1.set(0, 1, 0), ly); if (lp) { const rt = _a1.set(0, 1, 0).cross(ad).normalize(); ad.applyAxisAngle(rt, -lp); }
+      const want = _a3.copy(me.pos).addScaledVector(ad, -15); want.y += 3.2;
       want.y = Math.max(want.y, Hf(want.x, want.z) + 2);
-      PL.camP = PL.camP || want.clone(); PL.camP.lerp(want, Math.min(1, dt * 9));
+      PL.camP = PL.camP || want.clone(); PL.camP.lerp(want, Math.min(1, dt * (fl > 0 ? 14 : 9)));
       camera.position.copy(PL.camP);
-      _am.lookAt(camera.position, _a2.copy(me.pos).addScaledVector(ad, 200), _a1.set(0, 1, 0));
+      _am.lookAt(camera.position, _a2.copy(me.pos).addScaledVector(ad, 200 * (1 - fl)), _a1.set(0, 1, 0));
       camera.quaternion.setFromRotationMatrix(_am);
     } else {
       const back = _a2.set(0, 2.6, 11).applyQuaternion(me.q), want = _a3.copy(me.pos).add(back);

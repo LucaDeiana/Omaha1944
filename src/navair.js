@@ -135,8 +135,8 @@ class NavPlane {
   dropTorp(P) {
     if (!this.armed) return; this.armed = false; NAIR.nTorps = (NAIR.nTorps || 0) + 1;
     const o = this.pos.clone(); o.y = WATER_Y - 2; const d = P.clone().sub(o).setY(0).normalize(), a = Math.atan2(-d.x, -d.z);
-    const mesh = new THREE.Mesh(U.cyl, MAT.vc); mesh.scale.set(.27, 5.5, .27); mesh.rotation.set(PI / 2, a, 0, 'YXZ'); scene.add(mesh);
-    NV.torps.push({ p: o, d, v: (this.type === 'kate' ? 42 : 33) * KN, left: 4500, dmg: 1300, by: this, mesh, arm: 0, w: 0 });
+    const mesh = makeTorp(5.5, .28); o.copy(this.pos).add(new V3(0, -1.2, 0)); mesh.position.copy(o);
+    NV.torps.push({ p: o, d, v: (this.type === 'kate' ? 42 : 33) * KN, left: 4500, dmg: 1300, by: this, mesh, arm: 0, w: 0, fall: { y: Math.min(0, this.vel.y), h: this.vel.clone().setY(0).length() * .9 } });
     for (let i = 0; i < 8; i++) PS_SMOKE.emit(o.x, WATER_Y, o.z, rnd(-2, 2), rnd(3, 8), rnd(-2, 2), rnd(1, 2), 1, 4, .7, .93, .96, .98, .2, 9.81);
     play('imp_water', o, { ref: 50 });
   }
@@ -226,17 +226,67 @@ function navyTakePlane() {
   const type = chosenPlane(p.type), pos = p.pos.clone(), vel = p.vel.clone(), q = p.q.clone(), armed = p.armed || type !== p.type; p.remove();
   enterPlane({ type, pos, vel, q });
   PL.bombs = armed ? Math.max(1, (PLANE_SPECS[type] || {}).bombs || 1) : 0; PL.torpedo = NA_ROLE[type] === 'torpedo';
-  showMsg('Ai comandi: ' + (PLANE_SPECS[type] ? PLANE_SPECS[type].name : type) + (PL.torpedo ? ' · Spazio: siluro (sotto 90 m e 330 km/h)' : PL.bombs ? ' · Spazio: bomba' : '') + ' · P per tornare alla nave', 4);
+  showMsg('Ai comandi: ' + (PLANE_SPECS[type] ? PLANE_SPECS[type].name : type) + (PL.torpedo ? ' · Spazio: siluro' : PL.bombs ? ' · Spazio: bomba · N: siluro' : '') + ' · P per tornare alla nave', 4);
 }
+// siluro del giocatore: limiti di sgancio come i Mark 13 con l'anello di coda (quota e velocità)
+const TORP_LIM = { alt: 120, kmh: 420, run: 4500 };
 function navyPlayerTorpedo() {
   const me = PL.me; if (!me || PL.bombs <= 0) return false;
   const kmh = me.vel.length() * 3.6, alt = me.pos.y - WATER_Y;
-  if (alt > 90 || kmh > 330) { showMsg('Troppo alto o troppo veloce: il siluro si spezzerebbe (sotto 90 m e 330 km/h)', 2); return true; }
-  PL.bombs = 0; const d = me.vel.clone().setY(0).normalize(), o = me.pos.clone(); o.y = WATER_Y - 2;
-  const mesh = new THREE.Mesh(U.cyl, MAT.vc); mesh.scale.set(.27, 5.5, .27); mesh.rotation.set(PI / 2, Math.atan2(-d.x, -d.z), 0, 'YXZ'); scene.add(mesh);
-  NV.torps.push({ p: o, d, v: 33 * KN, left: 4500, dmg: 1300, by: NV.me, mesh, arm: 0, w: 0 });
-  showMsg('Siluro in acqua!', 1.5); play('imp_water', o, { ref: 50 });
+  if (alt > TORP_LIM.alt || kmh > TORP_LIM.kmh) { showMsg(`Troppo ${alt > TORP_LIM.alt ? 'alto' : 'veloce'}: il siluro si spezzerebbe (sotto ${TORP_LIM.alt} m e ${TORP_LIM.kmh} km/h)`, 2); return true; }
+  PL.bombs--; const d = me.vel.clone().setY(0).normalize(), o = me.pos.clone().add(new V3(0, -1.3, 0));
+  const mesh = makeTorp(5.5, .28); mesh.position.copy(o);
+  NV.torps.push({ p: o, d, v: 33 * KN, left: TORP_LIM.run, dmg: 1300, by: NV.me, mesh, arm: 0, w: 0, fall: { y: Math.min(0, me.vel.y), h: me.vel.clone().setY(0).length() * .9 } });
+  showMsg('Siluro sganciato!', 1.5); sfxMech('pick');
   return true;
+}
+// cambio d'armamento sugli aerei d'attacco: bombe o siluro (solo con il carico intatto)
+function navyToggleOrdnance() {
+  if (SCEN !== 'sea' || P.mode !== 'plane' || !PL.spec) return;
+  const full = Math.max(1, PL.spec.bombs || 1);
+  if (!PL.torpedo && PL.bombs < full) { showMsg('Si cambia armamento solo con il carico completo', 1.6); return; }
+  if (!PL.spec.bombs && NA_ROLE[PL.type] !== 'torpedo') { showMsg('Questo aereo non porta carichi', 1.6); return; }
+  PL.torpedo = !PL.torpedo; PL.bombs = PL.torpedo ? 1 : full;
+  showMsg(PL.torpedo ? `Armamento: SILURO · sgancio sotto ${TORP_LIM.alt} m e ${TORP_LIM.kmh} km/h` : 'Armamento: BOMBE', 2.2);
+}
+// mirino del siluro: punto d'intercettazione sulla nave nemica, rotta del siluro e limiti di sgancio
+const _tsg = { v: new V3(), w: new V3() };
+function torpSight() {
+  let cv = $('torpSight'); const on = SCEN === 'sea' && P.mode === 'plane' && PL.me && PL.torpedo && PL.bombs > 0 && !PL.me.crash;
+  if (!on) { if (cv) cv.style.display = 'none'; return; }
+  if (!cv) { cv = document.createElement('canvas'); cv.id = 'torpSight'; cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:17'; document.body.appendChild(cv); }
+  if (cv.width !== innerWidth || cv.height !== innerHeight) { cv.width = innerWidth; cv.height = innerHeight; }
+  cv.style.display = 'block'; const g = cv.getContext('2d'), W = cv.width, H = cv.height; g.clearRect(0, 0, W, H);
+  const me = PL.me, L = _tsg.v.copy(me.pos).setY(WATER_Y), hd = me.vel.clone().setY(0); if (hd.lengthSq() < 1) return; hd.normalize();
+  const scr = p => { const q = _tsg.w.copy(p).project(camera); return q.z < 1 ? [(q.x + 1) / 2 * W, (1 - q.y) / 2 * H] : null; };
+  const alt = me.pos.y - WATER_Y, kmh = me.vel.length() * 3.6, okA = alt <= TORP_LIM.alt, okS = kmh <= TORP_LIM.kmh, vt = 33 * KN;
+  // bersaglio: la nave nemica più vicina davanti all'aereo
+  let T = null, bd = 9e9;
+  for (const s of NV.ships) { if (s.team === NV.me.team || s.sinking) continue; const r = s.pos.clone().sub(L).setY(0), d = r.length(); if (d > 9000 || r.normalize().dot(hd) < .35) continue; if (d < bd) { bd = d; T = s; } }
+  let aligned = false, I = null, dI = 0;
+  if (T) {
+    const sv = new V3(-Math.sin(T.yaw), 0, -Math.cos(T.yaw)).multiplyScalar(T.spd || 0); let t = bd / vt;
+    for (let k = 0; k < 5; k++) { I = T.pos.clone().addScaledVector(sv, t).setY(WATER_Y); t = I.distanceTo(L) / vt; }
+    dI = I.distanceTo(L); const toI = I.clone().sub(L).normalize(), miss = Math.abs(toI.x * hd.z - toI.z * hd.x) * dI;
+    aligned = miss < T.C.B * .5 + 6;
+    // rotta della nave fino al punto d'intercettazione
+    const a = scr(T.pos.clone().setY(WATER_Y)), b = scr(I);
+    if (a && b) { g.setLineDash([6, 6]); g.strokeStyle = 'rgba(255,120,100,.8)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke(); g.setLineDash([]); }
+    if (b) { g.save(); g.translate(...b); g.rotate(PI / 4); g.strokeStyle = aligned ? '#7bd88f' : '#ffcf5a'; g.lineWidth = 2.5; g.strokeRect(-11, -11, 22, 22); g.restore();
+      g.fillStyle = aligned ? '#7bd88f' : '#ffcf5a'; g.font = '600 12px Oswald, sans-serif'; g.textAlign = 'center'; g.fillText((dI / 1000).toFixed(1) + ' km' + (dI > TORP_LIM.run ? ' · FUORI PORTATA' : ''), b[0], b[1] + 30); }
+  }
+  // rotta del siluro sull'acqua, dritta davanti all'aereo
+  const run = Math.min(TORP_LIM.run, I ? dI + 300 : 2500); g.strokeStyle = aligned ? 'rgba(123,216,143,.9)' : 'rgba(239,230,207,.75)'; g.lineWidth = 2; g.beginPath(); let first = true;
+  for (let s = 60; s <= run; s += 60) { const q = scr(L.clone().addScaledVector(hd, s)); if (!q) continue; first ? g.moveTo(...q) : g.lineTo(...q); first = false; } g.stroke();
+  // limiti di sgancio
+  const ready = okA && okS && T && aligned && dI <= TORP_LIM.run;
+  const x0 = W / 2 - 150, y0 = H - 210; g.fillStyle = 'rgba(10,12,10,.6)'; g.fillRect(x0, y0, 300, 64);
+  g.font = '600 13px Oswald, sans-serif'; g.textAlign = 'left';
+  g.fillStyle = okA ? '#7bd88f' : '#ff7a6a'; g.fillText('QUOTA ' + Math.round(alt) + ' m  (max ' + TORP_LIM.alt + ')', x0 + 12, y0 + 22);
+  g.fillStyle = okS ? '#7bd88f' : '#ff7a6a'; g.fillText('VELOCITÀ ' + Math.round(kmh) + ' km/h  (max ' + TORP_LIM.kmh + ')', x0 + 12, y0 + 42);
+  g.textAlign = 'right'; g.font = '700 15px Oswald, sans-serif'; g.fillStyle = ready ? '#7bd88f' : okA && okS ? '#ffcf5a' : '#ff7a6a';
+  g.fillText(ready ? 'SGANCIA!' : okA && okS ? (T ? 'ALLINEA' : 'NESSUN BERSAGLIO') : 'SCENDI E RALLENTA', x0 + 288, y0 + 34);
+  g.textAlign = 'left'; g.font = '400 11px Oswald, sans-serif'; g.fillStyle = 'rgba(239,230,207,.7)'; g.fillText('SILURO · Spazio sgancia · N bombe/siluro', x0 + 12, y0 + 58);
 }
 // in volo: segnalini sulle navi (rosse le nemiche, azzurre le amiche) con nome e distanza
 const _nmk = { els: [], v: new V3() };
@@ -292,7 +342,7 @@ function updateNavBullets(dt) {
   }
 }
 function updateNavAir(dt) {
-  updateNavMarkers(); updateNavBullets(dt);
+  updateNavMarkers(); torpSight(); updateNavBullets(dt);
   NAIR.strikeT = Math.max(0, NAIR.strikeT - dt);
   updateNavBombs(dt); updateNavAA(dt);
   // aereo del giocatore abbattuto o ammarato: si torna alla nave

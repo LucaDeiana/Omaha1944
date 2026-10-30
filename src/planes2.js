@@ -293,6 +293,8 @@ function buildSpecPlane(type) {
 
 // velocità massime storiche in volo livellato (km/h): la spinta di ogni aereo è tarata per raggiungerle a manetta piena col carrello retratto
 const PLANE_VMAX = { p47: 690, p51: 703, f4u: 671, spit: 657, typhoon: 652, hurri: 518, bf109: 640, stuka: 400, me262: 870, mosquito: 610, f47: 1450, ju88: 470, fw190: 655, b26: 460, zero: 533, val: 389, kate: 378, sbd: 410, tbf: 442, p40: 566 };
+// velocità di gioco: un quarto in più delle velocità storiche, altrimenti in avvicinamento alle navi gli aerei sembrano lenti
+for (const k in PLANE_VMAX) PLANE_VMAX[k] = Math.round(PLANE_VMAX[k] * 1.25);
 function planeThrustK(SP, type) {
   if (SP._tk) return SP._tk;
   const V = (PLANE_VMAX[type] || 560) / 3.6, m = SP.mass, S = SP.S, q = .6 * V * V, Cl = m * 9.8 / (q * S), drag = q * S * (.024 + .065 * Cl * Cl);

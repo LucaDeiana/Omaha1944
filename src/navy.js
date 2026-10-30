@@ -466,7 +466,7 @@ class NavShip {
     for (let i = 0; i < n; i++) {
       const m = T.mounts[i % T.mounts.length], o = this.toWorld(m[0] + (T.arc === 'side' ? Math.sign(rel) * this.C.B * .4 : 0), 0, m[2]); o.y = WATER_Y - 2;
       const a = Math.atan2(-dir.x, -dir.z) + (i - (n - 1) / 2) * .045, d = new V3(-Math.sin(a), 0, -Math.cos(a));
-      const mesh = new THREE.Mesh(U.cyl, MAT.vc); mesh.scale.set(.27, 7, .27); mesh.rotation.set(PI / 2, a, 0, 'YXZ'); scene.add(mesh);
+      const mesh = makeTorp(7, .27); mesh.position.copy(o); aimTorp(mesh, d);
       NV.torps.push({ p: o, d, v: T.kn * KN, left: T.range, dmg: T.dmg, by: this, mesh, arm: 0, w: 0 });
       PS_WAKE.emit(o.x, WATER_Y + .3, o.z, d.x * 3, 1, d.z * 3, 2, 1, 4, .6, .95, .97, .98, .3, 0);
     }
@@ -653,12 +653,42 @@ function shellOnShip(s, sh, H) {
   else { fxImpact(p, 'metal'); if (S.he && R() < .3) fxExplosion(p.clone(), .3, false); }
   if (me) { STATS.hits++; hitMarker(sh.sinking > 0, false); if (s.sec) navySecHit(sh, dmg, pen); else if (txt && S.cal >= 100) navyHitText(txt + (dmg > 0 ? ' · ' + Math.round(dmg) : ''), H.citadel ? '#ffd23a' : pen ? '#ffcf5a' : '#c9d2d8'); }
 }
-// siluri: corrono a pochi metri di profondità con la scia di bolle; esplodono contro lo scafo
+// modello del siluro: ogiva, corpo, coda conica, alette in croce ed eliche controrotanti (asse z, prua verso -z)
+const TORP_MAT = {};
+function makeTorp(len = 5.5, r = .27) {
+  if (!TORP_MAT.b) { TORP_MAT.b = new THREE.MeshStandardMaterial({ color: 0x3e4544, metalness: .55, roughness: .45 }); TORP_MAT.n = new THREE.MeshStandardMaterial({ color: 0x8a7a4a, metalness: .6, roughness: .4 }); TORP_MAT.p = new THREE.MeshStandardMaterial({ color: 0xa08540, metalness: .8, roughness: .3 }); }
+  const g = new THREE.Group(), body = len * .72;
+  const c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, body, 14), TORP_MAT.b); c.rotation.x = PI / 2; g.add(c);
+  const n = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 8, 0, TAU, 0, PI / 2), TORP_MAT.n); n.rotation.x = -PI / 2; n.scale.set(1, 1.6, 1); n.position.z = -body / 2; g.add(n);
+  const t = new THREE.Mesh(new THREE.CylinderGeometry(r, r * .25, len * .2, 14), TORP_MAT.b); t.rotation.x = -PI / 2; t.position.z = body / 2 + len * .1; g.add(t);
+  for (let i = 0; i < 4; i++) { const f = new THREE.Mesh(new THREE.BoxGeometry(.03, r * 1.7, len * .09), TORP_MAT.b); f.rotation.z = i * PI / 2; f.position.z = body / 2 + len * .14; f.translateY(r * .65); g.add(f); }
+  for (const k of [0, 1]) { const pr = new THREE.Mesh(new THREE.BoxGeometry(r * 2.1, .05, .06), TORP_MAT.p); pr.position.z = body / 2 + len * .21 + k * .08; pr.rotation.z = k ? PI / 4 : -PI / 4; g.add(pr); (g.userData.props = g.userData.props || []).push(pr); }
+  scene.add(g); return g;
+}
+function aimTorp(m, d) { m.rotation.set(0, Math.atan2(-d.x, -d.z), 0); }
+// siluri: corrono a pochi metri di profondità con la scia di bolle; esplodono contro lo scafo.
+// Quelli lanciati dagli aerei prima cadono, entrano in acqua con uno spruzzo e scendono alla quota di corsa
 function updateTorps(dt) {
   for (let i = NV.torps.length - 1; i >= 0; i--) {
-    const T = NV.torps[i], st = T.v * dt; T.p.addScaledVector(T.d, st); T.left -= st; T.arm += st;
-    T.mesh.position.copy(T.p); T.w -= dt;
-    if (T.w <= 0 && dist2Cam(T.p) < 4000 * 4000) { T.w = .12; PS_WAKE.emit(T.p.x - T.d.x * 6, WATER_Y + .15, T.p.z - T.d.z * 6, 0, .02, 0, rnd(8, 12), .7, rnd(2, 3), .45, .93, .96, .98, 0, 0); }
+    const T = NV.torps[i];
+    if (T.fall) {   // caduta dall'aereo: il siluro scende inclinato e tocca l'acqua
+      T.fall.y -= 9.8 * dt; T.p.x += T.d.x * T.fall.h * dt; T.p.z += T.d.z * T.fall.h * dt; T.p.y += T.fall.y * dt; T.fall.h *= Math.exp(-dt * .15);
+      T.mesh.position.copy(T.p); T.mesh.rotation.set(Math.atan2(T.fall.y, T.fall.h) * .9, Math.atan2(-T.d.x, -T.d.z), 0, 'YXZ');
+      if (T.p.y <= WATER_Y) {
+        const p = T.p.clone().setY(WATER_Y); T.fall = null; T.dive = 1.4; T.p.y = WATER_Y - .3;
+        for (let k = 0; k < 18; k++) PS_SMOKE.emit(p.x + rnd(-1.5, 1.5), p.y, p.z + rnd(-1.5, 1.5), rnd(-2, 2) + T.d.x * 4, rnd(6, 14), rnd(-2, 2) + T.d.z * 4, rnd(1.2, 2.4), 1.6, 6, .8, .93, .96, .98, .25, 9.81);
+        waterDrop(p.x, p.z, 6, -1.6, .9); play('imp_water', p, { ref: 60, vol: 1.2 });
+      }
+      continue;
+    }
+    if (T.dive > 0) { T.dive -= dt; T.p.y = lerp(T.p.y, WATER_Y - 2.2, Math.min(1, dt * 2)); }
+    const st = T.v * dt; T.p.addScaledVector(T.d, st); T.left -= st; T.arm += st;
+    T.mesh.position.copy(T.p); T.mesh.rotation.set(0, Math.atan2(-T.d.x, -T.d.z), 0); T.w -= dt;
+    if (T.mesh.userData.props) for (const [j, pr] of T.mesh.userData.props.entries()) pr.rotation.z += (j ? -1 : 1) * dt * 40;
+    // scia: bolle che affiorano qualche metro dietro e una striscia di schiuma che resta a lungo
+    if (T.w <= 0 && dist2Cam(T.p) < 5000 * 5000) { T.w = .06; const bx = T.p.x - T.d.x * 5, bz = T.p.z - T.d.z * 5;
+      PS_WAKE.emit(bx + rnd(-.4, .4), WATER_Y + .15, bz + rnd(-.4, .4), 0, .02, 0, rnd(9, 14), 1, rnd(2.2, 3.4), .55, .95, .97, .99, 0, 0);
+      if ((T.n = (T.n || 0) + 1) % 4 === 0) waterDrop(bx, bz, 2.5, -.25, .55); }
     let hit = null;
     if (T.arm > 150) for (const sh of NV.ships) { if (sh.sinking) continue; const l = sh.toLocal(T.p, _nvc); if (Math.abs(l.x) < sh.C.B / 2 + .5 && Math.abs(l.z) < sh.C.L / 2 && sh.C.D > 1.2) { hit = sh; break; } }
     if (hit || T.left <= 0 || navyH(T.p.x, T.p.z) > T.p.y) {

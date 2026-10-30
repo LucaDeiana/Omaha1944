@@ -151,7 +151,7 @@ function updateStation(dt) {
     if (s.aa.mesh) s.aa.mesh.rotation.y = P.yaw - PI;
     const fov = P.adsHeld ? 30 : 70; if (Math.abs(camera.fov - fov) > .1) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 10)); camera.updateProjectionMatrix(); }
     const foes = PLANES.filter(p => p.team === (PT === 'A' ? 'E' : 'A') && p.alive && !p.crash).length;
-    $('stHud').innerHTML = `<b>Flak 38 da 20 mm</b> — aerei nemici in volo: ${foes}<br><small>Mouse: mira (anticipa il bersaglio) · Click sx: fuoco · Click dx: zoom · E: esci</small>`;
+    $('stHud').innerHTML = `<b>Flak 38 da 20 mm</b> — aerei nemici in volo: ${foes}<br><small>Mouse: mira (anticipa il bersaglio) · Click sx: fuoco · Tasto dx: visuale libera · Z: zoom · E: esci</small>`;
     return;
   }
   if (P.dead || (s.type === 'mg' && s.b.destroyed)) { leaveStation(); return; }

@@ -70,7 +70,7 @@ function initInput() {
     if (P.mode === 'ship') { navyKey(c); return; }
     if (c === 'KeyB' && SCEN !== 'snp') { openSpawnMenu(); return; }
     if (P.mode === 'plane' && SCEN === 'sea' && c === 'KeyP') { navyTakePlane(); return; }
-    if (P.mode === 'plane') { if (c === 'KeyF' || c === 'Space') planeDropBomb(); if (c === 'KeyV') togglePlaneView(); if (c === 'KeyM') togglePlaneAssist(); if (c === 'KeyG') togglePlaneGear(); if (c === 'KeyT') planeLockToggle(); if (c === 'KeyR' && PL.me && PL.me.crash) { const alive = PL.wreck && PL.wreck.done && !PL.wreck.lethal; exitPlane(); P.mode = 'foot'; if (alive) openSpawnMenu(); else P.die(); } return; }
+    if (P.mode === 'plane') { if (c === 'KeyN') navyToggleOrdnance(); if (c === 'KeyZ') P.adsHeld = true; if (c === 'KeyF' || c === 'Space') planeDropBomb(); if (c === 'KeyV') togglePlaneView(); if (c === 'KeyM') togglePlaneAssist(); if (c === 'KeyG') togglePlaneGear(); if (c === 'KeyT') planeLockToggle(); if (c === 'KeyR' && PL.me && PL.me.crash) { const alive = PL.wreck && PL.wreck.done && !PL.wreck.lethal; exitPlane(); P.mode = 'foot'; if (alive) openSpawnMenu(); else P.die(); } return; }
     if (P.mode === 'naval') return;
     if (c === 'KeyR') startReload();
     else if (c === 'KeyC' || c === 'ControlLeft') { if (!P.swim) P.stance = P.stance === 1 ? 0 : 1; }
@@ -84,13 +84,14 @@ function initInput() {
     else if (c === 'KeyQ' && SCEN !== 'snp') selectSlot(P.prevSlot);
     else if (c === 'KeyE') P.ePressed = true;
   });
-  addEventListener('keyup', e => { KEYS[e.code] = false; });
+  addEventListener('keyup', e => { KEYS[e.code] = false; if (e.code === 'KeyZ' && P.mode === 'plane') P.adsHeld = false; });
   addEventListener('mousemove', e => {
     if (!GAME.running) return;
     if (P.mode === 'mg' || P.mode === 'mortar' || P.mode === 'flak') { stationMouse(e.movementX, e.movementY); return; }
     if (P.mode === 'ship') { navyMouse(e.movementX, e.movementY); return; }
     if (P.mode === 'tank') { tankMouse(e.movementX, e.movementY); return; }
     if (P.mode === 'airmark') { airMouse(e.movementX, e.movementY); return; }
+    if (P.mode === 'plane' && PL.free) { const s = .0022 * SETTINGS.sens; P.lookYaw = clamp((P.lookYaw || 0) - e.movementX * s, -PI, PI); P.lookPitch = clamp((P.lookPitch || 0) - e.movementY * s, -1.2, 1.2); return; }
     if (P.mode === 'plane' && PL.assist) { const s = .0013 * SETTINGS.sens; PL.aimYaw -= e.movementX * s; PL.aimPitch = clamp(PL.aimPitch - e.movementY * s, -1.35, 1.35); return; }
     if (P.mode === 'plane') { PL.stickX = clamp(PL.stickX + e.movementX * .0022 * SETTINGS.sens, -1, 1); PL.stickY = clamp(PL.stickY - e.movementY * .0022 * SETTINGS.sens, -1, 1); return; }
     if (P.mode === 'naval') { const s = .0021 * SETTINGS.sens * (camera.fov / 60); NAV.yaw -= e.movementX * s; NAV.pitch = clamp(NAV.pitch - e.movementY * s, -.4, .2); return; }
@@ -103,9 +104,9 @@ function initInput() {
     if (!GAME.running) return;
     if (e.button === 0) { mouseL = true; P.trigger = true; }
     if (e.button === 1 && P.mode === 'foot') { e.preventDefault(); spotEnemy(); }
-    if (e.button === 2) { P.adsHeld = true; if (P.mode === 'naval') NAV.zoom = true; }
+    if (e.button === 2) { if (P.mode === 'plane') PL.free = true; else P.adsHeld = true; if (P.mode === 'naval') NAV.zoom = true; }
   });
-  addEventListener('mouseup', e => { if (e.button === 0) { mouseL = false; P.trigger = false; } if (e.button === 2) { P.adsHeld = false; NAV.zoom = false; } });
+  addEventListener('mouseup', e => { if (e.button === 0) { mouseL = false; P.trigger = false; } if (e.button === 2) { P.adsHeld = false; NAV.zoom = false; PL.free = false; } });
   addEventListener('contextmenu', e => e.preventDefault());
   addEventListener('wheel', e => {
     // in volo la rotella regola la manetta (su = più motore), a passi del 5%
