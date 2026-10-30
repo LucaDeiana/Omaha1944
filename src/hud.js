@@ -117,7 +117,7 @@ function updateHUD(dt) {
   hudT -= dt; if (hudT > 0) return; hudT = .1;
   if (P.mode === 'naval') { $('navInfo').innerHTML = (NAV.target ? 'Distanza: <b>' + Math.round(NAV.range) + ' m</b>' : 'Nessun bersaglio') + '<br>' + (NAV.reload > 0 ? 'Ricarica: ' + NAV.reload.toFixed(1) + ' s' : NAV.ready ? '<b class="ok">PRONTO AL FUOCO</b>' : 'Brandeggio torretta…') + '<br><small>Click sx: fuoco · Click dx: binocolo · B: cambia ruolo</small>'; $('navZoom').style.display = NAV.zoom ? 'block' : 'none'; document.querySelector('.navCross').style.display = NAV.zoom ? 'none' : ''; }
   if (P.mode === 'plane') $('planehud').classList.toggle('ck', !PL.ext);
-  if (P.mode === 'plane' && PL.me) $('planeInfo').innerHTML = (PL.spec ? PL.spec.name + ' · ' : '') + 'Velocità ' + Math.round(PL.me.vel.length() * 3.6) + ' km/h · Quota ' + Math.round(PL.me.pos.y) + ' m · Manetta ' + Math.round(PL.throttle * 100) + '% · ' + PL.G.toFixed(1) + ' G' + ((PL.abK || 0) > .3 ? ' · <b style="color:#ffcf5a">AEROFRENI</b>' : '') + '<br>Bombe: ' + PL.bombs + (PL.bombs < 2 ? ' (riarmo ' + Math.max(0, Math.ceil(PL.rearm)) + ' s)' : '') + ' · Scafo ' + Math.max(0, Math.round(PL.me.hp / (PL.me.hpMax || 1100) * 100)) + '% · Carrello ' + (PL.gearK > .98 ? 'GIÙ' : PL.gearK < .02 ? 'su' : '…') + (PL.onDeck ? ' · SUL PONTE' : '') + '<br><small>Mouse: direzione · A/D: rollio · W/S o rotella: manetta · Click sx: mitragliatrici · Tasto dx: visuale libera · Z: zoom · X: aerofreni · Spazio/F: bomba · T: aggancia bersaglio · G: carrello · V: visuale · M: comandi manuali · R: rientro se colpito · B: cambia ruolo</small>';
+  if (P.mode === 'plane' && PL.me) planeHud();
   if (SETTINGS.fps) $('fps').textContent = Math.round(FPS.v) + ' fps · ' + Math.round(DYN.scale * 100) + '% ris.';
   if (P.mode !== 'foot' && SIDE.cur) { $('objT').textContent = (P.mode === 'naval' ? 'USS Texas — ' : 'P-47 — ') + SIDE.title; $('objS').textContent = SIDE.text; } else { $('objT').textContent = MISSION.title; $('objS').textContent = MISSION.objText; }
   $('hpbar').firstChild.style.width = P.hp + '%';
@@ -132,4 +132,35 @@ function updateHUD(dt) {
   $('wextra').innerHTML = `${w ? w.cal + '<br>' : ''}Granate: ${P.nades} · Cariche: ${P.charges} · Bende: ${P.bandages}<div class="slots">${slots}</div>`;
   if (SCEN === 'kas' || SCEN === 'snp') $('info').textContent = ''; else $('info').textContent = `Supporto aereo (T): ${AIR.cd > 0 ? Math.floor(AIR.cd / 60) + ':' + String(Math.floor(AIR.cd % 60)).padStart(2, '0') : 'PRONTO'} · ${PT === 'A' ? 'Alleati' : 'Camerati'}: ${FRIENDS().filter(a => a.alive).length} · Nemici in vista: ${FOES().filter(e => e.alive && dist2Cam(e.pos) < 200 * 200).length} · Uccisioni: ${STATS.kills} · Punti: ${FUN.score}${FUN.streak >= 3 ? ` · Serie: ${FUN.streak}` : ""} · Record: ${FUN.best}`;
   drawCompass();
+}
+
+// ---------- HUD di volo: strumenti a sinistra, armi a destra, comandi a scomparsa (H) ----------
+const PHUD = { el: null, help: 0, vs: 0, lastY: 0 };
+function planeHud() {
+  const me = PL.me, root = $('planeInfo');
+  if (!PHUD.el || !root.firstChild) {
+    root.innerHTML = `<div class="phL"><div class="phN" id="phN"></div><div class="phRow"><div class="phBig"><b id="phSpd"></b><small>km/h</small></div><div class="phBig"><b id="phAlt"></b><small>m</small></div></div>
+      <div class="phRow sm"><span id="phVs"></span><span id="phG"></span></div><div class="phThr"><i id="phThr"></i><span id="phThrT"></span></div><div class="phTags" id="phTags"></div></div>
+      <div class="phR"><div class="phW" id="phGun"></div><div class="phW" id="phOrd"></div><div class="phRe"><i id="phRe"></i></div><div class="phW sm" id="phLock"></div></div>
+      <div class="phHelp" id="phHelp"></div>`;
+    PHUD.el = root; PHUD.help = 12; PHUD.type = '';
+  }
+  const kmh = Math.round(me.vel.length() * 3.6), alt = Math.round(me.pos.y - (typeof WATER_Y !== 'undefined' && SCEN === 'sea' ? WATER_Y : 0));
+  PHUD.vs = lerp(PHUD.vs, me.vel.y, .1);
+  $('phN').textContent = PL.spec ? PL.spec.name : '';
+  $('phSpd').textContent = kmh; $('phSpd').className = SCEN === 'sea' && PL.torpedo && PL.bombs > 0 ? (kmh <= 420 ? 'ok' : 'hi') : '';
+  $('phAlt').textContent = alt; $('phAlt').className = alt < 60 ? 'hi' : '';
+  $('phVs').innerHTML = (PHUD.vs >= 0 ? '▲ ' : '▼ ') + Math.abs(PHUD.vs).toFixed(0) + ' m/s';
+  $('phG').innerHTML = PL.G.toFixed(1) + ' G'; $('phG').className = PL.G > 6 ? 'hi' : '';
+  $('phThr').style.width = Math.round(PL.throttle * 100) + '%'; $('phThrT').textContent = 'MANETTA ' + Math.round(PL.throttle * 100) + '%';
+  const tags = []; if ((PL.abK || 0) > .3) tags.push('<b class="y">AEROFRENI</b>'); if (PL.gearK > .02) tags.push(PL.gearK > .98 ? '<b>CARRELLO GIÙ</b>' : '<b>CARRELLO…</b>'); if (PL.onDeck) tags.push('<b>SUL PONTE</b>'); if (!PL.assist) tags.push('<b>MANUALE</b>');
+  $('phTags').innerHTML = tags.join('');
+  const G = PL.spec && PL.spec.guns; $('phGun').innerHTML = G ? `<small>ARMI</small>${G.pos.length} × ${String(G.cal).replace('.', ',')} mm` : '';
+  const full = PL.torpedo ? 1 : (PL.spec && PL.spec.bombs) || 0;
+  $('phOrd').innerHTML = full ? `<small>${PL.torpedo ? 'SILURO' : 'BOMBE'}</small>${PL.torpedo ? (PL.bombs ? '▬▶' : '—') : ('● '.repeat(PL.bombs) + '○ '.repeat(Math.max(0, full - PL.bombs))).trim()}` : '';
+  const re = PL.bombs < full && PL.rearm > 0; $('phRe').parentNode.style.display = re ? '' : 'none'; if (re) $('phRe').style.width = (100 - PL.rearm / 40 * 100).toFixed(0) + '%';
+  $('phLock').textContent = typeof AB !== 'undefined' && AB.lock ? 'AGGANCIATO: ' + (AB.lock.spec ? AB.lock.spec.name : AB.lock.C ? AB.lock.C.name : 'bersaglio') : '';
+  PHUD.help = Math.max(0, PHUD.help - 1 / 60);
+  const h = $('phHelp'); h.style.opacity = PHUD.help > 0 ? Math.min(1, PHUD.help) : 0;
+  if (PHUD.help > 0) h.innerHTML = 'Mouse: direzione · A/D: rollio · W/S o rotella: manetta · Clic sx: mitragliatrici · Tasto dx: visuale libera · Z: zoom · X: aerofreni<br>Spazio/F: ' + (PL.torpedo ? 'siluro' : 'bomba') + (SCEN === 'sea' ? ' · N: bombe/siluro' : '') + ' · T: aggancia · G: carrello · V: visuale · M: comandi manuali · R: rientro se colpito · B: cambia ruolo · <b>H: mostra/nascondi</b>';
 }

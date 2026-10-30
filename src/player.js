@@ -70,7 +70,7 @@ function initInput() {
     if (P.mode === 'ship') { navyKey(c); return; }
     if (c === 'KeyB' && SCEN !== 'snp') { openSpawnMenu(); return; }
     if (P.mode === 'plane' && SCEN === 'sea' && c === 'KeyP') { navyTakePlane(); return; }
-    if (P.mode === 'plane') { if (c === 'KeyN') navyToggleOrdnance(); if (c === 'KeyZ') P.adsHeld = true; if (c === 'KeyF' || c === 'Space') planeDropBomb(); if (c === 'KeyV') togglePlaneView(); if (c === 'KeyM') togglePlaneAssist(); if (c === 'KeyG') togglePlaneGear(); if (c === 'KeyT') planeLockToggle(); if (c === 'KeyR' && PL.me && PL.me.crash) { const alive = PL.wreck && PL.wreck.done && !PL.wreck.lethal; exitPlane(); P.mode = 'foot'; if (alive) openSpawnMenu(); else P.die(); } return; }
+    if (P.mode === 'plane') { if (c === 'KeyH') PHUD.help = PHUD.help > 0 ? 0 : 1e9; if (c === 'KeyN') navyToggleOrdnance(); if (c === 'KeyZ') P.adsHeld = true; if (c === 'KeyF' || c === 'Space') planeDropBomb(); if (c === 'KeyV') togglePlaneView(); if (c === 'KeyM') togglePlaneAssist(); if (c === 'KeyG') togglePlaneGear(); if (c === 'KeyT') planeLockToggle(); if (c === 'KeyR' && PL.me && PL.me.crash) { const alive = PL.wreck && PL.wreck.done && !PL.wreck.lethal; exitPlane(); P.mode = 'foot'; if (alive) openSpawnMenu(); else P.die(); } return; }
     if (P.mode === 'naval') return;
     if (c === 'KeyR') startReload();
     else if (c === 'KeyC' || c === 'ControlLeft') { if (!P.swim) P.stance = P.stance === 1 ? 0 : 1; }

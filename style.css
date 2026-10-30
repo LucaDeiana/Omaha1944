@@ -109,7 +109,7 @@ kbd { background: #2a2e2a; border: 1px solid #4a5040; padding: 1px 7px; border-r
 #navZoom .scope .v { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: rgba(0,0,0,.85); }
 #navZoom .ticks { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(4.2vh - 1px), rgba(0,0,0,.8) calc(4.2vh - 1px) 4.2vh) 50% 50% / 76% 1.6vh no-repeat, repeating-linear-gradient(0deg, transparent 0 calc(4.2vh - 1px), rgba(0,0,0,.8) calc(4.2vh - 1px) 4.2vh) 50% 50% / 1.6vh 76% no-repeat; }
 #navZoom .ladder { position: absolute; left: 50%; top: 50%; width: 10vh; height: 10vh; margin: -5vh; border: 1px solid rgba(0,0,0,.8); border-radius: 50%; }
-#planehud { display: none; position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); text-align: center; font-size: 16px; text-shadow: 0 0 4px #000; }
+#planehud { display: none; position: absolute; inset: 0; pointer-events: none; font-family: Oswald, sans-serif; text-shadow: 0 0 4px #000; }
 
 /* mirino a schermo più leggibile */
 #cross i { background: rgba(255, 255, 255, .95); box-shadow: 0 0 0 1px rgba(0, 0, 0, .75), 0 0 4px rgba(0, 0, 0, .6); }
@@ -159,8 +159,6 @@ kbd { background: #2a2e2a; border: 1px solid #4a5040; padding: 1px 7px; border-r
 
 #tankSight .usR{display:none}#tankSight.us .usR{display:block}#tankSight.us .deR{display:none}#tankSight .usR{position:absolute;left:50%;top:50%;width:76vh;height:76vh;transform:translate(-50%,-50%)}
 /* in cabina: i dati di volo stanno sugli strumenti; in alto resta solo una riga piccola, niente aiuto sopra il cruscotto */
-#planehud.ck { bottom: auto; top: 62px; font-size: 12px; opacity: .8; }
-#planehud.ck small { display: none; }
 
 /* ---------- schermata di rientro ---------- */
 #spawn { background: radial-gradient(ellipse at 50% 45%, rgba(10,12,10,.93), rgba(4,5,4,.985)); z-index: 25; }
@@ -204,3 +202,20 @@ body.pDead #gl { filter: saturate(.15) contrast(1.1); transition: filter 1.2s; }
 #readyGo b { display: block; font-family: 'Special Elite', serif; font-weight: normal; font-size: clamp(28px, 4vw, 46px); letter-spacing: .12em; margin: 10px 0; animation: rgp 1.8s ease-in-out infinite; }
 #readyGo span { font-size: 13px; letter-spacing: .2em; opacity: .7; } #readyGo kbd { border: 1px solid #e9dfc4; border-radius: 3px; padding: 0 6px; }
 @keyframes rgp { 50% { opacity: .55; } }
+
+/* ---------- HUD di volo ---------- */
+.phL { position: absolute; left: 28px; bottom: 28px; min-width: 230px; padding: 12px 16px; background: linear-gradient(90deg, rgba(8,10,9,.62), rgba(8,10,9,.25)); border-left: 3px solid var(--accent); }
+.phN { font-size: 12px; letter-spacing: .3em; color: var(--accent); margin-bottom: 4px; text-transform: uppercase; }
+.phRow { display: flex; gap: 22px; align-items: baseline; } .phRow.sm { font-size: 13px; gap: 16px; opacity: .85; margin-top: 2px; }
+.phBig b { font-size: 38px; font-weight: 600; letter-spacing: .02em; color: #f2ecd8; } .phBig small { font-size: 13px; margin-left: 4px; opacity: .7; }
+.phBig b.hi, .phRow .hi { color: #ff7a6a; } .phBig b.ok { color: #7bd88f; }
+.phThr { position: relative; height: 16px; margin-top: 8px; background: rgba(233,223,196,.12); } .phThr i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #8a7a3e, #e8c46a); }
+.phThr span { position: relative; font-size: 11px; letter-spacing: .2em; padding-left: 6px; line-height: 16px; }
+.phTags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; } .phTags b { font-size: 11px; letter-spacing: .15em; padding: 2px 7px; border: 1px solid rgba(233,223,196,.5); font-weight: 500; } .phTags b.y { color: #15140f; background: #ffcf5a; border-color: #ffcf5a; }
+.phR { position: absolute; right: 28px; bottom: 28px; min-width: 190px; padding: 12px 16px; text-align: right; background: linear-gradient(270deg, rgba(8,10,9,.62), rgba(8,10,9,.25)); border-right: 3px solid var(--accent); }
+.phW { font-size: 18px; font-weight: 600; letter-spacing: .05em; margin: 2px 0; } .phW small { display: block; font-size: 11px; font-weight: 400; letter-spacing: .3em; color: var(--accent); } .phW.sm { font-size: 12px; color: #ffcf5a; }
+.phW:empty { display: none; }
+.phRe { height: 4px; background: rgba(233,223,196,.15); margin: 4px 0; } .phRe i { display: block; height: 100%; background: #7bd88f; }
+.phHelp { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); width: min(980px, 70vw); text-align: center; font-size: 12px; line-height: 1.6; opacity: .85; transition: opacity .6s; }
+#planehud.ck .phL { left: 50%; top: 58px; bottom: auto; transform: translateX(-50%); min-width: 0; padding: 4px 12px; border: 0; background: rgba(8,10,9,.35); }
+#planehud.ck .phL .phThr, #planehud.ck .phL .phRow.sm, #planehud.ck .phN { display: none; } #planehud.ck .phBig b { font-size: 22px; }

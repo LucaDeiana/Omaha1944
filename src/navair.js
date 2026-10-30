@@ -279,7 +279,7 @@ function torpSight() {
   for (let s = 60; s <= run; s += 60) { const q = scr(L.clone().addScaledVector(hd, s)); if (!q) continue; first ? g.moveTo(...q) : g.lineTo(...q); first = false; } g.stroke();
   // limiti di sgancio
   const ready = okA && okS && T && aligned && dI <= TORP_LIM.run;
-  const x0 = W / 2 - 150, y0 = H - 210; g.fillStyle = 'rgba(10,12,10,.6)'; g.fillRect(x0, y0, 300, 64);
+  const x0 = W / 2 - 150, y0 = H - 140; g.fillStyle = 'rgba(10,12,10,.6)'; g.fillRect(x0, y0, 300, 64);
   g.font = '600 13px Oswald, sans-serif'; g.textAlign = 'left';
   g.fillStyle = okA ? '#7bd88f' : '#ff7a6a'; g.fillText('QUOTA ' + Math.round(alt) + ' m  (max ' + TORP_LIM.alt + ')', x0 + 12, y0 + 22);
   g.fillStyle = okS ? '#7bd88f' : '#ff7a6a'; g.fillText('VELOCITÀ ' + Math.round(kmh) + ' km/h  (max ' + TORP_LIM.kmh + ')', x0 + 12, y0 + 42);
