@@ -193,22 +193,61 @@ function updateOcean(t) {
 // ---------- isole ----------
 function navyH(x, z) {
   let h = -80;
-  for (const I of NV.islands) { const d = Math.hypot(x - I.x, z - I.z) / I.r; if (d < 1.3) { if (I.flat) { h = Math.max(h, d < .92 ? I.h : I.h - (d - .92) * 60); continue; } const n = fbm(x * .006 + I.x, z * .006, 3); h = Math.max(h, I.h * (1 - d * d) + (n - .5) * I.h * .5 - 6 * smooth((d - .8) / .5)); } }
+  for (const I of NV.islands) { const d = Math.hypot(x - I.x, z - I.z) / I.r; if (d < 1.3) { if (I.flat) { h = Math.max(h, d < .92 ? I.h : I.h - (d - .92) * 60); continue; } const n = fbm(x * .006 + I.x, z * .006, 3); let hh = I.h * (1 - d * d) + (n - .5) * I.h * .5 - 6 * smooth((d - .8) / .5);
+    if (I.mtn) { const rg = 1 - Math.abs(fbm(x * .0035 + I.z, z * .0035 + 7, 4) * 2 - 1); hh += I.mtn * Math.max(0, 1 - d * 1.15) ** 1.6 * (.45 + .9 * rg * rg); }   // montagna con le creste
+    h = Math.max(h, hh); } }
   return h;
 }
 function buildIsland(I) {
-  const n = 70, S = I.r * 2.7, pos = [], col = [], idx = [], c = new THREE.Color();
+  const n = I.mtn || I.town ? 140 : 70, S = I.r * 2.7, pos = [], col = [], idx = [], c = new THREE.Color();
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
     const x = I.x - S / 2 + i / (n - 1) * S, z = I.z - S / 2 + j / (n - 1) * S, y = Math.max(navyH(x, z), -20);
     pos.push(x, y, z);
     // colori per quota vera: battigia, prati, macchia in collina, roccia in cima; variazioni a chiazze
     const v = fbm(x * .004 + 3, z * .004, 3), e = fbm(x * .02, z * .02, 2);
-    c.set(y < 1.6 ? 0xc2b48a : I.flat ? (e > .55 ? 0x6b7d4c : 0x5e7a44) : y < 45 ? (v > .55 ? 0x4c6a32 : 0x5a7a3a) : y < 130 ? (v > .5 ? 0x3a5428 : 0x45602e) : (e > .5 ? 0x6f6656 : 0x5d5848));
+    if (I.dry) c.set(y < 1.8 ? 0xcfc0a0 : y < 40 ? (v > .55 ? 0x7c7a4a : e > .5 ? 0xa59468 : 0x8e8a58) : y < 160 ? (v > .5 ? 0x6a6a42 : e > .45 ? 0x9a8a6a : 0x857a5a) : (e > .5 ? 0xb4aa96 : 0x9c9280));   // macchia secca, terra ocra, roccia chiara
+    else c.set(y < 1.6 ? 0xc2b48a : I.flat ? (e > .55 ? 0x6b7d4c : 0x5e7a44) : y < 45 ? (v > .55 ? 0x4c6a32 : 0x5a7a3a) : y < 130 ? (v > .5 ? 0x3a5428 : 0x45602e) : (e > .5 ? 0x6f6656 : 0x5d5848));
     c.convertSRGBToLinear(); col.push(c.r, c.g, c.b);
   }
   for (let j = 0; j < n - 1; j++) for (let i = 0; i < n - 1; i++) { const a = j * n + i, b = a + n; idx.push(a, b, a + 1, a + 1, b, b + 1); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
   const m = new THREE.Mesh(g, MAT.vc); m.receiveShadow = true; scene.add(m);
+  if (I.town) buildIslandTown(I);
+}
+// paese egeo sul versante verso il canale: case bianche e color ocra, chiesa con la cupola, porto con il molo, faro e mulini
+function buildIslandTown(I) {
+  const mb = new MB(), a0 = I.town.a, slope = (x, z) => Math.abs(navyH(x + 5, z) - navyH(x - 5, z)) + Math.abs(navyH(x, z + 5) - navyH(x, z - 5));
+  // la costa nella direzione del paese
+  let cr = I.r; for (let f = 1.2; f > .3; f -= .01) if (navyH(I.x + Math.cos(a0) * I.r * f, I.z + Math.sin(a0) * I.r * f) > 1.5) { cr = I.r * f; break; }
+  const cx = I.x + Math.cos(a0) * cr, cz = I.z + Math.sin(a0) * cr;
+  let placed = 0;
+  for (let k = 0; k < 900 && placed < (I.town.n || 70); k++) {
+    const a = a0 + rnd(-.4, .4) * (300 / Math.max(300, I.r)), d = cr - rnd(15, 260), x = I.x + Math.cos(a) * d, z = I.z + Math.sin(a) * d, y = navyH(x, z);
+    if (y < 2.2 || y > 70 || slope(x, z) > 9) continue;
+    const w = rnd(6, 12), dp = rnd(6, 11), h = rnd(4.5, 8) * (R() < .25 ? 1.6 : 1), ry = a + rnd(-.3, .3), col = pick([0xf2efe6, 0xefe9da, 0xe8dcc0, 0xf4f1ea, 0xd9c49a]);
+    mb.mat = 'plaster'; mb.add(U.box, col, x, y + h / 2 - 1, z, 0, ry, 0, w, h + 2, dp);
+    mb.mat = 'vc'; for (let i = 0; i < 3; i++) mb.add(U.box, pick([0x2f5a7a, 0x3a6b4a, 0x5a3a2a]), x + Math.cos(ry) * (i - 1) * w * .28 + Math.sin(ry) * dp * .51, y + h * .55, z - Math.sin(ry) * (i - 1) * w * .28 + Math.cos(ry) * dp * .51, 0, ry, 0, .9, 1.4, .1);
+    if (R() < .3) { mb.mat = 'roof'; mb.add(U.cone, 0x9a4a30, x, y + h + .9, z, 0, ry + PI / 4, 0, Math.max(w, dp) * .74, 2, Math.max(w, dp) * .74); }
+    placed++;
+  }
+  // chiesa con la cupola e il campanile, un po' sopra il porto
+  { const d = cr - 70, x = I.x + Math.cos(a0) * d, z = I.z + Math.sin(a0) * d, y = navyH(x, z);
+    mb.mat = 'plaster'; mb.add(U.box, 0xf4f1ea, x, y + 5, z, 0, a0, 0, 12, 12, 18); mb.add(U.cyl12, 0xf4f1ea, x, y + 12, z, 0, 0, 0, 4.2, 3, 4.2);
+    mb.mat = 'vc'; mb.add(U.hemi, 0x2f5f9a, x, y + 13.4, z, 0, 0, 0, 4.4, 4, 4.4); mb.add(U.box, 0xd8c8a0, x, y + 18, z, 0, 0, 0, .25, 1.4, .25);
+    mb.mat = 'plaster'; const bx = x + Math.cos(a0 + PI / 2) * 9, bz = z + Math.sin(a0 + PI / 2) * 9; mb.add(U.box, 0xf4f1ea, bx, y + 9, bz, 0, a0, 0, 3.5, 18, 3.5); mb.mat = 'vc'; mb.add(U.hemi, 0x2f5f9a, bx, y + 18, bz, 0, 0, 0, 2, 2, 2); }
+  // porto: molo di pietra che entra nel mare, banchina e qualche barca
+  { const ex = Math.cos(a0), ez = Math.sin(a0), mx = cx + ex * 60, mz = cz + ez * 60; mb.mat = 'stone';
+    mb.add(U.box, 0xb8b0a0, mx, 1.2, mz, 0, -a0 + PI / 2, 0, 10, 4, 150); mb.add(U.box, 0xb8b0a0, cx, 1.2, cz, 0, -a0, 0, 24, 4, 120);
+    mb.mat = 'vc'; for (let i = 0; i < 5; i++) { const t = rnd(-50, 40), sx = cx + ex * 22 + Math.cos(a0 + PI / 2) * t, sz = cz + ez * 22 + Math.sin(a0 + PI / 2) * t; mb.add(U.sph, pick([0x2f5a7a, 0xb03a2a, 0xe8e2d0]), sx, .4, sz, 0, -a0, 0, 1.6, .7, 4.5); mb.add(U.cyl, 0x6b5132, sx, 3, sz, 0, 0, 0, .08, 5, .08); } }
+  // faro sul promontorio
+  { const a = a0 + .55, d = I.r * .82, x = I.x + Math.cos(a) * d, z = I.z + Math.sin(a) * d, y = Math.max(2, navyH(x, z));
+    mb.mat = 'plaster'; mb.add(U.cyl12, 0xf4f1ea, x, y + 8, z, 0, 0, 0, 2.2, 16, 2.2); mb.add(U.box, 0xefe9da, x + 4, y + 2.5, z, 0, 0, 0, 7, 5, 6); mb.mat = 'vc'; mb.add(U.cyl12, 0x2a2c2e, x, y + 17, z, 0, 0, 0, 1.6, 2, 1.6); mb.add(U.cone, 0xa83a2a, x, y + 18.8, z, 0, 0, 0, 1.9, 1.6, 1.9);
+    if (typeof addEmitter === 'function') NV.lights = (NV.lights || []).concat([{ x, y: y + 17, z }]); }
+  // mulini a vento sul crinale sopra il paese
+  for (let i = 0; i < 4; i++) { const a = a0 + (i - 1.5) * .12, d = cr - rnd(300, 380), x = I.x + Math.cos(a) * d, z = I.z + Math.sin(a) * d, y = navyH(x, z); if (y < 10) continue;
+    mb.mat = 'plaster'; mb.add(U.cyl12, 0xf4f1ea, x, y + 4, z, 0, 0, 0, 3, 9, 3); mb.mat = 'vc'; mb.add(U.cone, 0x7a5a3a, x, y + 9.4, z, 0, 0, 0, 3.2, 2.4, 3.2);
+    for (let k = 0; k < 4; k++) { const r = k * PI / 2 + i; mb.add(U.box, 0xe8e2d0, x + Math.cos(a) * 3.2 + Math.cos(r) * Math.sin(a) * 3.5, y + 8 + Math.sin(r) * 3.5, z + Math.sin(a) * 3.2 - Math.cos(r) * Math.cos(a) * 3.5, 0, -a, r, .3, 7, 1.6); } }
+  scene.add(groupMesh(mb.buildGroups(), true));
 }
 
 // ---------- modello della nave ----------
@@ -969,6 +1008,17 @@ function drawRadar(cv) {
 
 // ---------- missioni ----------
 const NAVY_MIS = {
+  isles: { name: 'Scontro tra le isole', ship: 'fletcher', weather: 'sereno', brief: 'Dodecaneso, ottobre 1943. Due Zerstörer e due Schnellboote si nascondono fra le isole: canali stretti, tiro a breve distanza. Affondali tutti.',
+    setup() {
+      // arcipelago: isole montuose con i paesi affacciati sui canali
+      const isl = [[-1700, -2200, 900, 60, 260, { a: .5, n: 80 }], [1900, -2600, 1100, 50, 340, { a: 2.4, n: 60 }], [200, -5200, 1300, 70, 420, { a: 1.6, n: 90 }], [-3900, -4200, 800, 50, 200], [3900, -5600, 900, 45, 240, { a: 3.4, n: 50 }],
+        [-2600, 600, 600, 40, 120], [2400, 300, 500, 35, 90], [-600, -3600, 280, 25, 0]];
+      for (const [x, z, r, h, mtn, town] of isl) NV.islands.push({ x, z, r, h, mtn, town, dry: true });
+      for (const I of NV.islands) buildIsland(I);
+      NV.me = new NavShip(navyPick('fletcher'), 'A', 0, 0, 0, { ai: false, spd: .3 });
+      for (const [x, z, k, a] of [[-400, -3300, 'z1934', PI * .9], [900, -4000, 'z1934', PI * 1.1], [-2300, -3300, 'sboot', PI * .6], [2700, -1500, 'sboot', PI * 1.3]]) new NavShip(k, 'E', x, z, a, { spd: .55 });
+    },
+    obj() { const n = NV.ships.filter(s => s.team === 'E' && !s.sinking).length; return [n === 0, 'Affonda le navi nascoste fra le isole — restano ' + n]; } },
   dd: { name: 'Caccia nella Manica', ship: 'fletcher', brief: 'Due Zerstörer e due Schnellboote razziano la Manica. Affondali tutti.',
     setup() { navyIslands(3); NV.me = new NavShip(navyPick('fletcher'), 'A', 0, 0, 0, { ai: false }); for (const [x, z, k] of [[2500, -12000, 'z1934'], [3600, -11400, 'z1934'], [-4000, -9000, 'sboot'], [-3400, -9500, 'sboot']]) new NavShip(k, 'E', x, z, PI * .1, { spd: .8 }); },
     obj() { const n = NV.ships.filter(s => s.team === 'E' && !s.sinking).length; return [n === 0, 'Affonda la flottiglia tedesca — restano ' + n]; } },
