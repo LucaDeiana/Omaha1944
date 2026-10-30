@@ -55,7 +55,7 @@ function buildKasserine() {
   mb.mat = 'plaster'; mb.add(U.box, 0xece4d0, V.x + 25, 3 + 9, V.z - 20, 0, 0, 0, 3.5, 18, 3.5); mb.add(U.sph, 0x4f8a72, V.x + 25, 3 + 19, V.z - 20, 0, 0, 0, 1.4, 1.2, 1.4); addSolid(V.x + 23, 0, V.z - 22, V.x + 27, 21, V.z - 18, 'tower');
   for (let i = 0; i < 30; i++) { const a = R() * TAU, r = rnd(80, 140); kasPalm(mb, V.x + Math.cos(a) * r, V.z + Math.sin(a) * r, rnd(.9, 1.2)); }
   // rocce sui pendii, pali del telegrafo lungo la pista, relitti
-  for (let i = 0; i < 260; i++) { const x = rnd(-700, 700), z = rnd(-1350, 350), y = kasH(x, z); if (Math.abs(x) < 220 && R() < .7) continue; const s = rnd(.8, 4); mb.mat = 'stone'; mb.add(U.ico1, pick([0xa08a68, 0x8e7a5c, 0xb09a74]), x, y + s * .3, z, rnd(0, 3), rnd(0, 3), 0, s * rnd(1, 1.6), s * .7, s); if (s > 2.2) addSolid(x - s * .8, y - 1, z - s * .8, x + s * .8, y + s, z + s * .8, 'rock'); }
+  for (let i = 0; i < 260; i++) { const x = rnd(-700, 700), z = rnd(-1350, 350), y = kasH(x, z); if (Math.abs(x) < 220 && R() < .7) continue; const s = rnd(.8, 4); mb.mat = 'rock'; mb.add(U.ico1, pick([0xa08a68, 0x8e7a5c, 0xb09a74]), x, y + s * .3, z, rnd(0, 3), rnd(0, 3), 0, s * rnd(1, 1.6), s * .7, s); if (s > 2.2) addSolid(x - s * .8, y - 1, z - s * .8, x + s * .8, y + s, z + s * .8, 'rock'); }
   for (let z = 380; z > -1350; z -= 45) { const x = kasRoadX(z) + 9, y = kasH(x, z); mb.mat = 'wood'; mb.add(U.cyl, 0x5a4630, x, y + 3.5, z, 0, 0, 0, .1, 7, .1); mb.add(U.box, 0x5a4630, x, y + 6.6, z, 0, 0, 0, 1.4, .1, .1); }
   for (const [x, z, ry] of [[-120, -320, .7], [150, -700, -.3], [-60, -1050, 2], [90, 60, 1.2]]) addSherman(mb, x, kasH(x, z), z, ry, true);
   // postazioni: sacchetti attorno ai pezzi anticarro e alle posizioni
