@@ -14,7 +14,9 @@ const BOT_NAMES_A = ['Miller', 'Jackson', 'Reese', 'Doyle', 'Parker', 'Mendez', 
 // ---------- terreno: città in piano, dune fuori le mura ----------
 function tunH(x, z) {
   const d = Math.hypot(x - TUN_C.x, z - TUN_C.z);
-  const dune = (fbm(x * .012 + 5, z * .012, 3) - .5) * 9 + Math.sin(x * .03 + z * .01) * 1.5;
+  // dune con la cresta: profilo asimmetrico (sopravento dolce, sottovento ripido) mosso dal rumore
+  const rp = x * .026 + z * .009 + fbm(x * .004, z * .004, 2) * 6, ridge = Math.pow(1 - Math.abs(Math.sin(rp)), 2.2) * (1 + .4 * Math.sin(rp * .5));
+  const dune = (fbm(x * .012 + 5, z * .012, 3) - .5) * 9 + Math.sin(x * .03 + z * .01) * 1.5 + ridge * 13 * smooth((Math.hypot(x - TUN_C.x, z - TUN_C.z) - TUN_R - 25) / 90);
   const town = 2 + (fbm(x * .02, z * .02, 2) - .5) * .5;
   return lerp(town, 3 + dune + (d - TUN_R) * .04, smooth((d - TUN_R + 10) / 45));
 }
@@ -111,6 +113,14 @@ function buildTunisia() {
   for (const [x, z, ry] of [[TUN_C.x - 150, TUN_C.z + 30, .8], [TUN_C.x + 140, TUN_C.z - 60, -.4], [TUN_C.x + 30, TUN_C.z + 150, 2.2]]) { addSherman(mb, x, tunH(x, z), z, ry, true); addSolid(x - 2, tunH(x, z) - 1, z - 3, x + 2, tunH(x, z) + 2.6, z + 3, 'tank'); addCover(x + 3, z, 'tank'); addCover(x - 3, z, 'tank'); }
   for (let i = 0; i < 16; i++) { const a = R() * TAU, r = rnd(20, TUN_R - 15), x = TUN_C.x + Math.cos(a) * r, z = TUN_C.z + Math.sin(a) * r; if (pointInSolid(new V3(x, 3, z))) continue; sandbagLine(mb, x - 1.5, z, x + 1.5, z, 2); addCover(x, z + 1, 'sand'); addCover(x, z - 1, 'sand'); }
   for (let i = 0; i < 24; i++) { const a = R() * TAU, r = rnd(10, TUN_R - 10), x = TUN_C.x + Math.cos(a) * r, z = TUN_C.z + Math.sin(a) * r; if (pointInSolid(new V3(x, 3, z))) continue; mb.mat = 'wood'; mb.add(U.box, 0x8a7350, x, tunH(x, z) + .45, z, 0, R() * PI, 0, 1.1, .9, .9); addSolid(x - .6, 0, z - .6, x + .6, tunH(x, z) + .9, z + .6, 'crate'); addCover(x + 1, z, 'sand'); }
+  // deserto attorno: rocce affioranti, cespugli secchi, creste rocciose all'orizzonte, polvere nel vento
+  for (let i = 0; i < 90; i++) { const a = R() * TAU, r = rnd(TUN_R + 25, TUN_R + 420), x = TUN_C.x + Math.cos(a) * r, z = TUN_C.z + Math.sin(a) * r, y = tunH(x, z), n = 1 + (R() * 4 | 0);
+    mb.mat = 'rock'; for (let k = 0; k < n; k++) { const s = rnd(.5, 2.4) * (k ? .6 : 1); mb.add(U.ico1, pick([0x9c8466, 0x8a7258, 0xa89070]), x + rnd(-3, 3), y + s * .2, z + rnd(-3, 3), rnd(0, 3), rnd(0, 3), 0, s * rnd(1, 1.5), s * .6, s); } }
+  mb.mat = 'vc'; for (let i = 0; i < 160; i++) { const a = R() * TAU, r = rnd(TUN_R + 12, TUN_R + 380), x = TUN_C.x + Math.cos(a) * r, z = TUN_C.z + Math.sin(a) * r, y = tunH(x, z), s = rnd(.3, .8);
+    for (let k = 0; k < 4; k++) mb.add(U.ico1, pick([0x7a6a40, 0x6b5f3a, 0x8a7a4a]), x + rnd(-.5, .5) * s, y + s * .3, z + rnd(-.5, .5) * s, rnd(0, 3), rnd(0, 3), 0, s * .6, s * .45, s * .6); }
+  for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + rnd(-.15, .15), r = rnd(620, 880), x = TUN_C.x + Math.cos(a) * r, z = TUN_C.z + Math.sin(a) * r, w = rnd(140, 280), h = rnd(40, 90);
+    mb.add(U.box, pick([0xa08060, 0x8f7052, 0xb09070]), x, h / 2 - 4, z, 0, -a, 0, w * .35, h, w); mb.add(U.cone, 0x9a7a5a, x, h - 4 + 6, z, 0, -a, 0, w * .2, 14, w * .55); }
+  for (let i = 0; i < 6; i++) { const a = R() * TAU, r = rnd(TUN_R + 40, TUN_R + 260), x = TUN_C.x + Math.cos(a) * r, z = TUN_C.z + Math.sin(a) * r; addEmitter(new V3(x, tunH(x, z), z), 'dust', rnd(1, 1.6)); }
   addTiled(mb, 100);
   // punti di rinascita: liberi, sparsi; quelli di squadra ai due lati opposti della città
   for (let i = 0; i < 400 && TUN.spawns.length < 36; i++) {

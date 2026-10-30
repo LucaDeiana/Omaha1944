@@ -246,6 +246,8 @@ function updateFX(dt) {
         if (R() < .5) PS_SMOKE.emit(e.p.x, e.p.y + s, e.p.z, rnd(-.3, .3) + .5, rnd(2, 3.5) * s, rnd(-.3, .3), rnd(7, 12), s * 1.2, s * 7, .72, ...C_BLACK, .1, -.1);
         if (R() < .2 && !far) PS_GRAIN.emit(e.p.x, e.p.y + s, e.p.z, rnd(-1, 1), rnd(2, 5), rnd(-1, 1), rnd(1, 2.5), .03, .01, 1, 4, 1.6, .3, .5, -1);
       }
+    } else if (e.type === 'dust') {   // polvere sollevata dal vento: veli bassi che scorrono sulla sabbia
+      while (e.acc > .35) { e.acc -= .35; const a = R() * TAU, r = rnd(0, 18) * s; PS_SMOKE.emit(e.p.x + Math.cos(a) * r, e.p.y + rnd(0, .6), e.p.z + Math.sin(a) * r, rnd(2.5, 4.5), rnd(.1, .6), rnd(-.6, .6), rnd(6, 10), s * 2, s * 9, .28, ...C_DESERT, .05, -.02); }
     } else if (e.type === 'smoke') {
       while (e.acc > .16) { e.acc -= .16; PS_SMOKE.emit(e.p.x + rnd(-1, 1) * s, e.p.y, e.p.z + rnd(-1, 1) * s, .6, rnd(1.5, 2.5) * s, rnd(-.2, .2), rnd(8, 13), s * 1.5, s * 9, .55, ...C_SMOKE, .05, -.05); }
     } else if (e.type === 'bank') {
