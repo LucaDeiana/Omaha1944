@@ -1166,7 +1166,7 @@ function buildFleet() {
   // torretta B della USS Texas manovrabile dal giocatore
   // torretta B (la seconda di prua) della Texas: è quella che il giocatore manovra
   const tb = tx.m.turrets.filter(t => t.arc === 'fore' && !t.sec && t.S.cal >= 300)[1] || tx.m.turrets[0];
-  const cam = new V3(0, tb.y + 9, tb.z + 16).applyMatrix4(tx.g.matrixWorld);
+  const cam = new V3(0, tb.y + 7.5, tb.z - 5).applyMatrix4(tx.g.matrixWorld);
   WORLD.texas = { g: tb.g, pitch: tb.pv, yaw: 0, elev: .1, muzzles: tb.muzzles, cam, base: PI / 2, pos: new V3() };
   tb.g.getWorldPosition(WORLD.texas.pos);
 }
