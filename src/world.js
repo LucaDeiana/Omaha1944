@@ -383,6 +383,7 @@ function updateBeachWater(dt, t) {
   const m = WORLD.waterMesh; m.position.set(Math.round(camera.position.x / 4) * 4, WATER_Y, Math.round(camera.position.z / 4) * 4);
   _wsH.length = 0;
   for (const b of WORLD.boats) if (b.g.visible && b.state !== 'reload') _wsH.push({ pos: b.g.position, yaw: b.g.rotation.y, spd: b.state === 'move' ? b.speed : b.state === 'return' ? b.speed * 1.1 : 0, L: 10.4, B: 3.4 });
+  for (const h of WORLD.fleetHulls || []) _wsH.push(h);
   WSIM.hulls = _wsH;
   updateWaterSim(dt, camera.position);
   const U = waterMat.uniforms; U.uSimOn.value = WSIM.on ? 1 : 0;
@@ -1140,7 +1141,7 @@ function buildGrass() {
 // USS Texas e Arkansas, incrociatori, cacciatorpediniere classe Fletcher, con le torrette brandeggiate verso la costa
 function placeShip2(key, x, z) {
   const C = NCLS[key], m = buildShipModel2(C), g = m.g;
-  g.position.set(x, 0, z); g.rotation.y = PI / 2; scene.add(g);
+  g.position.set(x, 0, z); g.rotation.y = PI / 2; scene.add(g); (WORLD.fleetHulls = WORLD.fleetHulls || []).push({ pos: g.position, yaw: PI / 2, spd: 0, L: C.L, B: C.B, big: 1 });
   for (const t of m.turrets) if (t.arc === 'fore' || t.arc === 'aft' || t.arc === 'side') { t.g.rotation.y = -PI / 2; if (t.pv) t.pv.rotation.x = t.S.cal >= 100 ? rnd(.06, .22) : .3; }
   g.updateMatrixWorld(true);
   let ng = 0; for (const t of m.turrets) if ((t.arc === 'fore' || t.arc === 'aft') && t.S.cal >= 100 && t.muzzles.length && ng++ < 3) WORLD.shipGuns.push({ p: t.muzzles[0].clone().applyMatrix4(t.pv.matrixWorld), big: C.type === 'bb', t: rnd(1, 9) });
