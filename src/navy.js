@@ -839,8 +839,13 @@ function navySecHit(sh, dmg, pen) {
 function navyPlayerLost() {
   after(7, () => {
     if (NV.over && !(NV.mis && NV.mis.free)) return;  // missione già vinta: la nave affonda da eroina
-    if (NV.mis && NV.mis.free) { const k = NV.me.cls; NV.me = new NavShip(k, 'A', NV.me.pos.x + 3000, NV.me.pos.z + 3000, NV.me.yaw, { ai: false, spd: .5 }); showMsg('Nuova nave al comando', 3); return; }
-    GAME.endTitle = 'NAVE AFFONDATA'; GAME.endText = 'La tua nave è andata a fondo.'; GAME.end(false);
+    // nuova nave della stessa classe lontano dai nemici: la missione continua da dove era
+    const old = NV.me, k = old.cls; let ex = 0, ez = 0, n = 0;
+    for (const s of NV.ships) if (s.team !== old.team && !s.sinking) { ex += s.pos.x; ez += s.pos.z; n++; }
+    let dx = 1, dz = 1; if (n) { dx = old.pos.x - ex / n; dz = old.pos.z - ez / n; } const l = Math.hypot(dx, dz) || 1;
+    const x = old.pos.x + dx / l * 3500, z = old.pos.z + dz / l * 3500, yaw = Math.atan2(-(ex / (n || 1) - x), -(ez / (n || 1) - z));
+    NV.me = new NavShip(k, old.team, x, z, n ? yaw : old.yaw, { ai: false, spd: .5 }); NV.lost = (NV.lost || 0) + 1;
+    showMsg('Nuova nave al comando: ' + NV.me.C.name, 4); feed('Rientri in battaglia con una nuova nave');
   });
 }
 

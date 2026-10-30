@@ -88,7 +88,13 @@ async function startGame() {
 // se il browser rifiuta la cattura del mouse (es. caricamento lungo dopo il clic) mostra un pulsante per entrare in partita
 function lockFailed() {
   if (!GAME.started || GAME.over || GAME.running) return;
-  $('pause').classList.remove('hidden'); $('pause').querySelector('h2').textContent = 'PRONTO'; $('resumeBtn').textContent = 'CLICCA PER ENTRARE IN BATTAGLIA';
+  if (GAME.entered) { $('pause').classList.remove('hidden'); return; }
+  // prima entrata: invito a tutto schermo al posto della pausa
+  $('pause').classList.add('hidden');
+  let r = $('readyGo');
+  if (!r) { r = document.createElement('div'); r.id = 'readyGo'; r.addEventListener('click', () => { lockPointer(); }); document.body.appendChild(r); }
+  r.innerHTML = `<div class="rg"><small>${(MISSION.title || '').replace(/—.*$/, '').trim() || 'FRONTE OCCIDENTALE 1944'}</small><b>CLICCA PER INIZIARE</b><span><kbd>Esc</kbd> pausa e impostazioni</span></div>`;
+  r.style.display = 'flex';
 }
 function lockPointer() {
   const c = renderer.domElement; if (!c.requestPointerLock) return;
@@ -104,11 +110,11 @@ document.addEventListener('pointerlockchange', () => {
     $('roleBtn').style.display = SCEN === 'kas' || SCEN === 'tun' || SCEN === 'snp' ? 'none' : '';   // nei carri e nel deathmatch non si cambia ruolo
     { const ps = $('pPlane'); if (!ps.options.length) ps.innerHTML = $('optPlane').innerHTML; ps.value = SETTINGS.plane || 'mission'; $('pPlaneL').style.display = ''; }
     try { speechSynthesis.cancel(); } catch (e) {}
-    $('pause').classList.remove('hidden'); mouseL = false; P.trigger = false; P.adsHeld = false; for (const k in KEYS) KEYS[k] = false;
+    if (GAME.entered) $('pause').classList.remove('hidden'); else lockFailed(); mouseL = false; P.trigger = false; P.adsHeld = false; for (const k in KEYS) KEYS[k] = false;
     if (window.speechSynthesis) speechSynthesis.cancel();
     if (AU.ctx) AU.ctx.suspend();
   }
-  if (locked) { $('pause').querySelector('h2').textContent = 'PAUSA'; $('resumeBtn').textContent = 'RIPRENDI'; $('pause').classList.add('hidden'); if (AU.ctx) AU.ctx.resume(); }
+  if (locked) { GAME.entered = true; if ($('readyGo')) $('readyGo').style.display = 'none'; $('pause').querySelector('h2').textContent = 'PAUSA'; $('resumeBtn').textContent = 'RIPRENDI'; $('pause').classList.add('hidden'); if (AU.ctx) AU.ctx.resume(); }
 });
 
 let last = performance.now();

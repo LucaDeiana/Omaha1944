@@ -197,3 +197,10 @@ kbd { background: #2a2e2a; border: 1px solid #4a5040; padding: 1px 7px; border-r
 #killCard b { display: block; font-family: 'Special Elite', serif; font-weight: normal; font-size: 40px; letter-spacing: .06em; margin: 4px 0; }
 #killCard span { font-size: 16px; letter-spacing: .15em; opacity: .85; }
 body.pDead #gl { filter: saturate(.15) contrast(1.1); transition: filter 1.2s; }
+
+#readyGo { position: fixed; inset: 0; z-index: 60; display: none; align-items: flex-end; justify-content: center; padding-bottom: 16vh; cursor: pointer; background: linear-gradient(0deg, rgba(0,0,0,.75), rgba(0,0,0,0) 55%); }
+#readyGo .rg { text-align: center; font-family: Oswald, sans-serif; color: #efe6cf; text-shadow: 0 2px 12px #000; }
+#readyGo small { display: block; font-size: 13px; letter-spacing: .5em; color: var(--accent); }
+#readyGo b { display: block; font-family: 'Special Elite', serif; font-weight: normal; font-size: clamp(28px, 4vw, 46px); letter-spacing: .12em; margin: 10px 0; animation: rgp 1.8s ease-in-out infinite; }
+#readyGo span { font-size: 13px; letter-spacing: .2em; opacity: .7; } #readyGo kbd { border: 1px solid #e9dfc4; border-radius: 3px; padding: 0 6px; }
+@keyframes rgp { 50% { opacity: .55; } }
