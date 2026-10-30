@@ -120,12 +120,29 @@ function initFX() {
 
 // ---------- API ----------
 const C_SAND = [.58, .49, .35], C_DIRT = [.27, .21, .14], C_STONE = [.45, .44, .42], C_WATER = [.82, .86, .88], C_SMOKE = [.24, .24, .24], C_BLACK = [.035, .033, .03];
+const C_SNOW = [.86, .88, .91], C_DESERT = [.72, .6, .42], C_RUBBLE = [.52, .5, .47];
+// terreno sotto un colpo, secondo lo scenario: neve nelle Ardenne e a Stalingrado, sabbia in Africa, macerie in città
+function fxGround(p, k) {
+  if (k === 'water' || k === 'metal' || k === 'wood' || k === 'stone') return k;
+  if (typeof SCEN === 'undefined') return k;
+  if (SCEN === 'ard' || (SCEN === 'snp' && typeof SNP !== 'undefined' && SNP.map === 'stalingrado')) return 'snow';
+  if (SCEN === 'tun' || SCEN === 'kas') return 'desert';
+  if (SCEN === 'snp') return 'rubble';
+  return k;
+}
+const mixC = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+// scintille: schegge incandescenti che rimbalzano e cadono
+function fxSparks(p, n, sp = 1, dir) {
+  for (let i = 0; i < n; i++) { const v = _fp.set(rnd(-1, 1), rnd(-.2, 1), rnd(-1, 1)); if (dir) v.addScaledVector(dir, -1.2); v.normalize().multiplyScalar(rnd(4, 13) * sp);
+    PS_FIRE.emit(p.x, p.y, p.z, v.x, v.y, v.z, rnd(.25, .7), rnd(.04, .09), .015, 1, 5, 3.2, 1.3, 1.2, 9.8, 1); }
+}
 function fxMuzzle(p, dir, big) {
   const s = big ? 1 : .6;
   for (let i = 0; i < 4; i++) PS_FIRE.emit(p.x + dir.x * i * .14 * s, p.y + dir.y * i * .14 * s, p.z + dir.z * i * .14 * s, dir.x * 3, dir.y * 3, dir.z * 3, .045, .4 * s * (1 - i * .15), .6 * s, 1, 5, 3, 1.2);
   PS_SMOKE.emit(p.x, p.y, p.z, dir.x * 1.5, .4, dir.z * 1.5, rnd(.7, 1.4), .2 * s, 1.4 * s, .3, .55, .55, .55, 1.5, -.3);
 }
 function fxImpact(p, kind, dir) {
+  kind = fxGround(p, kind);
   if (kind === 'water' && typeof waterDrop === 'function') waterDrop(p.x, p.z, .9, -.12, .35);
   if (dist2Cam(p) > 260 * 260) return;
   const near = dist2Cam(p) < 60 * 60;
@@ -133,14 +150,20 @@ function fxImpact(p, kind, dir) {
     for (let i = 0; i < (near ? 12 : 5); i++) PS_GRAIN.emit(p.x, p.y, p.z, rnd(-.9, .9), rnd(3, 7.5), rnd(-.9, .9), rnd(.6, 1), .05, .04, .9, ...C_WATER, .3, 9.8);
     PS_SMOKE.emit(p.x, p.y + .3, p.z, 0, 2.5, 0, .7, .2, .9, .55, ...C_WATER, 2, 4);
     PS_SMOKE.emit(p.x, p.y, p.z, 0, .3, 0, 1.2, .3, 1.4, .3, ...C_WATER, 1);
+  } else if (kind === 'snow') {
+    // sbuffo di neve farinosa che resta sospeso e ricade piano
+    for (let i = 0; i < 2; i++) PS_SMOKE.emit(p.x, p.y + .1, p.z, rnd(-.4, .4), rnd(1.2, 2.6), rnd(-.4, .4), rnd(1.2, 2), .2, rnd(1, 1.6), .85, ...C_SNOW, 1.6, .6);
+    for (let i = 0; i < (near ? 14 : 6); i++) PS_GRAIN.emit(p.x, p.y, p.z, rnd(-1.2, 1.2), rnd(1.5, 4.5), rnd(-1.2, 1.2), rnd(.8, 1.4), rnd(.03, .06), .05, 1, ...C_SNOW, .8, 6, 1);
   } else if (kind === 'metal' || kind === 'stone') {
-    for (let i = 0; i < 8; i++) PS_FIRE.emit(p.x, p.y, p.z, rnd(-5, 5), rnd(0, 6), rnd(-5, 5), rnd(.08, .25), .05, .02, 1, 4, 2.5, 1, 2, 9);
+    if (kind === 'metal') { fxSparks(p, near ? 14 : 6, 1, dir); PS_FIRE.emit(p.x, p.y, p.z, 0, 0, 0, .06, .5, .1, 1, 6, 4, 2); }
+    else for (let i = 0; i < 5; i++) PS_FIRE.emit(p.x, p.y, p.z, rnd(-5, 5), rnd(0, 6), rnd(-5, 5), rnd(.08, .2), .04, .02, 1, 4, 2.5, 1, 2, 9);
     PS_SMOKE.emit(p.x, p.y, p.z, 0, .6, 0, rnd(.6, 1), .2, 1.1, .55, ...C_STONE, 1);
     if (kind === 'stone') for (let i = 0; i < 4; i++) PS_GRAIN.emit(p.x, p.y, p.z, rnd(-2, 2), rnd(1, 4), rnd(-2, 2), .8, .04, .03, 1, ...C_STONE, .2, 9.8, 1);
   } else if (kind === 'wood') {
     for (let i = 0; i < 6; i++) PS_GRAIN.emit(p.x, p.y, p.z, rnd(-2, 2), rnd(1, 4), rnd(-2, 2), 1, .05, .04, 1, .45, .32, .2, .2, 9.8, 1);
   } else {
-    const c = kind === 'sand' ? C_SAND : C_DIRT, n = near ? 1 : .4;
+    const c = kind === 'sand' ? C_SAND : kind === 'desert' ? C_DESERT : kind === 'rubble' ? C_RUBBLE : C_DIRT, n = near ? 1 : .4;
+    if (kind === 'desert') PS_SMOKE.emit(p.x, p.y, p.z, rnd(-.6, .6), .3, rnd(-.6, .6), rnd(3, 4.5), .4, 2.6, .45, ...c, .5, -.05);   // polvere fine che resta nell'aria
     // getto di sabbia verticale
     for (let i = 0; i < 3; i++) PS_SMOKE.emit(p.x, p.y + i * .25, p.z, rnd(-.3, .3), rnd(2, 4.5) - i, rnd(-.3, .3), rnd(.6, 1.1), .12, rnd(.6, 1.1), .8, ...c, 2.5, 3);
     for (let i = 0; i < 18 * n; i++) PS_GRAIN.emit(p.x, p.y, p.z, rnd(-1.6, 1.6), rnd(2.5, 7), rnd(-1.6, 1.6), rnd(.7, 1.3), rnd(.03, .07), .04, 1, c[0] * .8, c[1] * .8, c[2] * .8, .3, 11, 1);
@@ -152,6 +175,7 @@ function fxShock(p, size) {
   r.m.visible = true; r.m.position.copy(p); r.t = 0; r.s = size;
 }
 function fxExplosion(p, size, water) {
+  const gk = water ? 'water' : fxGround(p, p.z > -58 ? 'sand' : 'dirt'), onObj = !water && typeof Hf === 'function' && p.y - Hf(p.x, p.z) > 1.4;
   if (water && typeof waterDrop === 'function') waterDrop(p.x, p.z, 2 + size * 2.2, -Math.min(1.6, .35 * size), 1);
   if (water && typeof WORLD !== 'undefined' && WORLD.boats) for (const b of WORLD.boats) if (b.kick) b.kick(p, size);
   const d2 = dist2Cam(p), far = d2 > 500 * 500, near = d2 < 90 * 90;
@@ -167,10 +191,14 @@ function fxExplosion(p, size, water) {
     if (!far) for (let i = 0; i < 80 * Q.particles; i++) PS_GRAIN.emit(p.x, p.y, p.z, rnd(-4, 4) * size, rnd(8, 18) * size, rnd(-4, 4) * size, rnd(1.5, 2.6), .08, .06, .9, ...C_WATER, .2, 9.8);
     for (let i = 0; i < 6; i++) PS_SMOKE.emit(p.x, p.y + 1, p.z, rnd(-2, 2), rnd(.5, 2), rnd(-2, 2), rnd(2, 4), size * 2, size * 7, .45, ...C_WATER, .6, -.2);
   } else {
-    const c = p.z > -58 ? C_SAND : C_DIRT;
+    const c = gk === 'snow' ? C_SNOW : gk === 'desert' ? C_DESERT : gk === 'rubble' ? C_RUBBLE : gk === 'sand' ? C_SAND : C_DIRT;
+    // su mezzi e strutture: pioggia di scintille e fumo nero d'olio; sulla neve, nube bianca con la terra scura sotto
+    if (onObj && !far) { fxSparks(p, Math.round(30 * Math.min(size, 2.5)), 1.4 * Math.sqrt(size)); for (let i = 0; i < 6; i++) PS_SMOKE.emit(p.x, p.y, p.z, rnd(-1, 1), rnd(1.5, 3.5), rnd(-1, 1), rnd(4, 7), size * 1.2, size * 5, .8, .06, .055, .05, .35, -.2); }
+    if (gk === 'snow' && !far) for (let i = 0; i < 10; i++) PS_SMOKE.emit(p.x, p.y + .3, p.z, rnd(-3, 3) * size, rnd(3, 9) * size, rnd(-3, 3) * size, rnd(1.6, 2.8), size * .9, size * 3.2, .9, ...C_DIRT, .7, 9.8);
+    if (gk === 'desert' && !far) for (let i = 0; i < 8; i++) PS_SMOKE.emit(p.x + rnd(-2, 2) * size, p.y + .4, p.z + rnd(-2, 2) * size, rnd(-3, 3), rnd(.3, 1.2), rnd(-3, 3), rnd(7, 12), size * 2, size * 9, .5, ...c, .25, -.05);
     for (let i = 0; i < (far ? 6 : 22); i++) PS_SMOKE.emit(p.x, p.y + .5, p.z, rnd(-2.5, 2.5) * size, rnd(6, 14) * size, rnd(-2.5, 2.5) * size, rnd(1, 1.9), size * .6, size * 2.2, .95, ...c, .6, 9.8);
     if (!far) for (let i = 0; i < 160 * Q.particles; i++) PS_GRAIN.emit(p.x, p.y + .3, p.z, rnd(-5, 5) * size, rnd(5, 18) * size, rnd(-5, 5) * size, rnd(1.5, 3.5), rnd(.04, .11), .06, 1, c[0] * .7, c[1] * .7, c[2] * .7, .15, 9.8, 1);
-    for (let i = 0; i < (far ? 4 : 14); i++) PS_SMOKE.emit(p.x + rnd(-1, 1) * size, p.y + rnd(0, 2) * size, p.z + rnd(-1, 1) * size, rnd(-1, 1), rnd(.8, 2.4), rnd(-1, 1), rnd(5, 10), size * 1.8, size * 8, .65, ...C_SMOKE, .3, -.15);
+    for (let i = 0; i < (far ? 4 : 14); i++) PS_SMOKE.emit(p.x + rnd(-1, 1) * size, p.y + rnd(0, 2) * size, p.z + rnd(-1, 1) * size, rnd(-1, 1), rnd(.8, 2.4), rnd(-1, 1), rnd(5, 10), size * 1.8, size * 8, .65, ...mixC(c, C_SMOKE, gk === 'snow' ? .3 : gk === 'desert' ? .35 : .6), .3, -.15);
     if (!far) fxDebris(p, Math.round(10 * Math.min(size, 2.2)), size, c === C_SAND);
     addDecal('scorch', p, size * 4.5);
   }
