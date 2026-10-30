@@ -10,7 +10,7 @@
   #mainMenu .shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(4,6,7,.92) 0%,rgba(4,6,7,.72) 32%,rgba(4,6,7,.18) 62%,rgba(4,6,7,.35) 100%),linear-gradient(0deg,rgba(0,0,0,.55),rgba(0,0,0,0) 30%)}
   #mainMenu .grain{position:absolute;inset:-50%;pointer-events:none;opacity:.07;background-image:radial-gradient(rgba(255,255,255,.9) .6px,transparent .8px);background-size:3px 3px;animation:mmgr .9s steps(6) infinite}
   @keyframes mmgr{0%{transform:translate(0,0)}20%{transform:translate(-1%,1%)}40%{transform:translate(1%,-2%)}60%{transform:translate(-2%,-1%)}80%{transform:translate(2%,1%)}100%{transform:translate(0,0)}}
-  #mainMenu .rule{width:min(340px,100%);height:1px;background:linear-gradient(90deg,#e8c46a,rgba(232,196,106,0));margin:-14px 0 18px;opacity:.7}
+  #mainMenu .rule{width:min(360px,100%);height:1px;background:linear-gradient(90deg,#e8c46a,rgba(232,196,106,0));margin:-10px 0 22px;opacity:.7}
   #introGate{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;cursor:pointer}
   #introGate .t{font-size:13px;letter-spacing:.5em;opacity:.6;animation:igp 1.6s ease-in-out infinite}
   @keyframes igp{50%{opacity:.15}}
@@ -27,15 +27,30 @@
   #introSkip kbd{border:1px solid #e9dfc4;padding:1px 6px;border-radius:3px;margin-right:4px}
   #mainMenu{position:fixed;inset:0;z-index:40;display:none;overflow:hidden;background:#05080a}
   #mainMenu canvas{position:absolute;inset:0;width:100%;height:100%}
-  #mainMenu .mm{position:relative;height:100%;display:flex;flex-direction:column;justify-content:center;padding:16px 8vw;box-sizing:border-box;gap:6px}
+  #mainMenu .mm{position:relative;height:100%;display:flex;flex-direction:column;justify-content:center;padding:24px 8vw 64px;box-sizing:border-box}
   #mainMenu .k{font-size:12px;letter-spacing:.5em;color:#e8c46a;opacity:.85}
-  #mainMenu h1{font-family:'Special Elite',monospace;font-weight:400;font-size:clamp(30px,6.4vw,72px);margin:4px 0 26px;color:#efe6cf;letter-spacing:.04em;line-height:1.05;text-shadow:0 4px 24px rgba(0,0,0,.8)}
-  #mainMenu button.mmb{display:block;width:min(340px,100%);text-align:left;background:linear-gradient(90deg,rgba(20,24,22,.78),rgba(20,24,22,0));border:0;border-left:3px solid transparent;color:#e9dfc4;font:600 clamp(16px,2.2vw,21px) Oswald,sans-serif;letter-spacing:.14em;padding:11px 16px;cursor:pointer;transition:border-color .2s,padding .2s,color .2s}
-  #mainMenu button.mmb:hover,#mainMenu button.mmb:focus-visible{border-left-color:#e8c46a;padding-left:26px;color:#fff;outline:none}
+  #mainMenu h1{font-family:'Special Elite',monospace;font-weight:400;font-size:clamp(30px,min(6vw,8vh),72px);margin:4px 0 22px;color:#efe6cf;letter-spacing:.04em;line-height:1.05;text-shadow:0 4px 24px rgba(0,0,0,.8)}
+  #mainMenu .pg{display:none;flex-direction:column;gap:6px;animation:mmin .35s ease}
+  #mainMenu .pg.on{display:flex}
+  @keyframes mmin{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+  #mainMenu .pt{font:500 13px Oswald,sans-serif;letter-spacing:.5em;color:#e8c46a;margin:0 0 10px}
+  #mainMenu button.mmb{display:block;width:min(360px,100%);text-align:left;background:linear-gradient(90deg,rgba(20,24,22,.8),rgba(20,24,22,0));border:0;border-left:3px solid transparent;color:#e9dfc4;font:600 clamp(17px,min(2.2vw,2.8vh),22px) Oswald,sans-serif;letter-spacing:.14em;padding:12px 18px;cursor:pointer;transition:border-color .2s,padding .2s,color .2s}
+  #mainMenu button.mmb:hover,#mainMenu button.mmb:focus-visible{border-left-color:#e8c46a;padding-left:28px;color:#fff;outline:none}
   #mainMenu button.mmb small{display:block;font:400 11px Oswald,sans-serif;letter-spacing:.12em;opacity:.55;margin-top:2px}
-  @media (max-height:860px){#mainMenu .mm{gap:2px;padding-top:10px;padding-bottom:10px}#mainMenu button.mmb{padding-top:6px!important;padding-bottom:6px!important;font-size:17px}#mainMenu .mm h1{font-size:clamp(28px,5.2vh,54px)!important;margin:4px 0 10px!important}#mainMenu button.mmb small{font-size:10px}}
-  @media (max-height:640px){#mainMenu button.mmb small{display:none}}
-  #mainMenu .ft{position:absolute;left:8vw;right:16px;bottom:14px;display:flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.15em;opacity:.55}
+  #mainMenu button.mmb.big{font-size:clamp(24px,min(3vw,4vh),32px);border-left-color:#e8c46a;background:linear-gradient(90deg,rgba(232,196,106,.22),rgba(232,196,106,0));margin-bottom:6px}
+  #mainMenu button.mmb.quit{margin-top:14px;font-size:15px;color:#d9a7a0;letter-spacing:.2em}
+  #mainMenu button.mmb.quit:hover,#mainMenu button.mmb.quit:focus-visible{border-left-color:#c0503f;color:#fff}
+  #mainMenu button.mmb.back{margin-top:14px;font-size:14px;opacity:.75;letter-spacing:.2em}
+  #mainMenu .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;max-width:min(780px,84vw)}
+  @media (max-width:700px){#mainMenu .cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  #mainMenu button.mmc{position:relative;text-align:left;min-height:118px;padding:16px 18px;border:1px solid rgba(233,223,196,.18);border-radius:3px;background:linear-gradient(160deg,rgba(26,30,28,.88),rgba(10,12,12,.7));color:#e9dfc4;cursor:pointer;display:flex;flex-direction:column;gap:6px;transition:border-color .2s,transform .2s,background .2s}
+  #mainMenu button.mmc:hover,#mainMenu button.mmc:focus-visible{border-color:#e8c46a;transform:translateY(-3px);background:linear-gradient(160deg,rgba(54,48,30,.9),rgba(14,14,12,.8));outline:none}
+  #mainMenu button.mmc i{font:500 10px Oswald,sans-serif;font-style:normal;letter-spacing:.45em;color:#e8c46a;opacity:.85}
+  #mainMenu button.mmc b{font:600 21px Oswald,sans-serif;letter-spacing:.1em}
+  #mainMenu button.mmc span{font:400 12px Oswald,sans-serif;letter-spacing:.06em;opacity:.65;line-height:1.4}
+  @media (max-height:700px){#mainMenu h1{margin-bottom:10px}#mainMenu .k{display:none}#mainMenu button.mmb{padding-top:8px;padding-bottom:8px}#mainMenu button.mmc{min-height:88px;padding:10px 14px}}
+  @media (max-height:560px){#mainMenu button.mmb small{display:none}#mainMenu .hd{display:none}}
+  #mainMenu .ft{position:absolute;left:8vw;right:16px;bottom:14px;pointer-events:none;display:flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.15em;opacity:.55}
   #mainMenu .ft svg{width:30px;height:30px}
   #mmCredits{position:fixed;inset:0;z-index:45;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.82);padding:16px}
   #mmCredits .c{max-width:560px;font-size:14px;line-height:1.6;color:#e9dfc4;text-align:center}
@@ -73,20 +88,33 @@
     <div id="introSkip"><kbd>Spazio</kbd> salta</div>`;
   const mm = document.createElement('div'); mm.id = 'mainMenu';
   mm.innerHTML = `<video id="mmV" muted loop playsinline preload="auto" src="assets/media/menu.mp4"></video><canvas id="mmC"></canvas><div class="shade"></div><div class="grain"></div><div class="mm">
-      <img id="mmLogo" alt="" style="display:none;max-width:min(260px,60vw);max-height:120px;margin-bottom:8px;filter:drop-shadow(0 4px 18px rgba(0,0,0,.8))">
-      <div class="k">1941 · 1942 · 1943 · 1944</div>
-      <h1>FRONTE<br>OCCIDENTALE 1944</h1><div class="rule"></div>
-      <button class="mmb" data-go="omaha">CAMPAGNA<small>Omaha Beach, Ardenne, Tunisia</small></button>
-      <button class="mmb" data-go="sea">BATTAGLIE NAVALI<small>Pearl Harbor, Midway, la Manica</small></button>
-      <button class="mmb" data-go="armor">GUERRA CORAZZATA<small>Sherman contro Tiger a Kasserine</small></button>
-      <button class="mmb" data-go="snp">SOLO CECCHINI<small>Due palazzi, una strada in rovina, bot e multigiocatore</small></button>
-      <button class="mmb" data-go="air">CIELI D'EUROPA<small>Caccia, bombardieri, portaerei</small></button>
-      <button class="mmb" data-go="career">CARRIERA<small>Grado, medaglie e missioni completate</small></button>
-      <button class="mmb" data-go="opts">IMPOSTAZIONI<small>Grafica, audio, comandi</small></button>
-      <button class="mmb" data-go="models">MODELLI 3D<small>Navi, aerei, mezzi e armi da vicino</small></button>
-      <button class="mmb" data-go="intro">RIVEDI L'INTRODUZIONE</button>
-      <button class="mmb" data-go="cred">RICONOSCIMENTI</button>
-      <button class="mmb" data-go="quit">ESCI DAL GIOCO</button>
+      <div class="hd"><img id="mmLogo" alt="" style="display:none;max-width:min(240px,50vw);max-height:100px;margin-bottom:8px;filter:drop-shadow(0 4px 18px rgba(0,0,0,.8))">
+        <div class="k">1941 · 1942 · 1943 · 1944</div><h1>FRONTE<br>OCCIDENTALE 1944</h1><div class="rule"></div></div>
+      <nav class="pg on" id="mmMain">
+        <button class="mmb big" data-go="play">GIOCA<small>Scegli il fronte: terra, mare, cielo</small></button>
+        <button class="mmb" data-go="career">CARRIERA<small>Grado, medaglie e missioni completate</small></button>
+        <button class="mmb" data-go="opts">IMPOSTAZIONI<small>Grafica, audio, comandi</small></button>
+        <button class="mmb" data-go="extra">EXTRA<small>Modelli 3D, introduzione, riconoscimenti</small></button>
+        <button class="mmb quit" data-go="quit">ESCI DAL GIOCO</button>
+      </nav>
+      <div class="pg" id="mmPlay">
+        <div class="pt">SCEGLI IL FRONTE</div>
+        <div class="cards">
+          <button class="mmc" data-go="omaha"><i>TERRA</i><b>CAMPAGNA</b><span>Omaha Beach, Ardenne, Tunisia</span></button>
+          <button class="mmc" data-go="armor"><i>TERRA</i><b>GUERRA CORAZZATA</b><span>Sherman contro Tiger a Kasserine</span></button>
+          <button class="mmc" data-go="snp"><i>TERRA</i><b>SOLO CECCHINI</b><span>Saint-Lô e Stalingrado, bot e multigiocatore</span></button>
+          <button class="mmc" data-go="sea"><i>MARE</i><b>BATTAGLIE NAVALI</b><span>Pearl Harbor, Midway, la Manica</span></button>
+          <button class="mmc" data-go="air"><i>CIELO</i><b>CIELI D'EUROPA</b><span>Caccia, bombardieri, portaerei</span></button>
+        </div>
+        <button class="mmb back" data-go="back">← INDIETRO</button>
+      </div>
+      <nav class="pg" id="mmExtra">
+        <div class="pt">EXTRA</div>
+        <button class="mmb" data-go="models">MODELLI 3D<small>Navi, aerei, mezzi e armi da vicino</small></button>
+        <button class="mmb" data-go="intro">RIVEDI L'INTRODUZIONE</button>
+        <button class="mmb" data-go="cred">RICONOSCIMENTI</button>
+        <button class="mmb back" data-go="back">← INDIETRO</button>
+      </nav>
     </div>
     <div class="ft">${LOGO}<span>UNA PRODUZIONE «LE PALLE DI LUCA SONO PICCINE PICCINE»</span></div>`;
   const cr = document.createElement('div'); cr.id = 'mmCredits';
@@ -259,7 +287,7 @@
   }
   function skip() { if (state === 'gate') return startStudio(); if (state === 'studio') { hush(.3); return startFilm(); } if (state === 'film') showMain(); }
   function showMain() {
-    hush(.8); music('menu', .5); state = 'menu'; root.style.display = 'none'; $('menu').classList.add('hidden'); mm.style.display = 'block'; menuBg(); const b = mm.querySelector('.mmb'); if (b) b.focus({ preventScroll: true });
+    hush(.8); music('menu', .5); state = 'menu'; root.style.display = 'none'; $('menu').classList.add('hidden'); mm.style.display = 'block'; menuBg(); page('mmMain');
   }
   function playIntro() { mm.style.display = 'none'; root.style.display = 'block'; state = 'gate'; last = 0; cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); if (AC) startStudio(); else { state = 'gate'; } }
 
@@ -292,7 +320,10 @@
     if (map && map !== 'opts') { const sel = $('optMap'); if (sel && sel.value !== map) { sel.value = map; sel.dispatchEvent(new Event('change')); } }
     if (map === 'opts') { const q = $('optQuality'); if (q) q.scrollIntoView({ block: 'center' }); } else m.scrollTop = 0;
   }
-  mm.addEventListener('click', e => { const b = e.target.closest('.mmb'); if (!b) return; if (BUF._click) snd('_click', .8); const go = b.dataset.go; if (go === 'models') { location.href = 'viewer.html'; return; } if (go === 'quit') { quitGame(b); return; } if (go === 'career') { if (window.CAREER || typeof CAREER !== 'undefined') CAREER.show(); return; }
+  // pagine del menù: principale, scelta del fronte, extra
+  function page(id) { for (const p of mm.querySelectorAll('.pg')) p.classList.toggle('on', p.id === id); const f = mm.querySelector('#' + id + ' button'); if (f) f.focus({ preventScroll: true }); }
+  addEventListener('keydown', e => { if (mm.style.display === 'block' && e.key === 'Escape' && !mm.querySelector('#mmMain.on') && cr.style.display !== 'flex') page('mmMain'); });
+  mm.addEventListener('click', e => { const b = e.target.closest('.mmb, .mmc'); if (!b) return; { const g = b.dataset.go; if (g === 'play') { if (BUF._click) snd('_click', .8); return page('mmPlay'); } if (g === 'extra') { if (BUF._click) snd('_click', .8); return page('mmExtra'); } if (g === 'back') { if (BUF._click) snd('_click', .8); return page('mmMain'); } } if (BUF._click) snd('_click', .8); const go = b.dataset.go; if (go === 'models') { location.href = 'viewer.html'; return; } if (go === 'quit') { quitGame(b); return; } if (go === 'career') { if (window.CAREER || typeof CAREER !== 'undefined') CAREER.show(); return; }
     if (go === 'intro') return playIntro(); if (go === 'cred') { cr.style.display = 'flex'; return; } openSetup(go); });
   cr.addEventListener('click', () => cr.style.display = 'none');
   root.addEventListener('click', () => state === 'gate' ? startStudio() : skip());
