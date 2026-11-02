@@ -26,7 +26,7 @@ const SNP_PROF = {
 };
 const SNP_PROF_KEYS = Object.keys(SNP_PROF);
 const SNP_DMG = { head: 999, body: 1, legs: 45, arms: 40 };   // body: danno pieno dell'arma (letale)
-function snpDamage(w, zone) { return zone === 'body' ? w.dmg : SNP_DMG[zone] || w.dmg; }
+function snpDamage(w, zone) { if (SNPCFG.hsOnly && zone !== 'head') return 0; return zone === 'body' ? w.dmg : SNP_DMG[zone] || w.dmg; }   // «solo headshot»: gli altri colpi non feriscono
 
 // ---------- rumori di sparo: ascoltati dai bot al pensiero successivo ----------
 function snpShotSound(pos, team, who) {
@@ -255,6 +255,7 @@ class SnpBot extends Soldier {
 
   // ---------- ogni fotogramma: movimento, sguardo, mira, fuoco ----------
   update(dt) {
+    if (SNP2.kc && SNP2.kc.on && SNP2.kc.freeze) { this.root.updateMatrixWorld(true); return; }   // fermi durante il replay della killcam
     if (!this.alive) return;
     this.stT += dt; this.flinch = Math.max(0, this.flinch - dt * 4); this.supp = Math.max(0, this.supp - dt * .3);
     this.fireCD -= dt; this.boltT = Math.max(0, this.boltT - dt);
@@ -344,12 +345,13 @@ class SnpBot extends Soldier {
     const dir = new V3(-Math.sin(this.lookY + this.errY + this.nzY) * Math.cos(this.lookP + this.errP + this.nzP), Math.sin(this.lookP + this.errP + this.nzP), -Math.cos(this.lookY + this.errY + this.nzY) * Math.cos(this.lookP + this.errP + this.nzP)).normalize();
     this.mag--; this.fireCD = this.W.rate; this.boltT = this.mag > 0 ? this.W.rate : 0; this.shotsHere++; this.set('FIRE');
     const hit = snpTrace(from, dir, this.W.range, this.team), end = from.clone().addScaledVector(dir, hit.t);
+    snpShotEv(this.name, this.team, from, end, hit.type === 'player' ? P : hit.type === 'soldier' ? hit.obj : null, hit.zone);
     sfxShot(this.snd, from, false, 0, 'weapon.' + this.wid + '.fire'); if (dist2Cam(from) < 180 * 180) fxMuzzle(this.muzzle(T1), dir, false);
     snpShotSound(from, this.team, this);
     snpNearMiss(from, end, this.team, hit.obj);
     if (NET.host) netAIShot(this, from, end, false);
     if (hit.type === 'player') {
-      const dm = snpDamage(this.W, hit.zone); SNP.killBy = { name: this.name, team: this.team, zone: hit.zone }; P.damage(dm, from, false, { name: this.name, weapon: this.W.name + (hit.zone === 'head' ? ' · colpo alla testa' : ''), pos: from.clone() });
+      const dm = snpDamage(this.W, hit.zone); SNP.killBy = { name: this.name, team: this.team, zone: hit.zone, w: this.wid, from: from.clone() }; P.damage(dm, from, false, { name: this.name, weapon: this.W.name + (hit.zone === 'head' ? ' · colpo alla testa' : ''), pos: from.clone() });
     } else if (hit.type === 'soldier') {
       const e = hit.obj, dm = snpDamage(this.W, hit.zone); e.lastHit = this;
       if (dist2Cam(end) < 130 * 130) bloodHit(end.clone(), dir, hit.zone === 'head' ? 1.4 : 1);

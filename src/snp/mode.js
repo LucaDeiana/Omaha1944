@@ -18,6 +18,11 @@ function snpReadCfg() {
   if (v('optSnpResp') !== null) SNPCFG.respawn = +v('optSnpResp');
   if ($('optSnpFill')) SNPCFG.fill = $('optSnpFill').checked;
   if (v('optSnpGun') !== null) SNPCFG.gun = v('optSnpGun');
+  if (v('optSnpKc') !== null) { SNPCFG.killcam = v('optSnpKc') !== '0'; SNPCFG.kcDur = +v('optSnpKc') || 4; }
+  if (v('optSnpAnn') !== null) SNPCFG.announce = v('optSnpAnn') === '1';
+  if (v('optSnpHs') !== null) SNPCFG.hsOnly = v('optSnpHs') === '1';
+  if (v('optSnpGoal') !== null) SNPCFG.goal = +v('optSnpGoal');
+  if (v('optSnpTime') !== null) SNPCFG.time = +v('optSnpTime');
 }
 function snpLevel() { return SNPCFG.diff === 'rnd' ? 1 + (R() * 5 | 0) : SNPCFG.diff === 'mix' ? pick([2, 3, 3, 3, 4, 4, 5]) : +SNPCFG.diff; }
 function snpProfile() { return SNPCFG.prof === 'rnd' ? pick(SNP_PROF_KEYS) : SNPCFG.prof; }
@@ -55,6 +60,7 @@ function snpPlacePlayer(dp) {
   P.pos.copy(n.pos); P.pos.x += rnd(-.5, .5); P.pos.z += rnd(-.5, .5); P.pos.y = snpFloor(P.pos.x, P.pos.z, P.pos.y + .2);
   P.yaw = PT === 'A' ? 0 : PI; P.pitch = 0; P.stance = 0;
   const w = WEAPONS[P.inv[0].id]; P.inv[0].mag = w.mag; P.inv[0].res = w.res; P.inv[2].mag = 7; P.inv[2].res = 21; P.nades = 0;
+  snpProtectStart(); SNP2.kcDone = false;
 }
 function snpSpawnBot(team, name) {
   const used = new Set(snpTeamBots(team).map(b => b.name));
@@ -69,21 +75,17 @@ function snpSpawnBot(team, name) {
 }
 function snpRow(name, team, extra) { let r = SNP.board.get(name); if (!r) { r = { kills: 0, deaths: 0, team, ...extra }; SNP.board.set(name, r); } return r; }
 // uccisione: punteggio di squadra e tabellone (solo l'host o la partita in solitario decidono)
-function snpCredit(kName, kTeam, vName, vTeam, zone) {
+function snpCredit(kName, kTeam, vName, vTeam, zone, info = {}) {
   if (SNP.over || NET.client) return;
-  const vr = vName ? snpRow(vName, vTeam) : null; if (vr) vr.deaths++;
-  if (kName && kTeam !== vTeam) { snpRow(kName, kTeam).kills++; SNP.score[kTeam]++; }
-  const head = zone === 'head' ? ' — colpo alla testa' : '';
-  const txt = !kName ? vName + ' è caduto' : kName === SNP.me ? 'Hai eliminato ' + vName + head : vName === SNP.me ? kName + ' ti ha eliminato' + head : kName + ' ha eliminato ' + vName + head;
-  feed(txt); if (kName === SNP.me && kTeam !== vTeam) { STATS.kills++; caSniperKill(zone === 'head'); }
-  if (vName === SNP.me) caSniperDied();
-  if (NET.on && NET.host) netSend({ t: 'snpfeed', k: kName, v: vName, zone });
+  const ev = { k: kName, kt: kTeam, v: vName, vt: vTeam, zone, w: info.w, dist: info.dist ? Math.round(info.dist) : 0 };
+  if (!snpKillEv(ev)) return;   // doppione: già contata
+  if (NET.on && NET.host) netSend({ t: 'snpfeed', k: kName, kt: kTeam, v: vName, vt: vTeam, zone, w: ev.w, d: ev.dist });
 }
 function snpOnDeath(s, byPlayer, zone) {
   if (!s.snp) return;
-  if (byPlayer) snpCredit(SNP.me, PT, s.name, s.team, zone);
-  else if (s.lastHitPeer) { const p = NET.peers.get(s.lastHitPeer); snpCredit(p ? p.name : '?', p ? p.side : (s.team === 'A' ? 'E' : 'A'), s.name, s.team, zone); }
-  else if (s.lastHit && s.lastHit.name) snpCredit(s.lastHit.name, s.lastHit.team, s.name, s.team, zone);
+  if (byPlayer) snpCredit(SNP.me, PT, s.name, s.team, zone, { w: P.slot() && P.slot().id, dist: P.pos.distanceTo(s.pos) });
+  else if (s.lastHitPeer) { const p = NET.peers.get(s.lastHitPeer); snpCredit(p ? p.name : '?', p ? p.side : (s.team === 'A' ? 'E' : 'A'), s.name, s.team, zone, { w: p && p.w, dist: p && p.tp ? s.pos.distanceTo(p.tp) : 0 }); }
+  else if (s.lastHit && s.lastHit.name) snpCredit(s.lastHit.name, s.lastHit.team, s.name, s.team, zone, { w: s.lastHit.wid, dist: s.lastHit.pos ? s.lastHit.pos.distanceTo(s.pos) : 0 });
   else snpCredit(null, null, s.name, s.team, zone);
   if (s.post) { s.post.occ = null; s.post = null; }
   const r = SNP.board.get(s.name); if (r) r.deathPos = s.pos.clone();
@@ -93,8 +95,24 @@ function snpOnDeath(s, byPlayer, zone) {
 function snpPlayerDied() {
   SNP.deathPos = P.pos.clone();
   const k = SNP.killBy; SNP.killBy = null;
-  if (NET.client) { netSend({ t: 'snpd', by: k ? k.name : null, bt: k ? k.team : null, zone: k ? k.zone : null }); return; }
-  snpCredit(k ? k.name : null, k ? k.team : null, SNP.me, PT, k ? k.zone : null);
+  SNP2.lastDeath = k ? { k: k.name, kt: k.team, zone: k.zone, w: k.w, dist: k.from ? k.from.distanceTo(P.pos) : 0, t: GAME.time } : { k: null, t: GAME.time }; SNP2.kcDone = false;
+  if (NET.client) { netSend({ t: 'snpd', by: k ? k.name : null, bt: k ? k.team : null, zone: k ? k.zone : null, w: k && k.w }); return; }
+  snpCredit(k ? k.name : null, k ? k.team : null, SNP.me, PT, k ? k.zone : null, { w: k && k.w, dist: SNP2.lastDeath.dist });
+}
+// l'host verifica un'uccisione dichiarata dalla vittima: tiratore esistente, squadra opposta, vivo, distanza e linea di tiro plausibili
+function snpValidateKill(m, victim) {
+  if (!m.by) return null;
+  let shooterPos = null, team = null;
+  for (const t of ['A', 'E']) for (const b of snpTeamBots(t)) if (b.name === m.by) { shooterPos = b.eyeP(new V3()); team = b.team; }
+  if (m.by === SNP.me && !P.dead) { shooterPos = P.pos.clone(); shooterPos.y += 1.5; team = PT; }
+  if (!shooterPos) for (const q of NET.peers.values()) if (q.name === m.by && q.tp) { shooterPos = q.tp.clone(); shooterPos.y += 1.5; team = q.side; }
+  if (!shooterPos || team === victim.side) return null;
+  const vp = victim.tp ? victim.tp.clone() : null; if (!vp) return { dist: 0 };
+  vp.y += 1.2; const d = shooterPos.distanceTo(vp); if (d > 900) return null;
+  const dir = vp.clone().sub(shooterPos).normalize(), h = raySolids(shooterPos, dir, d - 1); if (h && h.t < d - 2.5) return null;   // muro pieno in mezzo
+  const last = SNP2.lastKillBy && SNP2.lastKillBy[m.by]; if (last && GAME.time - last < .6) return null;   // due uccisioni impossibili in 0,6 s col fucile a otturatore
+  (SNP2.lastKillBy = SNP2.lastKillBy || {})[m.by] = GAME.time;
+  return { dist: d };
 }
 function snpDeployPoints() {
   const pos = snpSpawnNode(PT, SNP.deathPos).pos.clone(), cur = P.inv[0] ? P.inv[0].id : SNP_GUNS[PT][0];
@@ -104,7 +122,7 @@ function snpDeployPoints() {
 function updateSniper(dt) {
   MISSION.stageT += dt; updateSubs(dt); snpSmoke(dt); if (SNP.map === 'stalingrado' && ARD.snow) updateSnowfall(dt);
   while (SNP.sounds.length && GAME.time - SNP.sounds[0].t > 3) SNP.sounds.shift();
-  snpHud();
+  snpHud(); snpAnnTick(dt); snpKcRecord(dt);
   if (SNP.over) return;
   SNP.t += dt;
   // rinascita dei bot e posti lasciati ai giocatori che entrano
@@ -123,14 +141,13 @@ function updateSniper(dt) {
 function snpEnd() {
   const win = SNP.score[PT] > SNP.score[PT === 'A' ? 'E' : 'A'];
   GAME.endTitle = SNP.score.A === SNP.score.E ? 'PAREGGIO' : SNP.score.A > SNP.score.E ? 'VITTORIA: ' + SNP.M.teamA : 'VITTORIA: ' + SNP.M.teamE;
-  GAME.endText = snpBoardHTML(true) + '<br>';
+  GAME.endText = snpEndHTML() + '<br>';
   after(4, () => GAME.end(win));
 }
 function snpHud() {
   const left = Math.max(0, SNPCFG.time - SNP.t), clock = `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`, me = SNP.board.get(SNP.me) || { kills: 0, deaths: 0 };
   SNP.el.innerHTML = `<span style="color:#9fc2e8">${SNP.M.teamA} ${SNP.score.A}</span> &nbsp;—&nbsp; <span style="color:#e8c98f">${SNP.M.teamE} ${SNP.score.E}</span><br><span style="font-size:13px">${clock} · obiettivo ${SNPCFG.goal} · tu ${me.kills}/${me.deaths}</span>`;
-  SNP.tab.style.display = KEYS.Tab && !P.spawnMenu ? 'block' : 'none';
-  if (KEYS.Tab) SNP.tab.innerHTML = snpBoardHTML();
+  snpTabTick(1 / 60);
 }
 // giocatori umani per squadra (tu più quelli in rete)
 function snpHumans(team) { let n = PT === team ? 1 : 0; if (NET.on) for (const p of NET.peers.values()) if (p.side === team) n++; return n; }
@@ -155,26 +172,23 @@ function snpBalance() {
 // ---------- rete: l'host decide punteggio e bot, gli altri ricevono il tabellone ----------
 function snpBoardMsg() {
   return { t: 'snpb', sc: [SNP.score.A, SNP.score.E], tt: Math.round(SNP.t), over: SNP.over ? 1 : 0, cfg: [SNPCFG.goal, SNPCFG.time],
-    b: [...SNP.board.entries()].map(([n, r]) => [n, r.team, r.kills, r.deaths, r.bot ? r.lvl : 0, r.bot ? r.prof : '']) };
+    b: [...SNP.board.entries()].map(([n, r]) => [n, r.team, r.kills, r.deaths, r.bot ? r.lvl : 0, r.bot ? r.prof : '', r.score || 0, r.heads || 0, r.best || 0, r.longest || 0, r.shots || 0, r.hits || 0, r.ping]) };
 }
 function snpOnNet(m) {
   if (m.t === 'snpb') {
     if (!NET.client) return true;
     SNP.score.A = m.sc[0]; SNP.score.E = m.sc[1]; SNP.t = m.tt; SNPCFG.goal = m.cfg[0]; SNPCFG.time = m.cfg[1];
-    SNP.board.clear(); for (const [n, team, k, d, lvl, prof] of m.b) SNP.board.set(n, { kills: k, deaths: d, team, bot: !!lvl, lvl, prof });
+    SNP.board.clear(); for (const [n, team, k, d, lvl, prof, score, heads, best, longest, shots, hits, ping] of m.b) SNP.board.set(n, { kills: k, deaths: d, team, bot: !!lvl, lvl, prof, score, heads, best, longest, shots, hits, ping });
     if (m.over && !SNP.over) { SNP.over = true; snpEnd(); }
     return true;
   }
   if (m.t === 'snpd') {   // un giocatore in rete è caduto: l'host assegna l'uccisione
-    if (NET.host) { const p = NET.peers.get(m.id); if (p) snpCredit(m.by, m.bt, p.name, p.side, m.zone); }
+    if (NET.host) { const p = NET.peers.get(m.id); if (p) { const ok = snpValidateKill(m, p); snpCredit(ok ? m.by : null, ok ? m.bt : null, p.name, p.side, ok ? m.zone : null, ok ? { w: m.w, dist: ok.dist } : {}); } }
     return true;
   }
   if (m.t === 'snpfeed') {
     if (!NET.client) return true;
-    const head = m.zone === 'head' ? ' — colpo alla testa' : '';
-    feed(!m.k ? m.v + ' è caduto' : m.k === SNP.me ? 'Hai eliminato ' + m.v + head : m.v === SNP.me ? m.k + ' ti ha eliminato' + head : m.k + ' ha eliminato ' + m.v + head);
-    if (m.k === SNP.me) { STATS.kills++; caSniperKill(m.zone === 'head'); }
-    if (m.v === SNP.me) caSniperDied();
+    snpKillEv({ k: m.k, kt: m.kt, v: m.v, vt: m.vt, zone: m.zone, w: m.w, dist: m.d });   // sul client: killfeed e annunci dell'evento confermato dall'host
     return true;
   }
   if (m.t === 'newhost') {
@@ -189,7 +203,7 @@ function snpOnNet(m) {
   if (m.t === 'mapdiff') { feed('Sul server si gioca un\'altra mappa: partita in solitario'); try { NET.ws.close(); } catch (e) { } NET.on = false; return true; }
   return false;
 }
-function snpClientTick(dt) { MISSION.stageT += dt; updateSubs(dt); snpSmoke(dt); if (SNP.map === 'stalingrado' && ARD.snow) updateSnowfall(dt); snpHud(); }
+function snpClientTick(dt) { snpAnnTick(dt); snpKcRecord(dt); MISSION.stageT += dt; updateSubs(dt); snpSmoke(dt); if (SNP.map === 'stalingrado' && ARD.snow) updateSnowfall(dt); snpHud(); }
 function snpBoardHTML(end) {
   const rows = [...SNP.board.entries()].map(([n, r]) => ({ n, ...r }));
   const col = team => rows.filter(r => r.team === team).sort((a, b) => b.kills - a.kills || a.deaths - b.deaths)

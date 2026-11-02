@@ -146,8 +146,9 @@
   }
 
   // ---------- modalità cecchini: annunci e conferme (solo se presenti i file) ----------
-  for (const [ev, d] of [['headshot', 'Colpo alla testa'], ['double_headshot', 'Due colpi alla testa di fila'], ['triple_headshot', 'Tre colpi alla testa di fila'],
-    ['multikill', 'Due uccisioni in 4 secondi'], ['killing_spree', '5 uccisioni senza morire'], ['unstoppable', '10 uccisioni senza morire']]) add(`sniper.announcer.${ev}`, `sniper/announcer/${ev}`, 'sniper', `Annuncio: ${d}`, 'nessuno: solo se presente il file');
+  for (const [ev, d] of [['headshot', 'Colpo alla testa letale'], ['double_headshot', 'Due headshot letali entro 12 s'], ['triple_headshot', 'Tre headshot letali entro 12 s'], ['multi_headshot', 'Quattro o più headshot letali di fila'],
+    ['double_kill', 'Due uccisioni entro 4 s'], ['triple_kill', 'Tre uccisioni entro 4 s'], ['multi_kill', 'Quattro o più uccisioni ravvicinate'], ['multikill', 'Vecchio nome di «multi_kill» (ancora valido)'],
+    ['killing_spree', '5 uccisioni senza morire'], ['rampage', '10 uccisioni senza morire'], ['dominating', '15 uccisioni senza morire'], ['unstoppable', '20 uccisioni senza morire']]) add(`sniper.announcer.${ev}`, `sniper/announcer/${ev}`, 'sniper', `Annuncio: ${d}`, 'voce sintetica del sistema');
   for (const [ev, d] of [['hitmarker', 'Colpo a segno'], ['headshot_confirm', 'Conferma colpo alla testa'], ['kill_confirm', 'Conferma uccisione']]) add(`sniper.effects.${ev}`, `sniper/effects/${ev}`, 'sniper', d, 'nessuno: solo se presente il file');
 
   // ---------- grida dei soldati: sostituiscono la sintesi vocale per quella categoria ----------

@@ -84,7 +84,7 @@ function deathCam(dt) {
 function openSpawnMenu() {
   P.spawnMenu = true; DEP.pts = deployPoints(); DEP.sel = Math.min(DEP.sel, DEP.pts.length - 1); hideKillCard();
   DEP.cls = depClasses(); if (DEP.cls) { const cur = SCEN === 'snp' ? (P.inv[0] && P.inv[0].id) : P.cls; DEP.ci = Math.max(0, DEP.cls.findIndex(c => c.id === cur)); }
-  DEP.wait0 = DEP.wait = P.dead ? (SCEN === 'air' ? 1.5 : SCEN === 'tun' ? 3 : SCEN === 'snp' ? SNPCFG.respawn : 5) : 0;
+  DEP.wait0 = DEP.wait = P.dead ? (SCEN === 'air' ? 1.5 : SCEN === 'tun' ? 3 : SCEN === 'snp' ? Math.max(0, SNPCFG.respawn - (SNP2.kcSpent || 0)) : 5) : 0; if (SCEN === 'snp') SNP2.kcSpent = 0;
   DEP.life = P.dead ? { k: STATS.kills - (P.lifeK || 0), t: GAME.time - (P.lifeT || 0) } : null;
   $('spawn').classList.remove('hidden'); depRenderMap(); drawDeploy();
 }

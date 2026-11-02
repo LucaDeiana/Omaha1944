@@ -179,7 +179,7 @@ function playerFire() {
   P.bloom = Math.min(.04, P.bloom + (w.auto ? .0035 : .008));
   _d.x += rnd(-1, 1) * spread; _d.y += rnd(-1, 1) * spread; _d.z += rnd(-1, 1) * spread; _d.normalize();
   const r = hitscan(_o, _d, w.range || 600), p = _r.copy(_o).addScaledVector(_d, r.t);
-  if (SCEN === 'snp') { snpShotSound(_o, PT, P); snpNearMiss(_o, p, PT, r.obj); }
+  if (SCEN === 'snp') { snpShotSound(_o, PT, P); snpNearMiss(_o, p, PT, r.obj); snpShotEv(SNP.me, PT, _o, p, r.type === 'enemy' ? r.obj : null, r.zone); MISSION.godT = 0; }   // il primo colpo toglie la protezione dello spawn
   netShot(_o, p, w.snd);
   if (w.auto && (w.snd === 'bar' || w.snd === 'mg42' || w.snd === 'thompson' || w.snd === 'mp40') ? STATS.shots % (w.snd === 'bar' ? 2 : 3) === 0 : r.t > 30 && R() < .25) fxTracer(vmCur ? vmCur.group.localToWorld(vmCur.muzzle.clone()) : _o.clone().addScaledVector(_d, 3), p, w.auto ? 1.2 : .7, true);
   if (_o.y > WATER_Y && _d.y < 0) {

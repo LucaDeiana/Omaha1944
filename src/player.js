@@ -157,6 +157,7 @@ function updatePlayer(dt) {
   if (P.dead) {
     P.deathT += dt;
     $('fade').style.opacity = clamp((P.deathT - 1) / 1.4, 0, .85);
+    if (SCEN === 'snp' && !P.spawnMenu) { if (P.deathT > .9 && !SNP2.kcDone) { SNP2.kcDone = true; snpKcBegin(); } if (snpKcTick(dt)) { $('fade').style.opacity = 0; updateViewmodel(dt); return; } }
     deathCam(dt); if (P.deathT > 2.6 && !P.spawnMenu) openSpawnMenu();
     updateCamera(dt); updateViewmodel(dt); return;
   }

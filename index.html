@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="assets/icon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link href="assets/lib/fonts/fonts.css" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261102p">
+<link rel="stylesheet" href="style.css?v=20261102r">
 </head>
 <body>
 <div id="hud" class="hidden">
@@ -68,6 +68,10 @@
         <label id="snpDiffL" style="display:none">Difficoltà dei bot <select id="optSnpDiff"><option value="1">1 — Recluta</option><option value="2">2 — Soldato</option><option value="3" selected>3 — Veterano</option><option value="4">4 — Élite</option><option value="5">5 — Asso</option><option value="mix">Mista (soprattutto veterani)</option><option value="rnd">Casuale (1–5)</option></select></label>
         <label id="snpProfL" style="display:none">Carattere dei bot <select id="optSnpProf"><option value="rnd" selected>Casuale per ogni bot</option><option value="cauto">Tutti cauti</option><option value="aggressivo">Tutti aggressivi</option><option value="paziente">Tutti pazienti</option><option value="mobile">Tutti mobili</option><option value="opportunista">Tutti opportunisti</option></select></label>
         <label id="snpRespL" style="display:none">Rinascita <select id="optSnpResp"><option value="3">3 secondi</option><option value="5" selected>5 secondi</option><option value="8">8 secondi</option><option value="12">12 secondi</option></select></label>
+        <label id="snpKcL" style="display:none">Killcam <select id="optSnpKc"><option value="4" selected>Attiva — 4 s</option><option value="3">Attiva — 3 s</option><option value="5">Attiva — 5 s</option><option value="0">Disattivata</option></select></label>
+        <label id="snpAnnL" style="display:none">Annunci vocali <select id="optSnpAnn"><option value="1" selected>Attivi</option><option value="0">Solo a schermo</option></select></label>
+        <label id="snpHsL" style="display:none">Regole <select id="optSnpHs"><option value="0" selected>Normali</option><option value="1">Solo headshot</option></select></label>
+        <label id="snpGoalL" style="display:none">Fine partita <select id="optSnpGoal"><option value="25">25 uccisioni</option><option value="50" selected>50 uccisioni</option><option value="100">100 uccisioni</option></select> <select id="optSnpTime"><option value="600">10 minuti</option><option value="900" selected>15 minuti</option><option value="1200">20 minuti</option></select></label>
         <label id="snpFillL" style="display:none"><input id="optSnpFill" type="checkbox" checked> Il tuo posto conta come uno dei bot della squadra</label>
         <label id="tunModeL" style="display:none">Modalità (Tunisia) <select id="optTunMode"><option value="dm">Deathmatch — tutti contro tutti</option><option value="tdm">Deathmatch a squadre — USA contro Afrika Korps</option></select></label>
         <label>Fazione <select id="optSide"><option value="A">Alleati — 29ª Divisione USA</option><option value="E">Asse — 352ª Divisione, WN 62</option><option value="P">Paracadutisti — notte del D-Day (101ª)</option></select></label>
@@ -146,71 +150,74 @@
 <script src="assets/lib/three/examples/js/postprocessing/ShaderPass.js"></script>
 <script src="assets/lib/three/examples/js/postprocessing/UnrealBloomPass.js"></script>
 <script>if (!window.THREE) document.addEventListener('DOMContentLoaded', () => { document.getElementById('netErr').classList.remove('hidden'); document.getElementById('startBtn').disabled = true; });</script>
-<script src="assets/sfx_samples.js?v=20261102p"></script>
-<script src="assets/sfx_war.js?v=20261102p"></script>
-<script src="assets/tex_photo.js?v=20261102p"></script>
-<script src="src/intro.js?v=20261102p"></script>
-<script src="src/menus.js?v=20261102p"></script>
-<script src="src/config.js?v=20261102p"></script>
-<script src="src/textures.js?v=20261102p"></script>
-<script src="src/models.js?v=20261102p"></script>
-<script src="src/planes2.js?v=20261102p"></script>
-<script src="src/engine.js?v=20261102p"></script>
-<script src="src/audio.js?v=20261102p"></script>
-<script src="assets/audio_manifest.js?v=20261102p"></script>
-<script src="src/customaudio.js?v=20261102p"></script>
-<script src="src/fx.js?v=20261102p"></script>
-<script src="src/world.js?v=20261102p"></script>
-<script src="assets/models/male_base.js?v=20261102p"></script>
-<script src="assets/models/head_scan.js?v=20261102p"></script>
-<script src="src/ardennes.js?v=20261102p"></script>
-<script src="src/air.js?v=20261102p"></script>
-<script src="src/airmaps.js?v=20261102p"></script>
-<script src="src/airworld.js?v=20261102p"></script>
-<script src="src/tunisia.js?v=20261102p"></script>
-<script src="src/crowd.js?v=20261102p"></script>
-<script src="src/gore.js?v=20261102p"></script>
-<script src="src/soldier.js?v=20261102p"></script>
-<script src="src/weapons.js?v=20261102p"></script>
-<script src="src/guns.js?v=20261102p"></script>
-<script src="src/fun.js?v=20261102p"></script>
-<script src="src/aircraft.js?v=20261102p"></script>
-<script src="src/cockpit.js?v=20261102p"></script>
-<script src="src/ballistics.js?v=20261102p"></script>
-<script src="src/naval.js?v=20261102p"></script>
-<script src="src/sidemissions.js?v=20261102p"></script>
-<script src="src/aircombat.js?v=20261102p"></script>
-<script src="src/airbench.js?v=20261102p"></script>
-<script src="src/reinforce.js?v=20261102p"></script>
-<script src="src/tank.js?v=20261102p"></script>
-<script src="src/armor.js?v=20261102p"></script>
-<script src="src/para.js?v=20261102p"></script>
-<script src="src/snp/map.js?v=20261102p"></script>
-<script src="src/snp/props.js?v=20261102p"></script>
-<script src="src/snp/maps/stalingrado.js?v=20261102p"></script>
-<script src="src/snp/bots.js?v=20261102p"></script>
-<script src="src/snp/combat.js?v=20261102p"></script>
-<script src="src/snp/mode.js?v=20261102p"></script>
-<script src="src/airstrike.js?v=20261102p"></script>
-<script src="src/city.js?v=20261102p"></script>
-<script src="src/trees.js?v=20261102p"></script>
-<script src="src/npc.js?v=20261102p"></script>
-<script src="src/ship.js?v=20261102p"></script>
-<script src="src/inland.js?v=20261102p"></script>
-<script src="src/axis.js?v=20261102p"></script>
-<script src="src/stations.js?v=20261102p"></script>
-<script src="src/net.js?v=20261102p"></script>
-<script src="src/cutscene.js?v=20261102p"></script>
-<script src="src/player.js?v=20261102p"></script>
-<script src="src/deploy.js?v=20261102p"></script>
-<script src="src/mission.js?v=20261102p"></script>
-<script src="src/hud.js?v=20261102p"></script>
-<script src="src/water.js?v=20261102p"></script>
-<script src="src/navy.js?v=20261102p"></script>
-<script src="src/navair.js?v=20261102p"></script>
-<script src="src/shipmodels.js?v=20261102p"></script>
-<script src="src/main.js?v=20261102p"></script>
-<script src="src/career.js?v=20261102p"></script>
-<script src="src/music.js?v=20261102p"></script>
+<script src="assets/sfx_samples.js?v=20261102r"></script>
+<script src="assets/sfx_war.js?v=20261102r"></script>
+<script src="assets/tex_photo.js?v=20261102r"></script>
+<script src="src/intro.js?v=20261102r"></script>
+<script src="src/menus.js?v=20261102r"></script>
+<script src="src/config.js?v=20261102r"></script>
+<script src="src/textures.js?v=20261102r"></script>
+<script src="src/models.js?v=20261102r"></script>
+<script src="src/planes2.js?v=20261102r"></script>
+<script src="src/engine.js?v=20261102r"></script>
+<script src="src/audio.js?v=20261102r"></script>
+<script src="assets/audio_manifest.js?v=20261102r"></script>
+<script src="src/customaudio.js?v=20261102r"></script>
+<script src="src/fx.js?v=20261102r"></script>
+<script src="src/world.js?v=20261102r"></script>
+<script src="assets/models/male_base.js?v=20261102r"></script>
+<script src="assets/models/head_scan.js?v=20261102r"></script>
+<script src="src/ardennes.js?v=20261102r"></script>
+<script src="src/air.js?v=20261102r"></script>
+<script src="src/airmaps.js?v=20261102r"></script>
+<script src="src/airworld.js?v=20261102r"></script>
+<script src="src/tunisia.js?v=20261102r"></script>
+<script src="src/crowd.js?v=20261102r"></script>
+<script src="src/gore.js?v=20261102r"></script>
+<script src="src/soldier.js?v=20261102r"></script>
+<script src="src/weapons.js?v=20261102r"></script>
+<script src="src/guns.js?v=20261102r"></script>
+<script src="src/fun.js?v=20261102r"></script>
+<script src="src/aircraft.js?v=20261102r"></script>
+<script src="src/cockpit.js?v=20261102r"></script>
+<script src="src/ballistics.js?v=20261102r"></script>
+<script src="src/naval.js?v=20261102r"></script>
+<script src="src/sidemissions.js?v=20261102r"></script>
+<script src="src/aircombat.js?v=20261102r"></script>
+<script src="src/airbench.js?v=20261102r"></script>
+<script src="src/reinforce.js?v=20261102r"></script>
+<script src="src/tank.js?v=20261102r"></script>
+<script src="src/armor.js?v=20261102r"></script>
+<script src="src/para.js?v=20261102r"></script>
+<script src="src/snp/map.js?v=20261102r"></script>
+<script src="src/snp/props.js?v=20261102r"></script>
+<script src="src/snp/maps/stalingrado.js?v=20261102r"></script>
+<script src="src/snp/bots.js?v=20261102r"></script>
+<script src="src/snp/combat.js?v=20261102r"></script>
+<script src="src/snp/mode.js?v=20261102r"></script>
+<script src="src/snp/events.js?v=20261102r"></script>
+<script src="src/snp/killcam.js?v=20261102r"></script>
+<script src="src/snp/bench.js?v=20261102r"></script>
+<script src="src/airstrike.js?v=20261102r"></script>
+<script src="src/city.js?v=20261102r"></script>
+<script src="src/trees.js?v=20261102r"></script>
+<script src="src/npc.js?v=20261102r"></script>
+<script src="src/ship.js?v=20261102r"></script>
+<script src="src/inland.js?v=20261102r"></script>
+<script src="src/axis.js?v=20261102r"></script>
+<script src="src/stations.js?v=20261102r"></script>
+<script src="src/net.js?v=20261102r"></script>
+<script src="src/cutscene.js?v=20261102r"></script>
+<script src="src/player.js?v=20261102r"></script>
+<script src="src/deploy.js?v=20261102r"></script>
+<script src="src/mission.js?v=20261102r"></script>
+<script src="src/hud.js?v=20261102r"></script>
+<script src="src/water.js?v=20261102r"></script>
+<script src="src/navy.js?v=20261102r"></script>
+<script src="src/navair.js?v=20261102r"></script>
+<script src="src/shipmodels.js?v=20261102r"></script>
+<script src="src/main.js?v=20261102r"></script>
+<script src="src/career.js?v=20261102r"></script>
+<script src="src/music.js?v=20261102r"></script>
 </body>
 </html>

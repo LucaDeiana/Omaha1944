@@ -219,3 +219,35 @@ body.pDead #gl { filter: saturate(.15) contrast(1.1); transition: filter 1.2s; }
 .phHelp { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); width: min(980px, 70vw); text-align: center; font-size: 12px; line-height: 1.6; opacity: .85; transition: opacity .6s; }
 #planehud.ck .phL { left: 50%; top: 58px; bottom: auto; transform: translateX(-50%); min-width: 0; padding: 4px 12px; border: 0; background: rgba(8,10,9,.35); }
 #planehud.ck .phL .phThr, #planehud.ck .phL .phRow.sm, #planehud.ck .phN { display: none; } #planehud.ck .phBig b { font-size: 22px; }
+
+/* ---------- Solo cecchini 2.0: annunci, killfeed, classifica ---------- */
+#snpAnn { position: fixed; left: 50%; top: 28%; transform: translate(-50%, -50%) scale(.6); z-index: 30; pointer-events: none; opacity: 0; font-family: 'Special Elite', serif; letter-spacing: .12em; color: #f2ead2; text-shadow: 0 0 18px rgba(0,0,0,.9), 0 3px 8px #000; white-space: nowrap; }
+#snpAnn.b0 { font-size: 30px; } #snpAnn.b1 { font-size: 40px; } #snpAnn.b2 { font-size: 48px; color: #ffd46a; } #snpAnn.b3 { font-size: 56px; color: #ff9a5a; }
+#snpAnn.hs { color: #ff6a5a; } #snpAnn.b2.hs, #snpAnn.b3.hs { color: #ff4a3a; }
+#snpAnn.on { animation: snpAnn 1.3s cubic-bezier(.2,.9,.3,1) forwards; }
+@keyframes snpAnn { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(.95); } 22% { transform: translate(-50%, -50%) scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -60%) scale(1); } }
+#snpFeed { position: fixed; right: 18px; top: 70px; z-index: 18; pointer-events: none; font: 500 14px Oswald, sans-serif; text-align: right; text-shadow: 0 1px 3px #000; }
+#snpFeed div { margin: 3px 0; padding: 3px 9px; background: rgba(8,10,8,.45); transition: opacity .6s; }
+#snpFeed .a { color: #9fc2e8; } #snpFeed .e { color: #e8c98f; } #snpFeed .me { text-decoration: underline; font-weight: 600; }
+#snpFeed i { font-style: normal; color: #d8d0b8; font-size: 12px; } #snpFeed .hs { color: #ff6a5a; font-weight: 600; }
+.sb { font-family: Oswald, sans-serif; color: #e9dfc4; }
+.sbTop { text-align: center; letter-spacing: .2em; font-size: 13px; opacity: .8; margin-bottom: 10px; }
+.sbCols { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; }
+.sbT table { border-collapse: collapse; min-width: 420px; font-size: 14px; } .sbT td { padding: 3px 8px; text-align: right; } .sbT td:first-child { text-align: left; }
+.sbT tr.hd td { font-size: 11px; letter-spacing: .12em; opacity: .6; } .sbT tr.me { color: #ffd060; background: rgba(232,196,106,.12); }
+.sbT small { opacity: .55; margin-left: 6px; font-size: 11px; }
+.sbH { display: flex; align-items: baseline; gap: 12px; border-bottom: 2px solid; padding-bottom: 4px; margin-bottom: 4px; } .sbH.a { border-color: #9fc2e8; color: #9fc2e8; } .sbH.e { border-color: #e8c98f; color: #e8c98f; }
+.sbH b { font-size: 18px; letter-spacing: .1em; } .sbH span { font-size: 26px; font-weight: 600; } .sbH small { margin-left: auto; opacity: .7; font-size: 12px; color: #e9dfc4; }
+.sbAw { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 6px 0 12px; font-family: Oswald, sans-serif; }
+.sbAw div { min-width: 140px; padding: 8px 12px; background: rgba(20,24,22,.7); border-top: 2px solid var(--accent); text-align: center; }
+.sbAw small { display: block; font-size: 10px; letter-spacing: .3em; color: var(--accent); } .sbAw b { display: block; font-size: 18px; } .sbAw span { font-size: 12px; opacity: .75; }
+.sbMe { font: 13px/1.6 Oswald, sans-serif; text-align: center; opacity: .85; margin-bottom: 12px; }
+#snpKc { position: fixed; inset: 0; z-index: 26; pointer-events: none; display: none; }
+#snpKc.on { display: block; }
+#snpKc:before, #snpKc:after { content: ''; position: fixed; left: 0; right: 0; height: 9vh; background: #000; }
+#snpKc:before { top: 0; } #snpKc:after { bottom: 0; }
+#snpKc .kt { position: fixed; top: 2.5vh; left: 0; right: 0; text-align: center; color: #ff6a5a; font: 600 16px Oswald, sans-serif; letter-spacing: .5em; z-index: 1; }
+#snpKc .kb { position: fixed; bottom: 2vh; left: 0; right: 0; text-align: center; color: #efe6cf; font: 500 18px Oswald, sans-serif; letter-spacing: .1em; z-index: 1; }
+#snpKc .kb b { font-family: 'Special Elite', serif; font-weight: normal; font-size: 26px; color: #ffd060; } #snpKc .kb small { display: block; font-size: 12px; opacity: .7; letter-spacing: .2em; }
+
+body.kcOn #hud, body.kcOn #killCard, body.kcOn #snpFeed, body.kcOn #crossX { visibility: hidden; }
