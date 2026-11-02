@@ -159,7 +159,10 @@ PLANE_SPECS.ju88 = {
 PLANE_SPECS.p47 = { name: 'P-47D Thunderbolt', nation: 'us', builtin: true, guns: { pos: [[-2.5, -.3, -2.2], [-2.8, -.3, -2.2], [-3.1, -.3, -2.2], [-3.4, -.3, -2.2], [2.5, -.3, -2.2], [2.8, -.3, -2.2], [3.1, -.3, -2.2], [3.4, -.3, -2.2]], dmg: 25, int: .055, cal: 12.7, snd: 'm2', spread: .006 }, mass: 6000, S: 27.9, thrust: 1, agile: 1, hp: 1100, bombs: 2, eye: [0, 1.12, -.5] };
 // aereo scelto dal giocatore, o quello previsto dalla missione
 function chosenPlane(def) { return typeof SETTINGS !== 'undefined' && PLAYER_PLANES.includes(SETTINGS.plane) ? SETTINGS.plane : def; }
-const PLAYER_PLANES = ['p47', 'p51', 'f4u', 'spit', 'typhoon', 'hurri', 'p40', 'sbd', 'tbf', 'bf109', 'stuka', 'me262', 'mosquito', 'zero', 'val', 'kate', 'f47'];
+// Fw 190 A-8 (modello già nel gioco): 4 cannoni MG 151/20 nelle ali e 2 mitragliatrici MG 131 sul cofano
+PLANE_SPECS.fw190 = { name: 'Fw 190 A-8', nation: 'de', builtin: true, guns: { pos: [[-1.55, -.3, -1.2], [1.55, -.3, -1.2], [-2.55, -.35, -1.1], [2.55, -.35, -1.1]], dmg: 46, int: .086, cal: 20, he: .4, snd: 'mg42', spread: .007 },
+  guns2: { pos: [[-.28, .62, -2.6], [.28, .62, -2.6]], dmg: 24, int: .067, cal: 13, snd: 'm2', spread: .006 }, mass: 4400, S: 18.3, thrust: 1, agile: 1, hp: 900, bombs: 1, eye: [0, 1.0, -.2] };
+const PLAYER_PLANES = ['p47', 'p51', 'f4u', 'spit', 'typhoon', 'hurri', 'p40', 'sbd', 'tbf', 'bf109', 'fw190', 'stuka', 'me262', 'mosquito', 'zero', 'val', 'kate', 'f47'];
 
 // tondo britannico
 // hinomaru: disco rosso con bordo bianco sottile
@@ -297,7 +300,7 @@ const PLANE_VMAX = { p47: 690, p51: 703, f4u: 671, spit: 657, typhoon: 652, hurr
 for (const k in PLANE_VMAX) PLANE_VMAX[k] = Math.round(PLANE_VMAX[k] * 1.25);
 function planeThrustK(SP, type) {
   if (SP._tk) return SP._tk;
-  const V = (PLANE_VMAX[type] || 560) / 3.6, m = SP.mass, S = SP.S, q = .6 * V * V, Cl = m * 9.8 / (q * S), drag = q * S * (.024 + .065 * Cl * Cl);
+  const V = (PLANE_VMAX[type] || 560) / 3.6, m = SP.mass, S = SP.S, q = .6 * V * V, Cl = m * 9.8 / (q * S), drag = q * S * (.013 + .065 * Cl * Cl);   // stessa resistenza del volo: la potenza basta per la velocità massima, non per salire senza perdere velocità
   const base = (SP.jet ? 17000 : Math.min(32000, 1.6e6 / Math.max(V, 35))) * (m / 6000);
   return (SP._tk = drag / base);
 }

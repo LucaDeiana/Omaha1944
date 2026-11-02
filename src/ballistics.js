@@ -144,7 +144,7 @@ function updateAirSight() {
 function aiBulletImpact(b, end, hitPlane, water) {
   if (b.G.he) fxExplosion(end.clone(), b.G.he * .35, false);
   if (hitPlane) {
-    hitPlane.damage(b.dmg * (b.G.he ? 1.2 : 1), false); fxImpact(end, 'metal');
+    hitPlane.damage(b.dmg * (b.G.he ? 1.2 : 1), false, end, b.G); fxImpact(end, 'metal');
     if (hitPlane.player) { P.shake = Math.min(.6, P.shake + (b.G.cal >= 30 ? .2 : .06)); play('imp_metal', null, { vol: .7 }); if (R() < .3) lensSplat('dirt', .12); }
     return;
   }

@@ -33,8 +33,9 @@ class Plane {
     this.q.setFromRotationMatrix(_am);
     _aq.setFromAxisAngle(_a1.set(0, 0, 1), roll); this.q.multiply(_aq);
   }
-  damage(a, byPlayer) {
+  damage(a, byPlayer, pt, G) {
     if (!this.alive || this.crash) return;
+    if ((this.wing || this.hunter) && !this.player) return acHit(this, a, byPlayer, pt, G);   // caccia con danni per componente
     this.hp -= a;
     if (this.hp <= 0) {
       this.crash = true; this.trail = addEmitter(this.pos, 'trail', 1.5); this.trail.follow = q => q.copy(this.pos); this.trail.life = 30;
@@ -49,13 +50,12 @@ class Plane {
     this.age += dt;
     if (this.doomT !== undefined && !this.crash) { this.doomT -= dt; if (this.doomT <= 0) { this.doomT = undefined; fxExplosion(this.pos.clone(), 1.2, false); sfxBoom(this.pos, 1); this.damage(9999, false); if (dist2Cam(this.pos) < 900 * 900) say(N.walsh, this.team === 'A' ? 'Hanno preso un Thunderbolt!' : 'Un crucco abbattuto!'); } }
     for (const p of this.props) { p.rotation.z += dt * 47; p.userData.disc.material.opacity = .14; }
-    if (this.crash) {
+    if ((this.wing || this.hunter) && !this.player) { acUpdate(this, dt);   // caccia con volo fisico e pilota tattico (aircombat.js)
+    } else if (this.crash) {
       this.vel.y -= 9.8 * dt * 1.4; this.vel.multiplyScalar(1 - .1 * dt); this.roll += dt * (this.wingLost ? 6 * this.wingLost : 2);
       this.pos.addScaledVector(this.vel, dt); this.orient(this.roll);
       const gy = Math.max(Hf(this.pos.x, this.pos.z), this.pos.z > -9 ? WATER_Y : -99);
       if (this.pos.y < gy + 1) { explode(this.pos.clone().setY(gy + .5), 12, 500, {}); this.remove(); }
-    } else if (this.wing) { wingmanAI(this, dt);
-    } else if (this.hunter) { huntPlayer(this, dt);
     } else if (this.pi < this.path.length) {
       const wp = this.path[this.pi];
       _a1.subVectors(wp.p, this.pos); const d = _a1.length();
@@ -268,10 +268,15 @@ function updateAircraft(dt) {
 // la cabina in prima persona e gli strumenti sono in cockpit.js
 // colpo sul P-47: blindatura, poi danno a un componente scelto a caso con effetti in volo
 const PART_NAME = { eng: 'Motore', wl: 'Ala sinistra', wr: 'Ala destra', tail: 'Impennaggi' };
-function playerPlaneHit(me, a, byPlayer) {
+function playerPlaneHit(me, a, byPlayer, pt, G) {
   if (!me.alive || me.crash) return;
-  a *= .7; me.hp -= a;
-  const r = R(), k = r < .32 ? 'eng' : r < .56 ? 'wl' : r < .8 ? 'wr' : 'tail', before = me.parts[k];
+  a *= .7 * (G && G.he ? 1.3 : 1); me.hp -= a;
+  // parte colpita: dal punto d'impatto riportato nelle coordinate dell'aereo (a caso solo se il punto manca)
+  let k;
+  if (pt) { const l = _a3.copy(pt).sub(me.pos).applyQuaternion(_aqi.copy(me.q).invert()); k = Math.abs(l.x) > 1.4 ? (l.x < 0 ? 'wl' : 'wr') : l.z < -1.8 ? 'eng' : l.z > 2.8 ? 'tail' : null;
+    if (!k) { if (Math.abs(l.z) < 1.2 && R() < .08 && !me.engFire) { me.engFire = addEmitter(me.pos, 'fire', .35); me.engFire.follow = q => q.copy(me.pos); me.engFire.life = 1e9; showMsg('Serbatoio colpito: incendio!', 2.5); } P.shake = Math.min(.8, P.shake + .1); if (me.hp <= 0) Plane.prototype.damage.call(me, 99999, byPlayer); return; } }
+  else { const r = R(); k = r < .32 ? 'eng' : r < .56 ? 'wl' : r < .8 ? 'wr' : 'tail'; }
+  const before = me.parts[k];
   me.parts[k] = Math.max(0, before - a / 260);
   const v = me.parts[k];
   if (before >= .5 && v < .5) showMsg(PART_NAME[k] + ' danneggiato', 1.8);
@@ -410,8 +415,9 @@ function enterPlane(o = {}) {
   const sp = o.pos ? { pos: o.pos, vel: o.vel } : deck ? { pos: new V3(CARRIER.x, CARRIER.deckY + 2.3, CARRIER.z + CARRIER.len / 2 - 36), vel: new V3(0, 0, -.01) } : SCEN === 'air' && MISSION.stage >= 0 ? airSpawn() : { pos: new V3(rnd(-80, 40), 380, 1100), vel: new V3(0, -5, -120) };
   PL.type = o.type && PLANE_SPECS[o.type] ? o.type : PLAYER_PLANES.includes(SETTINGS.plane) ? SETTINGS.plane : 'p47'; PL.spec = PLANE_SPECS[PL.type]; PL.torpedo = false;
   const me = new Plane(PL.type, 'A', sp.pos, sp.vel, []); me.player = true; me.hpMax = PL.spec.hp; me.hp = me.hpMax;
-  me.parts = { eng: 1, wl: 1, wr: 1, tail: 1 }; me.damage = (a, byPlayer) => playerPlaneHit(me, a, byPlayer);
+  me.parts = { eng: 1, wl: 1, wr: 1, tail: 1 }; me.damage = (a, byPlayer, pt, G) => playerPlaneHit(me, a, byPlayer, pt, G);
   buildGear(me);
+  if (deck && typeof caHas === 'function' && caHas('aircraft.' + PL.type + '.engine_start')) caPlay('aircraft.' + PL.type + '.engine_start', null, { vol: 1 });   // avviamento (solo se c'è il file personale)
   PL.onDeck = deck; PL.atBase = true; PL.deckV = 0; PL.deckYaw = 0; PL.gearUp = !deck; PL.gearK = deck ? 1 : 0;
   if (deck) { me.q.setFromEuler(new THREE.Euler(.19, 0, 0, 'YXZ')); me.vel.set(0, 0, 0); }
   if (o.q) me.q.copy(o.q);
@@ -498,8 +504,12 @@ function updatePlane(dt) {
   if (KEYS.KeyS) PL.throttle = Math.max(0, PL.throttle - dt * .4);
   PL.rudder = lerp(PL.rudder, (KEYS.KeyD ? 1 : 0) - (KEYS.KeyA ? 1 : 0), dt * 6); // A/D: alettoni (rollio)
   if (me.crash) { PL.stickX = PL.stickY = 0; }
+  const v = me.vel; let V = Math.max(1, v.length());
+  // passo fisico fisso di 1/120 s, indipendente dagli FPS (al massimo 8 passi per fotogramma)
+  PL.acc = Math.min((PL.acc || 0) + dt, 8 / 120);
+  while (PL.acc >= 1 / 120) { PL.acc -= 1 / 120; const dt = 1 / 120;
   _pfw.set(0, 0, -1).applyQuaternion(me.q); _pup.set(0, 1, 0).applyQuaternion(me.q); _prt.set(1, 0, 0).applyQuaternion(me.q);
-  const v = me.vel, V = Math.max(1, v.length()); _vn.copy(v).multiplyScalar(1 / V);
+  V = Math.max(1, v.length()); _vn.copy(v).multiplyScalar(1 / V);
   const SP = PL.spec || PLANE_SPECS.p47, m = SP.mass, S = SP.S;
   // jet moderni: aria che si rarefà con la quota, velocità del suono, muro del suono
   const alt = Math.max(0, me.pos.y), rho = SP.mach ? 1.225 * Math.exp(-alt / 8500) : 1.2, q = .5 * rho * V * V;
@@ -513,7 +523,7 @@ function updatePlane(dt) {
   let lift = q * S * Cl; if (SP.gLim) lift = clamp(lift, -3 * m * 9.8, SP.gLim * m * 9.8);   // limite strutturale e del pilota
   // aerofreni (X tenuto): si aprono in mezzo secondo e aggiungono resistenza come i freni di picchiata
   PL.abK = lerp(PL.abK || 0, KEYS.KeyX && !PL.onDeck ? 1 : 0, Math.min(1, dt * 4));
-  const drag = q * S * (.024 * cdM + .065 * (lift / Math.max(1, q * S)) ** 2 + .012 * (PL.gearK || 0) + .11 * PL.abK);
+  const drag = q * S * (.013 * cdM + .065 * (lift / Math.max(1, q * S)) ** 2 + .012 * (PL.gearK || 0) + .11 * PL.abK);
   const pt = me.parts || { eng: 1, wl: 1, wr: 1, tail: 1 };
   const thrust = me.crash ? 0 : SP.thrustN ? PL.throttle * SP.thrustN * Math.pow(rho / 1.225, .7) * (1 + .35 * Mach) * (.3 + .7 * pt.eng) : PL.throttle * (SP.jet ? 17000 : Math.min(32000, 1.6e6 / Math.max(V, 35))) * planeThrustK(SP, PL.type) * (m / 6000) * (.3 + .7 * pt.eng);
   if (me.engFire && !me.crash) { me.hp -= dt * 14; if (me.hp <= 0) playerPlaneHit(me, 1, false); }
@@ -524,7 +534,10 @@ function updatePlane(dt) {
   v.addScaledVector(_F, dt / m);
   PL.G = lift / (m * 9.8);
   // rotazione: comandi + stabilità aerodinamica
-  const auth = clamp(V / 110, .25, 1.3) * SP.agile;
+  let auth = clamp(V / 110, .25, 1.3) * SP.agile;
+  // vicino alla velocità limite in picchiata i comandi si induriscono e l'aereo vibra
+  const ACp = typeof AC_CFG !== 'undefined' && AC_CFG[PL.type], vne = ACp ? ACp.vne : 999;
+  if (V > vne * .92 && !me.crash) { auth *= .5; P.shake = Math.max(P.shake, Math.min(.5, (V / vne - .92) * 4)); }
   // A/D ruotano l'aereo sul proprio asse (alettoni); a comandi rilasciati le ali tornano orizzontali
   const bankR = -Math.asin(clamp(_prt.y, -1, 1));
   let sx = PL.stickX, sy = PL.stickY, ty = 0, level = 0;
@@ -544,7 +557,11 @@ function updatePlane(dt) {
     sx = clamp(PL.stickX + PL.rudder, -1, 1);
     level = Math.abs(sx) < .1 && !me.crash ? bankR * 2 * auth : 0;
   }
-  let tp = sy * 1.0 * auth * (.45 + .55 * pt.tail), tr = -sx * 1.9 * auth + level;
+  // risposta ai comandi propria dell'aereo: il Fw 190 rolla quasi il doppio del P-47
+  const rollK = ACp ? ACp.roll / 1.45 : 1, pitchK = ACp ? ACp.pitch / .85 : 1;
+  let tp = sy * 1.0 * auth * pitchK * (.45 + .55 * pt.tail), tr = -sx * 1.9 * auth * rollK + level;
+  // stallo: oltre l'incidenza critica un'ala cade, l'aereo scuote; si esce spingendo il muso giù e ridando velocità
+  if (Math.abs(alpha) > st && !me.crash && !PL.onDeck) { tr += Math.sin(GAME.time * 2.3 + me.pos.x * .01) * 1.6; P.shake = Math.max(P.shake, .25); if (GAME.time > (PL.stallMsgT || 0)) { PL.stallMsgT = GAME.time + 3; showMsg('STALLO — muso giù e motore', 1.5); } }
   // l'ala colpita porta meno: l'aereo tende a rollare da quel lato
   tr += (pt.wr - pt.wl) * .9 * auth;
   // ala persa: avvitamento verso il lato mancante
@@ -554,6 +571,7 @@ function updatePlane(dt) {
   PL.av.x = lerp(PL.av.x, tp - alpha * 1.8 * auth, dt * 3); PL.av.z = lerp(PL.av.z, tr, dt * 5.5); PL.av.y = lerp(PL.av.y, ty - beta * 1.2 * auth, dt * 3);
   _aq.setFromEuler(new THREE.Euler(PL.av.x * dt, PL.av.y * dt, PL.av.z * dt, 'YXZ')); me.q.multiply(_aq).normalize();
   me.pos.addScaledVector(v, dt);
+  }
   }
   me.g.updateMatrixWorld();
   for (const p of me.props) p.rotation.z += dt * 60 * PL.throttle;
@@ -652,7 +670,7 @@ function airBulletImpact(o, d, t, hitPlane, hitVeh, water, G, dmg) {
     const end = o.clone().addScaledVector(d, t);
     // proiettili esplosivi: piccolo scoppio all'impatto
     if (G.he && t > 0) { fxExplosion(end.clone(), G.he * .35, false); if (dist2Cam(end) < 300 * 300) sfxBoom(end, G.he * .3); }
-    if (hitPlane) { hitPlane.damage(dmg * (G.he ? 1.2 : 1), true); fxImpact(end, 'metal'); hitMarker(false, false); return; }
+    if (hitPlane) { hitPlane.damage(dmg * (G.he ? 1.2 : 1), true, end, G); fxImpact(end, 'metal'); hitMarker(false, false); return; }
     if (hitVeh) { hitVeh.damage(hitVeh.tank ? (G.cal >= 37 ? dmg * .9 : G.cal >= 20 ? dmg * .12 : dmg * .25) : dmg * .9, true); fxImpact(end, 'metal'); if (R() < .3) sfxImpact(end, 'metal'); hitMarker(false, false); return; }
     if (G.he) { explode(end, G.he, dmg * 1.4, { byPlayer: true }); if (SCEN === 'air' && G.cal >= 30) airBombHit(end, G.cal >= 37 ? .25 : .12); }
     fxImpact(end, water ? 'water' : end.z > -58 ? 'sand' : 'dirt');

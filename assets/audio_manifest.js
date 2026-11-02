@@ -125,6 +125,12 @@
   for (const [p, name] of PLANES) {
     add(`aircraft.${p}.engine`, `aircraft/${p}/engine`, 'aircraft', `${name}: motore (loop, segue manetta e velocità)`, 'motore generico della nazione');
     add(`aircraft.${p}.guns_fire`, `aircraft/${p}/guns_fire`, 'aircraft', `${name}: mitragliatrici o cannoni di bordo`, 'colpo dell\'arma di bordo');
+    add(`aircraft.${p}.cannon_fire`, `aircraft/${p}/cannon_fire`, 'aircraft', `${name}: cannoni di bordo (20 mm e oltre)`, 'colpo dell\'arma di bordo');
+    add(`aircraft.${p}.engine_start`, `aircraft/${p}/engine_start`, 'aircraft', `${name}: avviamento del motore`, 'nessuno');
+    add(`aircraft.${p}.flyby`, `aircraft/${p}/flyby`, 'aircraft', `${name}: passaggio ravvicinato`, 'passaggio generico');
+    add(`aircraft.${p}.damage`, `aircraft/${p}/damage`, 'aircraft', `${name}: colpi sulla lamiera`, 'colpo su metallo');
+    add(`aircraft.${p}.fire`, `aircraft/${p}/fire`, 'aircraft', `${name}: incendio a bordo (loop)`, 'crepitio del fuoco');
+    add(`aircraft.${p}.explosion`, `aircraft/${p}/explosion`, 'aircraft', `${name}: esplosione in volo o all'impatto`, 'esplosione grande');
   }
 
   // ---------- navi ----------
