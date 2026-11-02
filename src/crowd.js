@@ -85,9 +85,38 @@ function sculpt(rings, n, hex, o = {}) {
 }
 // arto lungo l'asse z (piedi, scarpe): ruota le sezioni costruite lungo y
 const alongZ = (rings, n, hex, o) => { const g = sculpt(rings, n, hex, o); g.rotateX(-PI / 2); return g; };
+// volume smussato unitario (lato 1): da vicino sostituisce i parallelepipedi di giberne, borse, fibbie e cinghie corte
+let RBOX_G = null;
+function rboxGeo() {
+  if (RBOX_G) return RBOX_G;
+  const n = 8, rings = [[-.5, .34], [-.44, .5], [.44, .5], [.5, .34]], pos = [], idx = [];
+  for (const [y, r] of rings) for (let j = 0; j < n; j++) { const a = (j + .5) / n * TAU, c = Math.cos(a), sn = Math.sin(a); pos.push(Math.sign(c) * Math.pow(Math.abs(c), .3) * r, y, Math.sign(sn) * Math.pow(Math.abs(sn), .3) * r); }
+  const m = rings.length; for (let i = 0; i < m - 1; i++) for (let j = 0; j < n; j++) { const a = i * n + j, b = i * n + (j + 1) % n, c = a + n, d = b + n; idx.push(a, c, b, b, c, d); }
+  const c0 = pos.length / 3; pos.push(0, -.5, 0); const c1 = c0 + 1; pos.push(0, .5, 0);
+  for (let j = 0; j < n; j++) { idx.push(c0, j, (j + 1) % n); idx.push(c1, (m - 1) * n + (j + 1) % n, (m - 1) * n + j); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(pos.length / 3 * 2), 2)); g.setIndex(idx); g.computeVertexNormals();
+  return RBOX_G = g;
+}
+// cinghia a nastro lungo una spezzata (spessore t, larghezza w): segue il corpo invece di attraversarlo
+// la normale esterna è la direzione dal centro del busto (c) al punto
+function strapGeo(pts, w, t, c = new V3(0, .28, 0), sub = 4) {
+  const P = []; for (let i = 0; i < pts.length - 1; i++) for (let k = 0; k < sub; k++) { const u = k / sub, a = pts[Math.max(0, i - 1)], b = pts[i], cc = pts[i + 1], d = pts[Math.min(pts.length - 1, i + 2)];
+    const u2 = u * u, u3 = u2 * u; P.push(new V3().addScaledVector(b, 2).addScaledVector(cc.clone().sub(a), u).addScaledVector(a.clone().multiplyScalar(2).sub(b.clone().multiplyScalar(5)).add(cc.clone().multiplyScalar(4)).sub(d), u2).addScaledVector(b.clone().multiplyScalar(3).sub(a).sub(cc.clone().multiplyScalar(3)).add(d), u3).multiplyScalar(.5)); }
+  P.push(pts[pts.length - 1].clone());
+  const pos = [], idx = [], tg = new V3(), nn = new V3(), sd = new V3();
+  for (let i = 0; i < P.length; i++) {
+    tg.subVectors(P[Math.min(P.length - 1, i + 1)], P[Math.max(0, i - 1)]).normalize(); nn.subVectors(P[i], c).normalize(); sd.crossVectors(tg, nn).normalize(); nn.crossVectors(sd, tg).normalize();
+    for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) pos.push(P[i].x + sd.x * a * w / 2 + nn.x * b * t / 2, P[i].y + sd.y * a * w / 2 + nn.y * b * t / 2, P[i].z + sd.z * a * w / 2 + nn.z * b * t / 2);
+  }
+  for (let i = 0; i < P.length - 1; i++) for (let k = 0; k < 4; k++) { const a = i * 4 + k, b = i * 4 + (k + 1) % 4, c2 = a + 4, d = b + 4; idx.push(a, b, c2, b, d, c2); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(pos.length / 3 * 2), 2)); g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+const sv = (x, y, z) => new V3(x, y, z);
 function buildPartGeo(key, hi, gear) {
   const [team, part, kind] = key.split('_'), C = SCOL2[team], s = hi ? 14 : 7, mb = new MB(), A = team === 'A';
-  const add = (g, c, x, y, z, rx, ry, rz, sx, sy, sz) => mb.add(g, c, x, y, z, rx || 0, ry || 0, rz || 0, sx ?? 1, sy ?? 1, sz ?? 1);
+  const add = (g, c, x, y, z, rx, ry, rz, sx, sy, sz) => mb.add(hi && gear && g === U.box && part !== 'head' ? rboxGeo() : g, c, x, y, z, rx || 0, ry || 0, rz || 0, sx ?? 1, sy ?? 1, sz ?? 1);
+  const strap = (pts, c, w = .036, t = .009) => mb.add(strapGeo(pts, w, t), c, 0, 0, 0, 0, 0, 0, 1, 1, 1);
   const G = (g) => mb.addG(g, 0, 0, 0, 0, 0, 0, 1, 0xffffff), B = g => { if (!gear) G(g); };
   if (part === 'pelvis') {
     // calzoni: bacino con glutei, cavallo e cintura
@@ -102,7 +131,7 @@ function buildPartGeo(key, hi, gear) {
     // giacca: vita, torace con pettorali e scapole, spalle spioventi, colletto, collo
     B(sculpt([[-.06, .17, .105, .125], [.02, .158, .1, .115], [.12, .155, .105, .112], [.22, .168, .118, .118], [.32, .162, .122, .12], [.4, .158, .112, .112], [.46, .135, .095, .098], [.5, .12, .075, .08], [.53, .075, .06, .065]], hi ? 18 : 8, C.jacket, { fold: hi ? .014 : 0, seed: 3, shadeBottom: .18, foldMask: (t) => t < .7 ? 1 : .3, under: .12, underA: 0 }));
     if (hi) {
-      G(sculpt([[.5, .085, .07, .07, 0, .005], [.545, .082, .068, .07, 0, .005]], 14, C.jacket2, { fold: .006 }));
+      G(sculpt([[.5, .08, .066, .068, 0, .005], [.54, .076, .062, .066, 0, .005]], 14, C.jacket, { fold: .006 }));
       for (let k = 0; k < 4; k++) add(U.sph, 0x2a2a22, 0, .44 - k * .1, -.124 + k * .006, 0, 0, 0, .009, .009, .005);
       for (const sx of [-1, 1]) { add(U.box, C.jacket2, sx * .095, .41, -.122, -.14, 0, 0, .095, .025, .02); add(U.box, C.jacket2, sx * .095, .37, -.118, -.05, 0, 0, .09, .07, .012); }
       for (const sx of [-1, 1]) add(U.box, C.jacket2, sx * .17, .47, -.01, 0, 0, sx * -.35, .06, .015, .1);
@@ -110,9 +139,10 @@ function buildPartGeo(key, hi, gear) {
     B(sculpt([[.52, .052, .05, .055], [.6, .048, .045, .05]], hi ? 12 : 6, C.skin, { shadeBottom: .3 }));
     if (A) {
       G(sculpt([[.16, .1, .03, .05, 0, .16], [.22, .13, .04, .07, 0, .165], [.38, .135, .04, .075, 0, .165], [.46, .11, .03, .05, 0, .16]], hi ? 12 : 6, C.pack, { fold: hi ? .008 : 0, seed: 21, shadeBottom: .2 }));
-      for (const sx of [-1, 1]) add(U.box, C.web, sx * .08, .3, .232, 0, 0, 0, .03, .26, .01);
       add(cylG(.06, .06, .34, s), C.belt2, 0, .5, .17, 0, 0, PI / 2);
-      for (const sx of [-1, 1]) { add(U.box, C.web, sx * .088, .28, -.124, -.06, 0, 0, .036, .4, .01); add(U.box, C.web, sx * .1, .468, -.01, 0, 0, sx * -.3, .036, .01, .22); }
+      // bretelle M1936: dal cinturone davanti, sopra la spalla, giù fino alla borsa sulla schiena
+      if (hi) for (const sx of [-1, 1]) strap([sv(sx * .088, .06, -.128), sv(sx * .09, .25, -.13), sv(sx * .1, .41, -.115), sv(sx * .11, .495, -.04), sv(sx * .1, .49, .06), sv(sx * .085, .44, .17), sv(sx * .08, .3, .235), sv(sx * .08, .17, .235)], C.web);
+      else for (const sx of [-1, 1]) { add(U.box, C.web, sx * .088, .28, -.124, -.06, 0, 0, .036, .4, .01); add(U.box, C.web, sx * .1, .468, -.01, 0, 0, sx * -.3, .036, .01, .22); add(U.box, C.web, sx * .08, .3, .232, 0, 0, 0, .03, .26, .01); }
       if (hi) {
         for (const sx of [-1, 1]) add(U.box, C.jacket2, sx * .08, .35, -.12, 0, 0, 0, .08, .09, .02);
         add(new THREE.TorusGeometry(.19, .032, 6, 18), C.belt2, 0, .08, 0, PI / 2, 0, 0, 1, .66, 1);
@@ -123,7 +153,9 @@ function buildPartGeo(key, hi, gear) {
       }
       if (kind === 'medic') { add(U.box, 0xe5e2d8, -.2, .38, 0, 0, 0, 0, .02, .07, .13); add(U.box, 0xa01010, -.212, .38, 0, 0, 0, 0, .006, .05, .015); add(U.box, 0xa01010, -.212, .38, 0, 0, 0, 0, .006, .015, .05); }
     } else {
-      for (const sx of [-1, 1]) { add(U.box, C.web, sx * .085, .28, -.124, -.06, 0, sx * .12, .03, .42, .01); add(U.box, C.web, sx * .1, .468, -.01, 0, 0, sx * -.3, .03, .01, .22); add(U.box, C.web, sx * .04, .32, .125, .06, 0, sx * -.25, .03, .36, .01); }
+      // cinghie a Y: due davanti dalle giberne alle spalle, unite dietro in una sola che scende al cinturone
+      if (hi) { for (const sx of [-1, 1]) strap([sv(sx * .065, .06, -.13), sv(sx * .085, .25, -.13), sv(sx * .1, .41, -.115), sv(sx * .11, .495, -.035), sv(sx * .085, .48, .07), sv(sx * .03, .4, .13), sv(0, .33, .135)], C.web, .03); strap([sv(0, .34, .134), sv(0, .2, .13), sv(0, .06, .13)], C.web, .032); }
+      else for (const sx of [-1, 1]) { add(U.box, C.web, sx * .085, .28, -.124, -.06, 0, sx * .12, .03, .42, .01); add(U.box, C.web, sx * .1, .468, -.01, 0, 0, sx * -.3, .03, .01, .22); add(U.box, C.web, sx * .04, .32, .125, .06, 0, sx * -.25, .03, .36, .01); }
       add(cylG(.06, .06, .27, s), C.belt2, .02, .24, .16, .1, 0, 0);
       if (hi) {
         for (const sx of [-1, 1]) { add(U.box, C.jacket2, sx * .09, .36, -.12, 0, 0, 0, .085, .1, .02); add(U.box, C.jacket2, sx * .1, .12, -.115, 0, 0, 0, .09, .1, .02); }
@@ -183,7 +215,7 @@ function buildPartGeo(key, hi, gear) {
     const ls = hi ? 18 : 8;
     if (A) {
       add(lath([[0, .118], [.06, .112], [.112, .09], [.14, .052], [.153, .0], [.157, -.028], [.172, -.034], [.176, -.042], [.15, -.042]], ls), C.helm, 0, 0, 0);
-      if (hi) { for (let k = 0; k < 6; k++) add(U.box, C.net, 0, .07, 0, 0, k * PI / 6, 0, .31, .004, .006); for (const sx of [-1, 1]) add(U.box, 0x5a5236, sx * .122, -.09, -.012, 0, 0, sx * .28, .012, .11, .018); }
+      if (hi) { for (let k = 0; k < 6; k++) add(U.box, C.net, 0, .07, 0, 0, k * PI / 6, 0, .31, .004, .006); for (const sx of [-1, 1]) strap([sv(sx * .15, -.03, -.008), sv(sx * .148, -.075, -.014), sv(sx * .135, -.12, -.008), sv(sx * .118, -.15, .006)], 0x5a5236, .018, .004); }   // sottogola slacciati, ricadono ai lati del volto
       if (kind === 'medic') for (let k = 0; k < 4; k++) { const a = k * PI / 2, x = Math.sin(a) * .148, z = Math.cos(a) * .148; add(U.cyl, 0xe5e2d8, x, .04, z, PI / 2, a, 0, .045, .006, .045); add(U.box, 0xa01010, x * 1.03, .04, z * 1.03, 0, a, 0, .055, .016, .004); add(U.box, 0xa01010, x * 1.03, .04, z * 1.03, 0, a, 0, .016, .055, .004); }
     } else {
       add(lath([[0, .118], [.07, .11], [.12, .085], [.145, .045], [.15, .0], [.152, -.03], [.166, -.052], [.178, -.077], [.182, -.082], [.16, -.082]], ls), C.helm, 0, 0, .01);
