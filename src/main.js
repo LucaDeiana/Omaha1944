@@ -133,6 +133,7 @@ function frame(now) {
     updateAircraft(dt);
     updateSide(dt); updateDeploy(dt); updateNPC(dt); updateNet(dt); updateTanks(dt); updateAirStrike(dt);
     updatePlayer(dt); updateCutscene(dt);
+    if (!P.dead && document.body.classList.contains('pDead')) hideKillCard();   // rientro in volo, in nave o in carro: via il bianco e nero della morte
     updateAI(dt);
     updateProjectiles(dt);
     updateGore(dt);
