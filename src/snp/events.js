@@ -26,7 +26,9 @@ const SNP2 = { seen: new Map(), q: [], busyT: 0, feed: [], feedEl: null, anEl: n
 // ---------- statistiche ----------
 function snpStatRow(name, team) {
   const r = snpRow(name, team);
-  if (r.shots === undefined) Object.assign(r, { shots: 0, hits: 0, heads: 0, hsRun: 0, hsBest: 0, streak: 0, best: 0, longest: 0, lifeT0: SNP.t, lifeSum: 0, lives: 0, guns: {}, score: 0, multiN: 0, multiT: -99, hsN: 0, hsT: -99 });
+  // campo per campo: sui client la riga arriva dal tabellone dell'host con solo una parte delle statistiche
+  if (!r.statInit) { r.statInit = true; const D = { shots: 0, hits: 0, heads: 0, hsRun: 0, hsBest: 0, streak: 0, best: 0, longest: 0, lifeT0: SNP.t, lifeSum: 0, lives: 0, score: 0, multiN: 0, multiT: -99, hsN: 0, hsT: -99 }; for (const k in D) if (r[k] === undefined) r[k] = D[k]; }
+  if (!r.guns) r.guns = {};
   return r;
 }
 // ogni colpo sparato (per la precisione e per la killcam)
