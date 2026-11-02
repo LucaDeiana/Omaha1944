@@ -225,105 +225,113 @@ class KasTank {
     this.alive = true; this.hp = this.hpMax = T.hp; this.speed = 0; this.reload = rnd(1, T.reload); this.mgT = 0; this.player = false; this.tank = true;
     this.immob = false; this.jam = false; this.crew = { cmd: 1, gun: 1, load: 1, drv: 1, bow: 1 }; this.engDmg = 0; this.fire = 0; this.drvT = 0; this.box = { min: new V3(), max: new V3() }; this.aiT = rnd(0, .5); this.target = null; this.goalOff = new V3(rnd(-30, 30), 0, rnd(-30, 30)); this.err = new V3();
     this.eng = loopSound(type === 'sherman' ? 'eng_sherman' : type === 'tiger' ? 'eng_tiger' : 'eng_pz4', 0, 'vehicle.' + type + '.engine'); if (this.eng && type === 'pz3') this.rateK = 1.15; this.trk = loopSound('tracks', 0, 'vehicle.' + type + '.tracks');
-    MISSION.vehicles.push(this); KAS.tanks.push(this);
+    MISSION.vehicles.push(this); KAS.tanks.push(this); vpInit(this, type);
   }
   muzzle(o) { this.g.updateMatrixWorld(true); return o.set(0, 0, -this.G.len).applyMatrix4(this.gg.matrixWorld); }
   aimDir(o) { this.g.updateMatrixWorld(true); return o.set(0, 0, -1).transformDirection(this.gg.matrixWorld); }
   fireMain(byPlayer) {
-    if (this.reload > 0 || !this.alive) return; this.reload = this.T.reload * (byPlayer ? 1 : rnd(1, 1.3)) * (this.crew.load ? 1 : 2.2) * (this.crew.gun || this.crew.cmd ? 1 : 1.5);
+    if (this.reload > 0 || !this.alive) return;
+    if (this.cm.gun <= 0) { if (byPlayer && (this.msgT || 0) < GAME.time) { this.msgT = GAME.time + 2; showMsg('Cannone fuori uso', 1.4); } return; }
+    if (this.gunBlocked) { if (byPlayer && (this.msgT || 0) < GAME.time) { this.msgT = GAME.time + 2; showMsg('Canna ostruita: allontanati dall\'ostacolo', 1.4); } return; }
+    this.reload = this.T.reload * (byPlayer ? 1 : rnd(1, 1.3)) * (this.crew.load ? 1 : 2.2) * (this.crew.gun || this.crew.cmd ? 1 : 1.5);
     const o = this.muzzle(new V3()), d = this.aimDir(new V3());
-    if (!byPlayer) { const sp = .0018 + (Math.abs(this.speed) > 1 ? .006 : 0); d.x += rnd(-sp, sp); d.y += rnd(-sp, sp) * .6; d.z += rnd(-sp, sp); d.normalize(); }
+    const gsp = (1 - this.cm.gun / 100) * .006;   // canna o ottiche danneggiate: tiro meno preciso
+    if (!byPlayer || gsp > 0) { const sp = (byPlayer ? 0 : .0018 + (Math.abs(this.speed) > 1 ? .006 : 0)) + gsp; d.x += rnd(-sp, sp); d.y += rnd(-sp, sp) * .6; d.z += rnd(-sp, sp); d.normalize(); }
     kasShell(o, d, this.ammo === 'he' ? Object.assign({}, this.T, { pen: this.T.cal * .55, v: this.T.v * .75, he: true }) : this.T, this);
     PS_FIRE.emit(o.x, o.y, o.z, d.x * 6, d.y * 6, d.z * 6, .2, 2.4, 4, 1, 4, 2.5, 1.2);
     for (let i = 0; i < 8; i++) PS_SMOKE.emit(o.x, o.y, o.z, d.x * rnd(2, 6) + rnd(-1, 1), rnd(0, 1.5), d.z * rnd(2, 6) + rnd(-1, 1), rnd(2, 3.5), .8, 3.5, .62, .58, .5, .55, .8, -.05);
     for (let i = 0; i < 14; i++) PS_GRAIN.emit(this.pos.x + rnd(-3, 3), this.pos.y + .2, this.pos.z + rnd(-3, 3), rnd(-3, 3), rnd(1, 3), rnd(-3, 3), .8, .05, .05, .6, ...C_DIRT, .4, 9.8);
     play('tank_gun', byPlayer ? null : o, { vol: byPlayer ? 1.3 : 1.6, ref: 60, rate: this.T.cal >= 88 ? .82 : 1, revMul: 1.4, cx: 'vehicle.' + this.type + '.cannon_fire' }); sfxBoom(o, this.T.cal >= 88 ? 1.2 : .9); flashLight(o, 0xffb060, 40, .1);
-    if (byPlayer) { P.shake += .6; this.kick = 1; }
+    vpFire(this, o, d);
+    if (byPlayer) { P.shake += .6 + this.T.cal / 250; this.kick = 1; }
   }
-  fireMG(byPlayer) {   // mitragliatrice coassiale: utile contro i serventi dei Pak
-    if (this.mgT > 0) return; this.mgT = .09; const o = this.muzzle(new V3()), d = this.aimDir(new V3()); d.x += rnd(-.006, .006); d.y += rnd(-.004, .004); d.normalize();
-    const r = hitscan(o.clone().addScaledVector(d, 2), d, 700), p = o.clone().addScaledVector(d, r.t + 2); if (R() < .5) fxTracer(o, p, 1.3, byPlayer); sfxShot('mg42', o, byPlayer, 0, 'vehicle.' + this.type + '.machinegun_fire');
+  // mitragliatrice coassiale: parte dalla feritoia accanto al cannone, non dalla bocca del cannone
+  fireMG(byPlayer) {
+    if (this.mgT > 0 || !this.alive) return; this.mgT = this.vc.mg; this.g.updateMatrixWorld(true);
+    const o = new V3(.3, this.G.gunY, this.G.gunZ - .45).applyMatrix4(this.tg.matrixWorld), d = this.aimDir(new V3()); d.x += rnd(-.006, .006); d.y += rnd(-.004, .004); d.normalize();
+    PS_FIRE.emit(o.x + d.x * .3, o.y + d.y * .3, o.z + d.z * .3, d.x * 3, d.y * 3, d.z * 3, .04, .2, .35, 1, 4, 2.6, 1.2);
+    const r = hitscan(o.clone().addScaledVector(d, 2), d, 700), p = o.clone().addScaledVector(d, r.t + 2); if (R() < .5) fxTracer(o, p, 1.3, byPlayer); sfxShot(this.team === 'A' ? 'bar' : 'mg42', o, byPlayer, 0, 'vehicle.' + this.type + '.machinegun_fire');
     for (const g of KAS.guns) if (g.alive && g.pos.distanceTo(p) < 3) g.damage(1.5, byPlayer); if (r.type === 'terrain' || r.type === 'solid') fxImpact(p, 'dirt');
   }
-  // colpo perforante: faccia colpita, inclinazione, perforazione o rimbalzo
+  // colpo d'artiglieria: faccia colpita, spessore efficace della piastra inclinata, esito e componenti interni
   hit(p, dir, sh) {
     if (!this.alive) return;
     this.g.updateMatrixWorld(true);
-    const inv = new THREE.Matrix4().copy(this.g.matrixWorld).invert(), lp = p.clone().applyMatrix4(inv), ld = dir.clone().transformDirection(inv).negate();   // ld: dal carro verso chi spara
-    const T = this.T, onTurret = lp.y > T.hullH;
-    let face, armor, cosA;
-    if (onTurret) { const tl = ld.clone().applyAxisAngle(new V3(0, 1, 0), -this.tyaw); const front = tl.z < 0 && Math.abs(tl.z) > Math.abs(tl.x); armor = front ? T.t : T.ts; cosA = Math.max(.25, Math.hypot(front ? tl.z : tl.x, 0) / Math.max(.01, tl.length())); face = front ? 'torretta frontale' : 'torretta laterale'; }
-    else if (Math.abs(ld.z) > Math.abs(ld.x) * .9) { const front = ld.z < 0; armor = front ? T.f : T.r; cosA = Math.max(.25, Math.abs(ld.z) / ld.length()); face = front ? 'fronte' : 'retro'; }
-    else { armor = T.s; cosA = Math.max(.25, Math.abs(ld.x) / ld.length()); face = 'fianco'; }
-    if (sh.he) { fxExplosion(p, 1.4, false); sfxBoom(p, 1); this.hp -= 4; if (!onTurret && R() < .25) { this.immob = true; if (sh.owner && sh.owner.player) showMsg('Esplosivo: cingolo spezzato!', 1.4); } if (this.player) P.shake += .7; if (this.hp <= 0) this.destroy(sh.owner && sh.owner.player, false); return; }
-    const dist = sh.travel, pen = sh.T.pen * Math.max(.45, 1 - dist / 3500) * rnd(.9, 1.1), eff = armor / cosA;
-    const byP = sh.owner && sh.owner.player, mine = this.player;
-    if (cosA < .34 && R() < .7 || pen < eff) {   // rimbalzo
-      play('ricochet', p, { vol: 1, rate: rnd(.8, 1.1) }); play('clang', mine ? null : p, { vol: mine ? 1.2 : 1, ref: 40 }); fxImpact(p, 'metal', dir); this.hp -= 2;
-      if (byP) showMsg('Rimbalzo! (' + face + ', ' + Math.round(eff) + ' mm)', 1.4); if (mine) { showMsg('Colpo rimbalzato sul ' + face, 1.2); P.shake += .5; }
+    const inv = new THREE.Matrix4().copy(this.g.matrixWorld).invert(), lp = p.clone().applyMatrix4(inv), ld = dir.clone().transformDirection(inv);
+    const res = vpArmorHit(this, lp, ld, sh), byP = sh.owner && sh.owner.player, mine = this.player, cx = 'vehicle.' + this.type;
+    lp.copy(res.lp); p.copy(lp).applyMatrix4(this.g.matrixWorld);   // effetti sul punto d'ingresso vero
+    KAS.lastHit = res;
+    if (res.kind === 'ricochet' || res.kind === 'none') {
+      play('ricochet', p, { vol: 1, rate: rnd(.8, 1.1), cx: cx + '.ricochet' }); play('clang', mine ? null : p, { vol: mine ? 1.2 : 1, ref: 40, cx: cx + '.armor_hit' }); fxImpact(p, 'metal', dir); vpMark(this, lp, res.n, false);
+      for (let i = 0; i < 8; i++) PS_FIRE.emit(p.x, p.y, p.z, rnd(-5, 5), rnd(0, 4), rnd(-5, 5), .06, .15, .25, 1, 4, 3, 1.2);
+      const why = res.kind === 'ricochet' ? 'Rimbalzo! (' + res.face + ', ' + Math.round(res.ang) + '°)' : 'Non perforato (' + res.face + ', ' + Math.round(res.eff) + ' mm efficaci)';
+      if (byP) showMsg(why, 1.4); if (mine) { showMsg((res.kind === 'ricochet' ? 'Colpo rimbalzato sul ' : 'Colpo assorbito dal ') + res.face, 1.2); P.shake += .5; }
       return;
     }
-    const dmg = rnd(30, 60) * (sh.T.cal / 75) * (onTurret ? 1.1 : 1); this.hp -= dmg;
-    fxImpact(p, 'metal', dir); for (let i = 0; i < 12; i++) PS_FIRE.emit(p.x, p.y, p.z, rnd(-4, 4), rnd(0, 4), rnd(-4, 4), .05, .3, .5, 1, 3.5, 2.2, 1);
-    sfxBoom(p, .8); play('clang', mine ? null : p, { vol: mine ? 1.5 : 1, rate: .7, ref: 40 });
+    if (res.kind === 'track') {
+      fxImpact(p, 'metal', dir); sfxBoom(p, .5); play('clang', mine ? null : p, { vol: 1, rate: .8, ref: 40, cx: cx + '.armor_hit' }); for (let i = 0; i < 10; i++) PS_GRAIN.emit(p.x, p.y, p.z, rnd(-3, 3), rnd(1, 4), rnd(-3, 3), .9, .06, .06, .8, .2, .2, .18, .4, 9.8);
+      if (sh.he) fxExplosion(p, 1.2, false);
+      const m = res.crit || 'cingolo colpito'; if (byP) showMsg(m.charAt(0).toUpperCase() + m.slice(1) + '!', 1.4); if (mine) { showMsg(res.crit ? 'Cingolo spezzato: siamo immobili!' : 'Colpo sul cingolo', 1.6); P.shake += .6; }
+      return;
+    }
+    if (sh.he) { fxExplosion(p, 1.4, false); sfxBoom(p, 1); this.hp -= res.kind === 'pen' ? 18 : 4; vpMark(this, lp, res.n, res.kind === 'pen'); if (this.player) P.shake += .7; if (this.hp <= 0) this.destroy(byP, false); return; }
+    // perforazione o sfaldamento interno
+    const ck = sh.T.cal / 75, pen = res.kind === 'pen' || res.kind === 'critical';
+    this.hp -= pen ? rnd(30, 60) * ck * (lp.y > this.T.hullH ? 1.1 : 1) : rnd(2, 6);
+    fxImpact(p, 'metal', dir); for (let i = 0; i < (pen ? 12 : 5); i++) PS_FIRE.emit(p.x, p.y, p.z, rnd(-4, 4), rnd(0, 4), rnd(-4, 4), .05, .3, .5, 1, 3.5, 2.2, 1);
+    vpMark(this, lp, res.n, pen); sfxBoom(p, pen ? .8 : .4); play('clang', mine ? null : p, { vol: mine ? 1.5 : 1, rate: .7, ref: 40, cx: cx + '.armor_hit' });
     let crit = '';
-    // schegge all'interno: feriscono o uccidono membri dell'equipaggio vicini al punto d'impatto
-    const pool = onTurret ? ['cmd', 'gun', 'load', 'load'] : face === 'retro' ? ['drv', 'bow', 'load'] : ['drv', 'bow', 'load', 'gun'], nk = R() < .5 ? 1 : R() < .7 ? 2 : 0, lost = [];
-    for (let i = 0; i < nk; i++) { const m = pick(pool); if (this.crew[m]) { this.crew[m] = 0; lost.push(KAS_CREW[m]); } }
-    if (!this.crew.drv && this.crew.bow) this.drvT = 6;   // il mitragliere passa alla guida
-    if (!onTurret && (face === 'retro' || (face === 'fianco' && lp.z > 0)) && R() < .45) { this.engDmg = Math.min(1, this.engDmg + .5); if (R() < .3) this.fire = 1; crit = this.fire ? 'motore in fiamme' : 'motore colpito'; }
-    if (lost.length && !crit) crit = lost.join(', ') + (lost.length > 1 ? ' fuori combattimento' : ' fuori combattimento');
-    const alive = Object.values(this.crew).reduce((a, b) => a + b, 0);
-    if (alive <= 1) { this.hp = -1; crit = 'l’equipaggio abbandona il carro'; }
-    if (!onTurret && face !== 'fronte' && R() < .3) { this.immob = true; crit = 'cingolo spezzato'; }
-    else if (onTurret && R() < .25) { this.jam = true; crit = 'torretta bloccata'; }
-    if (R() < (face === 'fianco' ? .16 : .08)) { this.hp = -1; crit = 'munizioni esplose'; }
-    if (byP) { hitMarker(this.hp <= 0, false); showMsg('Perforato! ' + face + (crit ? ' — ' + crit : ''), 1.6); }
-    if (mine) { P.shake += 1; P.hurt = Math.min(1, (P.hurt || 0) + .4); showMsg('Siamo stati colpiti! ' + (crit || face), 1.8); }
+    if (pen) {
+      // schegge all'interno: feriscono o uccidono membri dell'equipaggio vicini al punto d'impatto
+      const pool = lp.y > this.T.hullH ? ['cmd', 'gun', 'load', 'load'] : res.face === 'retro' ? ['drv', 'bow', 'load'] : ['drv', 'bow', 'load', 'gun'], nk = R() < .5 ? 1 : R() < .7 ? 2 : 0, lost = [];
+      for (let i = 0; i < nk; i++) { const m = pick(pool); if (this.crew[m]) { this.crew[m] = 0; lost.push(KAS_CREW[m]); } }
+      if (!this.crew.drv && this.crew.bow) this.drvT = 6;   // il mitragliere passa alla guida
+      const names = res.comp.filter(k => k !== 'hull').map(k => VP_COMP_NAME[k] + (this.cm[k] <= 0 ? ' distrutto' : ' colpito'));
+      if (this.cm.engine <= 0 && res.comp.includes('engine') && !this.fire && R() < .35) this.fire = 1;
+      if (res.crit === 'munizioni') { if (R() < .55) { this.hp = -1; crit = 'munizioni esplose'; } else { this.fire = this.fire || 1; crit = 'incendio delle munizioni'; } }
+      else if (this.fire) crit = 'motore in fiamme';
+      else if (names.length) crit = names.join(', ');
+      if (lost.length) crit += (crit ? ' · ' : '') + lost.join(', ') + ' fuori combattimento';
+      const alive = Object.values(this.crew).reduce((a, b) => a + b, 0);
+      if (alive <= 1) { this.hp = -1; crit = 'l’equipaggio abbandona il carro'; }
+    } else if (res.comp.length) crit = res.comp.map(k => VP_COMP_NAME[k] + ' danneggiato').join(', ');
+    this.jam = this.cm.turret <= 0;
+    if (byP) { hitMarker(this.hp <= 0, false); showMsg((pen ? 'Perforato! ' : 'Sfaldamento interno, ') + res.face + (crit ? ' — ' + crit : ''), 1.6); }
+    if (mine) { P.shake += pen ? 1 : .5; if (pen) P.hurt = Math.min(1, (P.hurt || 0) + .4); showMsg((pen ? 'Siamo stati colpiti! ' : 'Colpo sulla corazza: ') + (crit || res.face), 1.8); }
     if (this.hp <= 0) this.destroy(byP, crit === 'munizioni esplose');
   }
-  damage(a, byPlayer) {   // esplosioni e mitragliatrici: poco effetto sulla corazza
-    if (!this.alive) return; this.hp -= a * .02; if (this.hp <= 0) this.destroy(byPlayer, false);
+  damage(a, byPlayer) {   // esplosioni e mitragliatrici: poco effetto sulla corazza, ma le esplosioni forti rompono organi esterni
+    if (!this.alive) return; this.hp -= a * .02; const c = a > 150 ? vpBlastComp(this, a, 1500) : ''; if (c && this.player) showMsg(c + ' danneggiato', 1.4);
+    if (this.hp <= 0) this.destroy(byPlayer, false);
   }
   destroy(byPlayer, ammo) {
     if (!this.alive) return; this.alive = false; burnMeshes(this.g);
-    const p = this.pos.clone(); p.y += 2; fxExplosion(p, ammo ? 5 : 3, false); sfxBoom(p, ammo ? 4 : 3); fxDebris(p, ammo ? 50 : 30, 3);
+    const p = this.pos.clone(); p.y += 2; fxExplosion(p, ammo ? 5 : 3, false); sfxBoom(p, ammo ? 4 : 3, false, 'vehicle.' + this.type + '.explosion'); fxDebris(p, ammo ? 50 : 30, 3);
     if (ammo) { this.g.remove(this.tg); scene.add(this.tg); this.tg.position.copy(p).add(new V3(rnd(-3, 3), 3, rnd(-3, 3))); this.tg.rotation.set(rnd(-1, 1), rnd(0, 6), rnd(-1, 1)); this.flyT = 1.2; this.flyV = new V3(rnd(-4, 4), 12, rnd(-4, 4)); KAS.fly = KAS.fly || []; KAS.fly.push(this); }
     else { this.tg.rotation.z = rnd(-.2, .2); }
     const e = addEmitter(p, 'fire', 1.4); e.life = 150; addEmitter(p.clone().add(new V3(0, 2, 0)), 'smoke', 1.6).life = 220;
-    if (this.eng) this.eng.at(this.pos, 0, 0, 1); if (this.trk) this.trk.at(this.pos, 0, 0, 1); if (this.tur) this.tur.set(0);
+    vpWreck(this);
     if (byPlayer) { STATS.kills += 5; KAS.killed++; feed(this.name + ' distrutto!'); }
     else if (this.team !== (KAS.side || 'A')) feed(this.name + ' nemico distrutto');
     else if (!this.player) feed(this.name + ' alleato perduto');
     if (this.player) kasPlayerKilled();
   }
+  vpClamp() { this.pos.x = clamp(this.pos.x, -620, 620); this.pos.z = clamp(this.pos.z, -1300, 380); }
   update(dt) {
     if (!this.alive) return;
     this.reload -= dt; this.mgT -= dt; this.kick = Math.max(0, (this.kick || 0) - dt * 3);
-    if (this.player) this.drive(dt); else this.think(dt);
-    if (this.immob) this.speed = lerp(this.speed, 0, dt * 3);
-    // equipaggio e motore: chi manca rallenta il carro, il motore colpito toglie potenza, l'incendio distrugge
-    if (!this.crew.drv) { if (this.drvT > 0) { this.drvT -= dt; this.speed = lerp(this.speed, 0, dt * 2); } else if (!this.crew.bow) this.speed = lerp(this.speed, 0, dt * 2); }
-    if (this.engDmg > 0) this.speed = clamp(this.speed, -this.T.vmax * (1 - this.engDmg) * .6, this.T.vmax * (1 - this.engDmg * .6));
-    if (this.fire > 0) { this.fire += dt; if (R() < dt * 12) PS_FIRE.emit(this.pos.x - Math.sin(this.yaw) * 2.2 * -1, this.pos.y + 2, this.pos.z - Math.cos(this.yaw) * -2.2, rnd(-.5, .5), 2, rnd(-.5, .5), .4, 1.2, 1.8, 1, 3, 1.6, .5); if (R() < dt * 6) PS_SMOKE.emit(this.pos.x, this.pos.y + 2.5, this.pos.z, 0, 3, 0, 3, 1.5, 6, .2, .18, .16, .7, 1, -.1); if (this.fire > 14) { this.hp = -1; this.destroy(false, R() < .5); return; } if (this.player && Math.floor(this.fire) !== Math.floor(this.fire - dt) && Math.floor(this.fire) % 3 === 0) showMsg('INCENDIO A BORDO! ' + Math.max(0, Math.ceil(14 - this.fire)) + ' s', 1.5); }
-    const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
-    this.pos.x += fx * this.speed * dt; this.pos.z += fz * this.speed * dt; this.odo = (this.odo || 0) + Math.abs(this.speed) * dt; if (this.odo > 1.2) { this.odo = 0; kasTrackMark(this); }
-    const tk = this.pos.clone(); tk.y += 1.25; pushOut(tk, 2.6, 1.4); this.pos.x = tk.x; this.pos.z = tk.z;
-    for (const o of KAS.tanks) if (o !== this && (o.alive || true)) { const dx = this.pos.x - o.pos.x, dz = this.pos.z - o.pos.z, d = Math.hypot(dx, dz); if (d < 5.5 && d > .01) { this.pos.x += dx / d * (5.5 - d) * .5; this.pos.z += dz / d * (5.5 - d) * .5; } }
-    this.pos.x = clamp(this.pos.x, -620, 620); this.pos.z = clamp(this.pos.z, -1300, 380);
-    const h = this.T.half, yf = Hf(this.pos.x + fx * h[1] * .8, this.pos.z + fz * h[1] * .8), yb = Hf(this.pos.x - fx * h[1] * .8, this.pos.z - fz * h[1] * .8);
-    const yl = Hf(this.pos.x - fz * h[0], this.pos.z + fx * h[0]), yr = Hf(this.pos.x + fz * h[0], this.pos.z - fx * h[0]);
-    this.pos.y = (yf + yb + yl + yr) / 4;
-    this.g.rotation.set(Math.atan2(yf - yb, h[1] * 1.6) - this.kick * .03, this.yaw, Math.atan2(yl - yr, h[0] * 2), 'YXZ');
+    const ta = performance.now(); if (this.player) this.drive(dt); else this.think(dt); if (!this.player) VP.st.ai += performance.now() - ta;
+    // equipaggio: senza pilota il carro si ferma finché il mitragliere non prende il suo posto
+    this.noDriver = !this.crew.drv && (this.drvT > 0 || !this.crew.bow); if (this.drvT > 0) this.drvT -= dt;
+    this.engDmg = 1 - this.cm.engine / 100; this.jam = this.cm.turret <= 0;
+    if (this.cm.engine < 25 && this.cm.engine > 0 && this.vp.stall <= 0 && R() < dt * .04) { this.vp.stall = 3; if (this.player) showMsg('Il motore si è spento!', 1.5); }
+    if (this.fire > 0) { this.fire += dt; if (R() < dt * 12) PS_FIRE.emit(this.pos.x - Math.sin(this.yaw) * 2.2 * -1, this.pos.y + 2, this.pos.z - Math.cos(this.yaw) * -2.2, rnd(-.5, .5), 2, rnd(-.5, .5), .4, 1.2, 1.8, 1, 3, 1.6, .5); if (R() < dt * 6) PS_SMOKE.emit(this.pos.x, this.pos.y + 2.5, this.pos.z, 0, 3, 0, 3, 1.5, 6, .2, .18, .16, .7, 1, -.1); this.cm.engine = Math.max(0, this.cm.engine - dt * 8); if (this.fire > 14) { this.hp = -1; this.destroy(false, R() < .5); return; } if (this.player && Math.floor(this.fire) !== Math.floor(this.fire - dt) && Math.floor(this.fire) % 3 === 0) showMsg('INCENDIO A BORDO! ' + Math.max(0, Math.ceil(14 - this.fire)) + ' s', 1.5); }
+    vpTick(this, dt);
+    this.odo = (this.odo || 0) + Math.abs(this.speed) * dt; if (this.odo > 1.2 && this.vp.lod < 2) { this.odo = 0; kasTrackMark(this); }
     this.tg.rotation.y = this.tyaw; this.gg.rotation.x = this.gpitch;
-    this.box.min.set(this.pos.x - h[0] - .4, this.pos.y, this.pos.z - h[0] - .4); this.box.max.set(this.pos.x + h[0] + .4, this.pos.y + this.T.hullH + 1, this.pos.z + h[0] + .4);
-    const sp = Math.abs(this.speed) / this.T.vmax;
-    if (this.eng) this.player ? this.eng.set(.55 + sp * .35, 0, .75 + sp * .55 + (KEYS.KeyW || KEYS.KeyS ? .12 : 0), 2500) : this.eng.at(this.pos, .55 + sp * .4, .75 + sp * .5, 170);
-    if (this.trk) this.player ? this.trk.set(sp * .7, 0, .6 + sp * .9, 4000) : this.trk.at(this.pos, sp * .8, .6 + sp * .9, 90);
-    if (this.player) { if (!this.tur) this.tur = loopSound('turret', 0, 'vehicle.' + this.type + '.turret_rotate'); const tv = Math.abs(angDiff(this.tyaw, this.tyawPrev ?? this.tyaw)) / Math.max(dt, 1e-3); this.tyawPrev = this.tyaw; if (this.tur) this.tur.set(clamp(tv * .6, 0, .35), 0, .8 + tv * .5); if (this.reload <= 0 && this.reloadPrev > 0) play('reload_clank', null, { cx: 'vehicle.' + this.type + '.cannon_reload',  vol: .9 }); this.reloadPrev = this.reload; }
-    if (Math.abs(this.speed) > 1 && R() < dt * 9) PS_SMOKE.emit(this.pos.x + rnd(-1.8, 1.8) - fx * 3, this.pos.y + .3, this.pos.z + rnd(-1.8, 1.8) - fz * 3, 0, .7, 0, 2.2, .9, 3.5, .7, .82, .74, .6, 1);   // polvere del deserto
+    if (this.player) { if (!this.tur) this.tur = loopSound('turret', 0, 'vehicle.' + this.type + '.turret_rotate'); const tv = Math.abs(angDiff(this.tyaw, this.tyawPrev ?? this.tyaw)) / Math.max(dt, 1e-3); this.tyawPrev = this.tyaw; if (this.tur) this.tur.set(clamp(tv * .6, 0, .35), 0, .8 + tv * .5); if (this.reload <= 0 && this.reloadPrev > 0) play('reload_clank', null, { cx: 'vehicle.' + this.type + '.cannon_reload', vol: .9 }); this.reloadPrev = this.reload; }
   }
-  // IA: verso la posizione da conquistare (o da difendere), ingaggio del nemico visibile più minaccioso
+  // IA: verso la posizione da conquistare (o da difendere), ingaggio del nemico visibile più minaccioso; ritirata se gravemente danneggiato
   think(dt) {
     this.aiT -= dt;
     if (this.aiT <= 0) {
@@ -333,13 +341,22 @@ class KasTank {
       if (this.team === 'A') for (const gp of KAS.guns) { if (!gp.alive) continue; const d = gp.pos.distanceTo(this.pos); if (d < 900 && d * 1.2 < bs && kasLOS(this.pos, gp.pos)) { bs = d * 1.2; best = gp; } }
       if (best !== this.target) this.err.set(rnd(-1, 1), rnd(-.5, .5), rnd(-1, 1)).multiplyScalar(this.team === 'E' ? 4.5 : 3);
       this.target = best;
+      // ritirata: scafo o motore molto danneggiati, cannone fuori uso → copertura verso le proprie linee
+      const bad = this.hp < this.hpMax * .35 || this.cm.engine < 30 || this.cm.gun <= 0;
+      if (bad && !this.retreat && this.target && !this.immob) { const back = KAS.side === 'S' ? kasSkBase(this.team) : this.team === 'A' ? new V3(this.pos.x, 0, this.pos.z + 300) : new V3(this.pos.x, 0, this.pos.z - 300); this.retreat = vpCover(this, this.target, back); }
+      if (this.retreat && this.retreat.distanceTo(this.pos) < 8) this.retreatDone = true;
     }
     // movimento
-    const cp = KAS_PTS[Math.min(KAS.stage, 2)], hold = this.team === 'E' && this.defend, goal = hold ? this.defend : new V3(cp.x, 0, cp.z).add(this.goalOff);
+    const cp = KAS_PTS[Math.min(KAS.stage, 2)], hold = this.team === 'E' && this.defend, goal = this.retreat && !this.retreatDone ? this.retreat : hold ? this.defend : new V3(cp.x, 0, cp.z).add(this.goalOff);
     const dx = goal.x - this.pos.x, dz = goal.z - this.pos.z, d = Math.hypot(dx, dz), tdist = this.target ? this.target.pos.distanceTo(this.pos) : 1e9;
-    let want = 0;
-    if (d > 12) { want = this.T.vmax * .75; if (this.target && tdist < 1000) want *= this.type === 'tiger' ? 0 : .35; this.yaw = angLerp(this.yaw, Math.atan2(-dx, -dz), dt * .5); }
-    this.speed = lerp(this.speed, want, dt * .6);
+    let want = 0, hdg = Math.atan2(-dx, -dz);
+    if (this.retreat && !this.retreatDone) { want = this.vc.vmax * .7; const back = angDiff(this.yaw, hdg); if (Math.abs(back) > 2 && this.target) { want = -this.vc.vrev; hdg += PI; } }   // indietreggia mostrando il fronte
+    else if (d > 12) { want = this.vc.vmax * .75; if (this.target && tdist < 1000) want *= this.type === 'tiger' ? 0 : .35; }
+    // fermo per sparare: il cannone non è stabilizzato (tranne lo Sherman, solo in elevazione)
+    if (this.target && this.reload < .8 && tdist < 1300 && !this.retreat) want = Math.min(want, this.type === 'sherman' ? 2.5 : 0);
+    // da fermo il Tiger volge il fronte corazzato verso il bersaglio
+    if (want === 0 && this.target && this.type === 'tiger') { hdg = Math.atan2(-(this.target.pos.x - this.pos.x), -(this.target.pos.z - this.pos.z)); vpDriveTo(this, hdg, 0, dt); if (Math.abs(angDiff(this.yaw, hdg)) > .25) { this.cmdThr = 0; this.cmdSteer = clamp(angDiff(this.yaw, hdg) * 2, -1, 1); } }
+    else vpDriveTo(this, hdg, want, dt);
     // tiro: anticipo sul bersaglio in moto e alzo balistico
     if (this.target) {
       const t = this.target, tp = t.pos.clone(); tp.y += t.tank ? (this.team === 'A' && t.type !== 'tiger' ? t.T.hullH + .5 : 1.4) : .8;   // gli Sherman mirano alla torretta, più sottile della piastra frontale
@@ -347,21 +364,20 @@ class KasTank {
       tp.add(this.err.clone().multiplyScalar(Math.min(1, tdist / 600)));
       this.err.multiplyScalar(1 - dt * (this.team === 'A' ? .3 : .16));   // la mira si affina tenendo il bersaglio
       const rel = Math.atan2(-(tp.x - this.pos.x), -(tp.z - this.pos.z)) - this.yaw;
-      if (!this.jam) this.tyaw = angLerpMax(this.tyaw, rel, dt * this.T.trav * (this.crew.gun ? 1 : .45));
+      if (!this.jam) this.tyaw = angLerpMax(this.tyaw, rel, dt * vpTraverse(this));
       const hd = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z), mz = this.muzzle(new V3()), want = Math.atan2(tp.y - mz.y, hd) + .5 * Math.asin(clamp(9.8 * hd / (this.T.v * this.T.v), -1, 1));
       const wel = Math.asin(clamp(this.aimDir(new V3()).y, -1, 1));   // alzo reale della canna nel mondo (lo scafo può essere inclinato)
-      this.gpitch = clamp(this.gpitch + clamp(want - wel, -dt * this.T.elev, dt * this.T.elev), -.2, .35);
+      const ev = vpElev(this); this.gpitch = clamp(this.gpitch + clamp(want - wel, -dt * ev, dt * ev), this.vc.elevMin, this.vc.elevMax);
       if (Math.abs(angDiff(this.tyaw, rel)) < .012 && Math.abs(want - wel) < .003 && Math.abs(this.speed) < 3.5 && tdist < 1300) this.fireMain(false);
-    } else if (!this.jam) this.tyaw = angLerpMax(this.tyaw, 0, dt * this.T.trav * .5);
+    } else if (!this.jam) this.tyaw = angLerpMax(this.tyaw, 0, dt * vpTraverse(this) * .5);
   }
   drive(dt) {
-    const th = (KEYS.KeyW ? 1 : 0) - (KEYS.KeyS ? 1 : 0), st = (KEYS.KeyA ? 1 : 0) - (KEYS.KeyD ? 1 : 0);
-    if (!this.immob && (this.crew.drv || (this.crew.bow && this.drvT <= 0))) { this.speed = lerp(this.speed, th * (th > 0 ? this.T.vmax : 4), dt * (th ? .6 : 1.4)); this.yaw += st * dt * .5 * (this.speed < 0 ? -1 : 1) * (Math.abs(this.speed) > .5 || th ? 1 : .7); }
+    this.cmdThr = (KEYS.KeyW ? 1 : 0) - (KEYS.KeyS ? 1 : 0); this.cmdSteer = (KEYS.KeyA ? 1 : 0) - (KEYS.KeyD ? 1 : 0);
     if (this.jam) this.ayaw = this.tyaw;
     if (mouseL) this.fireMain(true);
     if (KEYS.KeyF || KEYS.Space) this.fireMG(true);
   }
-  remove() { scene.remove(this.g); if (this.eng) this.eng.at(this.pos, 0, 0, 1); }
+  remove() { scene.remove(this.g); vpSilence(this); }
 }
 // cannone anticarro Pak 40: statico, brandeggio limitato, si nasconde bene
 class KasGun {
@@ -408,9 +424,10 @@ function kasDamagePanel(t) {
     document.body.appendChild(el); }
   if (!t || P.mode !== 'tank') { el.style.display = 'none'; return; } el.style.display = 'block';
   const col = (v, lost) => lost ? '#151515' : v > .66 ? '#6fae4f' : v > .33 ? '#d9b443' : '#c8432f', hp = clamp(t.hp / t.hpMax, 0, 1), blink = Math.sin(GAME.time * 10) > 0;
-  $('kdHull').setAttribute('fill', col(hp)); $('kdTur').setAttribute('fill', t.jam ? '#c8432f' : col(hp)); $('kdTl').setAttribute('fill', t.immob ? '#c8432f' : '#6fae4f'); $('kdTr').setAttribute('fill', t.immob ? '#c8432f' : '#6fae4f');
-  $('kdEng').setAttribute('fill', t.fire && blink ? '#ff7a30' : col(1 - t.engDmg));
-  $('kdCrew').innerHTML = Object.entries(KAS_CREW).map(([k, n]) => `<span style="color:${t.crew[k] ? '#cfe8b8' : '#c8432f'}">${t.crew[k] ? '●' : '✕'} ${n}</span>`).join('<br>') + (t.fire ? '<br><b style="color:#ff7a50">INCENDIO</b>' : '');
+  const cm = t.cm || {}, cv = k => clamp((cm[k] ?? 100) / 100, 0, 1);
+  $('kdHull').setAttribute('fill', col(hp)); $('kdTur').setAttribute('fill', t.jam ? '#c8432f' : col(cv('turret'))); $('kdTl').setAttribute('fill', col(cv('trackL'), false)); $('kdTr').setAttribute('fill', col(cv('trackR'), false));
+  $('kdEng').setAttribute('fill', t.fire && blink ? '#ff7a30' : col(cv('engine')));
+  $('kdCrew').innerHTML = Object.entries(KAS_CREW).map(([k, n]) => `<span style="color:${t.crew[k] ? '#cfe8b8' : '#c8432f'}">${t.crew[k] ? '●' : '✕'} ${n}</span>`).join('<br>') + (t.fire ? '<br><b style="color:#ff7a50">INCENDIO</b>' : '') + '<br>' + ['gun', 'trans', 'ammo'].map(k => `<span style="color:${col(cv(k))}">■ ${VP_COMP_NAME[k]} ${Math.round(cm[k] ?? 100)}%</span>`).join('<br>');
 }
 const KAS_SHELL_G = new THREE.CylinderGeometry(.06, .06, 1, 5).rotateX(PI / 2);
 function kasShell(o, d, T, owner) {
@@ -470,6 +487,7 @@ function kasSpawnPlayer() {
   for (let i = al; i < 3; i++) new KasTank('sherman', 'A', base.x + (i - 1) * 14 + 8, base.z + 18 + i * 6, 0);
 }
 function kasPlayerKilled() {
+  TANKS.camOn = false;
   if (KAS.side === 'S') { KAS.respawnT = 6; TANKS.me = null; $('stHud').style.display = 'none'; $('tankAim').style.display = 'none'; $('tankSight').style.display = 'none'; showMsg('Carro distrutto! Nuovo carro alla base fra 6 secondi', 4); return; }
   KAS.lives--; KAS.respawnT = 6; TANKS.me = null; $('stHud').style.display = 'none'; $('tankAim').style.display = 'none'; $('tankSight').style.display = 'none';
   if (KAS.lives <= 0) { KAS.over = true; GAME.endTitle = KAS.side === 'E' ? 'IL PASSO È PERDUTO' : 'LA BRIGATA È STATA RESPINTA'; GAME.endText = `Carri nemici distrutti: ${KAS.killed}<br>Posizioni conquistate: ${KAS.stage} su 3`; after(4, () => GAME.end(false)); showMsg('Tutti i carri perduti', 4); }
@@ -493,7 +511,7 @@ function initArmor() {
 function updateArmor(dt) {
   MISSION.stageT += dt; updateSubs(dt);
   for (const t of KAS.tanks) t.update(dt); for (const g of KAS.guns) g.update(dt);
-  kasUpdateShells(dt);
+  kasUpdateShells(dt); vpWreckTick();
   if (KAS.fly) for (const t of KAS.fly) if (t.flyT > 0) { t.flyT -= dt; t.flyV.y -= 9.8 * dt; t.tg.position.addScaledVector(t.flyV, dt); t.tg.rotation.x += dt * 2; const gy = Hf(t.tg.position.x, t.tg.position.z); if (t.tg.position.y < gy) { t.tg.position.y = gy; t.flyT = 0; } }
   if ($('mini')) $('mini').style.display = 'none';
   // giocatore distrutto: camera sul relitto e nuovo carro

@@ -80,14 +80,18 @@ class Panzer {
     this.alive = true; this.hp = 1500; this.speed = 0; this.reload = rnd(2, 4); this.mgT = 0; this.player = false; this.gunnerAlive = false;
     this.box = { min: new V3(), max: new V3() }; this.goal = null; this.lane = rnd(-7, 7); this.aiT = 0; this.target = null; this.tank = true;
     this.eng = loopSound('eng_boat', 0);
-    MISSION.vehicles.push(this); TANKS.list.push(this);
+    MISSION.vehicles.push(this); TANKS.list.push(this); this.type = 'pz4'; this.hpMax = 1500; vpInit(this, 'pz4');
   }
   muzzle(o) { this.g.updateMatrixWorld(true); return o.set(0, 0, -4.9).applyMatrix4(this.gg.matrixWorld); }
   aimDir(o) { this.g.updateMatrixWorld(true); return o.set(0, 0, -1).transformDirection(this.gg.matrixWorld); }
   fireMain(byPlayer) {
-    if (this.reload > 0) return; this.reload = byPlayer ? 3.6 : rnd(6, 9);
-    const o = this.muzzle(new V3()), d = this.aimDir(new V3());
+    if (this.reload > 0 || !this.alive) return;
+    if (this.cm.gun <= 0 || this.gunBlocked) { if (byPlayer && (this.msgT || 0) < GAME.time) { this.msgT = GAME.time + 2; showMsg(this.cm.gun <= 0 ? 'Cannone fuori uso' : 'Canna ostruita: allontanati dall\'ostacolo', 1.4); } return; }
+    this.reload = byPlayer ? 3.6 : rnd(6, 9);
+    const o = this.muzzle(new V3()), d = this.aimDir(new V3()), gsp = (1 - this.cm.gun / 100) * .006;
     if (!byPlayer) { d.x += rnd(-.012, .012); d.y += rnd(-.008, .012); d.normalize(); }
+    if (gsp > 0) { d.x += rnd(-gsp, gsp); d.y += rnd(-gsp, gsp) * .6; d.normalize(); }
+    vpFire(this, o, d);
     PS_FIRE.emit(o.x, o.y, o.z, d.x * 6, d.y * 6, d.z * 6, .2, 2.4, 4, 1, 4, 2.5, 1.2);
     for (let i = 0; i < 6; i++) PS_SMOKE.emit(o.x, o.y, o.z, d.x * rnd(2, 6) + rnd(-1, 1), rnd(0, 1.5), d.z * rnd(2, 6) + rnd(-1, 1), rnd(2, 3.5), .8, 3.5, .55, .55, .55, .55, .8, -.05);
     for (let i = 0; i < 10; i++) PS_GRAIN.emit(this.pos.x + rnd(-3, 3), this.pos.y + .2, this.pos.z + rnd(-3, 3), rnd(-3, 3), rnd(1, 3), rnd(-3, 3), .8, .05, .05, .6, ...C_DIRT, .4, 9.8);
@@ -100,7 +104,7 @@ class Panzer {
     after(Math.min(1.2, p.distanceTo(o) / 700), () => { p.y = Math.max(p.y, Hf(p.x, p.z)); explode(p, 6, 420, { byPlayer, bomb: true }); });
   }
   fireMG(byPlayer) {
-    if (this.mgT > 0) return; this.mgT = .07;
+    if (this.mgT > 0 || !this.alive) return; this.mgT = this.vc.mg;
     this.g.updateMatrixWorld(true); const o = new V3(.28, .42, -1.8).applyMatrix4(this.tg.matrixWorld), d = this.aimDir(new V3());
     PS_FIRE.emit(o.x, o.y, o.z, d.x * 3, d.y * 3, d.z * 3, .04, .25, .4, 1, 4, 2.6, 1.2);
     d.x += rnd(-.01, .01); d.y += rnd(-.008, .008); d.normalize();
@@ -115,34 +119,28 @@ class Panzer {
   damage(a, byPlayer) {
     if (!this.alive) return; this.hp -= a;
     if (this.player && a > 50) { P.shake += .6; P.hurt = Math.min(1, P.hurt + .3); }
+    // esplosioni forti (bazooka, bombe, cariche) rompono componenti: cingoli, motore, torretta, cannone, munizioni
+    const c = a >= 180 ? vpBlastComp(this, a, 1500) : '';
+    if (c) { if (this.player) showMsg(c.charAt(0).toUpperCase() + c.slice(1) + ' distrutto!', 1.6); else if (byPlayer) showMsg('Panzer: ' + c + ' fuori uso', 1.4); if (this.cm.ammo <= 0 && R() < .5) this.hp = 0; }
     if (this.hp > 0) return;
-    this.alive = false; burnMeshes(this.g); this.tg.rotation.z = rnd(-.4, .4); this.tg.position.y += .4;
-    const p = this.pos.clone(); p.y += 2; fxExplosion(p, 3, false); sfxBoom(p, 3); fxDebris(p, 30, 3);
+    this.alive = false; vpWreck(this); burnMeshes(this.g); this.tg.rotation.z = rnd(-.4, .4); this.tg.position.y += .4;
+    const p = this.pos.clone(); p.y += 2; fxExplosion(p, 3, false); sfxBoom(p, 3, false, 'vehicle.pz4.explosion'); fxDebris(p, 30, 3);
     const e = addEmitter(p, 'fire', 1.4); e.life = 120; addEmitter(p.clone().add(new V3(0, 2, 0)), 'smoke', 1.5).life = 160;
     if (this.eng) this.eng.at(this.pos, 0, 0, 1);
     if (byPlayer) { STATS.kills += 5; feed('Panzer IV distrutto!'); }
     else if (P.mode === 'foot' && P.pos.distanceTo(p) < 200) feed('Un Panzer è stato distrutto');
     if (this.player) { leaveTank(); P.damage(300, p, true); }
   }
+  vpClamp() { this.pos.x = clamp(this.pos.x, -MAPX + 30, MAPX - 30); this.pos.z = clamp(this.pos.z, -MAPX + 60, -62); }
   update(dt) {
     if (!this.alive) return;
     this.reload -= dt; this.mgT -= dt; this.kick = Math.max(0, (this.kick || 0) - dt * 3);
-    if (this.player) this.drive(dt); else this.think(dt);
-    // terreno, collisioni, inclinazione
-    const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
-    this.pos.x += fx * this.speed * dt; this.pos.z += fz * this.speed * dt;
-    // i carri schiacciano sacchi e ostacoli bassi
-    const tk = this.pos.clone(); tk.y += 1.25; pushOut(tk, 2.4, 1.4); this.pos.x = tk.x; this.pos.z = tk.z;
-    this.pos.x = clamp(this.pos.x, -MAPX + 30, MAPX - 30); this.pos.z = clamp(this.pos.z, -MAPX + 60, -62);
-    const yf = Hf(this.pos.x + fx * 2.5, this.pos.z + fz * 2.5), yb = Hf(this.pos.x - fx * 2.5, this.pos.z - fz * 2.5);
-    const yl = Hf(this.pos.x - fz * 1.3, this.pos.z + fx * 1.3), yr = Hf(this.pos.x + fz * 1.3, this.pos.z - fx * 1.3);
-    this.pos.y = (yf + yb + yl + yr) / 4;
-    this.g.rotation.set(Math.atan2(yf - yb, 5) - this.kick * .03, this.yaw, Math.atan2(yl - yr, 2.6), 'YXZ');
+    const ta = performance.now(); if (this.player) this.drive(dt); else this.think(dt); if (!this.player) VP.st.ai += performance.now() - ta;
+    if (this.cm.engine < 25 && this.cm.engine > 0 && this.vp.stall <= 0 && R() < dt * .04) { this.vp.stall = 3; if (this.player) showMsg('Il motore si è spento!', 1.5); }
+    this.immob = false; vpTick(this, dt); this.jam = this.cm.turret <= 0;
     this.tg.rotation.y = this.tyaw; this.gg.rotation.x = this.gpitch;
-    this.box.min.set(this.pos.x - 2.2, this.pos.y, this.pos.z - 2.2); this.box.max.set(this.pos.x + 2.2, this.pos.y + 2.6, this.pos.z + 2.2);
-    if (this.eng) this.eng.at(this.pos, .6 + Math.abs(this.speed) * .06, .55 + Math.abs(this.speed) * .05, 120);
-    if (Math.abs(this.speed) > 1 && R() < dt * 6) PS_SMOKE.emit(this.pos.x + rnd(-1.5, 1.5), this.pos.y + .3, this.pos.z + rnd(-1.5, 1.5), 0, .5, 0, 1.5, .6, 2.5, .6, ...C_DIRT, 1);
-    for (const m of TANKS.mines) if (!m.done && Math.abs(m.x - this.pos.x) < 1.8 && Math.abs(m.z - this.pos.z) < 2.6) { m.done = true; scene.remove(m.mesh); const p = new V3(m.x, Hf(m.x, m.z), m.z); explode(p, 5, 300, {}); this.damage(1100, false); feed('Un Panzer è saltato su una mina'); }
+    // mine anticarro: l'esplosione spezza il cingolo che la calpesta e danneggia la trasmissione
+    for (const m of TANKS.mines) if (!m.done && Math.abs(m.x - this.pos.x) < 1.8 && Math.abs(m.z - this.pos.z) < 2.6) { m.done = true; scene.remove(m.mesh); const p = new V3(m.x, Hf(m.x, m.z), m.z); explode(p, 5, 300, {}); const lx = (m.x - this.pos.x) * Math.cos(this.yaw) - (m.z - this.pos.z) * Math.sin(this.yaw); this.cm[lx < 0 ? 'trackL' : 'trackR'] = 0; this.cm.trans = Math.max(0, this.cm.trans - 40); this.damage(500, false); feed('Un Panzer è saltato su una mina'); }
   }
   // IA: raggiunge una posizione di tiro dietro la linea e ingaggia la fanteria nemica
   think(dt) {
@@ -157,21 +155,22 @@ class Panzer {
       this.target = best;
     }
     const g = this.goal, dx = g.x - this.pos.x, dz = g.z - this.pos.z, d = Math.hypot(dx, dz);
-    let want = 0;
-    if (d > 4) { const path = d > 40 && Math.abs(this.pos.x - roadPathX(this.pos.z)) < 30 ? new V3(roadPathX(this.pos.z + 12) + (this.pos.z > -150 || this.pos.z < -360 ? this.lane : 0), 0, this.pos.z + 12) : g; want = 6; this.yaw = angLerp(this.yaw, Math.atan2(-(path.x - this.pos.x), -(path.z - this.pos.z)), dt * .8); }
-    this.speed = lerp(this.speed, want, dt * .8);
+    let want = 0, hdg = this.yaw;
+    if (d > 4) { const path = d > 40 && Math.abs(this.pos.x - roadPathX(this.pos.z)) < 30 ? new V3(roadPathX(this.pos.z + 12) + (this.pos.z > -150 || this.pos.z < -360 ? this.lane : 0), 0, this.pos.z + 12) : g; want = 6; hdg = Math.atan2(-(path.x - this.pos.x), -(path.z - this.pos.z)); }
+    if (this.hp < 500 && this.target) { want = -this.vc.vrev; hdg = this.yaw; }   // gravemente danneggiato: indietreggia mostrando il fronte
+    if (this.target && this.reload < .8 && Math.abs(angDiff(this.tyaw, Math.atan2(-(this.target.pos.x - this.pos.x), -(this.target.pos.z - this.pos.z)) - this.yaw)) < .15) want = Math.min(want, 0);   // si ferma per sparare
+    vpDriveTo(this, hdg, want, dt);
     if (this.target) {
       const tp = this.target.pos, rel = Math.atan2(-(tp.x - this.pos.x), -(tp.z - this.pos.z)) - this.yaw;
-      this.tyaw = angLerpMax(this.tyaw, rel, dt * TANK_TRAVERSE);
-      const hd = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z); this.gpitch = lerp(this.gpitch, Math.atan2(tp.y + 1 - this.pos.y - 2.1, hd) + hd * .00004, dt * 2);
+      if (!this.jam) this.tyaw = angLerpMax(this.tyaw, rel, dt * vpTraverse(this));
+      const hd = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z); this.gpitch = clamp(this.gpitch + clamp(Math.atan2(tp.y + 1 - this.pos.y - 2.1, hd) + hd * .00004 - this.vp.th - this.gpitch, -dt * vpElev(this), dt * vpElev(this)), this.vc.elevMin, this.vc.elevMax);
       if (Math.abs(angDiff(this.tyaw, rel)) < .05 && this.speed < 2) this.fireMain(false);
       if (hd < 140 && R() < dt * 3) this.fireMG(false);
     }
   }
   drive(dt) {
-    const th = (KEYS.KeyW ? 1 : 0) - (KEYS.KeyS ? 1 : 0), st = (KEYS.KeyA ? 1 : 0) - (KEYS.KeyD ? 1 : 0);
-    this.speed = lerp(this.speed, th * (th > 0 ? 10 : 4), dt * (th ? .7 : 1.5));
-    this.yaw += st * dt * .55 * (this.speed < 0 ? -1 : 1) * (Math.abs(this.speed) > .5 || th ? 1 : .6);
+    this.cmdThr = (KEYS.KeyW ? 1 : 0) - (KEYS.KeyS ? 1 : 0); this.cmdSteer = (KEYS.KeyA ? 1 : 0) - (KEYS.KeyD ? 1 : 0);
+    if (this.jam) this.ayaw = this.tyaw;
     if (mouseL) this.fireMain(true);
     if (KEYS.KeyF || KEYS.Space) this.fireMG(true);
   }
@@ -189,6 +188,7 @@ function enterTank(t) {
   $('stHud').style.display = 'block';
 }
 function leaveTank() {
+  TANKS.camOn = false;
   if ($('drvSlit')) $('drvSlit').style.display = 'none';
   const t = TANKS.me; if (!t) return;
   t.player = false; TANKS.me = null; t.goal = null; P.mode = 'foot'; $('stHud').style.display = 'none'; $('tankAim').style.display = 'none'; $('tankSight').style.display = 'none';
@@ -197,12 +197,16 @@ function leaveTank() {
 }
 // il mouse sposta il punto di mira; torretta e cannone lo raggiungono con la velocità del brandeggio idraulico
 const TANK_TRAVERSE = .55, TANK_ELEV = .3;
-function tankMouse(mx, my) { const t = TANKS.me; if (!t) return; const s = .0021 * SETTINGS.sens * (camera.fov / 60); t.ayaw -= mx * s; t.apitch = clamp(t.apitch - my * s, -.14, .35); }
+function tankMouse(mx, my) { const t = TANKS.me; if (!t) return; const s = .0021 * SETTINGS.sens * (camera.fov / 60); t.ayaw -= mx * s; t.apitch = clamp(t.apitch - my * s, t.vc ? t.vc.elevMin : -.14, t.vc ? t.vc.elevMax : .35); }
 const _am2 = new THREE.Matrix4();
 function updateTankMode(dt) {
   const t = TANKS.me; if (!t || !t.alive) { if (SCEN === 'kas') return; leaveTank(); return; }
   P.pos.copy(t.pos); P.pos.y += 1.4;
-  t.tyaw = angLerpMax(t.tyaw, t.ayaw, dt * TANK_TRAVERSE); t.gpitch += clamp(t.apitch - t.gpitch, -dt * TANK_ELEV, dt * TANK_ELEV);
+  if (t.vc) { if (!t.jam) t.tyaw = angLerpMax(t.tyaw, t.ayaw, dt * vpTraverse(t)); const ev = vpElev(t);
+    // M4: stabilizzatore giroscopico in elevazione (compensa in parte il beccheggio dello scafo); gli altri carri non lo avevano
+    if (t.vc.stab) { const dth = t.vp.th - (t.thPrev ?? t.vp.th); t.apitch = clamp(t.apitch - dth * t.vc.stab, t.vc.elevMin, t.vc.elevMax); } t.thPrev = t.vp.th;
+    t.gpitch = clamp(t.gpitch + clamp(t.apitch - t.gpitch, -dt * ev, dt * ev), t.vc.elevMin, t.vc.elevMax); }
+  else { t.tyaw = angLerpMax(t.tyaw, t.ayaw, dt * TANK_TRAVERSE); t.gpitch += clamp(t.apitch - t.gpitch, -dt * TANK_ELEV, dt * TANK_ELEV); }
   const ay = t.yaw + (P.adsHeld ? t.tyaw : t.ayaw), zoom = P.adsHeld;
   // mirino del cannoniere: sull'asse della canna e orientato come la canna (anche con lo scafo inclinato)
   if (zoom) { t.g.updateMatrixWorld(true); camera.position.set(0, .2, -2.3).applyMatrix4(t.gg.matrixWorld); camera.quaternion.setFromRotationMatrix(_am2.extractRotation(t.gg.matrixWorld)); }
@@ -212,7 +216,10 @@ function updateTankMode(dt) {
   else if (t.view === 1 && t.G && t.G.cup) {   // capocarro con la testa fuori dalla cupola: guarda dove punta il mouse
     t.g.updateMatrixWorld(true); camera.position.set(...t.G.cup).applyMatrix4(t.tg.matrixWorld); camera.rotation.set(t.apitch, t.yaw + t.ayaw, 0, 'YXZ');
   }
-  else { camera.position.set(t.pos.x + Math.sin(ay) * 10, t.pos.y + 5.2, t.pos.z + Math.cos(ay) * 10); camera.rotation.set(t.apitch - .2, ay, 0, 'YXZ'); }
+  else {   // terza persona: la camera segue con un po' d'inerzia (peso del mezzo), senza ritardare la mira
+    const tx = t.pos.x + Math.sin(ay) * 10, ty = t.pos.y + 5.2, tz = t.pos.z + Math.cos(ay) * 10, k = TANKS.camOn ? Math.min(1, dt * 6) : 1; TANKS.camOn = true;
+    TANKS.cam = TANKS.cam || new V3(); TANKS.cam.set(lerp(TANKS.cam.x, tx, k), lerp(TANKS.cam.y, ty, Math.min(1, dt * 3.5)), lerp(TANKS.cam.z, tz, k)); if (k === 1) TANKS.cam.set(tx, ty, tz);
+    camera.position.copy(TANKS.cam); camera.rotation.set(t.apitch - .2 + (t.vp ? t.vp.th * .3 : 0), ay, t.vp ? t.vp.ph * .25 : 0, 'YXZ'); }
   camera.position.x += rnd(-1, 1) * P.shake * .05; camera.position.y += rnd(-1, 1) * P.shake * .05; P.shake = Math.max(0, P.shake - dt * 2);
   const fov = zoom ? 18 : t.view === 1 ? SETTINGS.fov : t.view === 2 ? 60 : 70; { let sl = $('drvSlit'); if (!sl) { sl = document.createElement('div'); sl.id = 'drvSlit'; sl.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:15;background:linear-gradient(180deg,#0b0b09 0,#0b0b09 39%,transparent 39.5%,transparent 58%,#0b0b09 58.5%,#0b0b09 100%);box-shadow:inset 0 0 0 9vw #0b0b09'; document.body.appendChild(sl); } sl.style.display = t.view === 2 && !zoom ? 'block' : 'none'; } if (Math.abs(camera.fov - fov) > .1) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 8)); camera.updateProjectionMatrix(); }
   // punto d'impatto del cannone proiettato sullo schermo
@@ -222,7 +229,7 @@ function updateTankMode(dt) {
   ta.classList.toggle('ready', t.reload <= 0);
   $('tankSight').style.display = zoom ? 'block' : 'none';
   $('tankRange').textContent = Math.round(rr.t) + ' m';
-  $('stHud').innerHTML = `<b>${t.name || 'Panzer IV'}</b>${t.ammo !== undefined || SCEN === 'kas' ? ' · ' + (t.ammo === 'he' ? 'ESPLOSIVO (2)' : 'PERFORANTE (1)') : ''} — scafo ${Math.max(0, Math.round(t.hp / (t.hpMax ? t.hpMax / 100 : 15)))}%${t.immob ? ' · <b style="color:#ff7a50">CINGOLO ROTTO</b>' : ''}${t.jam ? ' · <b style="color:#ff7a50">TORRETTA BLOCCATA</b>' : ''} · ${Math.round(Math.abs(t.speed) * 3.6)} km/h · ${t.reload > 0 ? 'cannone in ricarica ' + t.reload.toFixed(1) + ' s' : '<b class="ok">CANNONE PRONTO</b>'}<br><small>W/S/A/D guida · mouse torretta · click sx cannone · click dx mirino · F mitragliatrice${SCEN === 'kas' ? '' : ' · E esci'}</small>`;
+  $('stHud').innerHTML = `<b>${t.name || 'Panzer IV'}</b>${t.ammo !== undefined || SCEN === 'kas' ? ' · ' + (t.ammo === 'he' ? 'ESPLOSIVO (2)' : 'PERFORANTE (1)') : ''} — scafo ${Math.max(0, Math.round(t.hp / (t.hpMax ? t.hpMax / 100 : 15)))}%${t.cm ? ` · motore ${Math.round(t.cm.engine)}%${t.cm.engine <= 0 ? ' <b style="color:#ff7a50">FERMO</b>' : ''}` : ''}${t.immob ? ' · <b style="color:#ff7a50">' + (t.cm && t.cm.trans <= 0 ? 'TRASMISSIONE ROTTA' : 'CINGOLO ROTTO') + '</b>' : ''}${t.jam ? ' · <b style="color:#ff7a50">TORRETTA BLOCCATA</b>' : ''}${t.cm && t.cm.gun <= 0 ? ' · <b style="color:#ff7a50">CANNONE FUORI USO</b>' : t.gunBlocked ? ' · <b style="color:#ffb050">CANNA OSTRUITA</b>' : ''} · ${Math.round(Math.abs(t.speed) * 3.6)} km/h · ${t.reload > 0 ? 'cannone in ricarica ' + t.reload.toFixed(1) + ' s' : '<b class="ok">CANNONE PRONTO</b>'}<br><small>W/S/A/D guida · mouse torretta · click sx cannone · click dx mirino · F mitragliatrice${SCEN === 'kas' ? '' : ' · E esci'}</small>`;
 }
 // ---------- schieramento ----------
 function initTanks() {
@@ -237,6 +244,7 @@ function initTanks() {
 }
 function updateTanks(dt) {
   if (NET.client || !TANKS.inited) return;   // solo dove i Panzer sono schierati (Omaha)
+  vpWreckTick();
   TANKS.respawnT -= dt;
   const alive = TANKS.list.filter(t => t.alive).length, cap = PT === 'E' ? 3 : (MISSION.stage >= 3 ? 2 : 1);
   if (TANKS.respawnT <= 0 && alive < cap) { TANKS.respawnT = 90; new Panzer(roadPathX(-560) + rnd(-6, 6), -560, PI); if (P.mode === 'foot' && PT === 'A') say(N.radio, 'Attenzione: carri tedeschi in movimento dalla città!'); }

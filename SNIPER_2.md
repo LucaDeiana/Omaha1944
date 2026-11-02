@@ -54,3 +54,5 @@ Incompleti o mancanti: killcam, annunci con contatori distinti e priorità (prim
 | Avvio delle altre modalità | nessun errore JavaScript |
 
 Non eseguiti: colpo alle gambe (nel punto di prova un ostacolo basso fermava il colpo), audio personale reale degli annunci, partita multigiocatore con due computer, prestazioni sul PC dell'utente. Colpo alla testa non letale: con le regole attuali la testa è sempre letale, quindi non esiste; il sistema registra la zona e annuncia solo headshot letali.
+
+Benchmark in gioco eseguito qui solo sul codice nuovo: funziona in tutti gli scenari, ma con la grafica software va a 0,2–1,3 FPS e quei numeri non hanno valore (draw call 350–410, IA dei bot 1–6 ms su pochissimi fotogrammi). Il confronto con il codice precedente non è riuscito: il browser senza grafica è andato in timeout.

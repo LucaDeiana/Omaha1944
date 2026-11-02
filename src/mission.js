@@ -591,7 +591,7 @@ class Halftrack {
     if (!this.alive) return;
     const dx = this.dest.x - this.pos.x, dz = this.dest.z - this.pos.z, d = Math.hypot(dx, dz);
     if (d > 1) { const v = Math.min(d, 3.4 * dt); this.pos.x += dx / d * v; this.pos.z += dz / d * v; this.yaw = angLerp(this.yaw, Math.atan2(-dx, -dz), dt * 2); }
-    this.pos.y = Hf(this.pos.x, this.pos.z); this.g.rotation.y = this.yaw;
+    vpGroundPose(this, dt, [1.05, 2.9]);   // beccheggio e rollio dal terreno
     this.box.min.set(this.pos.x - 1.6, this.pos.y, this.pos.z - 3.1); this.box.max.set(this.pos.x + 1.6, this.pos.y + 2.4, this.pos.z + 3.1);
     if (!this.gunnerAlive) return;
     this.thinkT -= dt;
@@ -648,7 +648,7 @@ class Sherman {
         after(.5, () => { fxExplosion(t, 1.6, false); sfxBoom(t, 1.4); });
       }
     }
-    this.pos.y = Hf(this.pos.x, this.pos.z); this.m.rotation.y = this.yaw;
+    vpGroundPose(this, dt, [1.4, 3]);
   }
 }
 

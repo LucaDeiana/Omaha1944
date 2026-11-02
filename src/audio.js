@@ -330,10 +330,10 @@ function sfxShot(kind, pos, isPlayer, extraDelay = 0, cx) {
   }
   else play(far, pos, { ref: 70, delay: extraDelay, echo: true, vol: 1.2, revMul: rv, cx: cxF });
 }
-function sfxBoom(pos, size = 1, water = false) {
+function sfxBoom(pos, size = 1, water = false, cx) {
   const d = pos.distanceTo(camera.position);
-  if (d < 220) play(water ? 'boom_water' : 'boom', pos, { ref: 55 * size, vol: Math.min(1.6, .6 + size * .4), echo: true });
-  else play('boom_far', pos, { ref: 160 * size, vol: 1.3, echo: true });
+  if (d < 220) play(water ? 'boom_water' : 'boom', pos, { ref: 55 * size, vol: Math.min(1.6, .6 + size * .4), echo: true, cx });
+  else play('boom_far', pos, { ref: 160 * size, vol: 1.3, echo: true, cx });
 }
 function sfxShip(pos, cx) { const sp = spatial(pos, 600); sp.vol = Math.max(sp.vol, .3); sp.delay = Math.min(sp.delay, 3); play('ship_far', pos, { sp, vol: 1.1, cx }); }
 function sfxShipNear(cx) { play('ship_near', null, { vol: 1.3, revMul: 2, cx }); }

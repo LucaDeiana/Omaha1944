@@ -115,7 +115,9 @@
   // ---------- carri armati ----------
   const TANKS = [['sherman', 'M4 Sherman'], ['pz4', 'Panzer IV'], ['pz3', 'Panzer III'], ['tiger', 'Tiger I']];
   const TEV = [['engine', 'Motore (loop, segue il regime)', 'motore generico del carro'], ['tracks', 'Cingoli (loop)', 'tracks'], ['turret_rotate', 'Rotazione della torretta (loop)', 'turret'],
-    ['cannon_fire', 'Sparo del cannone', 'tank_gun'], ['cannon_reload', 'Ricarica del cannone', 'reload_clank'], ['machinegun_fire', 'Mitragliatrice coassiale', 'colpo MG 42 o M2']];
+    ['cannon_fire', 'Sparo del cannone', 'tank_gun'], ['cannon_reload', 'Ricarica del cannone', 'reload_clank'], ['machinegun_fire', 'Mitragliatrice coassiale', 'colpo MG 42 o M2'],
+    ['engine_idle', 'Motore al minimo (loop, si alterna al motore sotto carico)', 'nessuno: solo se presente il file'], ['skid', 'Cingoli che slittano (loop)', 'nessuno: solo se presente il file'],
+    ['armor_hit', 'Colpo sulla corazza', 'clang'], ['ricochet', 'Rimbalzo di un proiettile sulla corazza', 'ricochet'], ['collision', 'Urto contro un ostacolo o un altro carro', 'clang'], ['explosion', 'Esplosione del carro distrutto', 'boom']];
   for (const [t, name] of TANKS) for (const [ev, d, o] of TEV) add(`vehicle.${t}.${ev}`, `vehicles/tanks/${t}/${ev}`, 'vehicles', `${name}: ${d}`, o);
 
   // ---------- aerei ----------
