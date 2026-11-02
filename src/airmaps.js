@@ -280,7 +280,7 @@ const AIR_FREE = [{
       : `Ondata ${AIRM.wave}: ${alive.length} nemici · abbattuti ${AIRM.kills} · record ondata ${AIRM.best}`;
   },
 }];
-function airStageList() { return AIRFREE ? AIR_FREE : AIRMAP === 'norm' ? AIR_STAGES : AIR_STAGES2[AIRMAP]; }
+function airStageList() { if (typeof AMIS !== 'undefined' && AMIS.on) return AMIS.stages; return AIRFREE ? AIR_FREE : AIRMAP === 'norm' ? AIR_STAGES : AIR_STAGES2[AIRMAP]; }
 function airSpawn2() {
   let t = new V3(0, 0, 0);
   if (AIRMAP === 'manica') { if (MISSION.stage === 0 && AIRM.bombers) { const b = AIRM.bombers.find(p => p.alive && !p.crash); if (b) t = b.pos.clone(); } else if (AIRM.ships) { const s = AIRM.ships.find(v => v.alive); if (s) t = s.pos.clone(); } }

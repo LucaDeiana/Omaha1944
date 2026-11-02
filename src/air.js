@@ -136,7 +136,7 @@ function buildAirMap() {
   });
   buildRailway();
   buildTrees();
-  buildClouds(); buildAirFar(); buildCarrier(); buildCarrier();
+  buildClouds(); buildAirFar(); if (!(typeof AMIS !== 'undefined' && AMIS.on && AMIS.M.noCarrier)) buildCarrier();   // nelle missioni storiche niente portaerei davanti alla Normandia
 }
 function buildRailway() {
   const mb = new MB(); mb.mat = 'paint';
@@ -228,13 +228,16 @@ class AirTruck {
   }
   update(dt) {
     if (!this.alive) return;
-    if (this.z < 40) this.z += 7 * dt; // in fondo alla strada la colonna si ferma
-    const x = airRoadX(this.z) + 1.8; this.pos.set(x, Hf(x, this.z), this.z);
+    // attaccata, la colonna si ferma e i mezzi escono dalla strada verso le siepi (solo nelle missioni della campagna)
+    const scat = typeof AMIS !== 'undefined' && AMIS.on && AIRM.convoyHit;
+    if (scat) { this.off = this.off ?? (this.k % 2 ? 1 : -1) * rnd(14, 30); this.offN = Math.min(1, (this.offN || 0) + dt * .12); }
+    else if (this.z < 40) this.z += 7 * dt; // in fondo alla strada la colonna si ferma
+    const x = airRoadX(this.z) + 1.8 + (scat ? this.off * this.offN : 0); this.pos.set(x, Hf(x, this.z), this.z);
     this.g.rotation.y = Math.atan2(airRoadX(this.z + 3) - airRoadX(this.z), 3) + PI;
     this.box.min.set(x - 1.3, this.pos.y, this.z - 3.6); this.box.max.set(x + 1.3, this.pos.y + 2.5, this.z + 3.6);
   }
   damage(a, byPlayer) {
-    if (!this.alive) return; this.hp -= a;
+    if (!this.alive) return; this.hp -= a; if (!AIRM.convoyHit && byPlayer) AIRM.convoyHit = GAME.time > 0 ? (typeof AMIS !== 'undefined' && AMIS.on ? AMIS.t || .01 : GAME.time) : .01;
     if (this.hp > 0) return;
     this.alive = false; burnMeshes(this.g); const p = this.pos.clone(); p.y += 1.5;
     fxExplosion(p, 2, false); sfxBoom(p, 2); const e = addEmitter(p, 'fire', 1); e.life = 90;
@@ -377,6 +380,7 @@ function initAirMode() {
   if (AIRMAP !== 'norm') { MISSION.checkpoint = { pos: new V3(CARRIER.x, 0, CARRIER.z), yaw: 0 }; P.inBoat = false; P.boat = null; P.mode = 'foot'; P.pos.set(CARRIER.x, CARRIER.deckY + 2, CARRIER.z); awPreload(); setStage(0); return; }
   P.inBoat = false; P.boat = null; P.mode = 'foot'; P.pos.set(0, 500, 1100);
   MISSION.checkpoint = { pos: new V3(-30, 0, 1100), yaw: 0 };
+  if (typeof AMIS !== 'undefined' && AMIS.on) { const s = AMIS.M.start; P.pos.set(s.x, s.alt, s.z); MISSION.checkpoint = { pos: new V3(s.x, 0, s.z), yaw: s.hdg }; amisInit(); }
   awPreload(); setStage(0);
 }
 function updateAirMode(dt) {
@@ -385,11 +389,13 @@ function updateAirMode(dt) {
   airStageList()[MISSION.stage].update(dt);
   updateSubs(dt);
   for (const v of MISSION.vehicles) v.update(dt);
+  if (typeof AMIS !== 'undefined' && AMIS.on) amisFleetTick(dt);
   // a terra il giocatore non ha nulla da fare: torna subito in volo
   if (P.mode === 'foot' && !P.dead && !P.spawnMenu && GAME.started && !CUT.active) enterPlane();
 }
 // rientro in volo a ~1,5 km dall'obiettivo attuale, diretti verso di esso
 function airSpawn() {
+  if (typeof AMIS !== 'undefined' && AMIS.on) return amisSpawnPoint();
   if (AIRMAP !== 'norm') return airSpawn2();
   let t = new V3(0, 0, -400);
   if (MISSION.stage === 1) { const c = AIRM.convoy.find(v => v.alive); if (c) t = c.pos.clone(); }
@@ -402,7 +408,7 @@ function airSpawn() {
   const d = new V3(t.x - pos.x, 0, t.z - pos.z).normalize().multiplyScalar(130); d.y = -4;
   return { pos, vel: d };
 }
-const airDeployPoints = () => [
+const airDeployPoints = () => typeof AMIS !== 'undefined' && AMIS.on ? [{ label: 'In volo', sub: AMIS.M.title, kind: 'plane', carrier: false, pos: new V3(AMIS.M.start.x, 0, AMIS.M.start.z) }] : [
   { label: CARRIER.type === 'field' ? AIRMAPS[AIRMAP].field.name : 'Portaerei', sub: CARRIER.type === 'field' ? 'decollo dalla pista' : 'decollo dal ponte di volo', kind: 'plane', carrier: true, pos: new V3(CARRIER.x, 0, CARRIER.z) },
   { label: 'In volo', sub: 'vicino all\'obiettivo', kind: 'plane', carrier: false, pos: new V3(-30, 0, 1100) },
 ];

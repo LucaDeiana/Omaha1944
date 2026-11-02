@@ -88,6 +88,7 @@ const SIDE_DEF = {
 };
 
 function updateSide(dt) {
+  if (typeof AMIS !== 'undefined' && AMIS.on) { SIDE.cur = null; SIDE.mode = null; return; }   // le missioni della campagna aerea hanno obiettivi propri
   const mode = P.mode === 'naval' || P.mode === 'plane' ? P.mode : null;
   if (mode !== SIDE.mode) {
     SIDE.mode = mode;

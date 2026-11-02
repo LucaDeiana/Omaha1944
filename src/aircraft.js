@@ -411,7 +411,7 @@ function carrierRoll(me, dt, thrust, m) {
 function enterPlane(o = {}) {
   if (!PGEO.ready) return;
   const jetT = PLANE_SPECS[PLAYER_PLANES.includes(SETTINGS.plane) ? SETTINGS.plane : 'p47'].jet;
-  const deck = !o.pos && SCEN === 'air' && PL.spawnCarrier !== false && !(jetT && CARRIER.type !== 'field');
+  const deck = !o.pos && SCEN === 'air' && PL.spawnCarrier !== false && !(jetT && CARRIER.type !== 'field') && !(typeof AMIS !== 'undefined' && AMIS.on);   // campagna: si parte in volo
   const sp = o.pos ? { pos: o.pos, vel: o.vel } : deck ? { pos: new V3(CARRIER.x, CARRIER.deckY + 2.3, CARRIER.z + CARRIER.len / 2 - 36), vel: new V3(0, 0, -.01) } : SCEN === 'air' && MISSION.stage >= 0 ? airSpawn() : { pos: new V3(rnd(-80, 40), 380, 1100), vel: new V3(0, -5, -120) };
   PL.type = o.type && PLANE_SPECS[o.type] ? o.type : PLAYER_PLANES.includes(SETTINGS.plane) ? SETTINGS.plane : 'p47'; PL.spec = PLANE_SPECS[PL.type]; PL.torpedo = false;
   const me = new Plane(PL.type, 'A', sp.pos, sp.vel, []); me.player = true; me.hpMax = PL.spec.hp; me.hp = me.hpMax;
@@ -431,7 +431,7 @@ function enterPlane(o = {}) {
   if (PL.cockpit) PL.cockpit.visible = !PL.ext; if (me.g.userData.pilot) me.g.userData.pilot.visible = PL.ext; if (me.g.userData.glass) me.g.userData.glass.visible = PL.ext;
   if (PL.onDeck) { PL.throttle = 0; after(.1, () => showMsg((CARRIER.type === 'field' ? 'In testata pista' : 'Sul ponte della portaerei') + ': W per dare motore, a 150 km/h tira su · G carrello', 6)); }
   showMsg(PL.spec.name + ' — mouse: direzione · click sx: fuoco · T: aggancia e segui il cerchio d’anticipo · rotella: manetta', 4);
-  say(N.radio, 'Qui Thunderbolt Leader: attaccate le posizioni sulla scogliera. Attenti alla contraerea.');
+  if (!(typeof AMIS !== 'undefined' && AMIS.on)) say(N.radio, 'Qui Thunderbolt Leader: attaccate le posizioni sulla scogliera. Attenti alla contraerea.');
 }
 // mirino della visuale esterna: dove arrivano le raffiche (terreno lungo l'asse o punto di convergenza a 320 m)
 function planeAimMarker(me) {

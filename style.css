@@ -251,3 +251,11 @@ body.pDead #gl { filter: saturate(.15) contrast(1.1); transition: filter 1.2s; }
 #snpKc .kb b { font-family: 'Special Elite', serif; font-weight: normal; font-size: 26px; color: #ffd060; } #snpKc .kb small { display: block; font-size: 12px; opacity: .7; letter-spacing: .2em; }
 
 body.kcOn #hud, body.kcOn #killCard, body.kcOn #snpFeed, body.kcOn #crossX { visibility: hidden; }
+/* briefing delle missioni della campagna aerea */
+#airBrief{display:none;margin:10px 0 4px;padding:12px 14px;background:rgba(18,20,16,.72);border:1px solid rgba(232,196,106,.35);color:#e9e2cc;font:13px/1.45 'Special Elite','Courier New',monospace;max-height:46vh;overflow:auto;text-align:left}
+#airBrief .abHead{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;border-bottom:1px solid rgba(232,196,106,.3);padding-bottom:6px;margin-bottom:8px}
+#airBrief .abHead b{font:600 18px Oswald,sans-serif;letter-spacing:.06em;color:#f2e6c4}#airBrief .abN{font:600 11px Oswald,sans-serif;color:#e8c46a;letter-spacing:.2em}
+#airBrief .abGrid{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start}#airBrief canvas{width:150px;height:150px;border:1px solid #6b604a;background:#3b4f5a}
+#airBrief .abRow i{display:inline-block;min-width:86px;font-style:normal;color:#c8b98e;opacity:.85}#airBrief .abLock{color:#ff9a70;margin-top:6px}
+#airBrief .abCtx{margin:8px 0}#airBrief ol,#airBrief ul{margin:2px 0 6px 18px;padding:0}#airBrief details summary{cursor:pointer;color:#e8c46a}
+@media (max-width:700px){#airBrief .abGrid{grid-template-columns:1fr}}
