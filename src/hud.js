@@ -162,5 +162,5 @@ function planeHud() {
   $('phLock').textContent = typeof AB !== 'undefined' && AB.lock ? 'AGGANCIATO: ' + (AB.lock.spec ? AB.lock.spec.name : AB.lock.C ? AB.lock.C.name : 'bersaglio') : '';
   PHUD.help = Math.max(0, PHUD.help - 1 / 60);
   const h = $('phHelp'); h.style.opacity = PHUD.help > 0 ? Math.min(1, PHUD.help) : 0;
-  if (PHUD.help > 0) h.innerHTML = 'Mouse: direzione · A/D: rollio · W/S o rotella: manetta · Clic sx: mitragliatrici · Tasto dx: visuale libera · Z: zoom · X: aerofreni<br>Spazio/F: ' + (PL.torpedo ? 'siluro' : 'bomba') + (SCEN === 'sea' ? ' · N: bombe/siluro' : '') + ' · T: aggancia · G: carrello · V: visuale · M: comandi manuali · R: rientro se colpito · B: cambia ruolo · <b>H: mostra/nascondi</b>';
+  if (PHUD.help > 0) h.innerHTML = 'Mouse: direzione · A/D: rollio · W/S o rotella: manetta · Clic sx: mitragliatrici · Tasto dx: visuale libera · Shift o Z: mira (zoom) · X: aerofreni<br>Spazio/F: ' + (PL.torpedo ? 'siluro' : 'bomba') + (SCEN === 'sea' ? ' · N: bombe/siluro' : '') + ' · T: aggancia · G: carrello · V: visuale · M: comandi manuali · R: rientro se colpito · B: cambia ruolo · <b>H: mostra/nascondi</b>';
 }
