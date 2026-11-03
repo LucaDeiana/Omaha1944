@@ -76,6 +76,9 @@ Nuovo:
 - **Ricarica**: l'IA ora ha caricatori veri (Garand 8 colpi, Kar98k e Springfield 5, Thompson 30, MP 40 32, BAR 20, MG 42 a nastri da 250) e ricarica in 2–5 s. Nell'animazione l'arma si inclina con la volata in alto, la mano sinistra va alla giberna, poi al caricatore (sopra per i fucili, sotto per mitra e BAR) e torna all'arma. **È un cambio di gameplay**: durante la ricarica il soldato non spara. Misura a Omaha, 60 s di battaglia simulata: colpi dell'IA 4.010 contro 4.799 prima (−16%); caduti alleati 11 contro 13, tedeschi 7 contro 11 (singola simulazione, con variabilità). Nessuna ricarica rimasta bloccata.
 - **Finestre e feritoie**: busto in avanti e arma bassa appoggiata.
 - **Piedi sulla pendenza** (soldati vicini, fermi): la gamba a monte si piega, il bacino scende verso valle.
+- **Mani** (soldati vicini): dita a tubo raccolte a pugno sull'impugnatura, con nocche e pollice che si chiude, invece dei cilindretti dritti.
+  Costo: circa 1.700 triangoli in più per soldato vicino (fuciliere americano 16.400 in tutto); i soldati vicini sono al massimo 30.
+- **Ruoli**: i capisquadra (armati di mitra) portano il binocolo sul petto con la cinghia attorno al collo.
 - **Variazioni individuali**: ampiezza dei gesti, ritmo dello sguardo e inclinazione dell'arma diversi per ogni soldato, oltre a fase del passo e del respiro già casuali.
 
 Restano invariati:
@@ -88,11 +91,10 @@ Le sfere dei colpi seguono le ossa come prima: in ginocchio stanno dove sta il c
 
 ## Non fatto in questa fase (onestamente)
 - **Nessun modello nuovo creato**: niente Blender, niente GLB nuovi; corpo e volto sono quelli già presenti, con licenze libere.
-- **Nuovi ruoli visivi** (ufficiale, cecchino, equipaggi dei carri).
+- **Ruoli visivi** per ufficiali, cecchini ed equipaggi dei carri: nel gioco non esistono come soldati a piedi distinti (i cecchini a Omaha usano già il fucile con ottica).
 - **Animazioni ancora mancanti**:
   - morti diverse per postura (alla morte c'è già il ragdoll);
   - mitragliatrice su bipiede da prono (cambierebbe l'altezza del bersaglio, quindi il gameplay).
-- **Mani**: geometria delle mani rifatta.
 - **Normal map e ambient occlusion** sui tessuti.
 - **Verifica dei 50 FPS sul tuo PC.**
 

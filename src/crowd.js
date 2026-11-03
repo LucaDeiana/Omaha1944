@@ -168,6 +168,12 @@ function buildPartGeo(key, hi, gear) {
         add(U.cyl12, 0x2e2c28, .14, -.02, -.12, .25, 0, .15, .015, .32, .015); add(U.cyl12, 0x3a3630, .14, .16, -.12, .25, 0, .15, .03, .07, .03);
       }
     }
+    // caposquadra (armato di mitra): binocolo sul petto con la cinghia attorno al collo
+    if (gear && GEAR_K === 'smg') {
+      for (const sx of [-1, 1]) { add(cylG(.021, .019, .1, 10), 0x24221c, sx * .026, .33, -.16, -.15, 0, 0); add(cylG(.023, .023, .015, 10), 0x15140f, sx * .026, .38, -.152, -.15, 0, 0); }
+      add(U.box, 0x24221c, 0, .34, -.157, -.15, 0, 0, .03, .05, .03);
+      strap([sv(-.05, .375, -.155), sv(-.085, .47, -.11), sv(-.065, .545, -.03), sv(0, .565, .035), sv(.065, .545, -.03), sv(.085, .47, -.11), sv(.05, .375, -.155)], 0x3a2e22, .012, .004);
+    }
   } else if (part === 'head') {
     // testa: mascella, mento, zigomi, orbite, arcate, cranio; naso, orecchie, occhi, sopracciglia, labbra, barba
     const sk = C.skin;
@@ -191,7 +197,11 @@ function buildPartGeo(key, hi, gear) {
     B(sculpt([[.02, .046, .046, .046], [-.06, .046, .046, .044], [-.15, .041, .04, .037], [-.235, .038, .036, .034]], hi ? 12 : 6, C.jacket, { fold: hi ? .008 : 0, seed: 9 }));
     G(sculpt([[-.215, .045, .043, .041], [-.25, .044, .042, .04]], hi ? 12 : 6, C.jacket2, {}));
     G(sculpt([[-.245, .028, .02, .02], [-.27, .036, .022, .022], [-.3, .04, .024, .02], [-.325, .038, .02, .016]], hi ? 10 : 5, C.skin, { shadeBottom: .1 }));
-    if (hi) {
+    if (hi && gear) {
+      // mano chiusa sull'impugnatura: dita ad arco attorno al calcio, nocche, pollice che si chiude sopra
+      for (let k = 0; k < 4; k++) { const x = -.026 + k * .0175, r = k === 0 || k === 3 ? .0145 : .0165, P = []; for (let i = 0; i <= 6; i++) { const f = 2.2 - i / 6 * PI * 1.2; P.push(new V3(x, -.338 + r * Math.cos(f), -.02 + r * Math.sin(f))); } add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(P), 6, .0085 - (k === 3 ? .0012 : 0), 5), C.skin, 0, 0, 0); add(U.sph, C.skin, x, -.326, -.006, 0, 0, 0, .0095, .0095, .0095); }
+      { const P = []; for (let i = 0; i <= 5; i++) { const f = -.4 - i / 5 * 1.6; P.push(new V3(.03 - i * .006, -.3 + .022 * Math.sin(f), -.026 + .022 * Math.cos(f))); } add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(P), 5, .0095, 5), C.skin, 0, 0, 0); }
+    } else if (hi) {
       for (let k = 0; k < 4; k++) { const x = -.027 + k * .018, ln = k === 0 || k === 3 ? .028 : .034; add(cylG(.0095, .009, ln, 6), C.skin, x, -.338, -.004, .9, 0, 0); add(cylG(.009, .008, ln * .85, 6), C.skin, x, -.348, -.03, 2.2, 0, 0); }
       add(cylG(.01, .009, .045, 6), C.skin, .038, -.29, -.024, .5, 0, .9);
     } else add(U.box, C.skin, 0, -.34, -.012, .4, 0, 0, .065, .045, .03);
@@ -285,7 +295,7 @@ function getMesh(key) {
 }
 
 // ---------- scheletro ----------
-let GEAR_V = 0;   // variante dell'equipaggiamento durante la costruzione del corpo dei soldati vicini
+let GEAR_V = 0, GEAR_K = '';   // variante e arma durante la costruzione del corpo dei soldati vicini   // variante dell'equipaggiamento durante la costruzione del corpo dei soldati vicini
 function makeBody(team, kind, seed = (R() * 1e6) | 0) {
   const N = () => new THREE.Object3D();
   const root = N(); root.rotation.order = 'YXZ';
@@ -461,13 +471,13 @@ function skinMaterial(team) {
 }
 function skinTemplate(b) {
   const key = skinKey(b); let t = SKIN.tpl[key]; if (t) return t;
-  const r = makeBody(b.team, b.kind); BODIES.pop(); GEAR_V = b.gv || 0;
+  const r = makeBody(b.team, b.kind); BODIES.pop(); GEAR_V = b.gv || 0; GEAR_K = b.kind;
   r.root.updateMatrixWorld(true);
   const parts = [], ranges = [], white = new THREE.Color(1, 1, 1);
   const base = typeof BASE_MALE !== 'undefined';
   if (base) { const g = baseBodyGeo(b.team); parts.push({ g, m: new THREE.Matrix4(), c: white, vc: true, uvs: 1 }); ranges.push(['base', g.attributes.position.count, null]); }
   for (const p of r.parts) { if (base && p.name === 'head' && useScanHead(p.key)) continue; const g = (p.name === 'weapon' && gunGeo(b.team, b.kind)) || buildPartGeo(p.key, true, base); parts.push({ g, m: p.node.matrixWorld.clone(), c: white, vc: true, uvs: 1 }); ranges.push([p.name, g.attributes.position.count, p.node.matrixWorld.clone().invert()]); }
-  GEAR_V = 0;
+  GEAR_V = 0; GEAR_K = '';
   const geo = mergeGeos(parts), n = geo.attributes.position.count, si = new Float32Array(n * 4), sw = new Float32Array(n * 4), pa = geo.attributes.position, v = new V3();
   let o = 0;
   for (const [name, cnt, inv] of ranges) {
