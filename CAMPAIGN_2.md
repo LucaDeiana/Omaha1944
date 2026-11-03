@@ -53,7 +53,7 @@ Capitoli: Overlord 7, Ardenne 6, Deserto 6, Mare 5 (24 missioni).
 5. assalto alla scogliera;
 6. conclusione con salvataggio e sblocco.
 
-Ci sono 9 dialoghi dei personaggi.
+Ci sono 11 dialoghi dei personaggi.
 
 **Giocabili adattate**, indicate così nel menù: usano una modalità esistente e aggiungono personaggio, dialoghi e progresso.
 - Overlord 6: missione aerea P-47 con Lecca.
