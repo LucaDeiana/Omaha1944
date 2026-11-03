@@ -24,6 +24,8 @@ class Plane {
     this.g.traverse(o => { if (o.isMesh) o.castShadow = true; });
     scene.add(this.g); PLANES.push(this);
     this.eng = loopSound(type === 'fw190' || (spc && spc.nation === 'de') ? 'eng_fw' : type === 'b26' ? 'eng_bomber' : 'eng_p47', 0, 'aircraft.' + type + '.engine');
+    // carattere del motore finché non ci sono registrazioni proprie: P-47 (R-2800, 18 cilindri) più grave, Fw 190 (BMW 801, 14 cilindri) più alto
+    this.engK = type === 'p47' ? .9 : type === 'fw190' ? 1.1 : 1;
     if (spc && spc.jet) this.jet = true;
     this.orient(0);
   }
@@ -75,7 +77,7 @@ class Plane {
         if (hd < lead + 15 && this.bombT <= 0) { this.dropBomb(); this.bombT = this.type === 'b26' ? .35 : .15; }
       }
     } else { this.pos.addScaledVector(this.vel, dt); this.orient(this.roll *= .98); if (this.age > 60 || Math.abs(this.pos.x) > 2500 || Math.abs(this.pos.z) > 2500) this.remove(); }
-    this.eng && this.eng.at(this.pos, this.type === 'b26' ? 2.2 : 1.6, 1 + clamp(-_a3.subVectors(this.pos, camera.position).normalize().dot(this.vel) / 343, -.3, .3), this.type === 'b26' ? 500 : 260);
+    this.eng && this.eng.at(this.pos, this.type === 'b26' ? 2.2 : 1.6, (this.eng.custom ? 1 : this.engK) * (1 + clamp(-_a3.subVectors(this.pos, camera.position).normalize().dot(this.vel) / 343, -.3, .3)), this.type === 'b26' ? 500 : 260);
     if (this.alive && !this.crash && this.team === 'E' && dist2Cam(this.pos) < 220 * 220 && !this.shouted) { this.shouted = true; shout('en', 'plane', P.pos.clone().add(new V3(rnd(-8, 8), 0, rnd(-8, 8))), { text: pick(['Aircraft! Get down!', 'Here come the Jerries!']) }); }
   }
   // esplode in aria: palla di fuoco, rottami che cadono
@@ -642,7 +644,7 @@ function updatePlane(dt) {
   planeReticle(me); planeDamageHud(me);
   const fa = SETTINGS.fovAir || 88, fov = (PL.ext ? Math.max(55, fa - 18) : fa) * (P.adsHeld ? .45 : 1); if (Math.abs(camera.fov - fov) > .05) { camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 9)); camera.updateProjectionMatrix(); }
   if (PL.eng !== me.eng) PL.eng = me.eng;
-  me.eng && me.eng.set(.75 * (.4 + PL.throttle * .6), 0, .75 + PL.throttle * .5);
+  me.eng && me.eng.set(.75 * (.4 + PL.throttle * .6), 0, (.75 + PL.throttle * .5) * (me.eng.custom ? 1 : me.engK || 1));
   P.supp = Math.max(P.supp, clamp((PL.G - 5) / 3, 0, .9));
   PL.gT -= dt; if (PL.gT <= 0) { PL.gT = .07; drawGauges(); } updateCockpit(dt);
   P.pos.copy(me.pos);

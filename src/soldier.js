@@ -86,7 +86,7 @@ class Soldier {
       if (this.team === 'A' && !this.wounded && zone !== 'head' && zone !== 'blast' && this.state !== 'boat' && R() < .28) { this.becomeWounded(); return false; }
       this.die(from, byPlayer, zone, imp); return true;
     }
-    if (from && this.team !== PT && byPlayer) { this.target = P; this.tVis = true; this.duck = true; this.duckT = rnd(.6, 1.4); if (R() < .3) shout('de', 'medic', this.pos); }
+    if (from && this.team !== PT && byPlayer) { this.target = P; this.tVis = true; this.duck = true; this.duckT = rnd(.6, 1.4); if (R() < .3) shout('de', 'medic', this.pos, { src: this }); }
     return false;
   }
   becomeWounded() {
@@ -94,7 +94,7 @@ class Soldier {
     if (this.cover) { this.cover.occ--; this.cover = null; }
     hidePart(this.body, 'weapon');
     sfxVoice(this.pos, pick(['scream', 'wail']));
-    if (P.pos.distanceTo(this.pos) < 30) shout('en', 'medic', this.pos, { sub: true });
+    if (P.pos.distanceTo(this.pos) < 30) shout('en', 'medic', this.pos, { src: this, sub: true });
   }
   heal() { this.wounded = false; this.hp = 45; this.state = 'idle'; this.wait = rnd(.5, 2); const p = this.body.parts.find(x => x.name === 'weapon'); if (p) p.hidden = false; }
   die(from, byPlayer, zone, imp) {
@@ -135,7 +135,7 @@ class Soldier {
       this.anim(dt, 0, this.boat.open ? 0 : 1);
       if (this.boat.open) {
         this.leave -= dt;
-        if (this.leave <= 0) { this.state = 'move'; this.dest = new V3(this.pos.x + rnd(-1.2, 1.2), 0, this.boat.z - rnd(9, 14)); this.crouchRun = R() < .5; this.thinkT = rnd(1.5, 3); this.body.tint.multiplyScalar(.8); if (R() < .25) shout('en', 'move', this.pos); }
+        if (this.leave <= 0) { this.state = 'move'; this.dest = new V3(this.pos.x + rnd(-1.2, 1.2), 0, this.boat.z - rnd(9, 14)); this.crouchRun = R() < .5; this.thinkT = rnd(1.5, 3); this.body.tint.multiplyScalar(.8); if (R() < .25) shout('en', 'move', this.pos, { src: this }); }
       }
       return;
     }
@@ -148,7 +148,7 @@ class Soldier {
       if (!this.healer && this.pos.z > -55) { this.pos.z -= .35 * dt; sp = .3; }
       this.pos.y = Hf(this.pos.x, this.pos.z);
       this.anim(dt, 0, 0);
-      if (R() < dt * .12) { sfxVoice(this.pos, pick(['groan', 'wail'])); if (R() < .3 && P.pos.distanceTo(this.pos) < 25) shout('en', 'medic', this.pos); }
+      if (R() < dt * .12) { sfxVoice(this.pos, pick(['groan', 'wail'])); if (R() < .3 && P.pos.distanceTo(this.pos) < 25) shout('en', 'medic', this.pos, { src: this }); }
       return;
     }
     if (this.dest && !this.stationary) {
@@ -353,8 +353,8 @@ class Soldier {
     }
     if (this.tVis && this.target !== had && this.shoutT <= 0 && dist2Cam(this.pos) < 70 * 70) {
       this.shoutT = rnd(10, 25);
-      if (this.team === 'E') shout('de', R() < .5 ? 'spot' : 'fire', this.pos);
-      else shout('en', R() < .5 ? 'cover' : 'move', this.pos);
+      if (this.team === 'E') shout('de', R() < .5 ? 'spot' : 'fire', this.pos, { src: this });
+      else shout('en', R() < .5 ? 'cover' : 'move', this.pos, { src: this });
     }
   }
   thinkAlly() {
@@ -376,7 +376,7 @@ class Soldier {
     this.nadeT -= this.thinkDt;
     if (this.target && this.target !== P && this.tVis && this.target.inTrench && this.nadeT <= 0 && MISSION.allyNadeCD <= 0) {
       const d = this.target.pos.distanceTo(this.pos);
-      if (d > 10 && d < 28) { throwNadeAt(this, this.target.pos, 'A'); this.nadeT = rnd(20, 40); MISSION.allyNadeCD = rnd(3, 6); if (dist2Cam(this.pos) < 50 * 50) shout('en', 'grenade', this.pos); }
+      if (d > 10 && d < 28) { throwNadeAt(this, this.target.pos, 'A'); this.nadeT = rnd(20, 40); MISSION.allyNadeCD = rnd(3, 6); if (dist2Cam(this.pos) < 50 * 50) shout('en', 'grenade', this.pos, { src: this }); }
     }
     if (this.state === 'move') return;
     this.wait -= this.thinkDt * (MISSION.suppT > 0 || PT === 'E' ? 3 : 1);
@@ -384,9 +384,9 @@ class Soldier {
       // avanzata a sbalzi: metà della squadra copre mentre l'altra si muove, e mai sotto fuoco intenso
       let pinned = this.supp > (MISSION.suppT > 0 ? .7 : .5) && this.cover;
       this.pinT = pinned ? (this.pinT || 0) + this.thinkDt * 3 : 0;
-      if (this.pinT > 9) { pinned = false; this.pinT = 0; if (dist2Cam(this.pos) < 60 * 60 && R() < .3) shout('en', 'move', this.pos); }
+      if (this.pinT > 9) { pinned = false; this.pinT = 0; if (dist2Cam(this.pos) < 60 * 60 && R() < .3) shout('en', 'move', this.pos, { src: this }); }
       const myTurn = (Math.floor(GAME.time / 6) + this.bound) % 2 === 0 || MISSION.suppT > 0 || !this.cover;
-      if (pinned || !myTurn) { this.wait = rnd(1.2, 2.6); if (pinned && R() < .08 && dist2Cam(this.pos) < 50 * 50) shout('en', 'cover', this.pos); return; }
+      if (pinned || !myTurn) { this.wait = rnd(1.2, 2.6); if (pinned && R() < .08 && dist2Cam(this.pos) < 50 * 50) shout('en', 'cover', this.pos, { src: this }); return; }
       this.pickCover(Z);
     }
   }
@@ -458,7 +458,7 @@ class Soldier {
         if (this.nadeT <= 0 && cd <= 0) {
           throwNadeAt(this, t === P ? P.pos.clone().add(new V3(rnd(-2.5, 2.5) / D.acc, 0, rnd(-2.5, 2.5) / D.acc)) : t.pos, this.team);
           this.nadeT = rnd(18, 32); if (t === P) MISSION.nadeCD = rnd(6, 11) / D.acc; else MISSION.eNadeCD = rnd(3, 6);
-          if (dist2Cam(this.pos) < 60 * 60) shout('de', 'grenade', this.pos, { priority: true });
+          if (dist2Cam(this.pos) < 60 * 60) shout('de', 'grenade', this.pos, { src: this, priority: true });
         }
       }
     }

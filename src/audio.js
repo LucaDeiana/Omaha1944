@@ -24,6 +24,8 @@ function initAudio() {
   for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < d.length; i++) { const t = i / sr; d[i] = (R() * 2 - 1) * Math.pow(1 - i / d.length, 2.6) * (t < .02 ? t / .02 : 1); } }
   AU.rev = c.createConvolver(); AU.rev.buffer = ir;
   const rg = c.createGain(); rg.gain.value = .55; AU.rev.connect(rg); rg.connect(AU.out);
+  // bus di mixaggio: ogni categoria ha un suo volume (Impostazioni → Mixer) prima del compressore comune
+  AU.bus = {}; for (const k of MIX_BUSES) { const g = c.createGain(); g.gain.value = mixVol(k); g.connect(AU.out); AU.bus[k] = g; }
   initSpeech();
   return buildBank().then(r => { if (typeof loadCustomAudio === 'function') loadCustomAudio(); return r; });
 }
@@ -165,9 +167,9 @@ async function buildBank() {
     for (const [f, ty, v] of [[b, 'sawtooth', .25], [b / 2, 'triangle', .35], [b * 1.5, 'sawtooth', .08]]) { const o = oc.createOscillator(); o.type = ty; o.frequency.value = f; const g = oc.createGain(); g.gain.value = v; o.connect(g); g.connect(vca); o.start(0); }
     const am = oc.createOscillator(); am.frequency.value = cyl; const amg = oc.createGain(); amg.gain.value = .4; am.connect(amg); amg.connect(vca.gain); am.start(0);
   };
-  add('eng_p47', 1, engine(72, 18), 1); add('eng_fw', 1, engine(66, 22), 1); add('eng_boat', 1, engine(40, 10), 1);
+  add('eng_p47', 4.25, engine(72, 18), 1); add('eng_fw', 4.25, engine(66, 22), 1); add('eng_boat', 4.25, engine(40, 10), 1);
   // carri armati: motore radiale Continental dello Sherman, V12 Maybach del Panzer IV e del Tiger
-  add('eng_sherman', 1, engine(46, 11.5), 1); add('eng_pz4', 1, engine(38, 14), 1); add('eng_tiger', 1, engine(31, 16.5), 1);
+  add('eng_sherman', 4.25, engine(46, 11.5), 1); add('eng_pz4', 4.25, engine(38, 14), 1); add('eng_tiger', 4.25, engine(31, 16.5), 1);
   // cingoli: maglie che sbattono sulle ruote, cigolii, rombo del rotolamento
   add('tracks', 2, (oc, dst) => {
     oN(oc, dst, 0, 2, { type: 'lowpass', f: 180, v: .55, a: .05, brown: true, lin: true, off: 0 });
@@ -198,9 +200,13 @@ async function buildBank() {
   }, 1);
   await Promise.all(jobs);
   // anelli senza scatti: dissolvenza incrociata tra la fine e l'inizio
-  for (const n of ['eng_p47', 'eng_fw', 'eng_boat', 'eng_bomber', 'surf', 'wind', 'battle']) {
+  // motori: rendering di 4,25 s con frequenze che compiono un numero intero di cicli in 4 s; la dissolvenza di 0,25 s
+  // unisce la fine all'inizio senza salti di fase, e il loop ripete ogni 4 s invece che ogni 0,75 s (prima la pulsazione
+  // della giunzione si sentiva come un motore che si spegne e riparte)
+  const ENG4 = { eng_p47: 1, eng_fw: 1, eng_boat: 1, eng_sherman: 1, eng_pz4: 1, eng_tiger: 1 };
+  for (const n of ['eng_p47', 'eng_fw', 'eng_boat', 'eng_bomber', 'eng_sherman', 'eng_pz4', 'eng_tiger', 'surf', 'wind', 'battle']) {
     const b = AU.buf[n] && AU.buf[n][0]; if (!b) continue;
-    const L = b.length, F = Math.floor(Math.min(L * .3, sr * (L > sr * 2 ? 1.5 : .25))), src = b.getChannelData(0);
+    const L = b.length, F = ENG4[n] ? Math.floor(sr * .25) : Math.floor(Math.min(L * .3, sr * (L > sr * 2 ? 1.5 : .25))), src = b.getChannelData(0);
     const nb = c.createBuffer(1, L - F, sr), out = nb.getChannelData(0);
     for (let i = 0; i < L - F; i++) out[i] = i < F ? src[i] * (i / F) + src[L - F + i] * (1 - i / F) : src[i];
     AU.buf[n] = [nb];
@@ -210,11 +216,71 @@ async function buildBank() {
   if (window.SFX_DATA) for (const k in SFX_DATA) { const arr = []; for (const b64 of SFX_DATA[k]) { try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); arr.push(await c.decodeAudioData(u.buffer)); } catch (e) { } } if (arr.length) AU.buf[k] = arr; }
   // suoni reali di guerra (CC0): sostituiscono quelli sintetici con lo stesso nome; picco portato a 0,9
   if (window.SFX_WAR) for (const k in SFX_WAR) { const arr = []; for (const b64 of SFX_WAR[k]) { try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); const b = await c.decodeAudioData(u.buffer); const d = b.getChannelData(0); let mx = 0; for (let i = 0; i < d.length; i += 2) mx = Math.max(mx, Math.abs(d[i])); if (mx > 0) { const g = .9 / mx; for (let i = 0; i < d.length; i++) d[i] *= g; } arr.push(k === 'imp_metal' ? trimBuf(c, b, .09) : b); } catch (e) { } } if (arr.length) AU.buf[k] = arr; }
+  // registrazioni reali usate come loop (motori, risacca, incendio): si prende il tratto più costante e lo si chiude ad anello
+  // con una dissolvenza a potenza costante. Prima la registrazione intera (con le sue variazioni di volume) veniva ripetuta
+  // grezza: il motore dell'aereo «si spegneva e ripartiva» a ogni giro.
+  for (const n of ['eng_p47', 'eng_fw', 'eng_bomber', 'surf', 'fire_loop']) if (window.SFX_WAR && SFX_WAR[n] && AU.buf[n]) AU.buf[n] = AU.buf[n].map(b => steadyLoop(c, b, n === 'surf' ? 8 : 3));
   AU.ready = true;
   for (const h of AU.loopHandles || []) if (!h.dead && !h.src) h.build();   // loop chiesti durante il caricamento
   startAmbience();
 }
 
+// tratto più costante di una registrazione (finestre RMS di 50 ms), lungo al massimo maxSec, chiuso ad anello
+function steadyLoop(c, b, maxSec) {
+  const sr = b.sampleRate, d = b.getChannelData(0), W = Math.floor(sr * .05), rms = [];
+  for (let i = 0; i + W <= d.length; i += W) { let s2 = 0; for (let k = i; k < i + W; k++) s2 += d[k] * d[k]; rms.push(Math.sqrt(s2 / W)); }
+  const n = Math.min(rms.length, Math.max(8, Math.floor(maxSec / .05))); let best = 0, bs = -1;
+  for (let a = 0; a + n <= rms.length; a++) { let mn = 1e9, sm = 0; for (let k = a; k < a + n; k++) { mn = Math.min(mn, rms[k]); sm += rms[k]; } const sc = mn / (sm / n + 1e-9) + sm / n * .5; if (sc > bs) { bs = sc; best = a; } }
+  const a0 = best * W, L = n * W, F = Math.floor(Math.min(L * .25, sr * .4)), ch = b.numberOfChannels, nb = c.createBuffer(ch, L - F, sr);
+  let mx = 0;
+  for (let q = 0; q < ch; q++) { const s = b.getChannelData(q), o = nb.getChannelData(q); for (let i = 0; i < L - F; i++) { o[i] = i < F ? s[a0 + i] * Math.sin(i / F * PI / 2) + s[a0 + L - F + i] * Math.cos(i / F * PI / 2) : s[a0 + i]; mx = Math.max(mx, Math.abs(o[i])); } }
+  if (mx > 0) for (let q = 0; q < ch; q++) { const o = nb.getChannelData(q); for (let i = 0; i < o.length; i++) o[i] *= .85 / mx; }
+  return nb;
+}
+// ---------- mixaggio ----------
+const MIX_BUSES = ['weapons', 'voices', 'explosions', 'vehicles', 'aircraft', 'ambience', 'other'];
+const MIX_NAMES = { weapons: 'Armi', voices: 'Voci', explosions: 'Esplosioni', vehicles: 'Carri e navi', aircraft: 'Aerei', ambience: 'Ambiente', other: 'Altri effetti' };
+const MIX_OF = {};
+for (const n of ['garand', 'kar98', 'springfield', 'bar', 'thompson', 'mp40', 'colt', 'mg42', 'm2', 'rifle_far', 'smg_far', 'mg_far', 'mag_out', 'mag_in', 'bolt_open', 'bolt_close', 'clip_in', 'dry', 'pin', 'tink']) MIX_OF[n] = 'weapons';
+for (const n of ['boom', 'boom_far', 'boom_big', 'boom_water', 'imp_water', 'whistle', 'tank_gun', 'rocket']) MIX_OF[n] = 'explosions';
+for (const n of ['tracks', 'turret', 'reload_clank', 'clang', 'eng_sherman', 'eng_pz4', 'eng_tiger', 'eng_boat', 'horn', 'ship_near', 'ship_far', 'torpedo_run']) MIX_OF[n] = 'vehicles';
+for (const n of ['eng_p47', 'eng_fw', 'eng_bomber', 'flyby', 'dive', 'flak', 'flak_far']) MIX_OF[n] = 'aircraft';
+for (const n of ['surf', 'wind', 'battle', 'fire_loop', 'air_raid', 'gq_siren']) MIX_OF[n] = 'ambience';
+for (const n of ['scream', 'groan', 'yell', 'wail']) MIX_OF[n] = 'voices';
+const MIX_CX = [['weapon.', 'weapons'], ['vehicle.', 'vehicles'], ['aircraft.', 'aircraft'], ['shout.', 'voices'], ['radio.', 'voices'], ['sniper.announcer', 'voices'], ['ship.', 'vehicles']];
+function mixVol(k) { const m = SETTINGS.mix || {}; return m[k] ?? 1; }
+function busFor(name, o) {
+  if (!AU.bus) return AU.out;
+  if (o && o.bus && AU.bus[o.bus]) return AU.bus[o.bus];
+  const cx = o && o.cx; if (typeof cx === 'string') for (const [pre, b] of MIX_CX) if (cx.startsWith(pre)) return AU.bus[b];
+  return AU.bus[MIX_OF[name] || 'other'];
+}
+function mixApply() { if (!AU.bus) return; const t = AU.ctx.currentTime; for (const k of MIX_BUSES) AU.bus[k].gain.setTargetAtTime(mixVol(k) * (AU.duckK && k !== 'voices' && k !== 'ambience' ? AU.duckK : 1), t, .05); }
+// abbassamento leggero (−3,5 dB) di armi, esplosioni e mezzi mentre arriva un ordine importante
+function mixDuck(dur) { if (!AU.bus) return; AU.duckK = .67; mixApply(); clearTimeout(AU.duckT); AU.duckT = setTimeout(() => { AU.duckK = 0; mixApply(); }, dur * 1000); }
+// regolazioni nel menù, sotto il volume generale
+function mixUI() {
+  const v = $('optVol'); if (!v || $('mixBox')) return; const lab = v.closest('label') || v.parentNode;
+  const box = document.createElement('details'); box.id = 'mixBox'; box.style.cssText = 'margin:4px 0 8px;font-size:13px';
+  box.innerHTML = '<summary style="cursor:pointer">Mixer audio</summary>' + MIX_BUSES.map(k => `<label style="display:flex;gap:8px;align-items:center;margin:3px 0">${MIX_NAMES[k]} <input data-mix="${k}" type="range" min="0" max="1.5" step=".05" value="${mixVol(k)}" style="flex:1"><span>${Math.round(mixVol(k) * 100)}%</span></label>`).join('');
+  lab.parentNode.insertBefore(box, lab.nextSibling);
+  box.addEventListener('input', e => { const k = e.target.dataset && e.target.dataset.mix; if (!k) return; SETTINGS.mix = Object.assign({}, SETTINGS.mix, { [k]: +e.target.value }); e.target.nextSibling.textContent = Math.round(+e.target.value * 100) + '%'; mixApply(); if (typeof saveSettings === 'function') saveSettings(); });
+}
+addEventListener('load', () => { try { mixUI(); } catch (e) { } });
+// ---------- occlusione leggera ----------
+// un edificio o un muro fra la camera e la sorgente: suono più basso e più ovattato. Un raggio per cella di 10 m,
+// riusato per 0,5 s e azzerato quando la camera si sposta di qualche metro (al massimo poche decine di raggi al secondo)
+const OCC = { m: new Map(), cam: new V3(1e9, 0, 0), t: 0, rays: 0 };
+const _occO = new V3(), _occD = new V3();
+function audioOccluded(pos) {
+  if (typeof raySolids !== 'function' || typeof SCEN === 'undefined' || SCEN === 'air' || SCEN === 'sea') return false;
+  const now = performance.now();
+  if (OCC.cam.distanceToSquared(camera.position) > 16 || now - OCC.t > 500) { OCC.m.clear(); OCC.cam.copy(camera.position); OCC.t = now; }
+  const k = Math.floor(pos.x / 10) * 100003 + Math.floor(pos.z / 10), c = OCC.m.get(k); if (c !== undefined) return c;
+  _occO.copy(camera.position); _occD.set(Math.floor(pos.x / 10) * 10 + 5 - _occO.x, pos.y + 1.2 - _occO.y, Math.floor(pos.z / 10) * 10 + 5 - _occO.z);
+  const L = _occD.length(); _occD.multiplyScalar(1 / (L || 1)); OCC.rays++;
+  const r = !!raySolids(_occO, _occD, Math.max(0, L - 2)); OCC.m.set(k, r); return r;
+}
 // ---------- riproduzione spaziale ----------
 const _right = new V3(), _fwd = new V3(), _toSrc = new V3();
 function spatial(pos, ref = 30) {
@@ -223,10 +289,11 @@ function spatial(pos, ref = 30) {
   _right.set(Math.cos(P.yaw), 0, -Math.sin(P.yaw)); _fwd.set(-Math.sin(P.yaw), 0, -Math.cos(P.yaw));
   _toSrc.subVectors(pos, camera.position); _toSrc.y = 0;
   const l = _toSrc.length() || 1, behind = _toSrc.dot(_fwd) / l < -.3;
+  const occ = d > 6 && d < 220 ? audioOccluded(pos) : false;
   return {
-    vol: 1 / (1 + Math.pow(d / ref, 1.5)),
+    vol: 1 / (1 + Math.pow(d / ref, 1.5)) * (occ ? .6 : 1),
     pan: clamp(_toSrc.dot(_right) / l, -1, 1) * .85,
-    lp: clamp(22000 / (1 + d / 40), 300, 20000) * (behind ? .55 : 1),
+    lp: clamp(22000 / (1 + d / 40), 300, 20000) * (behind ? .55 : 1) * (occ ? .3 : 1), occ,
     delay: d > 25 ? d / 343 : 0,
     rev: clamp(.05 + d / 320, .05, .8), d
   };
@@ -262,7 +329,7 @@ function play(name, pos, o = {}) {
   let last = g;
   if (sp.lp < 19000) { const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = clamp(sp.lp, 80, 20000); last.connect(f); last = f; }
   if (c.createStereoPanner && sp.pan) { const p = c.createStereoPanner(); p.pan.value = clamp(sp.pan, -1, 1); last.connect(p); last = p; }
-  last.connect(AU.out);
+  last.connect(busFor(name, o));
   const rv = clamp(sp.rev * (o.revMul ?? 1), 0, 1);
   if (rv > .02) { const s = c.createGain(); s.gain.value = rv; last.connect(s); s.connect(AU.rev); }
   src.start(t);
@@ -272,7 +339,7 @@ function play(name, pos, o = {}) {
   if (o.echo && pos && sp.d > 15 && camera.position.z > -110 && vol > .05 && AU.active.length < MAX_VOICES - 8) {
     const e = c.createBufferSource(); e.buffer = src.buffer; e.playbackRate.value = src.playbackRate.value;
     const eg = c.createGain(); eg.gain.value = Math.min(vol * .28, 1); const ef = c.createBiquadFilter(); ef.type = 'lowpass'; ef.frequency.value = 900;
-    e.connect(ef); ef.connect(eg); eg.connect(AU.out);
+    e.connect(ef); ef.connect(eg); eg.connect(busFor(name, o));
     const ed = Math.min(3, (Math.abs(camera.position.z + 85) + Math.abs(pos.z + 85)) / 343 + .05);
     e.start(t + ed); AU.active.push({ src: e, g: eg, vol: vol * .28, start: t + ed, end: t + ed + dur });
   }
@@ -280,17 +347,31 @@ function play(name, pos, o = {}) {
 }
 // suono continuo. Se l'audio non è ancora pronto (mezzi creati durante il caricamento) il loop resta
 // in attesa e parte da solo appena i suoni sono pronti, con l'ultimo volume impostato.
+// file personale usato come loop: senza silenzi iniziali e finali e con la fine sfumata nell'inizio (dissolvenza
+// a potenza costante), così il giro non lascia buchi né click. L'originale resta intatto; il risultato è in cache.
+const LOOPIFY = new WeakMap();
+function loopify(b) {
+  if (LOOPIFY.has(b)) return LOOPIFY.get(b);
+  const ch = b.numberOfChannels, sr = b.sampleRate, d0 = b.getChannelData(0), th = .004; let a = 0, z = b.length - 1;
+  while (a < z && Math.abs(d0[a]) < th) a++; while (z > a && Math.abs(d0[z]) < th) z--;
+  const L = z - a + 1, F = Math.floor(Math.min(L * .2, sr * .35));
+  if (L < sr * .3) { LOOPIFY.set(b, b); return b; }
+  const nb = AU.ctx.createBuffer(ch, L - F, sr);
+  for (let c = 0; c < ch; c++) { const s = b.getChannelData(c), o = nb.getChannelData(c); for (let i = 0; i < L - F; i++) { if (i < F) { const k = i / F; o[i] = s[a + i] * Math.sin(k * PI / 2) + s[a + L - F + i] * Math.cos(k * PI / 2); } else o[i] = s[a + i]; } }
+  LOOPIFY.set(b, nb); return nb;
+}
 function loopSound(name, vol = 0, cx) {
   const h = {
     src: null, g: null, f: null, pan: null, name, cx, pend: [vol, 0, 1, 20000],
     build() {
-      const cl = typeof caResolve === 'function' ? caResolve(name, cx) : null, list = cl || AU.buf[name];
+      const cl = typeof caResolve === 'function' ? caResolve(name, cx) : null, list = cl ? [loopify(cl[0])] : AU.buf[name];
+      this.builds = (this.builds || 0) + 1; this.custom = !!cl;
       if (!list) return false;
       const c = AU.ctx, src = this.src = c.createBufferSource(); src.buffer = list[0]; src.loop = true;
       const g = this.g = c.createGain(); g.gain.value = this.pend[0]; const f = this.f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 20000;
       let last = f; src.connect(g); g.connect(f);
       if (c.createStereoPanner) { this.pan = c.createStereoPanner(); f.connect(this.pan); last = this.pan; }
-      last.connect(AU.out); src.start(); this.set(...this.pend); return true;
+      last.connect(busFor(name, { cx })); src.start(); this.set(...this.pend); return true;
     },
     set(v, p = 0, rate = 1, lp = 20000) {
       if (!fin(v) || !fin(p) || !fin(rate) || !fin(lp)) return;
@@ -428,7 +509,7 @@ const LINES = {
     medic: ['Medic!', 'Medic! I need a medic!', 'I\'m hit! I\'m hit!', 'Oh God... help me!', 'Somebody help me!', 'Mama...'],
     cover: ['Take cover!', 'Get down!', 'Machine gun!', 'MG on the bluff!', 'Covering fire!', 'Keep your heads down!'],
     grenade: ['Grenade!', 'Grenade! Get down!'], reload: ['Reloading!', 'Cover me, reloading!'], kill: ['Got him!', 'Kraut down!', 'He\'s down!'],
-    fire: ['Fire in the hole!'], mortar: ['Incoming!', 'Mortars! Incoming!'], plane: ['Aircraft!', 'Here come the Jerries!', 'Those are ours! Thunderbolts!'],
+    fire: ['Fire in the hole!'], openfire: ['Open fire!', 'Fire at will!', 'Let \'em have it!'], spot: ['Contact front!', 'Enemy spotted!', 'Krauts, up ahead!', 'There, by the hedgerow!'], fallback: ['Fall back! Fall back!', 'Pull back to cover!'], mortar: ['Incoming!', 'Mortars! Incoming!'], plane: ['Aircraft!', 'Here come the Jerries!', 'Those are ours! Thunderbolts!'],
   },
   de: {
     fire: ['Feuer!', 'Feuer frei!', 'Schießt doch!', 'Maschinengewehr, Feuer!'], spot: ['Da drüben! Amerikaner!', 'Achtung! Landungsboote!', 'Sie kommen!', 'Links! Links!'],
@@ -444,28 +525,55 @@ const IT = {
   'Granate!': 'Granata!', 'Handgranate!': 'Granata a mano!', 'Nachladen!': 'Ricarico!', 'Sanitäter!': 'Infermiere!', 'Ich bin getroffen!': 'Sono colpito!', 'Zurück! Zurück!': 'Indietro! Indietro!',
   'Haltet die Stellung!': 'Tenete la posizione!', 'Jabos! Jabos!': 'Cacciabombardieri!', 'Rückzug!': 'Ritirata!', 'Schießt doch!': 'Sparate!', 'Maschinengewehr, Feuer!': 'Mitragliatrice, fuoco!',
 };
+// ---------- gestore centrale delle voci ----------
+// Ogni grido è un evento: categoria, priorità, parlante, squadra, identificativo. Passa da qui qualunque sia la
+// riproduzione (file registrato, sintesi del browser, urlo sintetico) e viene scartato se: il parlante è morto,
+// è troppo lontano, la stessa categoria è stata detta da poco (in tutta la battaglia, per lingua), lo stesso
+// soldato o la stessa squadra ha già parlato da poco, l'evento è un doppione, o c'è già una voce più importante
+// o più vicina in corso. Meglio un soldato zitto che la stessa frase ogni tre secondi.
+// [priorità 0 bassa … 3 critica, attesa della categoria in s]
+const VOX_CFG = { grenade: [3, 4], mortar: [3, 6], plane: [2, 14], medic: [1, 7], cover: [2, 8], move: [1, 8], fire: [2, 14], openfire: [2, 14], spot: [2, 10], fallback: [2, 12], retreat: [2, 12], hold: [1, 18], reload: [1, 9], kill: [0, 12] };
+const VOX = { clock: () => performance.now() / 1000, cat: {}, spk: new WeakMap(), sq: {}, ids: new Map(), playing: [], log: [], req: 0, played: 0, dropped: 0, byCat: {} };
+function voxLog(lang, cat, o, res, text) { VOX.log.push({ t: VOX.clock(), k: lang + '.' + cat, res, text: text || '', src: o.src ? (o.src.name || o.src.kind || 'soldato') + (o.src.id !== undefined ? '#' + o.src.id : '') : '', ev: o.ev || '' }); if (VOX.log.length > 60) VOX.log.shift(); const b = VOX.byCat[lang + '.' + cat] || (VOX.byCat[lang + '.' + cat] = { req: 0, ok: 0 }); b.req++; if (res === 'ok') b.ok++; }
+function voxTick() {
+  const now = VOX.clock();
+  // chi muore smette di parlare
+  VOX.playing = VOX.playing.filter(p => { if (p.end <= now) return false; if (p.src && (p.src.alive === false || p.src.removed)) { try { p.h && p.h.stop && p.h.stop(); } catch (e) { } if (p.speech && window.speechSynthesis) speechSynthesis.cancel(); return false; } return true; });
+}
 function shout(lang, cat, pos, o = {}) {
-  const text = o.text || pick(LINES[lang][cat] || ['...']);
+  VOX.req++; voxTick();
+  const now = VOX.clock(), C = VOX_CFG[cat] || [1, 10], pri = o.priority ? Math.max(C[0], 2) : C[0], key = lang + '.' + cat;
+  const drop = r => { VOX.dropped++; voxLog(lang, cat, o, r); return false; };
+  if (o.src && (o.src.alive === false || o.src.removed)) return drop('parlante morto');
   const d = pos ? pos.distanceTo(camera.position) : 0;
   const vol = clamp(1 - d / (o.range || 70), 0, 1) * (o.vol ?? 1);
-  if (vol < .06) return;
+  if (vol < .06) return drop('troppo lontano');
+  if (o.ev && VOX.ids.has(o.ev) && now - VOX.ids.get(o.ev) < 60) return drop('evento già annunciato');
+  if (!o.force && now - (VOX.cat[key] || -1e9) < C[1]) return drop('categoria detta da poco');
+  if (o.src && now - (VOX.spk.get(o.src) || -1e9) < 12) return drop('soldato ha parlato da poco');
+  if (o.squad && now - (VOX.sq[o.squad.id + '.' + cat] || -1e9) < 25) return drop('squadra ha già dato l\'ordine');
+  if (VOX.playing.length) { const top = VOX.playing.reduce((a, b) => b.pri > a.pri || (b.pri === a.pri && b.d < a.d) ? b : a); if (VOX.playing.length >= 2 || pri < top.pri || (pri === top.pri && d >= top.d)) return drop('altra voce in corso'); }
+  const text = o.text || pick(LINES[lang][cat] || ['...']);
+  VOX.cat[key] = now; if (o.src) VOX.spk.set(o.src, now); if (o.squad) VOX.sq[o.squad.id + '.' + cat] = now; if (o.ev) VOX.ids.set(o.ev, now);
+  if (VOX.ids.size > 300) for (const [k2, t2] of VOX.ids) if (now - t2 > 60) VOX.ids.delete(k2);
+  VOX.played++; voxLog(lang, cat, o, 'ok', text);
+  const reg = (h, dur, speech) => VOX.playing.push({ h, end: now + dur, src: o.src, pri, d, speech });
   if (o.sub && d < 40) subLine(lang === 'en' ? 'Soldato USA' : 'Soldato tedesco', text, IT[text]);
   // grida registrate dall'utente (voices/shouts/<lingua>/<categoria>) al posto della sintesi vocale
-  if (SETTINGS.voices && typeof caHas === 'function' && caHas('shout.' + lang + '.' + cat)) { caPlay('shout.' + lang + '.' + cat, pos, { ref: 18, vol: vol * .9, revMul: 1.4 }); return; }
+  if (SETTINGS.voices && typeof caHas === 'function' && caHas('shout.' + lang + '.' + cat)) { const h = caPlay('shout.' + lang + '.' + cat, pos, { ref: 18, vol: vol * .9, revMul: 1.4, bus: 'voices' }); const du = h && h.buffer ? h.buffer.duration : 1.5; reg(h, du); if (pri >= 2 && d < 40) mixDuck(du); return true; }
   if (!SETTINGS.voices || !window.speechSynthesis) return;
-  if (!SPEECH.good[lang]) { if (pos && !o.priority) sfxVoice(pos, lang === 'en' ? 'yell' : 'yell'); return; }
+  if (!SPEECH.good[lang]) { if (pos && !o.priority) { sfxVoice(pos, 'yell'); reg(null, .8); } return; }
   // niente code: una voce alla volta, mai la stessa frase ripetuta a breve, niente voci a gioco fermo o in mare/cielo
-  const now = performance.now();
+  const nowMs = performance.now();
   if (typeof GAME !== 'undefined' && !GAME.running && !o.priority) return;
   if (typeof SCEN !== 'undefined' && SCEN === 'sea') return;
-  SPEECH.said = SPEECH.said || {}; if (now - (SPEECH.said[text] || -1e9) < 9000) return;
-  if (now - SPEECH.last < (o.priority ? 1200 : 2500)) return;
+  SPEECH.said = SPEECH.said || {}; if (nowMs - (SPEECH.said[text] || -1e9) < 9000) return;
   if (speechSynthesis.speaking || speechSynthesis.pending) { if (!o.priority) return; speechSynthesis.cancel(); }
-  SPEECH.said[text] = now;
+  SPEECH.said[text] = nowMs; reg(null, 1.6, true);
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang === 'en' ? 'en-US' : 'de-DE'; u.voice = pick(SPEECH[lang]);
-  u.rate = o.rate || rnd(1.08, 1.22); u.pitch = o.pitch || rnd(.92, 1.04); u.volume = Math.min(1, vol * SETTINGS.volume * 1.1);
-  SPEECH.pending++; SPEECH.last = now;
+  u.rate = o.rate || rnd(1.08, 1.22); u.pitch = o.pitch || rnd(.92, 1.04); u.volume = Math.min(1, vol * SETTINGS.volume * 1.1 * mixVol('voices'));
+  SPEECH.pending++; SPEECH.last = nowMs;
   u.onend = u.onerror = () => { SPEECH.pending = Math.max(0, SPEECH.pending - 1); };
   speechSynthesis.speak(u);
 }

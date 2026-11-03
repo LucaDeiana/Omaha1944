@@ -154,7 +154,7 @@
   for (const [ev, d] of [['hitmarker', 'Colpo a segno'], ['headshot_confirm', 'Conferma colpo alla testa'], ['kill_confirm', 'Conferma uccisione']]) add(`sniper.effects.${ev}`, `sniper/effects/${ev}`, 'sniper', d, 'nessuno: solo se presente il file');
 
   // ---------- grida dei soldati: sostituiscono la sintesi vocale per quella categoria ----------
-  for (const [lang, cats] of [['en', 'move medic cover grenade reload kill fire mortar plane'], ['de', 'fire spot grenade reload medic retreat hold plane']])
+  for (const [lang, cats] of [['en', 'move medic cover grenade reload kill fire openfire spot fallback mortar plane'], ['de', 'fire spot grenade reload medic retreat hold plane']])
     for (const c of cats.split(' ')) add(`shout.${lang}.${c}`, `voices/shouts/${lang}/${c}`, 'voices', `Grida ${lang === 'en' ? 'americane' : 'tedesche'}: ${c}`, 'sintesi vocale del browser');
 
   // ---------- introduzione e menù iniziale: prima intro/<suono>, poi il suono generico, poi l'originale ----------

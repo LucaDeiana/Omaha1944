@@ -10,6 +10,6 @@ const S = __dirname;
     for (let i = 0; i < secs * 30; i++) { const dt = 1 / 30; GAME.time += dt; try { updateTimers(dt); updateMission(dt); const t = performance.now(); updateAI(dt); const d = performance.now() - t; ai += d; mx = Math.max(mx, d); updateProjectiles(dt); } catch (e) { return 'ERR ' + e.stack.slice(0, 300); }
       if (i % 30 === 0) for (const s of allies.concat(enemies)) if (s.alive && s.state !== 'boat') { n++; if (s.cover && s.pos.distanceTo(new V3(s.cover.x, s.pos.y, s.cover.z)) < 2) cov++; } }
     window.losClear = l0;
-    const ex = typeof INF !== 'undefined' ? ' · ' + INF.report() : '';
+    const ex = (typeof INF !== 'undefined' ? ' · ' + INF.report() : '') + (typeof OCC !== 'undefined' ? ` · raggi d'occlusione ${Math.round(OCC.rays / secs)}/s` : '') + (typeof VOX !== 'undefined' ? ` · voci richieste ${VOX.req}, dette ${VOX.played}` : '');
     return `${secs} s: IA ${(ai / (secs * 30)).toFixed(2)} ms/fot (picco ${mx.toFixed(1)}) · linee di vista ${Math.round(los / secs)}/s · colpi ${shots} (senza vista ${blind}) · alleati ${a0}→${allies.filter(s => s.alive).length} · tedeschi ${e0}→${enemies.filter(s => s.alive).length} · al riparo ${Math.round(cov / Math.max(1, n) * 100)}%` + ex; }, secs), errs.slice(0, 2).join('|') || 'ok');
   await b.close(); })();

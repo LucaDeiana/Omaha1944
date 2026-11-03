@@ -84,8 +84,7 @@ Soldier.prototype.findTarget = function () {
   if (this.tVis && this.target !== had && !this.target.isBoat && !this.target.isSupp) { const r2 = rnd(.35, .9) * (this.morale !== undefined && this.morale < .5 ? 1.5 : 1); if (this.fireT < r2) { this.fireT = r2; INF.st.reactDelay++; } }
   if (this.tVis && this.target !== had && this.shoutT <= 0 && dist2Cam(this.pos) < 70 * 70) {
     this.shoutT = rnd(10, 25);
-    if (this.team === 'E') shout('de', R() < .5 ? 'spot' : 'fire', this.pos);
-    else shout('en', R() < .5 ? 'cover' : 'move', this.pos);
+    shout(this.team === 'E' ? 'de' : 'en', 'spot', this.pos, { src: this });   // nemico appena individuato (non «aprite il fuoco»: quello è un ordine del comandante)
   }
 };
 // udito: ogni sparo lascia una posizione approssimata (errore proporzionale alla distanza) a chi lo sente
@@ -173,7 +172,7 @@ function infSquadTick(q, dt) {
   const alive = q.m.filter(infOk);
   const dead = q.m.length - alive.length; if (dead > 0) { q.losses += dead; for (const s of alive) s.morale -= .12 * dead; q.m = alive; }
   if (!alive.length) return;
-  if (!q.lead || !infOk(q.lead)) { const nl = infLeaderPick(q); if (q.lead && nl) { INF.st.succession++; for (const s of alive) s.morale -= .15; if (dist2Cam(nl.pos) < 70 * 70) shout(q.team === 'E' ? 'de' : 'en', 'move', nl.pos); } q.lead = nl; }
+  if (!q.lead || !infOk(q.lead)) { const nl = infLeaderPick(q); if (q.lead && nl) { INF.st.succession++; for (const s of alive) s.morale -= .15; if (dist2Cam(nl.pos) < 70 * 70) shout(q.team === 'E' ? 'de' : 'en', 'move', nl.pos, { src: nl, squad: q }); } q.lead = nl; }
   const L = q.lead;
   // memoria condivisa entro il raggio della voce del comandante (niente rete telepatica tra squadre)
   let best = null, bs = 0;
@@ -181,7 +180,9 @@ function infSquadTick(q, dt) {
   if (best) for (const s of alive) { if (s === L || s.pos.distanceToSquared(L.pos) < INF.CFG.voiceR ** 2) { const own = s.mem && s.mem.get(best[0]); if (!own || own.t < best[1].t - 1) { infRemember(s, best[0], best[1].p, best[1].conf * .8, 'squadra'); INF.st.shared++; } } }
   const hadContact = !!q.contact;
   q.contact = best && bs > .2 ? { t: best[0], p: best[1].p.clone(), conf: bs } : null;
-  if (q.contact && !hadContact && L && dist2Cam(L.pos) < 70 * 70) shout(q.team === 'E' ? 'de' : 'en', 'spot', L.pos, { priority: true });
+  // nuovo contatto: il comandante lo annuncia e ordina di aprire il fuoco, una volta per episodio (non a ogni aggiornamento)
+  if (q.contact && !hadContact && L && GAME.time - (q.lastContactEnd || -99) > 20) { q.epi = (q.epi || 0) + 1; q.openPending = true; if (dist2Cam(L.pos) < 70 * 70) shout(q.team === 'E' ? 'de' : 'en', 'spot', L.pos, { priority: true, src: L, squad: q, ev: 'spot.' + q.id + '.' + q.epi }); }
+  if (!q.contact && hadContact) q.lastContactEnd = GAME.time;
   if (q.contact) { if (!q.cStart) q.cStart = GAME.time; if (!q.cPos) q.cPos = q.contact.p.clone(); else if (q.cPos.distanceTo(q.contact.p) > 8) { q.cPos.copy(q.contact.p); q.cStart = GAME.time; } } else { q.cStart = 0; q.cPos = null; }
   // morale: fuoco, perdite, isolamento, riparo, comandante vicino; recupero lento in calma
   let msum = 0;
@@ -205,11 +206,12 @@ function infSquadTick(q, dt) {
   if (q.state === 'FLANK') { infFlankTick(q, alive); return; }
   if (q.state === 'WITHDRAW') { if (q.stT > 20 && q.morale > .45) infSetState(q, 'REGROUP'); return; }
   if ((q.morale < .28 || q.losses >= Math.max(2, q.size0 * .6)) && q.contact && mob.length) {
-    infSetState(q, 'WITHDRAW'); INF.st.withdraw++; infCallSupport(q); for (const s of mob) infFallback(s, q.contact.p, 30); if (dist2Cam(L.pos) < 80 * 80) shout(q.team === 'E' ? 'de' : 'en', 'cover', L.pos, { priority: true }); return;
+    infSetState(q, 'WITHDRAW'); INF.st.withdraw++; infCallSupport(q); for (const s of mob) infFallback(s, q.contact.p, 30); if (dist2Cam(L.pos) < 80 * 80) shout(q.team === 'E' ? 'de' : 'en', q.team === 'E' ? 'retreat' : 'fallback', L.pos, { priority: true, src: L, squad: q, ev: 'wd.' + q.id + '.' + q.epi }); return;
   }
   if (q.contact) {
     // fuoco di soppressione: mitragliatrice, BAR e un fuciliere tengono la posizione nemica anche senza vederla
     infSetState(q, 'SUPPRESS');
+    if (q.openPending && L) { q.openPending = false; if (dist2Cam(L.pos) < 80 * 80) shout(q.team === 'E' ? 'de' : 'en', q.team === 'E' ? 'fire' : 'openfire', L.pos, { priority: true, src: L, squad: q, ev: 'open.' + q.id + '.' + q.epi }); }
     // solo armi automatiche (o un fuciliere se la squadra non ne ha) e solo su un contatto recente
     let base = alive.filter(s => s.kind === 'mg' || s.kind === 'bar'); if (!base.length) base = alive.filter(s => s.kind === 'rifle').slice(0, 1);
     const fresh = best && GAME.time - best[1].t < 6; if (!fresh) base = [];
@@ -234,7 +236,7 @@ function infCallSupport(q) {
   const E = q.contact.p, dx = L.pos.x - E.x, dz = L.pos.z - E.z, d = Math.hypot(dx, dz) || 1, tx = L.pos.x + dx / d * 12, tz = L.pos.z + dz / d * 12;
   for (const s of best.m) { if (!infOk(s) || s.stationary || s.inTrench || s.squad) continue; s.dest = new V3(tx + rnd(-8, 8), 0, tz + rnd(-8, 8)); s.state = 'move'; s.crouchRun = true; s.wait = rnd(6, 10); }
   infSetState(best, 'REGROUP'); INF.st.support = (INF.st.support || 0) + 1;
-  if (dist2Cam(best.lead.pos) < 80 * 80) shout(best.team === 'E' ? 'de' : 'en', 'move', best.lead.pos, { priority: true });
+  if (dist2Cam(best.lead.pos) < 80 * 80) shout(best.team === 'E' ? 'de' : 'en', 'move', best.lead.pos, { priority: true, src: best.lead, squad: best });
 }
 // carri: un carro nemico vicino e visibile spaventa (il fucile non lo ferma) e spinge verso un riparo lontano da lui;
 // davanti a un carro amico in movimento ci si sposta di lato
@@ -288,7 +290,7 @@ function infTryFlank(q, alive, mob) {
   if (fl.length < 1) return;
   for (const s of fl) { if (s.cover) { s.cover.occ--; } pick.occ++; s.cover = pick; s.dest = new V3(pick.x + rnd(-1, 1), 0, pick.z + rnd(-1, 1)); s.state = 'move'; s.crouchRun = true; s.stationary = false; s.flankUntil = GAME.time + 45; s.wait = rnd(6, 10); }
   q.flankers = fl; infSetState(q, 'FLANK'); INF.st.flanks++;
-  if (dist2Cam(L.pos) < 80 * 80) shout(q.team === 'E' ? 'de' : 'en', 'move', L.pos, { priority: true });
+  if (dist2Cam(L.pos) < 80 * 80) shout(q.team === 'E' ? 'de' : 'en', 'move', L.pos, { priority: true, src: L, squad: q, ev: 'flank.' + q.id + '.' + INF.st.flanks });
 }
 function infFlankTick(q, alive) {
   const fl = q.flankers.filter(infOk);
@@ -308,6 +310,7 @@ function infDirector() {
 }
 // ---------- ciclo ----------
 function updateInfantry(dt) {
+  if (typeof voxTick === 'function') voxTick();
   if (NET.client) return;
   const t0 = performance.now();
   if ((INF.formT -= dt) <= 0) { INF.formT = 3; infForm(); }
