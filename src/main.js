@@ -63,6 +63,7 @@ async function startGame() {
   if (typeof dzReset === 'function') dzReset();
   SETTINGS.quality = $('optQuality').value; SETTINGS.diff = $('optDiff').value; saveSettings();
   Q = QUALITY[SETTINGS.quality]; D = DIFF[SETTINGS.diff];
+  if (SCEN === 'aaa' && typeof aaaQ === 'function') Q = aaaQ();   // tech demo: preset propri
   const audioP = initAudio();
   $('menu').classList.add('hidden'); $('loading').classList.remove('hidden');
   const step = async (t) => { $('loadT').textContent = t; await new Promise(r => setTimeout(r, 30)); };
@@ -133,7 +134,7 @@ function frame(now) {
     updateWorld(dt, GAME.time);
     updateAircraft(dt);
     updateSide(dt); updateDeploy(dt); updateNPC(dt); updateNet(dt); updateTanks(dt); updateAirStrike(dt);
-    updatePlayer(dt); updateCutscene(dt);
+    updatePlayer(dt); updateCutscene(dt); if (SCEN === 'aaa') aaaLate(dt);
     if (!P.dead && document.body.classList.contains('pDead')) hideKillCard();   // rientro in volo, in nave o in carro: via il bianco e nero della morte
     updateAI(dt);
     updateProjectiles(dt);

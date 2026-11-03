@@ -106,6 +106,7 @@ function H(x, z) {
   if (SCEN === 'snp') return snpH(x, z);
   if (SCEN === 'kas') return kasH(x, z);
   if (SCEN === 'sea') return navyH(x, z);
+  if (SCEN === 'aaa') return aaaH(x, z);
   let y = H0(x, z);
   if (z > 100) return y;
   if (z < -84 && z > -97 && x > -165 && x < 165) { const d = Math.abs(z - trenchZ(x)); if (d < 1.7) y -= 1.8 * smooth((1.7 - d) / .6); }
@@ -1199,6 +1200,7 @@ function buildWorld(step) {
   if (SCEN === 'snp') { buildSniperMap(); return; }
   if (SCEN === 'kas') { buildKasserine(); return; }
   if (SCEN === 'sea') { buildNavyWorld(); return; }
+  if (SCEN === 'aaa') { aaaBuildWorld(); return; }
   genCraters();
   WORLD.villageY = H0(10, -283); CITY.y = H0(0, -575);
   buildHF(); buildHC();

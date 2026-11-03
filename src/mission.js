@@ -75,6 +75,7 @@ function initMission() {
   if (SCEN === 'snp') { initSniper(); return; }
   if (SCEN === 'kas') { initArmor(); return; }
   if (SCEN === 'sea') { initNavy(); return; }
+  if (SCEN === 'aaa') { aaaInit(); return; }
   if (PARA.on) { initPara(); return; }
   if (PT === 'E') { initAxis(); return; }
   const xs = [-97, -72, -47, -22, 3, 28, 53];
@@ -668,6 +669,7 @@ function updateMission(dt) {
   if (SCEN === 'kas') { updateArmor(dt); return; }
   if (PARA.on && SCEN === 'omaha') { updatePara(dt); return; }
   if (SCEN === 'sea') { updateNavy(dt); return; }
+  if (SCEN === 'aaa') { aaaUpdate(dt); return; }
   if (ARD.snow) updateSnowfall(dt);
   MISSION.suppT = Math.max(0, (MISSION.suppT || 0) - dt);
   for (const b of [...WORLD.bunkers, ...(WORLD.extraBunkers || []), ...(WORLD.tobruks || [])]) b.supT = Math.max(0, (b.supT || 0) - dt);
