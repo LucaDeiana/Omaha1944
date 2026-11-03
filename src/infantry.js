@@ -81,7 +81,7 @@ Soldier.prototype.findTarget = function () {
     if (bs.length) { this.target = { isBoat: true, b: pick(bs), chest: function (o) { const g = this.b.g.position; return o.set(g.x + rnd(-1.4, 1.4), g.y + rnd(.6, 2), g.z - 5 + rnd(-.3, 2)); } }; this.tVis = true; }
   }
   // tempo di reazione: un nuovo bersaglio non viene colpito nello stesso istante in cui lo si vede
-  if (this.tVis && this.target !== had && !this.target.isBoat && !this.target.isSupp) { const r2 = rnd(.35, .9) * (this.morale !== undefined && this.morale < .5 ? 1.5 : 1); if (this.fireT < r2) { this.fireT = r2; INF.st.reactDelay++; } }
+  if (this.tVis && this.target !== had && !this.target.isBoat && !this.target.isSupp) { const r2 = rnd(.35, .9) * (this.morale !== undefined && this.morale < .5 ? 1.5 : 1) * (this.team !== PT && typeof D !== "undefined" && D.react ? D.react : 1); /* difficoltà: reattività dei nemici */ if (this.fireT < r2) { this.fireT = r2; INF.st.reactDelay++; } }
   if (this.tVis && this.target !== had && this.shoutT <= 0 && dist2Cam(this.pos) < 70 * 70) {
     this.shoutT = rnd(10, 25);
     shout(this.team === 'E' ? 'de' : 'en', 'spot', this.pos, { src: this });   // nemico appena individuato (non «aprite il fuoco»: quello è un ordine del comandante)

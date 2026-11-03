@@ -128,7 +128,7 @@ function frame(now) {
     const dt = Math.min(SCEN === 'sea' ? .1 : .05, raw) * GAME.timeScale;  // in mare navi e proiettili vanno a sottopassi: anche a pochi fotogrammi il tempo resta reale
     GAME.time += dt;
     updateTimers(dt);
-    updateMission(dt);
+    updateMission(dt); if (typeof campTick === 'function') campTick(dt);
     updateWorld(dt, GAME.time);
     updateAircraft(dt);
     updateSide(dt); updateDeploy(dt); updateNPC(dt); updateNet(dt); updateTanks(dt); updateAirStrike(dt);

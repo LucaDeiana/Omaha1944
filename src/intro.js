@@ -92,6 +92,7 @@
         <div class="k">1941 · 1942 · 1943 · 1944</div><h1>FRONTE<br>OCCIDENTALE 1944</h1><div class="rule"></div></div>
       <nav class="pg on" id="mmMain">
         <button class="mmb big" data-go="play">GIOCA<small>Scegli il fronte: terra, mare, cielo</small></button>
+        <button class="mmb" data-go="campaign">CAMPAGNA<small>Theatres of War — missioni, personaggi, salvataggi</small></button>
         <button class="mmb" data-go="career">CARRIERA<small>Grado, medaglie e missioni completate</small></button>
         <button class="mmb" data-go="opts">IMPOSTAZIONI<small>Grafica, audio, comandi</small></button>
         <button class="mmb" data-go="extra">EXTRA<small>Modelli 3D, introduzione, riconoscimenti</small></button>
@@ -323,7 +324,7 @@
   // pagine del menù: principale, scelta del fronte, extra
   function page(id) { for (const p of mm.querySelectorAll('.pg')) p.classList.toggle('on', p.id === id); const f = mm.querySelector('#' + id + ' button'); if (f) f.focus({ preventScroll: true }); }
   addEventListener('keydown', e => { if (mm.style.display === 'block' && e.key === 'Escape' && !mm.querySelector('#mmMain.on') && cr.style.display !== 'flex') page('mmMain'); });
-  mm.addEventListener('click', e => { const b = e.target.closest('.mmb, .mmc'); if (!b) return; { const g = b.dataset.go; if (g === 'play') { if (BUF._click) snd('_click', .8); return page('mmPlay'); } if (g === 'extra') { if (BUF._click) snd('_click', .8); return page('mmExtra'); } if (g === 'back') { if (BUF._click) snd('_click', .8); return page('mmMain'); } } if (BUF._click) snd('_click', .8); const go = b.dataset.go; if (go === 'models') { location.href = 'viewer.html'; return; } if (go === 'quit') { quitGame(b); return; } if (go === 'career') { if (window.CAREER || typeof CAREER !== 'undefined') CAREER.show(); return; }
+  mm.addEventListener('click', e => { const b = e.target.closest('.mmb, .mmc'); if (!b) return; { const g = b.dataset.go; if (g === 'play') { if (BUF._click) snd('_click', .8); return page('mmPlay'); } if (g === 'extra') { if (BUF._click) snd('_click', .8); return page('mmExtra'); } if (g === 'back') { if (BUF._click) snd('_click', .8); return page('mmMain'); } } if (BUF._click) snd('_click', .8); const go = b.dataset.go; if (go === 'models') { location.href = 'viewer.html'; return; } if (go === 'campaign' && typeof campMenu === 'function') { mm.style.display = 'none'; campMenu(); return; } if (go === 'quit') { quitGame(b); return; } if (go === 'career') { if (window.CAREER || typeof CAREER !== 'undefined') CAREER.show(); return; }
     if (go === 'intro') return playIntro(); if (go === 'cred') { cr.style.display = 'flex'; return; } openSetup(go); });
   cr.addEventListener('click', () => cr.style.display = 'none');
   root.addEventListener('click', () => state === 'gate' ? startStudio() : skip());

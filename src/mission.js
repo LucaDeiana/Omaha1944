@@ -31,7 +31,7 @@ const SEATS = [];
 for (let r = 0; r < 7; r++) for (let c = -1; c <= 1; c++) SEATS.push(new V3(c * .95, .47, -3.6 + r * 1.1));
 function fillBoat(b, n, squad, skipPlayerSeat) {
   const seats = SEATS.filter((s, i) => !(skipPlayerSeat && i === 16));
-  const names = [N.sarge, N.walsh, N.kow, N.baker, N.russo, N.doc], kinds = ['rifle', 'smg', 'bar', 'rifle', 'rifle', 'medic'];
+  const names = [N.sarge, N.walsh, N.kow, N.baker, N.russo, N.doc], kinds = (typeof CAMP !== 'undefined' && CAMP.on && CAMP.squadKinds) || ['rifle', 'smg', 'bar', 'rifle', 'rifle', 'medic'];
   for (let i = 0; i < n && i < seats.length; i++) {
     const sq = squad && i >= 3 && i < 9;
     const a = addAlly(sq ? kinds[i - 3] : randAllyKind(), b.x, b.z, { state: 'boat', squad: sq, name: sq ? names[i - 3] : '' });

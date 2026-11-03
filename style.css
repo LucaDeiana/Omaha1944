@@ -259,3 +259,21 @@ body.kcOn #hud, body.kcOn #killCard, body.kcOn #snpFeed, body.kcOn #crossX { vis
 #airBrief .abRow i{display:inline-block;min-width:86px;font-style:normal;color:#c8b98e;opacity:.85}#airBrief .abLock{color:#ff9a70;margin-top:6px}
 #airBrief .abCtx{margin:8px 0}#airBrief ol,#airBrief ul{margin:2px 0 6px 18px;padding:0}#airBrief details summary{cursor:pointer;color:#e8c46a}
 @media (max-width:700px){#airBrief .abGrid{grid-template-columns:1fr}}
+/* menù della campagna */
+#campMenu{display:none;position:fixed;inset:0;z-index:95;background:rgba(8,9,7,.94);color:#e9e2cc;font:14px/1.45 'Special Elite','Courier New',monospace;align-items:flex-start;justify-content:center;overflow:auto}
+#campMenu .cmIn{width:min(1100px,96vw);margin:24px auto;padding:0 12px}
+#campMenu .cmHd{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid rgba(232,196,106,.35);margin-bottom:12px}
+#campMenu h2{font:600 34px Oswald,sans-serif;letter-spacing:.12em;margin:4px 0}#campMenu .cmK{font:600 11px Oswald,sans-serif;color:#e8c46a;letter-spacing:.3em}
+#campMenu .cmX{margin-left:auto;background:none;border:0;color:#e9e2cc;font-size:20px;cursor:pointer}
+#campMenu .cmBar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+#campMenu button{font:600 14px Oswald,sans-serif;letter-spacing:.06em;color:#efe6cf;background:rgba(232,196,106,.12);border:1px solid rgba(232,196,106,.45);padding:8px 14px;cursor:pointer;text-align:left}
+#campMenu button small{display:block;font:12px 'Special Elite',monospace;opacity:.75;letter-spacing:0}
+#campMenu .cmProg{opacity:.8}
+#campMenu .cmGrid{display:grid;grid-template-columns:minmax(260px,380px) 1fr;gap:16px}
+#campMenu .cmCh{margin-bottom:12px}#campMenu .cmCh>b{font:600 17px Oswald,sans-serif;letter-spacing:.06em;color:#e8c46a;display:block}#campMenu .cmCh>small{display:block;opacity:.7;margin-bottom:4px}
+#campMenu .cmM{display:flex;justify-content:space-between;width:100%;margin:3px 0;background:rgba(255,255,255,.04)}#campMenu .cmM i{font-style:normal;font-size:12px;opacity:.75}#campMenu .cmM.off{opacity:.55}
+#campMenu .cmBrief{background:rgba(26,24,18,.75);border:1px solid rgba(232,196,106,.25);padding:12px 16px}
+#campMenu .cmT{font:600 26px Oswald,sans-serif;letter-spacing:.08em}#campMenu .cmD{color:#e8c46a;margin-bottom:8px}
+#campMenu .cmChars span{display:block;margin:2px 0}#campMenu .cmA{color:#ffcf80}
+#campMenu .cmGo{margin-top:10px;font-size:18px;background:rgba(232,196,106,.3)}#campMenu canvas{display:block;margin:8px 0;border:1px solid #6b604a;max-width:100%}
+@media (max-width:760px){#campMenu .cmGrid{grid-template-columns:1fr}}

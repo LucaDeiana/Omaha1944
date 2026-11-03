@@ -55,9 +55,10 @@ const QUALITY = {
   ultra: { label: 'Ultra', pr: Math.min(DPR, 2), prMin: .75, shadows: 4096, shadowDist: 120, post: true, bloom: true, fxaa: true, terrainStep: .7, tex: 1024, allyAlive: 203, enemyAlive: 203, allySlots: 559, enemySlots: 429, grass: 24000, lights: 4, particles: 1.25, lod: 126, waveBoats: 7, gibs: 30, ragdolls: 40 },
 };
 const DIFF = {
-  recluta: { label: 'Recluta', dmg: .45, acc: .7 },
-  regolare: { label: 'Regolare', dmg: .75, acc: .9 },
-  veterano: { label: 'Veterano', dmg: 1.15, acc: 1.1 },
+  recluta: { label: 'Recluta', dmg: .45, acc: .7, react: 1.5 },
+  regolare: { label: 'Regolare', dmg: .75, acc: .9, react: 1.1 },
+  temprato: { label: 'Temprato', dmg: .95, acc: 1, react: .9 },
+  veterano: { label: 'Veterano', dmg: 1.15, acc: 1.1, react: .75 },
 };
 let PT = 'A'; // fazione del giocatore: 'A' Alleati, 'E' Asse
 const SETTINGS = { side: 'A', quality: 'medio', diff: 'regolare', sens: 1, fov: 72, fovAir: 88, gore: true, voices: true, dynres: true, volume: .85, fps: false };
