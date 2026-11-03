@@ -86,6 +86,12 @@
 - **Ripari meno esposti**: quando la squadra ha un contatto, se il riparo scelto dalla logica esistente è sotto il tiro della posizione nemica nota, il soldato prende uno dei 4 ripari liberi più vicini (entro 10 m) che il nemico non vede.
 - **Tiratori scelti**: dopo tre colpi cambiano posizione, su un riparo a 8–25 m che resta alla stessa distanza dal bersaglio.
 
+### Percorsi, supporto e soldati lontanissimi (terza fase)
+- **Tappa coperta**: con un contatto, se il punto di mezzo del tragitto verso il riparo è visto dal nemico noto e il tragitto supera 18 m, il soldato fa tappa su un riparo intermedio coperto, poi prosegue.
+- **Supporto**: quando una squadra ripiega, la squadra vicina della stessa fazione senza contatto (entro 90 m) si porta 12 m dietro di lei per coprirla.
+- **Livello 3**: oltre 350 m dalla camera, senza bersaglio e senza contatto di squadra, il soldato ragiona ogni 2–3 s invece che ogni 0,9–1,4 s. Il movimento e il combattimento continuano normalmente.
+- Un errore introdotto in questa fase (un commento che inghiottiva la chiamata del ragionamento) è stato trovato dalla prova nell'arena e corretto prima della pubblicazione.
+
 ### Direttore di battaglia (versione leggera)
 Ogni 3 s calcola per fazione il rapporto di forze e il morale medio, e decide l'atteggiamento:
 - **attacco**: rapporto sopra 1,4 e morale sopra 0,55;
@@ -162,8 +168,9 @@ Regressione: tutte le modalità e il visualizzatore partono senza errori. Inoltr
 - **Navigazione tattica con costo d'esposizione lungo tutto il percorso**: si usa la navigazione esistente; è coperta solo la destinazione (ripari meno esposti).
 - **Assistente mitragliere**: non esiste come soldato nel gioco.
 - **Carri e fanteria nella stessa battaglia**: verificati solo dai test, perché nei 120–180 s simulati a Omaha i Panzer non arrivano vicino alla fanteria.
-- **Settori e rinforzi del direttore**: oggi decide solo l'atteggiamento della fazione.
-- **Livelli di simulazione 2 e 3** (simulazione astratta dei soldati lontani): restano quelli esistenti, cioè think più rari e animazioni ridotte con la distanza.
+- **Settori e rinforzi del direttore**: oggi decide l'atteggiamento della fazione e il supporto tra squadre vicine, non sposta rinforzi.
+- **Tappe coperte e supporto tra squadre** verificati solo nel codice: l'arena ha una squadra per parte e nelle prove non sono scattati.
+- **Simulazione astratta dei soldati lontani**: non c'è; c'è il livello 3 con decisioni più rare.
 - **Prove di rete con due computer**: il nuovo sistema non gira sui client (`NET.client`) e non aggiunge messaggi di rete.
 - **Scontri 20 contro 20 e 40 contro 40 nell'arena**: la battaglia completa di Omaha, con oltre 300 soldati, copre la scala.
 - **FPS sul tuo PC**: da misurare in una battaglia a Omaha. Ctrl+Maiusc+I mostra lo stato dell'IA.

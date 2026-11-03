@@ -540,7 +540,8 @@ function updateAI(dt) {
         s.thinkT -= dt;
         if (s.thinkT <= 0 && AI_BUDGET.n < 30) {
           AI_BUDGET.n++;
-          s.thinkDt = dist2Cam(s.pos) > 200 * 200 ? rnd(.9, 1.4) : rnd(.3, .55); s.thinkT = s.thinkDt; s.think();
+          { const d2 = dist2Cam(s.pos); s.thinkDt = d2 > 350 * 350 && !s.tVis && !(s.squadQ && s.squadQ.contact) ? rnd(2, 3) : d2 > 200 * 200 ? rnd(.9, 1.4) : rnd(.3, .55); }
+          s.thinkT = s.thinkDt; s.think();   // livello 3 (sopra): lontanissimi e senza contatto, decisioni più rare
         }
       }
     }

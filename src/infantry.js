@@ -105,11 +105,24 @@ function infSuppressAt(team, p, amt) {
     s.supp = Math.min(1, s.supp + amt * (1 - Math.sqrt(dx * dx + dz * dz) / 3));
   }
 }
+// tragitto esposto: se il punto di mezzo del percorso è visto dal nemico noto, tappa su un riparo coperto vicino al percorso
+function infRouteHop(s, E) {
+  if (!s.dest || s.detour) return;
+  const mx = (s.pos.x + s.dest.x) / 2, mz = (s.pos.z + s.dest.z) / 2, L = Math.hypot(s.dest.x - s.pos.x, s.dest.z - s.pos.z); if (L < 18) return;
+  const eye = _iB.set(E.x, Hf(E.x, E.z) + 1.5, E.z); if (!losClear(eye, _iC.set(mx, Hf(mx, mz) + 1, mz))) return;
+  let best = null, bd = (L * .45) ** 2;
+  for (const o of covers) { if (o.occ >= 2) continue; const d2 = (o.x - mx) ** 2 + (o.z - mz) ** 2; if (d2 < bd) { bd = d2; best = o; } }
+  if (!best || losClear(_iB.set(E.x, Hf(E.x, E.z) + 1.5, E.z), _iC.set(best.x, Hf(best.x, best.z) + 1.1, best.z))) return;
+  s.detour = s.dest; s.dest = new V3(best.x + rnd(-.3, .3), 0, best.z + rnd(-.3, .3)); s.crouchRun = true; INF.st.routeHop = (INF.st.routeHop || 0) + 1;
+}
 (function infCoverHook() {
   const pc = Soldier.prototype.pickCover;
   Soldier.prototype.pickCover = function (Z) {
     pc.call(this, Z);
     const q = this.squadQ, c = this.cover; if (!c || !q || !q.contact) return;
+    try { this.pickCoverInner(q, c); } finally { infRouteHop(this, q.contact.p); }
+  };
+  Soldier.prototype.pickCoverInner = function (q, c) {
     const E = q.contact.p, eye = _iB.set(E.x, Hf(E.x, E.z) + 1.5, E.z);
     if (!losClear(eye, _iC.set(c.x, Hf(c.x, c.z) + 1.1, c.z))) return;
     const alt = covers.filter(o => o !== c && o.occ < 2 && Math.hypot(o.x - c.x, o.z - c.z) < 10).sort((a, b) => Math.hypot(a.x - c.x, a.z - c.z) - Math.hypot(b.x - c.x, b.z - c.z)).slice(0, 4);
@@ -192,7 +205,7 @@ function infSquadTick(q, dt) {
   if (q.state === 'FLANK') { infFlankTick(q, alive); return; }
   if (q.state === 'WITHDRAW') { if (q.stT > 20 && q.morale > .45) infSetState(q, 'REGROUP'); return; }
   if ((q.morale < .28 || q.losses >= Math.max(2, q.size0 * .6)) && q.contact && mob.length) {
-    infSetState(q, 'WITHDRAW'); INF.st.withdraw++; for (const s of mob) infFallback(s, q.contact.p, 30); if (dist2Cam(L.pos) < 80 * 80) shout(q.team === 'E' ? 'de' : 'en', 'cover', L.pos, { priority: true }); return;
+    infSetState(q, 'WITHDRAW'); INF.st.withdraw++; infCallSupport(q); for (const s of mob) infFallback(s, q.contact.p, 30); if (dist2Cam(L.pos) < 80 * 80) shout(q.team === 'E' ? 'de' : 'en', 'cover', L.pos, { priority: true }); return;
   }
   if (q.contact) {
     // fuoco di soppressione: mitragliatrice, BAR e un fuciliere tengono la posizione nemica anche senza vederla
@@ -213,6 +226,15 @@ function infSquadTick(q, dt) {
     // riunione: chi si è allontanato troppo dal comandante, senza ordini di posto, torna verso di lui
     if (q.state === 'REGROUP') { for (const s of mob) if (!s.dest && s.pos.distanceTo(L.pos) > 30 && s.team !== 'A') { s.dest = new V3(L.pos.x + rnd(-6, 6), 0, L.pos.z + rnd(-6, 6)); s.state = 'move'; } if (q.stT > 15) infSetState(q, 'HOLD'); }
   }
+}
+function infCallSupport(q) {
+  const L = q.lead; if (!L || !q.contact) return; let best = null, bd = 90 * 90;
+  for (const o of INF.squads) { if (o === q || o.team !== q.team || o.contact || o.state === 'WITHDRAW' || !o.lead) continue; const d2 = o.lead.pos.distanceToSquared(L.pos); if (d2 < bd) { bd = d2; best = o; } }
+  if (!best) return;
+  const E = q.contact.p, dx = L.pos.x - E.x, dz = L.pos.z - E.z, d = Math.hypot(dx, dz) || 1, tx = L.pos.x + dx / d * 12, tz = L.pos.z + dz / d * 12;
+  for (const s of best.m) { if (!infOk(s) || s.stationary || s.inTrench || s.squad) continue; s.dest = new V3(tx + rnd(-8, 8), 0, tz + rnd(-8, 8)); s.state = 'move'; s.crouchRun = true; s.wait = rnd(6, 10); }
+  infSetState(best, 'REGROUP'); INF.st.support = (INF.st.support || 0) + 1;
+  if (dist2Cam(best.lead.pos) < 80 * 80) shout(best.team === 'E' ? 'de' : 'en', 'move', best.lead.pos, { priority: true });
 }
 // carri: un carro nemico vicino e visibile spaventa (il fucile non lo ferma) e spinge verso un riparo lontano da lui;
 // davanti a un carro amico in movimento ci si sposta di lato
@@ -300,7 +322,7 @@ function updateInfantry(dt) {
 }
 INF.report = () => { const s = INF.st, m = {}; for (const L of [allies, enemies]) for (const x of L) if (infOk(x) && x.morale !== undefined) { const k = moraleName(x.morale); m[k] = (m[k] || 0) + 1; }
   const qs = {}; for (const q of INF.squads) qs[q.state] = (qs[q.state] || 0) + 1;
-  return `squadre ${INF.squads.length} ${JSON.stringify(qs)} · morale ${JSON.stringify(m)} · avvistati ${s.spotted} · sentiti ${s.heard} · contatti persi ${s.lost} · condivisi ${s.shared} · ritardi di reazione ${s.reactDelay} · soppressione su posizione nota ${s.supFire} · inchiodati ${s.pinned} · fiancheggiamenti ${s.flanks} (interrotti ${s.flankAbort}, rinunce ${JSON.stringify(s.noFlank || {})}) · ripiegamenti ${s.withdraw} · in rotta ${s.routed} · successioni ${s.succession} · paura dei carri ${s.tankScare || 0} (scarti ${s.tankDodge || 0}, passi di lato ${s.tankStep || 0}) · ripari meno esposti ${s.coverSwap || 0} · cambi di posizione dei tiratori ${s.snMove || 0} · ${(INF.ms || 0).toFixed(3)} ms`; };
+  return `squadre ${INF.squads.length} ${JSON.stringify(qs)} · morale ${JSON.stringify(m)} · avvistati ${s.spotted} · sentiti ${s.heard} · contatti persi ${s.lost} · condivisi ${s.shared} · ritardi di reazione ${s.reactDelay} · soppressione su posizione nota ${s.supFire} · inchiodati ${s.pinned} · fiancheggiamenti ${s.flanks} (interrotti ${s.flankAbort}, rinunce ${JSON.stringify(s.noFlank || {})}) · ripiegamenti ${s.withdraw} · in rotta ${s.routed} · successioni ${s.succession} · paura dei carri ${s.tankScare || 0} (scarti ${s.tankDodge || 0}, passi di lato ${s.tankStep || 0}) · ripari meno esposti ${s.coverSwap || 0} · cambi di posizione dei tiratori ${s.snMove || 0} · tappe coperte ${s.routeHop || 0} · squadre in supporto ${s.support || 0} · ${(INF.ms || 0).toFixed(3)} ms`; };
 
 // ---------- debug (Ctrl+Maiusc+I): stato, squadra, morale, soppressione, ultima posizione nota, legami col comandante ----------
 const INF_COL = { HOLD: '#9fd0ff', SUPPRESS: '#ffcf5a', FLANK: '#ff8a3d', WITHDRAW: '#ff5050', REGROUP: '#c58bff' };

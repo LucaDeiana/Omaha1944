@@ -13,7 +13,7 @@ const S = __dirname;
     for (const t of TANKS.list || []) { t.alive = false; } 
     // centro dell'arena: zona dell'entroterra con più ripari
     let bc = null, bn = 0; for (const c of covers) { if (c.z > -120 || c.z < -420 || /hedge/.test(c.kind)) continue; let n = 0; for (const o of covers) if (Math.hypot(o.x - c.x, o.z - c.z) < 55) n += /hedge/.test(o.kind) ? -2 : 1; if (n > bn) { bn = n; bc = c; } }
-    const cx = bc.x, cz = bc.z; MISSION.allyZone = { zMin: cz - 70, zMax: cz + 70, xMin: cx - 60, xMax: cx + 60, step: 13, wait: [2, 4] };
+    const cx = bc.x, cz = bc.z; camera.position.set(cx, Hf(cx, cz) + 30, cz + 90); camera.updateMatrixWorld(true); MISSION.allyZone = { zMin: cz - 70, zMax: cz + 70, xMin: cx - 60, xMax: cx + 60, step: 13, wait: [2, 4] };
     const A = [], E = [], kinds = ['smg', 'rifle', 'bar', 'rifle', 'rifle', 'rifle', 'rifle', 'rifle'], ek = ['smg', 'rifle', 'mg', 'rifle', 'rifle', 'rifle', 'rifle', 'rifle'];
     for (let i = 0; i < N; i++) { const a = new Soldier('A', kinds[i % 8], cx + (i - N / 2) * 4, cz + 55 + (i % 2) * 3, { state: 'cover' }); if (!allies.includes(a)) allies.push(a); A.push(a); }
     const FL = process_env_FL;
