@@ -170,7 +170,7 @@ class Soldier {
     this.moving = sp > .5;
     if (!this.fixedY) {
       if (this.moving) { pushOut(this.pos, .35); applyWire(this.pos, this.prev); }
-      this.pos.y = Hf(this.pos.x, this.pos.z);
+      this.pos.y = FLOORS.length ? Math.max(Hf(this.pos.x, this.pos.z), worldFloor(this.pos.x, this.pos.z, this.pos.y)) : Hf(this.pos.x, this.pos.z);
       if (this.moving && inMinefield(this.pos.x, this.pos.z)) checkMines(this.pos);
     }
     this.vel.subVectors(this.pos, this.prev).multiplyScalar(1 / Math.max(dt, 1e-3));

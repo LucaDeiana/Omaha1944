@@ -12,7 +12,7 @@ const DRAWS = [-1250, -700, -30, 450, 950];
 const HEDGES = [{ z: -170, gaps: [[-40, -20], [55, 68]] }, { z: -218, gaps: [[-40, -20], [-125, -112], [88, 100]] }];
 for (const h of HEDGES) for (let x = -MAPX; x < MAPX; x += 180) if (Math.abs(x) > 230) h.gaps.push([x, x + 14]);
 for (const d of DRAWS) if (d !== -30) for (const h of HEDGES) h.gaps.push([d - 10, d + 10]);
-const WORLD = {
+const WORLD = { floors: null,
   wireBreached: false, wireGaps: [], bunkers: [], flaks: [], boats: [], shipGuns: [], crates: [], pickups: [], shells: [], bombard: 'bluff', villageY: 0,
   mortarPits: [[-125, -103], [-58, -106], [32, -104], [112, -102]].map(([x, z]) => ({ x, z })), aaSites: [[-75, -110], [5, -112], [75, -108], [-160, -108], [-32, -116], [135, -110], [-200, -432], [150, -432], [-60, -548], [260, -548], [-310, -664], [40, -664], [330, -432]].map(([x, z]) => ({ x, z })),
   texas: null,
@@ -152,6 +152,17 @@ function waterLevel(x, z, t) { return WATER_Y + waveH(x, z, t); }
 function inMinefield(x, z) { for (const m of MINEFIELDS) if (x > m[0] && x < m[1] && z > m[2] && z < m[3]) return true; return false; }
 
 // ---------- solidi ----------
+// solai e rampe (interni a più piani, scale): stesso formato della modalità cecchini; il pavimento più alto non sopra i piedi + 0,55 m
+const FLOORS = [];
+function worldFloor(x, z, yf) {
+  let best = -1e9;
+  for (const f of FLOORS) {
+    if (f.off || x < f.x0 || x > f.x1 || z < f.z0 || z > f.z1) continue;
+    let y = f.y; if (f.ramp) { const r = f.ramp, k = clamp(((r.axis === 'z' ? z : x) - r.c0) / (r.c1 - r.c0), 0, 1); y = r.y0 + (r.y1 - r.y0) * k; }
+    if (y <= yf + .55 && y > best) best = y;
+  }
+  return best;
+}
 function addSolid(x0, y0, z0, x1, y1, z1, tag) {
   const s = { min: new V3(Math.min(x0, x1), Math.min(y0, y1), Math.min(z0, z1)), max: new V3(Math.max(x0, x1), Math.max(y0, y1), Math.max(z0, z1)), tag, on: true };
   solids.push(s); return s;
@@ -197,7 +208,8 @@ function losClear(a, b) {
   return true;
 }
 function pushOut(p, r, h = 1.7) {
-  for (const s of solids) {
+  const list = typeof vpNear === 'function' ? vpNear(p, r) : solids;
+  for (const s of list) {
     if (!s.on || p.y + h < s.min.y || p.y > s.max.y - (s.walk ? .6 : .05)) continue;
     if (p.x < s.min.x - r || p.x > s.max.x + r || p.z < s.min.z - r || p.z > s.max.z + r) continue;
     const cx = clamp(p.x, s.min.x, s.max.x), cz = clamp(p.z, s.min.z, s.max.z);
@@ -1035,8 +1047,9 @@ function buildStatic() {
   for (const [vx, vz] of [[-700, -330], [-1250, -300], [600, -420]]) for (let k = 0; k < 14; k++) addHouse(S, vx + (k % 7) * 16 - 48 + srnd(-2, 2), vz + (k < 7 ? 0 : -26), srnd(9, 12), 8, R() < .5 ? 6 : 4.5, R() < .3);
   const north = [[-79, 11, 0], [-63, 12, 1], [-48, 9, 0], [-17, 10, 0], [-2, 11, 1], [36, 12, 0], [52, 11, 0], [70, 11, 1]];
   const south = [[-79, 11, 0], [-62, 12, 0], [-45, 10, 1], [-16, 11, 0], [35, 10, 1], [51, 12, 0], [68, 11, 0]];
-  for (const [x, w, r] of north) addHouse(S, x, -268, w, 8, R() < .5 ? 6 : 4.5, !!r);
-  for (const [x, w, r] of south) addHouse(S, x, -295, w, 8.5, R() < .5 ? 6 : 4.5, !!r);
+  // Colleville 4.0 (libreria Architettura): stessi lotti; ?village=old per confrontare con la versione precedente
+  if (typeof buildColleville === 'function' && !/village=old/.test(location.search)) buildColleville();
+  else { for (const [x, w, r] of north) addHouse(S, x, -268, w, 8, R() < .5 ? 6 : 4.5, !!r); for (const [x, w, r] of south) addHouse(S, x, -295, w, 8.5, R() < .5 ? 6 : 4.5, !!r); }
   {
     const cx = 13, cz = -312, w = 10, d = 20, base = Math.min(H(cx - 5, cz - 10), H(cx + 5, cz + 10)) - .3, st = 0xc6bda8;
     S.mat = 'stone'; S.add(U.box, st, cx, base + 4.5, cz, 0, 0, 0, w, 9, d);

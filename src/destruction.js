@@ -22,7 +22,7 @@ const DZ_MAT = {
   terra: { res: 4, thr: 20, he: .7, ap: .2, col: 0x6a5a40, dust: [.5, .42, .3], snd: 'imp_sand', tl: 'terra', flam: 0, rub: 0x5a4a34 },
   vegetazione: { res: .7, thr: 4, he: 1.6, ap: .4, col: 0x3c5a2a, dust: [.35, .4, .25], snd: 'dz_wood', tl: 'vegetazione', flam: .25, rub: 0x3a3a22 },
 };
-const DZ = { on: false, objs: new Map(), secs: [], routes: [], listeners: {}, log: [], fires: 0, FIRE_MAX: 10, CRATER_MAX: 160, craters: 0, debug: false,
+const DZ = { pools: {}, on: false, objs: new Map(), secs: [], routes: [], listeners: {}, log: [], fires: 0, FIRE_MAX: 10, CRATER_MAX: 160, craters: 0, debug: false,
   st: { hits: 0, blasts: 0, changes: 0, colMs: 0, routeMs: 0, rubble: 0, debris: 0, craterMs: 0 }, rub: null, rubN: 0, RUB_MAX: 1500, mats: {}, geo: null };
 for (const k in DZ_MAT) if (typeof TL_MAT !== 'undefined' && !TL_TAG['dz_' + k]) TL_TAG['dz_' + k] = DZ_MAT[k].tl;
 if (typeof TL_TAG !== 'undefined') { TL_TAG.rubble = 'terra'; TL_TAG.rubbleH = 'muratura'; }
@@ -33,15 +33,53 @@ function dzOn(type, fn) { (DZ.listeners[type] || (DZ.listeners[type] = [])).push
 function dzEmit(type, d) { DZ.log.push({ t: GAME.time, type, id: d && d.id }); if (DZ.log.length > 60) DZ.log.shift(); if (!DZ.restoring) for (const fn of DZ.listeners[type] || []) try { fn(d); } catch (e) { console.warn(e); } }
 
 // ---------- materiali e mesh condivisi ----------
+// resa: un'InstancedMesh per materiale visivo (pietra, intonaco, mattoni, legno, cemento, tetto, colore pieno), texture triplanare
+// calcolata in coordinate del mondo (così la pietra ha la stessa scala su un pannello di 2 m e su uno di 5 m)
+const DZ_VIS = { pietra: 'stone', mattoni: 'brick', legno: 'wood', cemento: 'concrete', acciaio: 'paint', sacchi: 'sack', terra: 'sack', vegetazione: 'vc' };
+const DZ_TRI = { stone: .62, brick: .55, plaster: .38, wood: .55, concrete: .3, roof: .5, sack: .6 };
+function dzTriMat(name) {
+  const tex = typeof TEX !== 'undefined' && TEX[name], sc = DZ_TRI[name];
+  if (!tex || !sc) return new THREE.MeshLambertMaterial({ vertexColors: true });
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: tex.map, normalMap: tex.normal, roughness: 1 });
+  m.onBeforeCompile = sh => {
+    sh.uniforms.uTri = { value: sc };
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vTriP;varying vec3 vTriN;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n#ifdef USE_INSTANCING\nvTriP=(modelMatrix*instanceMatrix*vec4(transformed,1.)).xyz;vTriN=normalize(mat3(modelMatrix*instanceMatrix)*objectNormal);\n#else\nvTriP=(modelMatrix*vec4(transformed,1.)).xyz;vTriN=normalize(mat3(modelMatrix)*objectNormal);\n#endif');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uTri;varying vec3 vTriP;varying vec3 vTriN;')
+      .replace('#include <map_fragment>', `vec3 bw=pow(abs(vTriN),vec3(4.));bw/=dot(bw,vec3(1.));vec2 tx=vTriP.zy*uTri,ty=vTriP.xz*uTri,tz=vTriP.xy*uTri;
+        vec4 tcol=mapTexelToLinear(texture2D(map,tx))*bw.x+mapTexelToLinear(texture2D(map,ty))*bw.y+mapTexelToLinear(texture2D(map,tz))*bw.z;diffuseColor*=vec4(tcol.rgb,1.);`)
+      .replace('#include <normal_fragment_maps>', `vec3 nx=texture2D(normalMap,tx).xyz*2.-1.,ny=texture2D(normalMap,ty).xyz*2.-1.,nz=texture2D(normalMap,tz).xyz*2.-1.;
+        vec3 wn=normalize(vTriN+1.2*(bw.x*vec3(0.,nx.y,nx.x)+bw.y*vec3(ny.x,0.,ny.y)+bw.z*vec3(nz.x,nz.y,0.)));normal=normalize(mat3(viewMatrix)*wn);`);
+  };
+  return m;
+}
+const _dzZ = new THREE.Matrix4().makeScale(0, 0, 0);
+function dzPool(vis) {
+  let P_ = DZ.pools[vis]; if (P_) return P_;
+  const cap = 6000, im = new THREE.InstancedMesh(DZ.geo, dzTriMat(vis), cap); im.count = 0; im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3);
+  im.frustumCulled = false; im.castShadow = im.receiveShadow = true; scene.add(im); return DZ.pools[vis] = { im, n: 0, cap };
+}
+// un'istanza: scatola con la base in basso al centro (x, y0, z), dimensioni e rotazione attorno a y
+function dzInst(vis, col, x, y0, z, sx, sy, sz, ry = 0, rx = 0, rz = 0) {
+  const P_ = dzPool(vis); if (P_.n >= P_.cap) return null; const i = P_.n++;
+  _dzQ.setFromEuler(new THREE.Euler(rx, ry, rz, 'YXZ')); _dzM4.compose(_dzP.set(x, y0, z), _dzQ, _dzS.set(sx, sy, sz)); P_.im.setMatrixAt(i, _dzM4); _dzC.setHex(col); P_.im.setColorAt(i, _dzC);
+  P_.im.count = P_.n; P_.im.instanceMatrix.needsUpdate = true; P_.im.instanceColor.needsUpdate = true; DZ.st.inst = (DZ.st.inst || 0) + 1;
+  return { P: P_, i, m: _dzM4.clone(), col };
+}
+function dzInstSet(h, fn) { if (!h) return; _dzM4.copy(h.m); fn(_dzM4); h.P.im.setMatrixAt(h.i, _dzM4); h.P.im.instanceMatrix.needsUpdate = true; }
+function dzInstHide(h) { if (!h) return; h.P.im.setMatrixAt(h.i, _dzZ); h.P.im.instanceMatrix.needsUpdate = true; h.hidden = true; }
+function dzInstTint(h, k) { if (!h) return; _dzC.setHex(h.col).multiplyScalar(k); h.P.im.setColorAt(h.i, _dzC); h.P.im.instanceColor.needsUpdate = true; }
+// decorazione legata a una sezione (sparisce col danno grave) o a un oggetto (sparisce col crollo): cornici, persiane, davanzali, travi
+function dzDeco(link, vis, col, x, y0, z, sx, sy, sz, ry = 0, rx = 0, rz = 0) { const h = dzInst(vis, col, x, y0, z, sx, sy, sz, ry, rx, rz); if (h && link) (link.deco || (link.deco = [])).push(h); return h; }
 function dzMat(m, dmg) { const k = m + (dmg ? '_d' : ''); if (DZ.mats[k]) return DZ.mats[k]; const c = new THREE.Color(DZ_MAT[m].col); if (dmg) c.multiplyScalar(.72); return DZ.mats[k] = new THREE.MeshLambertMaterial({ color: c }); }
 function dzInit() {
   if (DZ.geo) return; DZ.on = true;
-  DZ.geo = new THREE.BoxGeometry(1, 1, 1); DZ.geo.translate(0, .5, 0);
+  DZ.geo = new THREE.BoxGeometry(1, 1, 1); DZ.geo.translate(0, .5, 0); { const n = DZ.geo.attributes.position.count; DZ.geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3)); } DZ.pools = {};
   // macerie persistenti: un'unica InstancedMesh di sassi (colori per istanza)
   const g = new THREE.IcosahedronGeometry(1, 0); DZ.rub = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ color: 0xffffff }), DZ.RUB_MAX); DZ.rub.count = 0; DZ.rub.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(DZ.RUB_MAX * 3), 3); DZ.rub.frustumCulled = false; DZ.rub.castShadow = DZ.rub.receiveShadow = true; scene.add(DZ.rub);
 }
 function dzReset() {
-  for (const s of DZ.secs) { if (s.mesh) { scene.remove(s.mesh); } }
+  for (const k in DZ.pools || {}) { scene.remove(DZ.pools[k].im); DZ.pools[k].im.dispose(); } DZ.pools = {}; for (const o of DZ.objs.values()) for (const m of o.vis || []) scene.remove(m); if (typeof FLOORS !== 'undefined') FLOORS.length = 0;
   DZ.objs.clear(); DZ.secs.length = 0; DZ.routes.length = 0; DZ.log.length = 0; DZ.listeners = {}; DZ.fires = 0; DZ.craters = 0; DZ.rubN = 0; if (DZ.rub) DZ.rub.count = 0;
   if (DZ.geo) { scene.remove(DZ.rub); DZ.geo = null; DZ.mats = {}; } DZ.on = false;
 }
@@ -60,7 +98,8 @@ function dzSection(obj, role, mat, x0, y0, z0, x1, y1, z1, o = {}) {
   const sol = addSolid(x0, y0, z0, x1, y1, z1, 'dz_' + mat); sol.mat = M.tl;
   const sec = { n: DZ.secs.length, id: obj.id + '/' + (obj.secs.length), obj, role, mat, M, box: [x0, y0, z0, x1, y1, z1], sol, max: Math.max(60, vol * M.res * 42) * (o.hpK || 1), hp: 0, state: 0, covers: [], rubSol: null, ground: o.ground ?? y0, structural: role === 'wall' };
   sec.hp = sec.max; sol._dz = sec;
-  if (role !== 'hidden') { const m = new THREE.Mesh(DZ.geo, dzMat(mat, false)); m.position.set((x0 + x1) / 2, y0, (z0 + z1) / 2); m.scale.set(x1 - x0, y1 - y0, z1 - z0); m.castShadow = m.receiveShadow = true; scene.add(m); sec.mesh = m; }
+  if (role !== 'hidden') sec.vis = dzInst(o.vis || DZ_VIS[mat] || 'vc', o.col ?? M.col, (x0 + x1) / 2, y0, (z0 + z1) / 2, x1 - x0, y1 - y0, z1 - z0);
+  sec.visible = role !== 'hidden'; sec.visH = y1 - y0;
   obj.secs.push(sec); DZ.secs.push(sec); return sec;
 }
 function dzObject(id, type, o = {}) { dzInit(); const obj = { id, type, state: 0, secs: [], collapsed: false, persistent: true, ...o }; DZ.objs.set(id, obj); return obj; }
@@ -80,7 +119,7 @@ function dzHouse(id, cx, cz, w, d, storeys, mat = 'pietra', o = {}) {
   run('x', cx - w / 2, cx + w / 2, cz + d / 2, 0, 'front'); run('x', cx - w / 2, cx + w / 2, cz - d / 2, 0, 'back');
   run('z', cz - d / 2 + t / 2, cz + d / 2 - t / 2, cx - w / 2, 0, 'left'); run('z', cz - d / 2 + t / 2, cz + d / 2 - t / 2, cx + w / 2, 0, 'right');
   // tetto: una lastra (blocca la vista dall'alto), crolla con l'edificio
-  const roof = dzSection(obj, 'roof', 'legno', cx - w / 2 - .3, obj.top, cz - d / 2 - .3, cx + w / 2 + .3, obj.top + .5, cz + d / 2 + .3, { hpK: 3 }); roof.mesh.material = new THREE.MeshLambertMaterial({ color: 0x5f646b });
+  const roof = dzSection(obj, 'roof', 'legno', cx - w / 2 - .3, obj.top, cz - d / 2 - .3, cx + w / 2 + .3, obj.top + .5, cz + d / 2 + .3, { hpK: 3, vis: 'roof', col: 0x8a909a }); dzInstTint(roof.vis, 1); roof.vis.col = 0x5f646b; dzInstTint(roof.vis, 1);
   // coperture della fanteria ai lati della casa
   for (const [x, z, f] of [[cx - w / 2 - 1, cz + d / 2 + 1.2, 'front'], [cx + w / 2 + 1, cz + d / 2 + 1.2, 'front'], [cx - w / 2 - 1.2, cz - d / 2 - 1, 'back'], [cx + w / 2 + 1.2, cz - d / 2 - 1, 'back']]) dzCover(obj.secs.find(s => s.face === f && s.role === 'wall'), x, z, 'house');
   return obj;
@@ -152,16 +191,16 @@ function dzChips(sec, p, dir, k) {
 }
 function dzSetState(sec, st, o = {}) {
   if (st <= sec.state && !o.force) return; const t0 = performance.now();
-  sec.state = st; DZ.st.changes++; const b = sec.box, m = sec.mesh, quiet = !!o.quiet;
-  if (st >= 1 && m) m.material = sec.role === 'roof' ? m.material : dzMat(sec.mat, true);   // crepe: tinta più scura e frammenti
+  sec.state = st; DZ.st.changes++; const b = sec.box, quiet = !!o.quiet;
+  if (st >= 1 && sec.role !== 'roof') dzInstTint(sec.vis, .72);   // crepe: tinta più scura e frammenti
   if (st === 2 && sec.role !== 'roof') {
     // gravemente danneggiata: resta metà della sezione (in basso), il collider segue la geometria
-    const h = (b[4] - b[1]) * .5; sec.sol.max.y = b[1] + h; if (m) m.scale.y = h; sec.hp = Math.min(sec.hp, sec.max * .34);
+    const h = (b[4] - b[1]) * .5; sec.sol.max.y = b[1] + h; dzInstSet(sec.vis, M4 => M4.scale(_dzS.set(1, .5, 1))); sec.visH = h; for (const d of sec.deco || []) dzInstHide(d); sec.hp = Math.min(sec.hp, sec.max * .34);
     for (const c of sec.covers) c.kind = 'ruin';
     if (!quiet) for (let i = 0; i < 5; i++) dzRubble(rnd(b[0], b[3]), sec.ground + .1, rnd(b[2], b[5]), rnd(.25, .5), sec.M.rub);
   }
   if (st === 3) {
-    sec.sol.on = false; if (m) m.visible = false;
+    sec.sol.on = false; dzInstHide(sec.vis); sec.visible = false; for (const d of sec.deco || []) dzInstHide(d);
     // macerie basse dove stava la sezione (collider semplice, superabile dai cingoli, copertura bassa)
     if (sec.role !== 'roof' && sec.role !== 'hidden') {
       const y0 = sec.ground, rh = sec.role === 'door' ? .25 : .55;
@@ -188,6 +227,7 @@ function dzObjState(obj, o = {}) {
 }
 function dzCollapse(obj, o = {}) {
   obj.collapsed = true; const quiet = !!o.quiet;
+  for (const m of obj.vis || []) m.visible = false; for (const d of obj.deco || []) dzInstHide(d); for (const f of obj.floors || []) { f.off = true; if (f.sol) f.sol.on = false; }
   for (const s of obj.secs) if (s.state < 3) { s.state = 2; dzSetState(s, 3, { quiet: true }); }
   // cumulo: collider unico, più basso della casa ma alto abbastanza da bloccare i carri e dare copertura
   const x0 = obj.cx - obj.w / 2 - 1, x1 = obj.cx + obj.w / 2 + 1, z0 = obj.cz - obj.d / 2 - 1, z1 = obj.cz + obj.d / 2 + 1, hh = Math.min(2.4, (obj.top - obj.base) * .3);

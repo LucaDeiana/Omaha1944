@@ -229,6 +229,7 @@ function updatePlayer(dt) {
   else { P.pos.x = clamp(P.pos.x, -MAPX + 20, MAPX - 20); P.pos.z = clamp(P.pos.z, -MAPX + 60, 115); }
   let ground = Math.max(Hf(P.pos.x, P.pos.z), boatFloor, bunkerStep(P.pos.x, P.pos.z), P.onShip ? Math.max(shipFloor, shipDeckY(P.pos.x, P.pos.z)) : -99);
   if (P.swim) ground = Math.max(ground, wl - 1.4);
+  if (FLOORS.length && !P.onShip) ground = Math.max(ground, worldFloor(P.pos.x, P.pos.z, P.pos.y));
   if (SCEN === 'snp') { snpClamp(PT, P.pos); ground = Math.max(ground, snpFloor(P.pos.x, P.pos.z, P.pos.y)); }
   if (KEYS.Space && P.grounded && P.stance === 0 && !P.swim && P.depth < .6) { P.vy = 4.8; P.grounded = false; }
   P.vy -= 18 * dt; P.pos.y += P.vy * dt;

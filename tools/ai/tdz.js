@@ -19,11 +19,11 @@ const URL = 'file://' + path.resolve(__dirname, '../../index.html');
     ok('2 un colpo → danno leggero, il muro protegge ancora', panel.state === 1 && panel.sol.on && panel.sol.max.y === y0 && !!tlRay(out, inn, 'sight'), `${DZ_ST[panel.state]}, integrità ${Math.round(panel.hp / panel.max * 100)}%`);
     // 3 danno grave: metà sezione, collider abbassato
     shot(panel, false);
-    ok('3 secondo colpo → danno grave, collider della metà rimasta', panel.state === 2 && Math.abs(panel.sol.max.y - (panel.box[1] + (panel.box[4] - panel.box[1]) * .5)) < .01 && Math.abs(panel.mesh.scale.y - (panel.sol.max.y - panel.box[1])) < .01, `alto ${(panel.sol.max.y - panel.box[1]).toFixed(2)} m su ${(panel.box[4] - panel.box[1]).toFixed(2)}`);
+    ok('3 secondo colpo → danno grave, collider della metà rimasta', panel.state === 2 && Math.abs(panel.sol.max.y - (panel.box[1] + (panel.box[4] - panel.box[1]) * .5)) < .01 && Math.abs(panel.visH - (panel.sol.max.y - panel.box[1])) < .01, `alto ${(panel.sol.max.y - panel.box[1]).toFixed(2)} m su ${(panel.box[4] - panel.box[1]).toFixed(2)}`);
     // 4-5 distrutto: collider tolto, macerie basse con collider proprio; la vista e i colpi passano dall'apertura e solo da lì
     shot(panel, false);
     const side = front.find(s => s !== panel && s.state === 0), sc = mid(side);
-    ok('4 terzo colpo → sezione distrutta', panel.state === 3 && !panel.sol.on && !panel.mesh.visible);
+    ok('4 terzo colpo → sezione distrutta', panel.state === 3 && !panel.sol.on && !panel.visible);
     ok('5 collider coerente: varco libero, macerie basse, muro accanto ancora solido', !tlRay(out, inn, 'shell', 0) && !!panel.rubSol && panel.rubSol.max.y - panel.ground < .6 && !!tlRay(sc.clone().add(new V3(0, 0, 6)), sc.clone().add(new V3(0, 0, -1.2)), 'shell', 0), 'macerie alte ' + (panel.rubSol.max.y - panel.ground).toFixed(2) + ' m');
     // 6 varco percorribile dalla fanteria (a piano terra)
     const g0 = front.find(s => s.box[1] < H.base && s.role === 'wall' && s.state === 0), gc = mid(g0), rt = dzRoute('varco', gc.clone().add(new V3(0, 0, 3)), gc.clone().add(new V3(0, 0, -3)), .8, 'inf'); const before = rt.open;

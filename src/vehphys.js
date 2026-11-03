@@ -213,6 +213,14 @@ function vpGrid() {
   VP.grid = G; VP.gridN = solids.length; return G;
 }
 const VP_EMPTY = [];
+// solidi vicini a un punto (raggio piccolo): celle della griglia + solidi grandi; lista riutilizzata, senza duplicati
+const _vpNear = []; let _vpNq = 0;
+function vpNear(p, r) {
+  const G = vpGrid(), c = VP.CELL, x0 = Math.floor((p.x - r - .5) / c), x1 = Math.floor((p.x + r + .5) / c), z0 = Math.floor((p.z - r - .5) / c), z1 = Math.floor((p.z + r + .5) / c), q = ++_vpNq; _vpNear.length = 0;
+  for (let i = x0; i <= x1; i++) for (let j = z0; j <= z1; j++) { const l = G.get(i * 100003 + j); if (l) for (const s of l) if (s._vpq !== q) { s._vpq = q; _vpNear.push(s); } }
+  for (const s of VP.big) if (s._vpq !== q) { s._vpq = q; _vpNear.push(s); }
+  return _vpNear;
+}
 function vpCell(x, z) { const G = vpGrid(), c = VP.CELL; return G.get(Math.floor(x / c) * 100003 + Math.floor(z / c)) || VP_EMPTY; }
 function vpGround(x, z, yRef) {
   let h = Hf(x, z);
