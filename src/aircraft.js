@@ -427,7 +427,7 @@ function enterPlane(o = {}) {
   if (!PL.cockpit || PL.cockpitType !== PL.type) { if (PL.cockpit && PL.cockpit.parent) PL.cockpit.parent.remove(PL.cockpit); buildCockpit(PL.type); }
   me.g.add(PL.cockpit); PL.cockpit.visible = true; if (me.g.userData.pilot) me.g.userData.pilot.visible = false;
   P.mode = 'plane'; P.dead = false;
-  scene.fog.density = SCEN === 'sea' ? FOG_BASE * FOG_K : FOG_BASE * .3;   // in mare la visibilità è quella del meteo (decine di km)
+  scene.fog.density = SCEN === 'sea' ? FOG_BASE * FOG_K : FOG_BASE * AIR_FOG;   // in mare la visibilità è quella del meteo (decine di km)
   if (!PL.onDeck) spawnWingmen();
   PL.head = null; if (PL.assist === undefined) PL.assist = true; PL.ext = PL.assist; resetPlaneAim();
   if (PL.cockpit) PL.cockpit.visible = !PL.ext; if (me.g.userData.pilot) me.g.userData.pilot.visible = PL.ext; if (me.g.userData.glass) me.g.userData.glass.visible = PL.ext;

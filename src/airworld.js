@@ -5,7 +5,7 @@
 //  materiale del terreno centrale, livelli di dettaglio, boschi,
 //  case sparse e villaggi.
 // ============================================================
-const AW = { on: false, size: 1000, half: 12000, R: 6200, chunks: new Map(), mat: null, crownG: null, trunkG: null, wallG: null, roofG: null, last: null };
+const AW = { on: false, size: 1000, half: 12000, R: 8000, chunks: new Map(), mat: null, crownG: null, trunkG: null, wallG: null, roofG: null, last: null };
 // area coperta dal terreno dettagliato del centro: lì i tasselli si abbassano e restano nascosti sotto
 const awInCenter = (x, z) => x > -MAPX - 120 && x < MAPX + 120 && z > -MAPX && z < 420;
 
@@ -43,7 +43,7 @@ function awHorizon() {
   const m = new THREE.Mesh(g, AW.mat); m.frustumCulled = false; scene.add(m); AW.horizon = m;
 }
 // passo della griglia per distanza: vicino fitto, lontano rado
-function awLod(d) { return d < 2300 ? 0 : 1; }
+function awLod(d) { return d < 2600 ? 0 : d < 5600 ? 1 : 2; }   // vicino: alberi con tronco; medio: solo chiome, meno fitte; lontano: terreno rado con paesi
 const AW_STEP = [20, 40, 100];
 
 let AWH = null;  // altezze del tassello in costruzione
@@ -106,12 +106,12 @@ function awProps(cx, cz, lod) {
   const seed = hash2(cx * 7 + 3, cz * 13 + 5); let rs = seed * 1e6 | 0; const rr = () => ((rs = (rs * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
   // boschi: macchie dove il rumore a grande scala è alto, più alberi sparsi lungo i campi
   const trees = [];
-  const want = lod === 0 ? 550 : 0;  // oltre 3,5 km gli alberi diventano puntini scuri: i boschi restano nei colori del terreno
+  const want = lod === 0 ? 550 : lod === 1 ? 110 : 0;  // a media distanza poche chiome grandi danno il volume dei boschi; oltre restano i colori del terreno
   for (let t = 0; t < want * 3 && trees.length < want; t++) {
     const x = x0 + rr() * S, z = z0 + rr() * S, f = fbm(x * .0011 + 40, z * .0011, 3);
     if (f < .53 && rr() > .04) continue;
     if (!awLandOK(x, z, .35)) continue;
-    trees.push([x, awH(x, z), z, (.8 + rr() * .5) * (f > .6 ? 1.2 : 1)]);
+    trees.push([x, awH(x, z), z, (.8 + rr() * .5) * (f > .6 ? 1.2 : 1) * (lod ? 1.6 : 1)]);
   }
   if (trees.length) {
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new V3(), p = new V3();
@@ -125,7 +125,7 @@ function awProps(cx, cz, lod) {
   }
   // fattorie sparse e, in alcuni tasselli, un villaggio con la chiesa
   const houses = [];
-  const nFarm = 2 + Math.floor(rr() * 5);
+  const nFarm = lod === 2 ? 0 : 2 + Math.floor(rr() * 5);
   for (let i = 0; i < nFarm; i++) {
     const x = x0 + 60 + rr() * (S - 120), z = z0 + 60 + rr() * (S - 120); if (!awLandOK(x, z, .15)) continue;
     const ry = rr() * PI; for (let b = 0; b < 2 + rr() * 2; b++) houses.push([x + Math.cos(ry) * b * 14, z + Math.sin(ry) * b * 14, 8 + rr() * 6, 7 + rr() * 4, 4 + rr() * 2, ry + (b % 2) * PI / 2]);
@@ -154,7 +154,7 @@ function awProps(cx, cz, lod) {
 function awBuild(cx, cz, lod) {
   awHeights(cx, cz, lod);
   const g = new THREE.Group(); g.add(awTerrain(cx, cz, lod));
-  if (lod < 2) g.add(awProps(cx, cz, lod));
+  g.add(awProps(cx, cz, lod));
   scene.add(g); return g;
 }
 function awDispose(c) { scene.remove(c.g); c.g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.isInstancedMesh) o.dispose && o.dispose(); }); }
@@ -173,7 +173,7 @@ function updateAirChunks(dt, all) {
     if (c) { c.seen = true; if (c.lod !== lod) todo.push([d, i, j, lod, key]); } else todo.push([d, i, j, lod, key]);
   }
   todo.sort((a, b) => a[0] - b[0]);
-  let budget = all ? 1e9 : 1;
+  let budget = all ? 1e9 : todo.length && todo[0][0] < 3000 ? 4 : 2;   // se manca qualcosa vicino si recupera in fretta
   for (const [, i, j, lod, key] of todo) {
     if (budget-- <= 0) break;
     const old = AW.chunks.get(key); if (old) awDispose(old);

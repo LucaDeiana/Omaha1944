@@ -81,7 +81,7 @@ function airIntro() {
   const D1 = 5.5, D2 = 6, D3 = 6.5, T = D1 + D2 + D3, V = 115, alt = Math.max(tgt.y, C.deckY) + 260;
   // la formazione arriva sopra l'obiettivo alla fine del filmato
   CUT.lead = t => tgt.clone().addScaledVector(dir, -V * (T - t) + 60).setY(Math.min(alt, tgt.y + 110 + (T - t) * 14));
-  scene.fog.density = FOG_BASE * FOG_K * .3;  // visibilità da volo, come in cabina
+  scene.fog.density = FOG_BASE * FOG_K * AIR_FOG;  // visibilità da volo, come in cabina
   CUT.dir = dir; CUT.planes = [];
   for (let i = 0; i < 3; i++) { const m = makePlaneModel(type); m.userData.off = [[0, 0, 0], [-16, -2, 14], [16, 2, 16]][i]; scene.add(m); CUT.planes.push(m); }
   const along = C.type === 'field' ? new V3(0, 0, 1) : new V3(0, 0, 1);

@@ -6,7 +6,7 @@ let renderer, scene, camera, composer = null, gradePass = null, bloomPass = null
 const SUN_DIR = new V3(-.62, .34, .3).normalize();
 const lightPool = [];
 const MAT = {};
-const FOG_BASE = .0029;
+const FOG_BASE = .0029, AIR_FOG = .2;   // in volo la foschia è più rada: si vede a 5-6 km (prima 3-4)
 let FOG_K = 1; // moltiplicatore della nebbia per scenario e meteo
 const DYN = { scale: 1, acc: 0, n: 0, t: 0 };
 

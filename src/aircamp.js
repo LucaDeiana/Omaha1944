@@ -17,7 +17,7 @@ const AIR_CAMPAIGN = [
     date: '7 giugno 1944', time: 'mattina', theatre: 'Normandia', place: 'Entroterra di Omaha Beach e valle della Douve (ricostruzione)',
     map: 'norm', aircraft: 'p47', lives: 3, timeLimit: 1500, noRearm: true, noCarrier: true,
     arm: '8 mitragliatrici Browning M2 da 12,7 mm, 2 bombe da 500 libbre',
-    weather: { label: 'Nuvoloso, base delle nubi tra 500 e 700 m, foschia in aumento', cloudY: -160, cover: .35, gray: .25, fog: 1.6 },
+    weather: { label: 'Nuvoloso, base delle nubi tra 500 e 700 m, foschia in aumento', cloudY: -160, cover: .35, gray: .25, fog: 1.3 },
     context: 'Il giorno dopo lo sbarco la testa di ponte di Omaha è ancora sottile. I gruppi caccia della 9ª Air Force, decollati dall\'Inghilterra, battono le strade dietro la costa per fermare i rinforzi tedeschi diretti alle spiagge. La Luftwaffe si vede poco, ma la Flak protegge strade e ponti.',
     history: {
       doc: ['Nei giorni dello sbarco i P-47 della 9ª Air Force (Ninth Air Force) attaccarono strade, ponti e ferrovie dietro le spiagge normanne, con bombe da 500 libbre e mitragliatrici da 12,7 mm.', 'Il 6 e il 7 giugno la Luftwaffe effettuò pochissime sortite sulla testa di sbarco rispetto alle migliaia degli Alleati.', 'Il tempo nei primi giorni dell\'invasione era nuvoloso e ventoso.', 'I P-47 operavano dalle basi in Inghilterra: le prime piste avanzate in Normandia entrarono in servizio solo nei giorni successivi.'],
@@ -53,7 +53,7 @@ const AIR_CAMPAIGN = [
       fail: 'Abbiamo perso troppi aerei. Interrompete e rientrate.',
     },
     events: [
-      { id: 'cloud', when: c => c.t > 70, radio: 'cloud', do() { AMIS.fogT = 2.3; } },
+      { id: 'cloud', when: c => c.t > 70, radio: 'cloud', do() { AMIS.fogT = 1.75; } },
       { id: 'scatter', when: c => AIRM.convoyHit, radio: 'scatter' },
       { id: 'flakFirst', when: c => c.flakNear, radio: 'flakFirst' },
       { id: 'fighters', when: c => AIRM.convoyHit && c.t - AIRM.convoyHit > 75, radio: 'fighters', do() { for (let i = 0; i < 2; i++) { const h = spawnHunter('fw190'); AMIS.st.foes++; } } },
@@ -225,7 +225,7 @@ function amisTick(dt) {
   }
   // meteo: la visibilità cambia gradualmente
   AMIS.fogK = lerp(AMIS.fogK, AMIS.fogT, Math.min(1, dt * .08));
-  if (P.mode === 'plane') scene.fog.density = FOG_BASE * .3 * AMIS.fogK;
+  if (P.mode === 'plane') scene.fog.density = FOG_BASE * AIR_FOG * AMIS.fogK;
   // bersagli terrestri distrutti
   st.ground = (AMIS.groups.convoy || []).filter(u => !u.alive).length + (WORLD.aaSites || []).filter(a => a.dead).length + (AIRM.bridge && AIRM.bridge.down ? 1 : 0);
   // secondari mostrati sotto l'obiettivo
