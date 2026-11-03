@@ -37,7 +37,14 @@ function infRemember(s, t, p, conf, src) {
   if (m && m.conf > conf && GAME.time - m.t < 2) return;
   if (m) { m.p.copy(p); m.t = GAME.time; m.conf = Math.max(conf, m.conf * .5); m.src = src; } else s.mem.set(t, { p: p.clone(), t: GAME.time, conf, src });
 }
+// tiratore scelto: dopo tre colpi si sposta su un altro riparo a 8–25 m, alla stessa distanza dal bersaglio
+function infSnRelocate(me) {
+  const tp = me.snMove.tp; me.snMove = null; const d0 = Math.hypot(me.pos.x - tp.x, me.pos.z - tp.z); let best = null, bs = 1e9;
+  for (const c of covers) { if (c.occ >= 2 || c === me.cover) continue; const dd = Math.hypot(c.x - me.pos.x, c.z - me.pos.z); if (dd < 8 || dd > 25) continue; const sc = Math.abs(Math.hypot(c.x - tp.x, c.z - tp.z) - d0) + dd * .2; if (sc < bs) { bs = sc; best = c; } }
+  if (best) { if (me.cover) me.cover.occ--; best.occ++; me.cover = best; me.dest = new V3(best.x, 0, best.z); me.state = 'move'; me.crouchRun = true; INF.st.snMove = (INF.st.snMove || 0) + 1; }
+}
 Soldier.prototype.findTarget = function () {
+  if (this.snMove && GAME.time > this.snMove.t) infSnRelocate(this);
   const r = this.w.range, me = this.pos, C = INF.CFG, cands = [];
   const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
   for (const o of infFoes(this.team)) {
@@ -98,6 +105,17 @@ function infSuppressAt(team, p, amt) {
     s.supp = Math.min(1, s.supp + amt * (1 - Math.sqrt(dx * dx + dz * dz) / 3));
   }
 }
+(function infCoverHook() {
+  const pc = Soldier.prototype.pickCover;
+  Soldier.prototype.pickCover = function (Z) {
+    pc.call(this, Z);
+    const q = this.squadQ, c = this.cover; if (!c || !q || !q.contact) return;
+    const E = q.contact.p, eye = _iB.set(E.x, Hf(E.x, E.z) + 1.5, E.z);
+    if (!losClear(eye, _iC.set(c.x, Hf(c.x, c.z) + 1.1, c.z))) return;
+    const alt = covers.filter(o => o !== c && o.occ < 2 && Math.hypot(o.x - c.x, o.z - c.z) < 10).sort((a, b) => Math.hypot(a.x - c.x, a.z - c.z) - Math.hypot(b.x - c.x, b.z - c.z)).slice(0, 4);
+    for (const o of alt) if (!losClear(_iB.set(E.x, Hf(E.x, E.z) + 1.5, E.z), _iC.set(o.x, Hf(o.x, o.z) + 1.1, o.z))) { c.occ--; o.occ++; this.cover = o; this.dest = new V3(o.x + rnd(-.35, .35), 0, o.z + rnd(-.2, .3)); INF.st.coverSwap = (INF.st.coverSwap || 0) + 1; return; }
+  };
+})();
 (function infHooks() {
   const f0 = Soldier.prototype.fire;
   Soldier.prototype.fire = function () {
@@ -108,6 +126,10 @@ function infSuppressAt(team, p, amt) {
     if (t && !t.isBoat) infSuppressAt(this.team === 'A' ? 'E' : 'A', T3, this.kind === 'mg' ? .3 : this.kind === 'bar' ? .22 : .15);
     if ((AI_FRAME + this.id) % 3 === 0) infHear(this, this.pos, this.kind === 'mg' ? 1.5 : 1);
     if (this.morale !== undefined && this.morale < .5) this.fireT *= 1.35;   // morale basso: tiro esitante
+    if (this.kind === 'sniper' && !this.stationary && !this.inBunker && t && !t.isSupp) {
+      this.snN = (this.snN || 0) + 1;
+      if (this.snN >= 3) { this.snN = 0; this.snMove = { t: GAME.time + rnd(1, 2), tp: t.pos.clone() }; }
+    }
     if (t && t.isSupp) { if (this.burst > 0) this.fireT *= 1.6; else this.fireT *= 2.2; }   // soppressione: raffiche più rade, per tenere giù la testa al nemico
   };
 })();
@@ -155,6 +177,7 @@ function infSquadTick(q, dt) {
     d -= s.supp * .05; if (!near) d -= .015; if (s.cover || s.inTrench) d += .008; if (lp) d += .01; if (s.supp < .1 && !q.contact) d += .03; if (s.supp < .2) d += .01;
     d -= INF.dir[q.team].mode === 'withdraw' ? .01 : 0;
     s.morale = clamp(s.morale + d * dt * (d < 0 ? 1 / (s.grit || 1) : (s.grit || 1)), 0, 1); msum += s.morale;
+    infTankCheck(s);
     // stato inchiodato: fuoco molto intenso, niente tiro per qualche secondo
     if (s.supp > .85 && !s.pinned) { s.pinned = GAME.time + rnd(2, 4); INF.st.pinned++; }
     if (s.pinned && GAME.time > s.pinned) s.pinned = 0;
@@ -189,6 +212,25 @@ function infSquadTick(q, dt) {
     infSetState(q, q.state === 'WITHDRAW' || q.state === 'REGROUP' ? 'REGROUP' : 'HOLD');
     // riunione: chi si è allontanato troppo dal comandante, senza ordini di posto, torna verso di lui
     if (q.state === 'REGROUP') { for (const s of mob) if (!s.dest && s.pos.distanceTo(L.pos) > 30 && s.team !== 'A') { s.dest = new V3(L.pos.x + rnd(-6, 6), 0, L.pos.z + rnd(-6, 6)); s.state = 'move'; } if (q.stT > 15) infSetState(q, 'HOLD'); }
+  }
+}
+// carri: un carro nemico vicino e visibile spaventa (il fucile non lo ferma) e spinge verso un riparo lontano da lui;
+// davanti a un carro amico in movimento ci si sposta di lato
+const infTeamOfTank = t => t.team || 'E';   // i Panzer di Omaha e delle Ardenne sono tedeschi
+function infTankCheck(s) {
+  if (typeof VP === 'undefined' || !VP.list.length) return;
+  for (const t of VP.list) {
+    if (!t.alive || t.removedVP) continue;
+    const dx = t.pos.x - s.pos.x, dz = t.pos.z - s.pos.z, d2 = dx * dx + dz * dz;
+    if (infTeamOfTank(t) !== s.team) {
+      if (d2 > 75 * 75) continue;
+      if (!losClear(s.eye(_iA), _iB.set(t.pos.x, t.pos.y + 2, t.pos.z))) continue;
+      s.supp = Math.min(1, s.supp + .25); s.morale -= .03; infRemember(s, t, t.pos, .9, 'carro'); INF.st.tankScare = (INF.st.tankScare || 0) + 1;
+      if (d2 < 40 * 40 && !s.stationary && !s.inTrench && GAME.time > (s.tankDodgeT || 0)) { s.tankDodgeT = GAME.time + 8; infFallback(s, t.pos, 15); INF.st.tankDodge = (INF.st.tankDodge || 0) + 1; }
+    } else if (d2 < 10 * 10 && Math.abs(t.speed || 0) > 1 && !s.stationary) {
+      const fx = -Math.sin(t.yaw), fz = -Math.cos(t.yaw), ahead = -(dx * fx + dz * fz) * Math.sign(t.speed);
+      if (ahead > 0) { const side = (-dx * fz + dz * fx) > 0 ? 1 : -1; s.dest = new V3(s.pos.x - fz * side * 6, 0, s.pos.z + fx * side * 6); s.state = 'move'; INF.st.tankStep = (INF.st.tankStep || 0) + 1; }
+    }
   }
 }
 // riparo più lontano dal nemico (ripiegamento o rotta); mai attraverso il nemico
@@ -258,7 +300,7 @@ function updateInfantry(dt) {
 }
 INF.report = () => { const s = INF.st, m = {}; for (const L of [allies, enemies]) for (const x of L) if (infOk(x) && x.morale !== undefined) { const k = moraleName(x.morale); m[k] = (m[k] || 0) + 1; }
   const qs = {}; for (const q of INF.squads) qs[q.state] = (qs[q.state] || 0) + 1;
-  return `squadre ${INF.squads.length} ${JSON.stringify(qs)} · morale ${JSON.stringify(m)} · avvistati ${s.spotted} · sentiti ${s.heard} · contatti persi ${s.lost} · condivisi ${s.shared} · ritardi di reazione ${s.reactDelay} · soppressione su posizione nota ${s.supFire} · inchiodati ${s.pinned} · fiancheggiamenti ${s.flanks} (interrotti ${s.flankAbort}, rinunce ${JSON.stringify(s.noFlank || {})}) · ripiegamenti ${s.withdraw} · in rotta ${s.routed} · successioni ${s.succession} · ${(INF.ms || 0).toFixed(3)} ms`; };
+  return `squadre ${INF.squads.length} ${JSON.stringify(qs)} · morale ${JSON.stringify(m)} · avvistati ${s.spotted} · sentiti ${s.heard} · contatti persi ${s.lost} · condivisi ${s.shared} · ritardi di reazione ${s.reactDelay} · soppressione su posizione nota ${s.supFire} · inchiodati ${s.pinned} · fiancheggiamenti ${s.flanks} (interrotti ${s.flankAbort}, rinunce ${JSON.stringify(s.noFlank || {})}) · ripiegamenti ${s.withdraw} · in rotta ${s.routed} · successioni ${s.succession} · paura dei carri ${s.tankScare || 0} (scarti ${s.tankDodge || 0}, passi di lato ${s.tankStep || 0}) · ripari meno esposti ${s.coverSwap || 0} · cambi di posizione dei tiratori ${s.snMove || 0} · ${(INF.ms || 0).toFixed(3)} ms`; };
 
 // ---------- debug (Ctrl+Maiusc+I): stato, squadra, morale, soppressione, ultima posizione nota, legami col comandante ----------
 const INF_COL = { HOLD: '#9fd0ff', SUPPRESS: '#ffcf5a', FLANK: '#ff8a3d', WITHDRAW: '#ff5050', REGROUP: '#c58bff' };

@@ -51,6 +51,16 @@ const S = __dirname;
     if (cv) { cv.occ = 0; const kd = covers.indexOf(cv); covers.splice(kd, 1); try { infSquadTick(q, 1); v.think(); ok('riparo rimosso: nessun errore', true); } catch (e) { ok('riparo rimosso: nessun errore', false, e.message); } covers.splice(kd, 0, cv); }
     // 11 fuoco di soppressione: non colpisce mai
     const hp0 = e2.hp; g.reloadT = 0; g.target = { isSupp: true, alive: true, pos: e2.pos.clone(), crouch: 0, chest(o) { return o.copy(this.pos).setY(this.pos.y + .9); } }; for (let i = 0; i < 30; i++) { g.mag = 8; g.fire(); } ok('soppressione: nessun colpo garantito', e2.hp === hp0);
+    // 13 carri: un Panzer vicino e visibile spaventa e fa cercare riparo; davanti a uno Sherman in movimento ci si sposta di lato
+    clear(); const ta = mk('A', 'rifle', ep[0], ep[1]); const sqa = [ta, mk('A', 'rifle', ep[0] + 2, ep[1]), mk('A', 'rifle', ep[0] - 2, ep[1]), mk('A', 'smg', ep[0], ep[1] + 2)]; infForm();
+    const pz = new Panzer(a.pos.x, a.pos.z, 0); pz.think = () => { }; const sp0 = ta.supp; infSquadTick(ta.squadQ, 1);
+    ok('carri: il Panzer spaventa e fa cercare riparo', ta.supp > sp0 && !!ta.dest, 'soppressione ' + ta.supp.toFixed(2) + ', scarti ' + (INF.st.tankDodge || 0));
+    pz.alive = false; vpRemove(pz);
+    const sh = new KasTank('sherman', 'A', ta.pos.x, ta.pos.z + 7, 0); sh.speed = 4; sh.think = () => { }; ta.dest = null; ta.tankDodgeT = 0; infSquadTick(ta.squadQ, 1);
+    ok('carri: passo di lato davanti allo Sherman in movimento', !!ta.dest && (INF.st.tankStep || 0) > 0); vpRemove(sh);
+    // 14 tiratore scelto: dopo tre colpi cambia posizione
+    const sn = mk('A', 'sniper', ep[0] + 5, ep[1]); sn.target = e2; for (let i = 0; i < 3; i++) { sn.mag = 5; sn.fire(); } sn.dest = null; for (let i = 0; i < 3; i++) { GAME.time += 1; sn.findTarget(); }
+    ok('tiratore scelto: cambia posizione dopo tre colpi', !!sn.dest, 'spostamenti ' + (INF.st.snMove || 0));
     // 12 debug attivabile
     INF.debug = true; try { infDebugDraw(); for (let i = 0; i < 6; i++) infDebugDraw(); ok('debug: sovrimpressione', true); } catch (e) { ok('debug: sovrimpressione', false, e.message); } INF.debug = false;
     return R.join('\n'); }));

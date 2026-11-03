@@ -76,6 +76,16 @@
   - **REGROUP**: senza contatto, chi si è allontanato più di 30 m torna verso il comandante.
 - **Voce**: avvistamento, ordine di fiancheggiare, ripiegamento e successione usano il sistema delle grida esistente, con priorità e attese, e solo vicino alla camera.
 
+### Carri, ripari e tiratori scelti (seconda fase)
+- **Carri**:
+  - un carro nemico entro 75 m e visibile alza la soppressione e abbassa il morale (il fucile non lo ferma);
+  - entro 40 m il soldato mobile ripiega su un riparo lontano dal carro, al massimo una volta ogni 8 s;
+  - davanti a un carro amico in movimento, entro 10 m, si sposta di lato.
+  
+  I Panzer di Omaha e delle Ardenne contano come tedeschi.
+- **Ripari meno esposti**: quando la squadra ha un contatto, se il riparo scelto dalla logica esistente è sotto il tiro della posizione nemica nota, il soldato prende uno dei 4 ripari liberi più vicini (entro 10 m) che il nemico non vede.
+- **Tiratori scelti**: dopo tre colpi cambiano posizione, su un riparo a 8–25 m che resta alla stessa distanza dal bersaglio.
+
 ### Direttore di battaglia (versione leggera)
 Ogni 3 s calcola per fazione il rapporto di forze e il morale medio, e decide l'atteggiamento:
 - **attacco**: rapporto sopra 1,4 e morale sopra 0,55;
@@ -102,7 +112,7 @@ Per ogni soldato entro 60 m:
 Le linee mostrano il comandante con i membri, l'ultima posizione nota e il riparo scelto. Il debug è spento per default.
 
 ## Test (cartella `tools/ai`, Playwright senza grafica, generatore deterministico)
-`tinf.js`, test dei singoli comportamenti: **18 su 18 superati**.
+`tinf.js`, test dei singoli comportamenti: **20 su 20 superati in tre esecuzioni consecutive**. Oltre a quelli elencati sotto: il Panzer vicino spaventa e fa cercare riparo; passo di lato davanti allo Sherman in movimento; il tiratore scelto cambia posizione dopo tre colpi.
 
 | Test | Esito |
 |---|---|
@@ -149,9 +159,9 @@ Le squadre da sole costano circa 0,01–0,08 ms; il resto del costo viene dai co
 Regressione: tutte le modalità e il visualizzatore partono senza errori. Inoltre 60 s di combattimento nelle Ardenne e in Tunisia senza errori. In Tunisia (tutti contro tutti) le squadre sono disattivate; i colpi in 60 s variano molto da una partita all'altra (prima 74–79, dopo 17–155).
 
 ## Non fatto (onestamente)
-- **Navigazione tattica con costo d'esposizione**: si usa la navigazione esistente; la scelta del riparo tiene già conto di distanza e nemici vicini.
-- **Ruoli di assistente mitragliere e tiratore scelto** come comportamenti propri.
-- **Coordinamento con i carri** (riconoscerli, evitarli, cercare riparo).
+- **Navigazione tattica con costo d'esposizione lungo tutto il percorso**: si usa la navigazione esistente; è coperta solo la destinazione (ripari meno esposti).
+- **Assistente mitragliere**: non esiste come soldato nel gioco.
+- **Carri e fanteria nella stessa battaglia**: verificati solo dai test, perché nei 120–180 s simulati a Omaha i Panzer non arrivano vicino alla fanteria.
 - **Settori e rinforzi del direttore**: oggi decide solo l'atteggiamento della fazione.
 - **Livelli di simulazione 2 e 3** (simulazione astratta dei soldati lontani): restano quelli esistenti, cioè think più rari e animazioni ridotte con la distanza.
 - **Prove di rete con due computer**: il nuovo sistema non gira sui client (`NET.client`) e non aggiunge messaggi di rete.
