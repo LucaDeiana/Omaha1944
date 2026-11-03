@@ -73,6 +73,9 @@ Nuovo:
   - alta (muro, rovina, casa, chiesa, carro, siepe, albero): a ridosso; per sparare si sporge di lato, dal lato del bersaglio rispetto al riparo; quando non spara sbircia oltre lo spigolo.
 
   È solo una posa: l'altezza usata dal combattimento dell'IA non cambia. Le sfere dei colpi del giocatore seguono il corpo, quindi chi spara in ginocchio dietro i sacchetti espone meno.
+- **Ricarica**: l'IA ora ha caricatori veri (Garand 8 colpi, Kar98k e Springfield 5, Thompson 30, MP 40 32, BAR 20, MG 42 a nastri da 250) e ricarica in 2–5 s. Nell'animazione l'arma si inclina con la volata in alto, la mano sinistra va alla giberna, poi al caricatore (sopra per i fucili, sotto per mitra e BAR) e torna all'arma. **È un cambio di gameplay**: durante la ricarica il soldato non spara. Misura a Omaha, 60 s di battaglia simulata: colpi dell'IA 4.010 contro 4.799 prima (−16%); caduti alleati 11 contro 13, tedeschi 7 contro 11 (singola simulazione, con variabilità). Nessuna ricarica rimasta bloccata.
+- **Finestre e feritoie**: busto in avanti e arma bassa appoggiata.
+- **Piedi sulla pendenza** (soldati vicini, fermi): la gamba a monte si piega, il bacino scende verso valle.
 - **Variazioni individuali**: ampiezza dei gesti, ritmo dello sguardo e inclinazione dell'arma diversi per ogni soldato, oltre a fase del passo e del respiro già casuali.
 
 Restano invariati:
@@ -87,9 +90,6 @@ Le sfere dei colpi seguono le ossa come prima: in ginocchio stanno dove sta il c
 - **Nessun modello nuovo creato**: niente Blender, niente GLB nuovi; corpo e volto sono quelli già presenti, con licenze libere.
 - **Nuovi ruoli visivi** (ufficiale, cecchino, equipaggi dei carri).
 - **Animazioni ancora mancanti**:
-  - ricarica visibile (l'IA non ha caricatori: andrebbe aggiunta anche nel gioco);
-  - posa specifica per le finestre (arma appoggiata al davanzale);
-  - piedi adattati alla pendenza;
   - morti diverse per postura (alla morte c'è già il ragdoll);
   - mitragliatrice su bipiede da prono (cambierebbe l'altezza del bersaglio, quindi il gameplay).
 - **Mani**: geometria delle mani rifatta.

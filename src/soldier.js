@@ -46,6 +46,8 @@ function cycleOrder() {
 }
 // qualità dei ripari: più alta = più protetto
 // altezza della copertura per la posa: 1 bassa, 2 alta (0 o assente: nessuna posa speciale)
+// caricatori dell'IA: colpi e secondi di ricarica (Garand 8 a lastrina, Kar98k e Springfield 5, Thompson 30, MP 40 32, BAR 20, MG 42 a nastro da 250)
+const AI_MAG = { A: { rifle: [8, 1.8], sniper: [5, 2.4], smg: [30, 2.2], bar: [20, 2.5], medic: [7, 2] }, E: { rifle: [5, 2.2], sniper: [5, 2.4], smg: [32, 2.2], mg: [250, 5], medic: [8, 2] } };
 const COVER_H = { sand: 1, bank: 1, crater: 1, wreck: 1, hh: 1, wallN: 2, wallS: 2, ruin: 2, gate: 2, church: 2, house: 2, houseS: 2, tank: 2, tree: 2, hedgeN: 2, hedgeS: 2 };
 const COVER_Q = { bank: 7, tank: 6, sand: 6, bunker: 6, trench: 5, wallN: 5, house: 6, church: 6, ruin: 5, gate: 3, crater: 3.5, hh: 2.5, tree: 4 };
 class Soldier {
@@ -202,7 +204,8 @@ class Soldier {
     this.crouch = lerp(this.crouch, wc, dt * 6);
     const firing = !this.duck && !this.moving && this.target && this.tVis && !this.flee && !this.role && !this.healTarget;
     this.aimW = lerp(this.aimW, firing || (this.target && !this.moving) ? 1 : 0, dt * 5);
-    if (firing) {
+    if (this.reloadT > 0) this.reloadT -= dt;
+    if (firing && !(this.reloadT > 0)) {
       this.fireT -= dt;
       if (this.fireT <= 0) {
         if (this.burst <= 0) { this.burst = Math.round(rnd(this.w.burst[0], this.w.burst[1])); if (this.kind === 'mg' && this.vis.length > 1 && R() < .6) this.target = pick(this.vis); this.sweep = rnd(-1, 1); }
@@ -256,6 +259,13 @@ class Soldier {
     const kS = Math.min(1, run * 3), kAmp = lerp(.9, 1.35, run) * kS;
     b.knL.rotation.x = -((Math.max(0, Math.sin(this.ph + 1.6)) * kAmp + Math.max(0, -Math.sin(this.ph + 1.6)) * .14 * kS + kb) * (1 - pr) + Math.max(0, s) * .8 * crawl + wd * .7) - kn * 1.45;
     b.knR.rotation.x = -((Math.max(0, Math.sin(this.ph + 1.6 + PI)) * kAmp + Math.max(0, -Math.sin(this.ph + 1.6 + PI)) * .14 * kS + kb) * (1 - pr) + Math.max(0, -s) * .8 * crawl + wd * 1.1) - kn * 1.6;
+    // piedi sulla pendenza (soldati vicini, fermi, in piedi): la gamba a monte si piega, il bacino scende verso valle
+    if (still && pr < .1 && !wd && d2 < 35 * 35 && !this.fixedY) {
+      const rx = Math.cos(this.yaw) * .11, rz = -Math.sin(this.yaw) * .11, y0 = this.pos.y, dL = Hf(this.pos.x - rx, this.pos.z - rz) - y0, dR = Hf(this.pos.x + rx, this.pos.z + rz) - y0;
+      const kL = clamp(dL * 6, 0, .7), kR = clamp(dR * 6, 0, .7);
+      b.knL.rotation.x -= kL; b.hipL.rotation.x += kL * .5; b.knR.rotation.x -= kR; b.hipR.rotation.x += kR * .5;
+      b.hips.position.y -= clamp(-Math.min(dL, dR), 0, .12);
+    }
     const fl = this.flinch * .35;
     b.spine.rotation.set((-(.15 * run + cr * (still ? .3 : .45) + this.lean) + this.aim * .7 + Math.sin(this.br) * .012) * (1 - pr) + pr * .35 + fl - wd * .3, -s * .07 * run * up, -(c * .04 * Math.min(1, run * 4) + this.bank * .5) * up);
     b.neck.rotation.set(-this.aim * .3 + pr * .7 - fl * .5 + wd * .5, 0, 0);
@@ -277,6 +287,8 @@ class Soldier {
     // sotto il fuoco, appostato e non impegnato a sparare: testa incassata e spalle basse
     const posted = this.state === 'post' || this.state === 'cover' || this.state === 'hold', cower = posted && this.aimW < .5 ? clamp(this.supp * 1.4, 0, 1) : 0;
     b.neck.rotation.x += cower * .4; b.spine.rotation.x -= cower * .12;
+    // alla finestra o alla feritoia: busto in avanti, arma bassa appoggiata al davanzale
+    if (this.inBunker && this.kind !== 'mg') { b.spine.rotation.x -= .12 * this.aimW; _sw.y -= .03 * this.aimW; }
     // rinculo nella spalla
     b.spine.rotation.x += this.kick * .05 * (this.kind === 'smg' ? .5 : 1);
     // reazione al colpo: busto spinto indietro, gamba che cede o spalla colpita
@@ -293,7 +305,7 @@ class Soldier {
       b.hips.position.x += side * .14 * this.peek; b.spine.rotation.z -= side * .26 * this.peek; b.neck.rotation.z += side * .14 * this.peek;
       if (this.aimW < .3) { b.spine.rotation.x -= .08; b.neck.rotation.y += side * .25 * (1 - this.aimW); }   // a ridosso, sbircia oltre lo spigolo
     }
-    poseWeapon(b, this.aimW, this.kind === 'mg' ? 1 - this.aimW : 0, boatW, wPort, _sw, { low: this.relax * (1 - this.aimW) * (1 - wPort), kick: this.kick, bolt: this.boltT > 0 && this.boltT < 1 ? 1 - this.boltT : 0, cant: V.cant });
+    poseWeapon(b, this.aimW, this.kind === 'mg' ? 1 - this.aimW : 0, boatW, wPort, _sw, { low: this.relax * (1 - this.aimW) * (1 - wPort), kick: this.kick, bolt: this.boltT > 0 && this.boltT < 1 ? 1 - this.boltT : 0, cant: V.cant, reload: this.reloadT > 0 ? 1 - this.reloadT / this.reloadT0 : 0 });
     if (hr > 0 && this.hitZ === 'arm') b.shR.rotation.x += hr * .5;
     if (this.aimW > .3) b.neck.rotation.z -= .1 * this.aimW;   // guancia sul calcio
     if (this.throwT > 0) { const k = 1 - this.throwT / .7; solveArm(SH_R, T5.set(.22, lerp(.75, .5, k), lerp(.25, -.55, k)), POLE_R, b.shR, b.elR); }
@@ -453,7 +465,9 @@ class Soldier {
 
   fire() {
     if (this.supB && this.supB.manned) return;
-    this.kick = 1; if (this.kind === 'sniper' || (this.kind === 'rifle' && this.team === 'E')) this.boltT = 1.25;   // Kar98k e Springfield: otturatore dopo ogni colpo (il Garand è semiautomatico)
+    this.kick = 1; if (this.kind === 'sniper' || (this.kind === 'rifle' && this.team === 'E')) this.boltT = 1.25;
+    // caricatore: finiti i colpi, ricarica (l'arma tace per qualche secondo)
+    const M = (AI_MAG[this.team] || AI_MAG.A)[this.kind]; if (M) { if (this.mag === undefined) this.mag = Math.ceil(M[0] * rnd(.4, 1)); if (--this.mag <= 0) { this.mag = M[0]; this.reloadT = this.reloadT0 = M[1] * rnd(.9, 1.2); this.burst = 0; this.boltT = 0; } }   // Kar98k e Springfield: otturatore dopo ogni colpo (il Garand è semiautomatico)
     const t = this.target, tp = targetChest(t, T2); if (!tp) return;
     const from = this.muzzle(T1), d = from.distanceTo(tp);
     let p = this.w.acc * clamp(1.15 - d / this.w.range, .12, 1);

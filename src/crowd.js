@@ -357,6 +357,18 @@ function poseWeapon(b, wAim, wHip, wBoat, wPort = 0, sway = null, o = null) {
   solveArm(SH_R, g.position, POLE_R, b.shR, b.elR);
   _tL.copy(b.fore).applyQuaternion(g.quaternion).add(g.position);
   solveArm(SH_L, _tL, POLE_L, b.shL, b.elL);
+  // ricarica: arma inclinata e con la volata in alto; la mano sinistra va alla giberna, poi al caricatore (sotto per mitra e BAR, sopra per i fucili), poi torna
+  if (o && o.reload > 0) {
+    const k = o.reload, tilt = Math.sin(Math.min(1, k * 1.2) * PI) ;
+    _ek.set(.35 * tilt, 0, .5 * tilt); g.quaternion.multiply(_qk.setFromEuler(_ek)); g.position.y -= .04 * tilt;
+    solveArm(SH_R, g.position, POLE_R, b.shR, b.elR);
+    const under = b.kind === 'smg' || b.kind === 'bar' || b.kind === 'mg';
+    _bo.set(0, under ? -.08 : .06, under ? -.12 : -.06).applyQuaternion(g.quaternion).add(g.position);
+    if (k < .35) _tL.lerpVectors(_tL.copy(b.fore).applyQuaternion(g.quaternion).add(g.position), _c.set(-.1, .1, -.16), Math.sin(k / .35 * PI / 2));
+    else if (k < .75) _tL.lerpVectors(_c.set(-.1, .1, -.16), _bo, Math.min(1, (k - .35) / .25));
+    else _tL.lerpVectors(_bo, _cd.copy(b.fore).applyQuaternion(g.quaternion).add(g.position), (k - .75) / .25);
+    solveArm(SH_L, _tL, POLE_L, b.shL, b.elL);
+  }
   // otturatore girevole-scorrevole: la mano destra va alla leva, la apre, arretra e richiude (la sinistra tiene l'arma)
   if (o && o.bolt > 0) { const k = o.bolt, pull = Math.sin(Math.min(1, k) * PI); _bo.set(.045, .045, -.04 + pull * .09).applyQuaternion(g.quaternion).add(g.position); solveArm(SH_R, _bo, POLE_R, b.shR, b.elR); }
 }
