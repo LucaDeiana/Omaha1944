@@ -132,6 +132,7 @@ function netHostSnapshot(dt) {
   const m = { t: 'snap', sol, boats, ev: NET.ev, dead: NET.deaths, mi: [MISSION.stage, MISSION.title, MISSION.objText, MISSION.markers.slice(0, 5).map(k => [r1(k.pos.x), r1(k.pos.y), r1(k.pos.z), k.label || '']), [r1(MISSION.checkpoint.pos.x), r1(MISSION.checkpoint.pos.z), r2(MISSION.checkpoint.yaw || 0)], PT] };
   NET.worldT -= .1;
   if (NET.worldT <= 0) { NET.worldT = 1; m.w = [WORLD.bunkers.concat(WORLD.extraBunkers || []).map(b => b.destroyed ? 1 : 0), WORLD.flaks.map(f => f.alive ? 0 : 1), WORLD.wireGaps, WORLD.wireBreached ? 1 : 0]; }
+  if (NET.worldT === 1 && typeof DZ !== 'undefined' && DZ.secs.length) m.dz = DZ.secs.map(q => q.state).join('');   // stato della distruzione per chi entra a partita in corso
   netSend(m); NET.ev = []; NET.deaths = [];
 }
 function netOnAIHit(m) {
@@ -191,13 +192,15 @@ function netApplySnapshot(m) {
       if (e[8]) fxTracer(o, en, 1.3);
       if (dist2Cam(o) < 400 * 400) sfxShot(e[7], o);
       if (P.targetable() && P.mode === 'foot') { const cl = closestOnSeg(o, en, P.pos); if (cl < 3) P.nearMiss(o, en); }
-    } else if (e[0] === 1) { const p = new V3(e[1], e[2], e[3]); fxExplosion(p, e[4] / 4.5, !!e[5]); sfxBoom(p, e[4] / 5, !!e[5]); const d = p.distanceTo(P.pos); if (d < e[4] * 4) P.shake = Math.min(1.6, P.shake + (1 - d / (e[4] * 4)) * 1.3); }
+    } else if ((e[0] === 7 || e[0] === 8) && typeof dzNetEvent === 'function') dzNetEvent(e);
+    else if (e[0] === 1) { const p = new V3(e[1], e[2], e[3]); fxExplosion(p, e[4] / 4.5, !!e[5]); sfxBoom(p, e[4] / 5, !!e[5]); const d = p.distanceTo(P.pos); if (d < e[4] * 4) P.shake = Math.min(1.6, P.shake + (1 - d / (e[4] * 4)) * 1.3); }
   }
   // missione
   const [stage, title, obj, mk, cp, hostSide] = m.mi;
   MISSION.stage = stage; MISSION.title = title; MISSION.objText = hostSide === PT ? obj : 'Fermate il nemico — ' + obj;
   MISSION.markers = mk.map(([x, y, z, l]) => ({ pos: new V3(x, y, z), label: l }));
   if (hostSide === PT) MISSION.checkpoint = { pos: new V3(cp[0], 0, cp[1]), yaw: cp[2] };
+  if (m.dz && typeof dzNetSync === 'function') dzNetSync(m.dz);
   if (m.w) {
     const bs = WORLD.bunkers.concat(WORLD.extraBunkers || []);
     m.w[0].forEach((d, i) => { if (d && bs[i] && !bs[i].destroyed) { bs[i].gunner = null; bs[i].destroy(); } });

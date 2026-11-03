@@ -333,6 +333,7 @@ class KasTank {
   }
   // IA: verso la posizione da conquistare (o da difendere), ingaggio del nemico visibile più minaccioso; ritirata se gravemente danneggiato
   think(dt) {
+    if (this.target && this.target.alive === false) this.target = null;   // un relitto non è più un bersaglio
     this.aiT -= dt;
     if (this.aiT <= 0) {
       this.aiT = .6;
@@ -344,6 +345,9 @@ class KasTank {
       // bersaglio nascosto dietro un edificio: si aspetta un poco, poi si cerca un altro angolo di tiro (non chi difende una posizione fissa)
       if (!best && mem.state === TL_KNOWN && mem.hidT > 3 && !this.flankP && !this.retreat && !this.immob && !(this.team === 'E' && this.defend && this.defend.distanceTo(this.pos) < 30 && R() < .5)) { this.flankP = tlFirePos(this, mem.p); this.flankT = 20; if (this.flankP) TL.st.reposition++; }
       if (best || mem.state === TL_UNKNOWN) this.flankP = null;
+      { const c = mem.state === TL_KNOWN && this._tlc && this._tlc.get(mem.tgt), sec = c && c.by && c.by._dz;
+        this.breachSec = !best && sec && sec.state < 3 && sec.role !== 'roof' && this.pos.distanceTo(mem.p) < 450 && !this.retreat ? sec : null;
+        if (this.breachSec) { this.flankP = null; if (this.ammo !== 'he') { this.ammo = 'he'; this.ammoAuto = true; } } else if (this.ammoAuto) { this.ammo = 'ap'; this.ammoAuto = false; } }
       this.tlWhy = best ? '' : mem.state === TL_KNOWN ? 'bersaglio coperto (' + ((this._tlc && this._tlc.get(mem.tgt) || {}).why || '?') + ')' + (this.flankP ? ': cerco un angolo di tiro' : ': attendo') : 'nessun bersaglio visibile';
       if (best !== this.target) this.err.set(rnd(-1, 1), rnd(-.5, .5), rnd(-1, 1)).multiplyScalar(this.team === 'E' ? 4.5 : 3);
       this.target = best;
@@ -354,11 +358,12 @@ class KasTank {
     }
     // movimento
     if (this.flankP && ((this.flankT -= dt) <= 0 || this.flankP.distanceTo(this.pos) < 6)) { if (this.flankP.distanceTo(this.pos) >= 6) this.flankP = null; }
-    const cp = KAS_PTS[Math.min(KAS.stage, 2)], hold = this.team === 'E' && this.defend, goal = this.retreat && !this.retreatDone ? this.retreat : this.flankP ? this.flankP : hold ? this.defend : new V3(cp.x, 0, cp.z).add(this.goalOff);
+    const cp = KAS_PTS[Math.min(KAS.stage, 2)], hold = this.team === 'E' && this.defend, goal = this.retreat && !this.retreatDone ? this.retreat : this.flankP ? this.flankP : hold ? this.defend : this.goalP ? this.goalP : new V3(cp.x, 0, cp.z).add(this.goalOff);
     const dx = goal.x - this.pos.x, dz = goal.z - this.pos.z, d = Math.hypot(dx, dz), tdist = this.target ? this.target.pos.distanceTo(this.pos) : 1e9;
     let want = 0, hdg = Math.atan2(-dx, -dz);
     if (this.retreat && !this.retreatDone) { want = this.vc.vmax * .7; const back = angDiff(this.yaw, hdg); if (Math.abs(back) > 2 && this.target) { want = -this.vc.vrev; hdg += PI; } }   // indietreggia mostrando il fronte
     else if (this.flankP) want = d > 6 ? this.vc.vmax * .5 : 0;
+    else if (this.breachSec) want = 0;
     else if (d > 12) { want = this.vc.vmax * .75; if (this.target && tdist < 1000) want *= this.type === 'tiger' ? 0 : .35; }
     // fermo per sparare: il cannone non è stabilizzato (tranne lo Sherman, solo in elevazione)
     if (this.target && this.reload < .8 && tdist < 1300 && !this.retreat) want = Math.min(want, this.type === 'sherman' ? 2.5 : 0);
@@ -380,6 +385,13 @@ class KasTank {
         if (tlLOF(this, tp, this.ammo === 'he' ? 0 : this.T.pen)) this.fireMain(false);
         else { TL.st.noLOF++; this.tlWhy = 'non sparo: ' + this._tlf.why; this.lofBadT = (this.lofBadT || 0) + dt; if (this.lofBadT > 3 && !this.flankP && !this.immob) { this.flankP = tlFirePos(this, t.pos); this.flankT = 15; this.lofBadT = 0; } }
       }
+    } else if (this.breachSec && !this.jam) {
+      // tiro di sfondamento contro la sezione che copre il nemico: la linea di tiro deve arrivare proprio a quella sezione
+      const b = this.breachSec.box, tp = new V3((b[0] + b[3]) / 2, b[1] + Math.min(1.6, (b[4] - b[1]) * .5), (b[2] + b[5]) / 2);
+      const rel = Math.atan2(-(tp.x - this.pos.x), -(tp.z - this.pos.z)) - this.yaw; this.tyaw = angLerpMax(this.tyaw, rel, dt * vpTraverse(this));
+      const hd = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z), mz = this.muzzle(new V3()), wantE = Math.atan2(tp.y - mz.y, hd), wel = Math.asin(clamp(this.aimDir(new V3()).y, -1, 1)), ev = vpElev(this);
+      this.gpitch = clamp(this.gpitch + clamp(wantE - wel, -dt * ev, dt * ev), this.vc.elevMin, this.vc.elevMax);
+      if (Math.abs(angDiff(this.tyaw, rel)) < .02 && Math.abs(wantE - wel) < .006 && Math.abs(this.speed) < 2 && this.reload <= 0) { const h = tlRay(mz, tp, 'shell', 0); if (!h || h.s === this.breachSec.sol) { this.fireMain(false); this.breachShots = (this.breachShots || 0) + 1; this.tlWhy = 'sfondo ' + this.breachSec.obj.id; } else this.tlWhy = 'sezione non raggiungibile dalla canna'; }
     } else if (!this.jam) {
       // bersaglio noto ma coperto: la torretta resta sull'ultima posizione per qualche secondo, poi torna in avanti (niente brandeggio infinito verso un nemico nascosto)
       const m = tlMem(this), toward = m.state === TL_KNOWN && m.hidT < 6 ? Math.atan2(-(m.p.x - this.pos.x), -(m.p.z - this.pos.z)) - this.yaw : 0;
@@ -463,8 +475,8 @@ function kasUpdateShells(dt) {
       s.v.y -= 9.8 * h; tmp.copy(s.v).multiplyScalar(h); s.prev.copy(s.p); s.p.add(tmp); s.travel += tmp.length();
       // edifici e muri: segmento continuo fra la posizione precedente e la nuova (niente tunneling); prima dei carri
       { const hs = tlRay(s.prev, s.p, 'shell', s.he ? 0 : s.pen, true);
-        if (_tlHit.pen.length) for (const [, so, m] of _tlHit.pen) { if (!s.thru) s.thru = new Set(); if (s.thru.has(so)) continue; s.thru.add(so); s.pen -= m.pen; s.T = Object.assign({}, s.T, { pen: Math.max(0, s.pen) }); TL.st.shellPen++; fxImpact(s.p, m.fx); }
-        if (hs && !(s.thru && s.thru.has(hs.s))) { hit = true; s.p.copy(s.prev).addScaledVector(tmp.normalize(), hs.t); TL.st.shellSolid++; KAS.st = KAS.st || {}; KAS.st.solid = (KAS.st.solid || 0) + 1; fxImpact(s.p, hs.mat.fx); fxDebris && fxDebris(s.p, 8, 1.2); sfxBoom(s.p, .5); if (s.he) explode(s.p, 5, 200, { byPlayer: !!(s.owner && s.owner.player), bomb: true }); if (typeof cityBlast === 'function') cityBlast(s.p, s.he ? 6 : 4, s.he ? 220 : 120); break; } }
+        if (_tlHit.pen.length) for (const [, so, m] of _tlHit.pen) { if (!s.thru) s.thru = new Set(); if (s.thru.has(so)) continue; s.thru.add(so); s.pen -= m.pen; s.T = Object.assign({}, s.T, { pen: Math.max(0, s.pen) }); TL.st.shellPen++; fxImpact(s.p, m.fx); if (so._dz) dzShellHit(so, s.p, s.v.clone().normalize(), s); }
+        if (hs && !(s.thru && s.thru.has(hs.s))) { hit = true; s.p.copy(s.prev).addScaledVector(tmp.normalize(), hs.t); TL.st.shellSolid++; if (hs.s._dz) dzShellHit(hs.s, s.p, s.v.clone().normalize(), s); KAS.st = KAS.st || {}; KAS.st.solid = (KAS.st.solid || 0) + 1; fxImpact(s.p, hs.mat.fx); fxDebris && fxDebris(s.p, 8, 1.2); sfxBoom(s.p, .5); if (s.he) explode(s.p, 5, 200, { byPlayer: !!(s.owner && s.owner.player), bomb: true }); if (typeof cityBlast === 'function') cityBlast(s.p, s.he ? 6 : 4, s.he ? 220 : 120); break; } }
       if (s.p.y < Hf(s.p.x, s.p.z)) { hit = true; KAS.st = KAS.st || {}; KAS.st.ground = (KAS.st.ground || 0) + 1; if (s.owner && s.owner.target) { const e = s.p.distanceTo(s.owner.target.pos); KAS.st.err = (KAS.st.err || 0) + e; KAS.st.short = (KAS.st.short || 0) + (s.owner.pos.distanceTo(s.p) < s.owner.pos.distanceTo(s.owner.target.pos) - 10 ? 1 : 0); } const p = s.p.clone(); p.y = Hf(p.x, p.z) + .2; if (s.he) { explode(p, 7, 260, { byPlayer: !!(s.owner && s.owner.player), bomb: true }); for (const g of KAS.guns) if (g.alive && g.pos.distanceTo(p) < 8) g.damage(30 * (1 - g.pos.distanceTo(p) / 9), s.owner && s.owner.player); break; } fxImpact(p, 'dirt'); for (let j = 0; j < 16; j++) PS_GRAIN.emit(p.x, p.y, p.z, rnd(-3, 3), rnd(3, 8), rnd(-3, 3), 1, .08, .08, .9, ...C_DIRT, .5, 9.8); PS_SMOKE.emit(p.x, p.y + .5, p.z, 0, 1.5, 0, 3, 1, 3, .7, .8, .72, .58, .9); sfxBoom(p, .6); for (const g of KAS.guns) if (g.alive && g.pos.distanceTo(p) < 3) g.damage(25, s.owner && s.owner.player); break; }
       for (const t of KAS.tanks) {
         if (t === s.owner || !t.alive) continue;
@@ -497,6 +509,7 @@ function kasSpawnPlayer() {
     const ty = KAS.ptype || 'sherman', tm = ty === 'sherman' ? 'A' : 'E', b = kasSkBase(tm), me = new KasTank(ty, tm, b.x + rnd(-25, 25), b.z + rnd(-15, 15), tm === 'A' ? 0 : PI);
     me.player = true; TANKS.me = me; P.mode = 'tank'; P.dead = false; me.ayaw = 0; me.apitch = 0; $('stHud').style.display = 'block'; $('tankSight').classList.toggle('us', tm === 'A'); KAS.pteam = tm; return;
   }
+  if (KAS.side === 'V') { const C = KAS.vil.C, me = new KasTank('sherman', 'A', C.x - 6 + rnd(-4, 4), C.z + 125, 0); me.player = true; TANKS.me = me; P.mode = 'tank'; P.dead = false; me.ayaw = 0; me.apitch = 0; $('stHud').style.display = 'block'; $('tankSight').classList.add('us'); return; }
   if (KAS.side === 'E') {   // difesa: Tiger sul passo, fronte a sud
     const C = KAS_PTS[2], me = new KasTank('tiger', 'E', C.x + rnd(-15, 15), C.z - 30, PI); me.player = true; TANKS.me = me; P.mode = 'tank'; P.dead = false; me.ayaw = 0; me.apitch = 0; $('stHud').style.display = 'block'; $('tankSight').classList.remove('us');
     const al = KAS.tanks.filter(t => t.alive && t.team === 'E' && !t.player).length;
@@ -524,6 +537,7 @@ function initArmor() {
   KAS.ptype = $('optKasTank') ? $('optKasTank').value : 'sherman';
   if (KAS.side === 'S') { MISSION.title = 'Battaglia libera — Sidi Bou Zid'; MISSION.objText = 'Prima squadra a 15 carri distrutti'; KAS.stage = 1; KAS.score = { A: 0, E: 0 }; KAS.skT = 720; KAS.botResp = []; kasSpawnPlayer();
     const pt = KAS.pteam; for (const tm of ['A', 'E']) for (let i = KAS.tanks.filter(t => t.team === tm).length; i < 5; i++) kasSkBot(tm); }
+  else if (KAS.side === 'V') kasVillage();
   else if (KAS.side === 'E') { MISSION.title = 'Difesa del passo — Kasserine, febbraio 1943'; MISSION.objText = 'Respingi quattro ondate di Sherman'; KAS.stage = 2; KAS.wave = 0; KAS.waveT = 25; kasSpawnPlayer(); }
   else { MISSION.title = 'Passo di Kasserine — febbraio 1943'; MISSION.objText = 'Conquista la cresta di Djebel Ksaira'; kasSpawnWave(0); kasSpawnPlayer(); }
   if (!KAS.el) { KAS.el = document.createElement('div'); KAS.el.id = 'kasHud'; KAS.el.style.cssText = 'position:fixed;top:44px;left:50%;transform:translateX(-50%);pointer-events:none;z-index:18;font:600 15px/1.35 Oswald,sans-serif;color:#efe6cf;text-align:center;text-shadow:0 1px 3px #000;background:rgba(10,12,10,.55);padding:6px 16px;border-radius:3px;min-width:320px'; document.body.appendChild(KAS.el); }
@@ -544,6 +558,7 @@ function updateArmor(dt) {
     if (KAS.respawnT <= 0) { if (w) w.player = false; kasSpawnPlayer(); }
   }
   if (KAS.over) return kasHud();
+  if (KAS.side === 'V') { kasVillageTick(dt); return kasHud(); }
   if (KAS.side === 'E') { kasDefense(dt); return kasHud(); }
   if (KAS.side === 'S') { kasSkirmish(dt); return kasHud(); }
   // rinforzi della brigata: un nuovo Sherman dalle retrovie finché i carri alleati sono meno di tre
@@ -604,6 +619,7 @@ function kasHud() {
   const st = Math.min(KAS.stage, 2), C = KAS_PTS[st], me = TANKS.me;
   const dist = me ? Math.round(Math.hypot(me.pos.x - C.x, me.pos.z - C.z)) : 0;
   const foes = KAS.tanks.filter(t => t.alive && t.team === 'E').length, guns = KAS.guns.filter(g => g.alive).length;
+  if (KAS.side === 'V') { KAS.el.innerHTML = `VILLAGGIO · FASE ${Math.min(4, MISSION.stage + 1)}/4<br><span style="font-size:12px">${MISSION.objText}</span>`; return; }
   if (KAS.side === 'S') { const l = Math.max(0, KAS.skT); KAS.el.innerHTML = `<span style="color:#9fc2e8">USA ${KAS.score.A}</span> &nbsp;—&nbsp; <span style="color:#e8c98f">ASSE ${KAS.score.E}</span><br><span style="font-size:12px">${Math.floor(l / 60)}:${String(Math.floor(l % 60)).padStart(2, '0')} · obiettivo 15 · distrutti da te ${KAS.killed}</span>`; }
   else if (KAS.side === 'E') { const foes = KAS.tanks.filter(t => t.alive && t.team === 'A').length; KAS.el.innerHTML = `DIFESA DEL PASSO · ONDATA ${KAS.wave}/4${KAS.wave < 4 ? ' · prossima fra ' + Math.max(0, Math.ceil(KAS.waveT)) + ' s' : ''}<div style="height:6px;margin:5px 0 3px;background:rgba(255,255,255,.12)"><div style="height:100%;width:${Math.round(KAS.cap * 100)}%;background:#6aa0e8"></div></div><span style="font-size:12px">Sherman in arrivo ${foes} · Tiger di riserva ${KAS.lives} · distrutti ${KAS.killed}</span>`; }
   else KAS.el.innerHTML = KAS.stage < 3 ? `OBIETTIVO ${KAS.stage + 1}/3 · ${C.name.toUpperCase()} · ${dist} m<div style="height:6px;margin:5px 0 3px;background:rgba(255,255,255,.12)"><div style="height:100%;width:${Math.round(KAS.cap * 100)}%;background:${KAS.contested ? '#d9b443' : '#6aa0e8'}"></div></div><span style="font-size:12px">carri nemici ${foes} · Pak ${guns} · carri di riserva ${KAS.lives} · distrutti ${KAS.killed}</span>`
@@ -619,4 +635,50 @@ function kasHud() {
   x.fillStyle = '#e8c46a'; x.beginPath(); x.moveTo(100, 88); x.lineTo(95, 98); x.lineTo(105, 98); x.fill();
   // i Pak si vedono sul radar solo quando sparano o sono vicini
   for (const g of KAS.guns) if (g.alive && (g.reload > 4.5 || (me && g.pos.distanceTo(me.pos) < 250))) g.spotted = true;
+}
+
+// ============================================================
+//  Villaggio — dimostrazione della distruzione 3.0 (vertical slice).
+//  Casa in pietra a due piani, muro di cinta, barricata di legno sulla strada, postazione di sacchi; un Panzer IV
+//  nascosto dietro la casa, fanteria tedesca al riparo del muro e dei sacchi, fanti americani e uno Sherman alleato
+//  col giocatore. Fasi: avvicinamento → varco (la casa copre il Panzer) → distruzione del Panzer → fine.
+// ============================================================
+function kasVillage() {
+  const C = new V3(kasRoadX(90), 0, 90); C.y = Hf(C.x, C.z); KAS.vil = { C, stage: 0, breach: false, ended: false };
+  MISSION.title = 'Villaggio — distruzione'; MISSION.objText = 'Avanza verso il villaggio'; MISSION.stage = 0; MISSION.stageT = 0;
+  const hx = C.x + 16, hz = C.z - 6;
+  dzHouse('casa_01', hx, hz, 11, 8, 2, 'pietra');
+  dzWall('muro_01', C.x - 32, C.z - 4, C.x - 7, C.z - 4, 2.1, 'pietra', { coverSide: -1 });
+  dzWall('barricata_01', C.x - 5, C.z + 12, C.x + 5, C.z + 12, 1.3, 'legno', { role: 'barricade', type: 'barricade', pw: 2, t: .5, hpK: .8, coverSide: -1 });
+  dzWall('sacchi_01', C.x - 18, C.z - 24, C.x - 10, C.z - 24, .9, 'sacchi', { type: 'cover', role: 'sandbag', pw: 2, t: .9, coverSide: -1 });
+  dzRoute('strada', new V3(C.x, 0, C.z + 30), new V3(C.x, 0, C.z - 10), 3.4, 'tank');
+  // un varco nella facciata vale come passaggio per la fanteria
+  dzOn('WALL_BREACHED', d => { if (d.id === 'casa_01' && !KAS.vil.breach) { KAS.vil.breach = true; KAS.vil.breachP = d.sec ? new V3((d.sec.box[0] + d.sec.box[3]) / 2, 0, (d.sec.box[2] + d.sec.box[5]) / 2) : null; say(N.radio, 'Varco aperto nella casa! Fanteria, avanti per la breccia!'); for (const s of allies) if (s.alive && s.villUS && KAS.vil.breachP) { s.stationary = false; s.state = 'move'; s.dest = KAS.vil.breachP.clone().add(new V3(rnd(-1.5, 1.5), 0, 4 + rnd(0, 3))); } } });
+  dzOn('ROUTE_OPENED', d => { if (d.id === 'strada') feed('La barricata è distrutta: la strada è libera'); });
+  dzOn('COVER_DESTROYED', d => { if (d.cover) feed('Una copertura nemica è stata distrutta'); });
+  // nemici
+  const pz = new KasTank('pz4', 'E', hx + 1, hz - 22, 0); pz.defend = new V3(pz.pos.x, 0, pz.pos.z); pz.vilTank = true; KAS.vil.pz = pz;
+  const ger = [['mg', C.x - 26], ['rifle', C.x - 20], ['rifle', C.x - 13], ['smg', C.x - 14]];
+  for (const [k, x] of ger) { const c = covers.filter(c => c.dz && !c.dead && c.occ < 1).sort((a, b) => Math.abs(a.x - x) - Math.abs(b.x - x))[0]; const s = new Soldier('E', k, c ? c.x : x, c ? c.z : C.z - 8, { state: 'cover', stationary: false }); if (c) { s.cover = c; c.occ++; } enemies.includes(s) || enemies.push(s); s.villDE = true; }
+  // alleati
+  const us = new KasTank('sherman', 'A', hx + 2, C.z + 70, 0); us.goalP = new V3(hx + 2, 0, C.z + 62); us.vilTank = true; KAS.vil.us = us;
+  for (let i = 0; i < 5; i++) { const s = new Soldier('A', i ? 'rifle' : 'smg', C.x - 8 + i * 3, C.z + 80 + (i % 2) * 2, { state: 'cover' }); allies.includes(s) || allies.push(s); s.villUS = true; }
+  MISSION.allyZone = { zMin: C.z - 60, zMax: C.z + 110, xMin: C.x - 80, xMax: C.x + 80, step: 12, wait: [2, 5] };
+  kasSpawnPlayer();
+  say(N.radio, 'Qui comando: villaggio davanti a voi. Un Panzer è segnalato dietro la casa grande. Non si vede: apritevi un varco.');
+  showMsg('Sherman — W/S/A/D guida · mouse torretta · click sx cannone · 1/2 munizioni (2 = esplosivo, per i muri)', 6);
+}
+function kasVillageStage(st) {
+  MISSION.stage = st; MISSION.stageT = 0;
+  MISSION.objText = ['Avanza verso il villaggio', 'Il Panzer è coperto dalla casa: apri un varco (munizione esplosiva, tasto 2)', 'Distruggi il Panzer IV', 'Villaggio preso'][st] || '';
+  if (st === 3 && !KAS.vil.ended) { KAS.vil.ended = true; banner('VILLAGGIO PRESO', 'Il Panzer è distrutto'); if (!(typeof CAMP !== 'undefined' && CAMP.on)) after(6, () => { GAME.endTitle = 'VILLAGGIO PRESO'; GAME.endText = `Sezioni distrutte: ${DZ.secs.filter(s => s.state >= 3).length}/${DZ.secs.length} · crateri ${DZ.craters}`; GAME.end(true); }); }
+}
+function kasVillageTick(dt) {
+  const V = KAS.vil; if (!V) return;
+  const near = KAS.tanks.some(t => t.alive && t.team === 'A' && t.pos.distanceTo(V.C) < 110);
+  if (MISSION.stage === 0 && near) { kasVillageStage(1); say(N.radio, 'Il Panzer è dietro la casa. Sfondate il muro con l\'esplosivo!'); }
+  if (MISSION.stage === 1 && (V.breach || (V.pz.alive && KAS.tanks.some(t => t.team === 'A' && t.alive && tlSee(t, V.pz))))) kasVillageStage(2);
+  if (MISSION.stage <= 2 && !V.pz.alive) kasVillageStage(3);
+  // la fanteria segnala il Panzer via radio: per gli Sherman è una posizione nota (TARGET_KNOWN), non un bersaglio visibile
+  if (MISSION.stage >= 1 && V.pz.alive && (V.repT = (V.repT || 0) - dt) <= 0) { V.repT = 4; for (const t of KAS.tanks) if (t.alive && t.team === 'A' && !t.player) { const m = tlMem(t); if (m.state !== TL_VISIBLE) { m.state = TL_KNOWN; m.tgt = V.pz; m.p.copy(V.pz.pos); m.t = GAME.time; m.hidT = Math.max(m.hidT, 3.5); } } }
 }

@@ -75,7 +75,7 @@ const URL = 'file://' + path.resolve(__dirname, '../../index.html');
     for (const t of TANKS.list) { t.alive = false; scene.remove(t.g); } TANKS.list.length = 0; for (const s of allies) { s.alive = false; s.removed = true; s.body.removed = true; } allies.length = 0; P.dead = true; P.pos.set(0, -50, 900);
     let H, hx, hz, hw;
     for (const c of solids.filter(s => s.on && /house|church|ruin/.test(s.tag) && s.max.y - s.min.y > 5 && s.max.x - s.min.x > 6)) { const x = (c.min.x + c.max.x) / 2, z = (c.min.z + c.max.z) / 2, w = (c.max.x - c.min.x) / 2, a = new V3(x - w - 30, Hf(x - w - 30, z) + 2.7, z), b = new V3(x + w + 8, Hf(x + w + 8, z) + 1.3, z);
-      if (pointInSolid(a) || pointInSolid(b) || !tlRay(a, b)) continue; c.on = false; const clear = !tlRay(a, b); c.on = true; if (clear) { H = c; hx = x; hz = z; hw = w; break; } }
+      const a2 = a.clone().setY(a.y - .7); if (pointInSolid(a) || pointInSolid(b) || !tlRay(a, b)) continue; c.on = false; const clear = !tlRay(a, b) && !tlRay(a2, b, 'shell', 0); c.on = true; if (clear) { H = c; hx = x; hz = z; hw = w; break; } }
     const pz = new Panzer(hx - hw - 30, hz, -PI / 2); pz.goal = pz.pos.clone(); pz.think0 = 0;
     const so = new Soldier('A', 'rifle', hx + hw + 8, hz, { state: 'cover', stationary: true }); allies.includes(so) || allies.push(so);
     let boom = 0; const ex0 = explode; explode = function (pt, ...a) { if (pt.distanceTo(so.pos) < 7) boom++; return ex0(pt, ...a); };

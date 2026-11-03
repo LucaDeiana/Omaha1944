@@ -69,21 +69,21 @@ const _tlE = new V3(), _tlP = [];
 function tlSee(obs, tgt) {
   const C = obs._tlc || (obs._tlc = new Map()); let e = C.get(tgt);
   const now = GAME.time;
-  if (e && now < e.t && Math.abs(obs.pos.x - e.ox) + Math.abs(obs.pos.z - e.oz) < 1.5 && Math.abs(tgt.pos.x - e.tx) + Math.abs(tgt.pos.z - e.tz) < 1.5 && (!e.by || e.by.on) && e.n === solids.length) { TL.st.cacheHit++; return e.vis; }
+  if (e && now < e.t && Math.abs(obs.pos.x - e.ox) + Math.abs(obs.pos.z - e.oz) < 1.5 && Math.abs(tgt.pos.x - e.tx) + Math.abs(tgt.pos.z - e.tz) < 1.5 && (!e.by || e.by.on) && e.n === solids.length + (TL.ver || 0) * 1e5) { TL.st.cacheHit++; return e.vis; }
   if (!e) { e = {}; C.set(tgt, e); if (C.size > 64) C.clear(); }
   tlEye(obs, _tlE); tlAimPts(tgt, _tlP); let vis = false, by = null, hp = null;
   for (const p of _tlP) { const h = tlRay(_tlE, p, 'sight'); if (!h) { vis = true; break; } if (!by) { by = h.s; hp = h.terrain ? 'terreno' : (h.s.tag || 'solido'); e.hit = _tlE.clone().addScaledVector(_tlD.subVectors(p, _tlE).normalize(), h.t); } }
-  Object.assign(e, { n: solids.length, t: now + .5 + Math.random() * .3, ox: obs.pos.x, oz: obs.pos.z, tx: tgt.pos.x, tz: tgt.pos.z, vis, by: vis ? null : by, why: vis ? '' : hp, e: _tlE.clone(), p: _tlP[0].clone() });
+  Object.assign(e, { n: solids.length + (TL.ver || 0) * 1e5, t: now + .5 + Math.random() * .3, ox: obs.pos.x, oz: obs.pos.z, tx: tgt.pos.x, tz: tgt.pos.z, vis, by: vis ? null : by, why: vis ? '' : hp, e: _tlE.clone(), p: _tlP[0].clone() });
   if (vis) e.hit = null;
   return vis;
 }
 // linea di tiro: dalla bocca del cannone al punto mirato, con la perforazione del colpo (cache 0,25 s)
 function tlLOF(t, aim, pen, near = 0) {   // near: un colpo esplosivo che si ferma a pochi metri dal bersaglio (sacchetti davanti al soldato) è comunque giustificato
   const now = GAME.time, L = t._tlf || (t._tlf = { t: -1 });
-  if (now < L.t && L.n === solids.length && L.ax !== undefined && Math.abs(L.ax - aim.x) + Math.abs(L.az - aim.z) < 2) return L.ok;
+  if (now < L.t && L.n === solids.length + (TL.ver || 0) * 1e5 && L.ax !== undefined && Math.abs(L.ax - aim.x) + Math.abs(L.az - aim.z) < 2) return L.ok;
   const mz = t.muzzle(new V3()); TL.st.lofs++;
   let h = tlRay(mz, aim, 'shell', pen || 0); if (h && near && mz.distanceTo(aim) - h.t < near) h = null;
-  L.t = now + .25; L.n = solids.length; L.ax = aim.x; L.az = aim.z; L.ok = !h; L.m = mz; L.a = aim.clone(); L.why = h ? (h.terrain ? 'terreno davanti alla canna' : (h.s.tag || 'ostacolo') + ' davanti alla canna') : ''; L.hit = h ? mz.clone().addScaledVector(_tlD.subVectors(aim, mz).normalize(), h.t) : null;
+  L.t = now + .25; L.n = solids.length + (TL.ver || 0) * 1e5; L.ax = aim.x; L.az = aim.z; L.ok = !h; L.m = mz; L.a = aim.clone(); L.why = h ? (h.terrain ? 'terreno davanti alla canna' : (h.s.tag || 'ostacolo') + ' davanti alla canna') : ''; L.hit = h ? mz.clone().addScaledVector(_tlD.subVectors(aim, mz).normalize(), h.t) : null;
   return L.ok;
 }
 

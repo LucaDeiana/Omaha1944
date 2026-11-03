@@ -60,6 +60,7 @@ const S = __dirname;
     ok('carri: passo di lato davanti allo Sherman in movimento', !!ta.dest && (INF.st.tankStep || 0) > 0); vpRemove(sh);
     // 14 tiratore scelto: dopo tre colpi cambia posizione
     for (const c of covers) if (Math.hypot(c.x - ep[0], c.z - ep[1]) < 40) c.occ = 0;
+    for (const [dx, dz] of [[14, 6], [-12, 9]]) covers.push({ x: ep[0] + 5 + dx, z: ep[1] + dz, kind: 'sand', occ: 0 });   // coperture certe (la mappa le genera a caso)
     const sn = mk('A', 'sniper', ep[0] + 5, ep[1]); sn.target = e2; for (let i = 0; i < 3; i++) { sn.mag = 5; sn.fire(); } sn.dest = null; for (let i = 0; i < 3; i++) { GAME.time += 1; sn.findTarget(); }
     ok('tiratore scelto: cambia posizione dopo tre colpi', !!sn.dest, 'spostamenti ' + (INF.st.snMove || 0));
     // 12 debug attivabile

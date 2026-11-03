@@ -19,7 +19,7 @@ const CHARACTERS = [
     personality: 'Esperto e pragmatico, protettivo con i suoi, lucido nei momenti critici.', missions: ['overlord_01'], presence: { overlord_01: 'campo' }, relations: { alessio_medda: 'comandante di plotone', matteo_murtas: 'squadra' } },
   { id: 'nino_baker', firstName: 'Nino', lastName: 'Baker', rank: 'Technical Sergeant', rankShort: 'T/Sgt.', rankIt: 'Sergente tecnico', faction: 'US', branch: 'US_ARMY', role: 'tank_commander', roleIt: 'capocarro di uno Sherman',
     persistent: true, fictional: true, voiceProfile: 'us_nco', aiProfile: 'tank_commander', model: 'us_tanker', gear: 'pistola M1911, cuffie da carrista',
-    personality: 'Conosce i corazzati come le sue tasche, deciso, coordina bene con la fanteria.', missions: ['desert_03'], presence: { desert_03: 'campo' }, relations: {},
+    personality: 'Conosce i corazzati come le sue tasche, deciso, coordina bene con la fanteria.', missions: ['desert_03', 'overlord_05'], presence: { desert_03: 'campo', overlord_05: 'giocatore' }, relations: {},
     note: 'Nel 1943-44 i capocarro delle divisioni corazzate erano di solito sergenti o sergenti maggiori; il grado di Technical Sergeant è plausibile per un capocarro di plotone.' },
   { id: 'richard_lecca', firstName: 'Richard', lastName: 'Lecca', rank: 'First Lieutenant', rankShort: '1st Lt.', rankIt: 'Tenente', faction: 'US', branch: 'USAAF', role: 'fighter_pilot', roleIt: 'pilota di P-47 Thunderbolt',
     persistent: true, fictional: true, voiceProfile: 'us_pilot', aiProfile: 'pilot', model: 'us_pilot', gear: 'P-47D Thunderbolt', callsign: 'Thunderbolt One',
@@ -63,7 +63,12 @@ const CAMPAIGN = {
       { id: 'overlord_02', n: 2, title: 'Break the Atlantic Wall', date: '6 giugno 1944', loc: 'Capisaldi della scogliera', status: 'planned', characters: ['alessio_medda', 'dominick_ucchesu', 'matteo_murtas'] },
       { id: 'overlord_03', n: 3, title: 'Beyond the Beach', date: '7 giugno 1944', loc: 'Entroterra di Omaha', status: 'planned', characters: ['alessio_medda', 'dominick_ucchesu'] },
       { id: 'overlord_04', n: 4, title: 'The Hedgerows', date: 'giugno 1944', loc: 'Bocage normanno', status: 'planned', characters: ['dominick_ucchesu', 'matteo_murtas'] },
-      { id: 'overlord_05', n: 5, title: 'Steel Support', date: 'luglio 1944', loc: 'Normandia', status: 'planned', characters: ['nino_baker', 'alessio_medda'], needs: 'Sherman pilotabile con la fanteria nella stessa mappa' },
+      { id: 'overlord_05', n: 5, title: 'Steel Support', date: 'luglio 1944', loc: 'Un villaggio (scenario di prova sul motore dei carri)', status: 'adapted', mode: { map: 'kas', kasSide: 'V' }, characters: ['nino_baker'], player: 'nino_baker', after: 'overlord_01', endStage: 3,
+        adaptedFrom: 'mappa dei carri di Kasserine con il villaggio distruttibile (terreno e colori sono ancora quelli della valle tunisina)',
+        context: 'Un Panzer IV è nascosto dietro la casa grande del villaggio. Non si vede e non si colpisce attraverso i muri: bisogna aprire un varco. Lo Sherman di Baker, uno Sherman di supporto e una squadra di fanteria.',
+        objectives: [['approach', 'Avanza verso il villaggio', 0], ['breach', 'Apri un varco nella casa o trova una linea di tiro', 1], ['kill', 'Distruggi il Panzer IV', 2]],
+        doc: ['Nell\'estate del 1944 in Normandia gli Sherman sfondavano spesso muri e siepi con l\'esplosivo per aprire la strada alla fanteria.'], story: ['Il sergente Baker, il villaggio e lo scontro sono di fantasia.'],
+        events: { 0: [[3, 'nino_baker', 'radio', 'Qui Baker. Il villaggio è davanti a noi, fanteria dietro i carri.', 'Baker here. Village ahead, infantry behind the tanks.']], 1: [[2, 'nino_baker', 'radio', 'Il crucco è dietro la casa. Esplosivo nel muro, poi lo stano.', 'Jerry is behind that house. HE into the wall, then we flush him out.']], 2: [[1, 'nino_baker', 'radio', 'Muro giù, lo vedo! Perforante, fuoco!', 'Wall\'s down, I see him! AP, fire!']] } },
       { id: 'overlord_06', n: 6, title: 'Thunder Over Normandy', date: '7 giugno 1944', loc: 'Entroterra di Omaha (dall\'aria)', status: 'adapted', mode: { airMis: 'c_norm_cas' }, characters: ['richard_lecca'], player: 'richard_lecca', after: 'overlord_01',
         context: 'Il giorno dopo lo sbarco i P-47 della 9ª Air Force battono le strade dietro le spiagge per fermare i rinforzi tedeschi.', adaptedFrom: 'missione «Strade di Normandia» della campagna aerea',
         doc: ['I P-47 della Ninth Air Force attaccarono strade, ponti e ferrovie dietro le spiagge nei giorni dello sbarco.'], story: ['Il tenente Lecca è un personaggio di fantasia; il nominativo «Thunderbolt One» è inventato.'],
@@ -174,7 +179,7 @@ function campTick(dt) {
   if (CAMP.resumeStage > 0) { if (MISSION.stage < 0) return; const st = CAMP.resumeStage; CAMP.resumeStage = 0; if (typeof CUT !== 'undefined' && CUT.active) endCutscene(); campResume(st); }   // ripresa: niente filmato iniziale, e il punto salvato non viene sovrascritto dalla fase 0
   const st = MISSION.stage;
   // punto di ripresa persistente all'inizio di ogni fase
-  if (st > CAMP.stageSaved && st < (m.endStage ?? 99)) { CAMP.stageSaved = st; const s = campLoad(); s.cp = { mission: m.id, stage: st, t: Date.now() }; campSave(s); if (st > 0) showMsg('Punto di ripresa salvato', 1.8); }
+  if (st > CAMP.stageSaved && st < (m.endStage ?? 99)) { CAMP.stageSaved = st; const s = campLoad(); s.cp = { mission: m.id, stage: st, t: Date.now() }; if (typeof DZ !== 'undefined' && DZ.on && DZ.secs.length) s.cp.dz = dzSnapshot(); campSave(s); if (st > 0) showMsg('Punto di ripresa salvato', 1.8); }
   // dialoghi della fase, legati al tempo trascorso nella fase reale (non a un orologio globale)
   if (!(typeof CUT !== 'undefined' && CUT.active)) for (const e of (m.events || {})[st] || []) { const k = st + ':' + e[1] + ':' + e[0]; if (!CAMP.fired.has(k) && MISSION.stageT >= e[0]) { CAMP.fired.add(k); campLine(e[1], e[2], e[3], e[4]); } }
   campHud();
@@ -182,6 +187,7 @@ function campTick(dt) {
 }
 // ripresa da una fase salvata: il mondo viene portato allo stato della fase (varco aperto, squadra accanto al giocatore)
 function campResume(stage) {
+  if (CAMP.m.mode && CAMP.m.mode.kasSide === 'V' && stage >= 1) { const s = campLoad(); if (s.cp && s.cp.dz) dzRestore(s.cp.dz); for (let i = 0; i < stage; i++) for (const e of (CAMP.m.events || {})[i] || []) CAMP.fired.add(i + ':' + e[1] + ':' + e[0]); kasVillageStage(stage); CAMP.stageSaved = stage; showMsg('Ripresa: stato del villaggio ripristinato', 3); return; }
   if (CAMP.m.id !== 'overlord_01' || stage < 1) return;
   P.inBoat = false; if (P.boat) P.boat = null; P.mode = 'foot';
   if (stage >= 3 && typeof addWireGap === 'function') { addWireGap(BREACH_X); MISSION.flags.placed = true; }

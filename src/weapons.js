@@ -331,10 +331,11 @@ function updateProjectiles(dt) {
 
 // ---------- esplosioni ----------
 const _ex = new V3();
+const _exO = new V3();
 function explode(p, radius, dmg, o = {}) {
   const wet = p.z > -9 && Hf(p.x, p.z) < WATER_Y && p.y < WATER_Y + .8;
   fxExplosion(p, radius / 4.5, wet); sfxBoom(p, radius / 5, wet);
-  if (!NET.client) { cityBlast(p, radius, dmg); depotBlast(p, radius, dmg); }
+  if (!NET.client) { cityBlast(p, radius, dmg); depotBlast(p, radius, dmg); if (typeof dzExplosion === 'function') dzExplosion(p, radius, dmg, o); }
   treeBlast(p, radius);
   if (radius >= 4 && Math.abs(p.z - WIRE_Z) < 2.6 && !NET.client && addWireGap(p.x)) onWireGap(p.x);
   if (NET.host) netHostEvent([1, r1(p.x), r1(p.y), r1(p.z), radius, wet ? 1 : 0]); else if (NET.on && o.byPlayer) netSend({ t: 'boom', p: [p.x, p.y, p.z], r: radius });
@@ -347,6 +348,7 @@ function explode(p, radius, dmg, o = {}) {
     if (d < radius) {
       let dm = dmg * (1 - d / radius);
       if (s.inTrench && d > 2) dm *= .5;
+      if (d > 1.2 && typeof tlRay === 'function') { const h = tlRay(_exO.set(p.x, p.y + .4, p.z), _ex, 'shell', 0, true); if (h && h.s && h.t < d - .5) dm *= .3; }   // un muro integro in mezzo protegge
       if (s.prone > .5) dm *= .6;
       if (o.ship) dm *= s.team === 'E' && R() < .12 ? 1 : .08;
       s.damage(dm, p, !!o.byPlayer && s.team !== PT, 'blast', { blast: p.clone(), power: radius * 1.6 });

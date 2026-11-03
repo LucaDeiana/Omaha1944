@@ -145,6 +145,7 @@ class Panzer {
   }
   // IA: raggiunge una posizione di tiro dietro la linea e ingaggia la fanteria nemica
   think(dt) {
+    if (this.target && this.target !== P && this.target.alive === false) this.target = null;
     this.aiT -= dt;
     if (!this.goal) this.aiT = 0;
     if (this.aiT <= 0) {

@@ -355,6 +355,7 @@ function buildTerrain() {
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(cl, 3));
   g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setAttribute('splat', new THREE.BufferAttribute(sp, 4)); g.setAttribute('aux', new THREE.BufferAttribute(ax, 2));
   g.setIndex(new THREE.BufferAttribute(idx, 1)); g.computeVertexNormals();
+  WORLD.terr = { g, xs, zs, nx, nz };   // per i crateri della distruzione (deformazione locale)
   const mat = terrainMaterial(), TI = 14, TJ = 8;
   for (let tj = 0; tj < TJ; tj++) for (let ti = 0; ti < TI; ti++) {
     const i0 = Math.floor(ti * (nx - 1) / TI), i1 = Math.floor((ti + 1) * (nx - 1) / TI), j0 = Math.floor(tj * (nz - 1) / TJ), j1 = Math.floor((tj + 1) * (nz - 1) / TJ);

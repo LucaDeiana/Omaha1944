@@ -97,6 +97,10 @@ async function buildBank() {
   add('imp_metal', .45, (oc, dst, i) => { const j = 1 + i * .11, sh = shaperN(oc, 3); sh.connect(dst); oN(oc, sh, 0, .006, { type: 'highpass', f: 2000, v: 2, a: .0002 }); oN(oc, sh, 0, .08, { type: 'bandpass', f: 600 * j, q: 1, v: 1.5, a: .0005 }); oT(oc, sh, 0, .05, { f: 160 * j, f2: 80, v: 1 }); oN(oc, dst, .005, .2, { type: 'bandpass', f: 1400 * j, f2: 500, q: 1.2, v: .35, a: .002 }); }, 5);
   add('imp_flesh', .3, (oc, dst) => { oN(oc, dst, 0, .07, { f: 450, v: 1.3 }); oT(oc, dst, 0, .1, { f: 110, f2: 55, v: .9 }); oN(oc, dst, .005, .06, { type: 'bandpass', f: 900, q: 2, v: .4 }); });
   add('imp_wood', .2, (oc, dst) => { oN(oc, dst, 0, .07, { type: 'bandpass', f: 900, q: 2.5, v: 1.1 }); oN(oc, dst, 0, .03, { type: 'highpass', f: 2000, v: .4 }); });
+  // distruzione: muratura che si sgretola, crollo lungo, legno che si spezza (procedurali, varianti)
+  add('dz_crumble', 1.1, (oc, dst, i) => { oN(oc, dst, 0, .06, { type: 'bandpass', f: 1600 + i * 200, q: .8, v: 1.1, a: .001 }); oN(oc, dst, 0, .7, { type: 'lowpass', f: 900, f2: 160, v: .7, a: .01, brown: true }); for (let k = 0; k < 14; k++) oN(oc, dst, .03 + R() * .8, .03 + R() * .04, { type: 'bandpass', f: 700 + R() * 2200, q: 2, v: .18 + R() * .2 }); });
+  add('dz_collapse', 3.2, (oc, dst, i) => { oN(oc, dst, 0, 2.6, { type: 'lowpass', f: 420 + i * 40, f2: 70, v: 1.4, a: .08, brown: true }); oT(oc, dst, 0, .5, { f: 70, f2: 34, v: .9, a: .01 }); for (let k = 0; k < 30; k++) oN(oc, dst, .05 + R() * 2.4, .04 + R() * .08, { type: 'bandpass', f: 500 + R() * 1800, q: 1.6, v: .1 + R() * .25 }); }, 2);
+  add('dz_wood', .7, (oc, dst, i) => { oN(oc, dst, 0, .05, { type: 'bandpass', f: 1100 + i * 180, q: 3, v: 1.4, a: .0005 }); oN(oc, dst, .01, .3, { type: 'bandpass', f: 600, f2: 300, q: 1.5, v: .5, a: .01 }); for (let k = 0; k < 8; k++) oN(oc, dst, .02 + R() * .45, .02, { type: 'bandpass', f: 1500 + R() * 2500, q: 3, v: .2 }); });
   add('imp_stone', .3, (oc, dst) => { oN(oc, dst, 0, .05, { type: 'bandpass', f: 2400, v: 1 }); oN(oc, dst, 0, .14, { f: 600, v: .4 }); });
   const boom = (water) => (oc, dst, i) => {
     const sh = shaperN(oc, 3); sh.connect(dst);

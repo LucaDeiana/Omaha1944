@@ -425,7 +425,7 @@ function vpAudio(t, dt) {
 function vpSilence(t) { for (const k of ['eng', 'trk', 'tur', 'idle', 'skid']) if (t[k]) { if (t[k].at) t[k].at(t.pos, 0, 0, 1); t[k].set(0); } }
 // ---------- relitti: restano in fumo per un tempo limitato, al massimo VP.WRECK_MAX insieme ----------
 function vpWreck(t) {
-  t.wreckT = GAME.time; VP.wrecks.push(t); vpSilence(t);
+  t.wreckT = GAME.time; VP.wrecks.push(t); vpSilence(t); if (typeof dzWreck === 'function') dzWreck(t);
   if (t.strips) for (const s of t.strips) s.material.map.offset.y += .3;
 }
 function vpWreckTick() {
@@ -436,7 +436,7 @@ function vpWreckTick() {
   }
 }
 function vpRemove(t) {
-  t.removedVP = true; const k = VP.list.indexOf(t); if (k >= 0) VP.list.splice(k, 1); const w = VP.wrecks.indexOf(t); if (w >= 0) VP.wrecks.splice(w, 1);
+  t.removedVP = true; if (t.wreckSol) { t.wreckSol.on = false; if (typeof TL !== 'undefined') TL.ver = (TL.ver || 0) + 1; } const k = VP.list.indexOf(t); if (k >= 0) VP.list.splice(k, 1); const w = VP.wrecks.indexOf(t); if (w >= 0) VP.wrecks.splice(w, 1);
   if (t.remove) t.remove(); else { scene.remove(t.g); vpSilence(t); }
   for (const L of [typeof KAS !== 'undefined' ? KAS.tanks : null, TANKS.list, MISSION.vehicles]) if (L) { const j = L.indexOf(t); if (j >= 0) L.splice(j, 1); }
 }
