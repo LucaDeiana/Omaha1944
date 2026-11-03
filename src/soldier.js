@@ -45,6 +45,8 @@ function cycleOrder() {
   for (const a of allies) if (a.squad && a.alive && a.state !== 'boat') { a.wait = ORDERS.mode === 'hold' ? 0 : rnd(0, 1); if (ORDERS.mode === 'hold') { a.dest = null; a.state = 'cover'; } }
 }
 // qualità dei ripari: più alta = più protetto
+// altezza della copertura per la posa: 1 bassa, 2 alta (0 o assente: nessuna posa speciale)
+const COVER_H = { sand: 1, bank: 1, crater: 1, wreck: 1, hh: 1, wallN: 2, wallS: 2, ruin: 2, gate: 2, church: 2, house: 2, houseS: 2, tank: 2, tree: 2, hedgeN: 2, hedgeS: 2 };
 const COVER_Q = { bank: 7, tank: 6, sand: 6, bunker: 6, trench: 5, wallN: 5, house: 6, church: 6, ruin: 5, gate: 3, crater: 3.5, hh: 2.5, tree: 4 };
 class Soldier {
   constructor(team, kind, x, z, o = {}) {
@@ -241,7 +243,10 @@ class Soldier {
     b.hips.rotation.set(-PI / 2 * .93 * pr + PI / 2 * .9 * wd, s * lerp(.07, .1, run) * run * up, (c * .05 * Math.min(1, run * 4) + this.bank) * up);
     const crawl = pr * Math.min(1, sp);
     // fermo e basso: in ginocchio (ginocchio destro a terra, piede sinistro avanti) invece dello squat; in movimento: passo piegato
-    const kn = still ? cr * (1 - pr) * up : 0;
+    // dietro una copertura bassa resta in ginocchio anche per sparare (spara da sopra i sacchetti)
+    const lowC = (this.state === 'post' || this.state === 'cover' || this.state === 'hold') && this.cover && COVER_H[this.cover.kind] === 1 ? 1 : 0;
+    this.lowK = lerp(this.lowK || 0, lowC, Math.min(1, dt * 4));
+    const kn = still ? Math.max(cr, this.lowK) * (1 - pr) * up : 0;
     if (kn > 0) b.hips.position.y = lerp(b.hips.position.y, .6, kn), b.hips.position.z = -.04 * kn;
     const base = still ? 0 : cr * .45;
     b.hipL.rotation.set((s * .8 * run + base) * (1 - pr) + s * .3 * crawl + wd * (.3 + Math.sin(this.ph * .7) * .2) + kn * 1.4, 0, -.04 - pr * .12 - kn * .12);
@@ -277,6 +282,17 @@ class Soldier {
     // reazione al colpo: busto spinto indietro, gamba che cede o spalla colpita
     const hr = this.hitR;
     if (hr > 0) { if (this.hitZ === 'leg') { b.knL.rotation.x -= hr * .7; b.hips.position.y -= hr * .06; b.hips.rotation.z += hr * .1; } else if (this.hitZ === 'arm') b.spine.rotation.y += hr * .25; else b.spine.rotation.x += hr * .3; }
+    // posa secondo la copertura: bassa (sacchetti, scarpata, cratere, relitto) → in ginocchio, curvo quando non spara;
+    // alta (muro, rovina, casa, carro, siepe, albero) → a ridosso, si sporge di lato per sparare, dal lato verso il bersaglio
+    const cv = posted && this.cover && !this.moving ? COVER_H[this.cover.kind] : 0;
+    if (cv === 1) { b.spine.rotation.x -= .28 * (1 - this.aimW) * cr; b.neck.rotation.x += .25 * (1 - this.aimW) * cr; }
+    else if (cv === 2) {
+      if (this.target && this.aimW > .05) { const tx = this.target.pos.x - this.cover.x, tz = this.target.pos.z - this.cover.z, rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw); this.peekS = (tx * rx + tz * rz) >= 0 ? 1 : -1; }
+      const side = this.peekS || (this.id % 2 ? 1 : -1), k = this.aimW * up;
+      this.peek = lerp(this.peek || 0, k, Math.min(1, dt * 4));
+      b.hips.position.x += side * .14 * this.peek; b.spine.rotation.z -= side * .26 * this.peek; b.neck.rotation.z += side * .14 * this.peek;
+      if (this.aimW < .3) { b.spine.rotation.x -= .08; b.neck.rotation.y += side * .25 * (1 - this.aimW); }   // a ridosso, sbircia oltre lo spigolo
+    }
     poseWeapon(b, this.aimW, this.kind === 'mg' ? 1 - this.aimW : 0, boatW, wPort, _sw, { low: this.relax * (1 - this.aimW) * (1 - wPort), kick: this.kick, bolt: this.boltT > 0 && this.boltT < 1 ? 1 - this.boltT : 0, cant: V.cant });
     if (hr > 0 && this.hitZ === 'arm') b.shR.rotation.x += hr * .5;
     if (this.aimW > .3) b.neck.rotation.z -= .1 * this.aimW;   // guancia sul calcio
