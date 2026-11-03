@@ -24,6 +24,7 @@ const WPOSES = {
   ready: { p: new V3(.115, .29, -.27), q: qE(-.42, .12, .04) },
   port: { p: new V3(.08, .2, -.21), q: qE(.78, .55, .3) },
   hip: { p: new V3(.13, .24, -.26), q: qE(-.06, 0, 0) },
+  low: { p: new V3(.12, .2, -.2), q: qE(-.85, .18, .06) },   // a riposo: volata verso il basso, braccia distese
   boat: { p: new V3(.05, .25, -.15), q: qE(-1.1, .2, 0) },
 };
 
@@ -139,7 +140,7 @@ function buildPartGeo(key, hi, gear) {
     B(sculpt([[.52, .052, .05, .055], [.6, .048, .045, .05]], hi ? 12 : 6, C.skin, { shadeBottom: .3 }));
     if (A) {
       G(sculpt([[.16, .1, .03, .05, 0, .16], [.22, .13, .04, .07, 0, .165], [.38, .135, .04, .075, 0, .165], [.46, .11, .03, .05, 0, .16]], hi ? 12 : 6, C.pack, { fold: hi ? .008 : 0, seed: 21, shadeBottom: .2 }));
-      add(cylG(.06, .06, .34, s), C.belt2, 0, .5, .17, 0, 0, PI / 2);
+      if (!gear || GEAR_V !== 1) add(cylG(.06, .06, .34, s), C.belt2, 0, .5, .17, 0, 0, PI / 2);   // coperta arrotolata (non tutti la portavano)
       // bretelle M1936: dal cinturone davanti, sopra la spalla, giù fino alla borsa sulla schiena
       if (hi) for (const sx of [-1, 1]) strap([sv(sx * .088, .06, -.128), sv(sx * .09, .25, -.13), sv(sx * .1, .41, -.115), sv(sx * .11, .495, -.04), sv(sx * .1, .49, .06), sv(sx * .085, .44, .17), sv(sx * .08, .3, .235), sv(sx * .08, .17, .235)], C.web);
       else for (const sx of [-1, 1]) { add(U.box, C.web, sx * .088, .28, -.124, -.06, 0, 0, .036, .4, .01); add(U.box, C.web, sx * .1, .468, -.01, 0, 0, sx * -.3, .036, .01, .22); add(U.box, C.web, sx * .08, .3, .232, 0, 0, 0, .03, .26, .01); }
@@ -147,7 +148,7 @@ function buildPartGeo(key, hi, gear) {
         for (const sx of [-1, 1]) add(U.box, C.jacket2, sx * .08, .35, -.12, 0, 0, 0, .08, .09, .02);
         add(new THREE.TorusGeometry(.19, .032, 6, 18), C.belt2, 0, .08, 0, PI / 2, 0, 0, 1, .66, 1);
         add(U.box, C.pack, -.07, .2, -.135, 0, 0, 0, .15, .12, .06);
-        add(U.box, C.wood, 0, .22, .245, 0, 0, 0, .03, .22, .02); add(U.box, C.metal, 0, .1, .24, 0, 0, 0, .1, .1, .015);
+        if (GEAR_V !== 2) { add(U.box, C.wood, 0, .22, .245, 0, 0, 0, .03, .22, .02); add(U.box, C.metal, 0, .1, .24, 0, 0, 0, .1, .1, .015); }   // pala da trincea
         G(sculpt([[.2, .075, .04, .01, 0, -.14], [.24, .088, .05, .012, 0, -.142], [.32, .088, .05, .012, 0, -.142], [.35, .07, .035, .01, 0, -.14]], 10, 0x4e4a36, { fold: .006, seed: 23, shadeBottom: .25 }));
         add(U.box, 0x3e3a2a, 0, .34, -.188, .2, 0, 0, .17, .03, .05);
       }
@@ -156,10 +157,11 @@ function buildPartGeo(key, hi, gear) {
       // cinghie a Y: due davanti dalle giberne alle spalle, unite dietro in una sola che scende al cinturone
       if (hi) { for (const sx of [-1, 1]) strap([sv(sx * .065, .06, -.13), sv(sx * .085, .25, -.13), sv(sx * .1, .41, -.115), sv(sx * .11, .495, -.035), sv(sx * .085, .48, .07), sv(sx * .03, .4, .13), sv(0, .33, .135)], C.web, .03); strap([sv(0, .34, .134), sv(0, .2, .13), sv(0, .06, .13)], C.web, .032); }
       else for (const sx of [-1, 1]) { add(U.box, C.web, sx * .085, .28, -.124, -.06, 0, sx * .12, .03, .42, .01); add(U.box, C.web, sx * .1, .468, -.01, 0, 0, sx * -.3, .03, .01, .22); add(U.box, C.web, sx * .04, .32, .125, .06, 0, sx * -.25, .03, .36, .01); }
-      add(cylG(.06, .06, .27, s), C.belt2, .02, .24, .16, .1, 0, 0);
+      const gasM = !gear || GEAR_V !== 1;   // contenitore della maschera antigas
+      if (gasM) add(cylG(.06, .06, .27, s), C.belt2, .02, .24, .16, .1, 0, 0);
       if (hi) {
         for (const sx of [-1, 1]) { add(U.box, C.jacket2, sx * .09, .36, -.12, 0, 0, 0, .085, .1, .02); add(U.box, C.jacket2, sx * .1, .12, -.115, 0, 0, 0, .09, .1, .02); }
-        for (let k = 0; k < 6; k++) add(new THREE.TorusGeometry(.061, .006, 4, 10), C.belt2, .02, .12 + k * .045, .16, PI / 2 + .1, 0, 0);
+        if (gasM) for (let k = 0; k < 6; k++) add(new THREE.TorusGeometry(.061, .006, 4, 10), C.belt2, .02, .12 + k * .045, .16, PI / 2 + .1, 0, 0);
         add(U.box, C.pack, -.08, .28, .15, 0, 0, 0, .14, .1, .06); add(U.box, 0x6b6146, 0, .48, -.06, 0, 0, 0, .1, .02, .02);
         for (const sx of [-1, 1]) add(U.box, 0x54503c, sx * .19, .43, 0, 0, 0, 0, .05, .02, .12);
         add(U.box, 0x5a5034, .17, .02, .1, 0, -.3, 0, .18, .2, .1);
@@ -283,7 +285,8 @@ function getMesh(key) {
 }
 
 // ---------- scheletro ----------
-function makeBody(team, kind) {
+let GEAR_V = 0;   // variante dell'equipaggiamento durante la costruzione del corpo dei soldati vicini
+function makeBody(team, kind, seed = (R() * 1e6) | 0) {
   const N = () => new THREE.Object3D();
   const root = N(); root.rotation.order = 'YXZ';
   const hips = N(); hips.position.y = .95; root.add(hips);
@@ -313,7 +316,8 @@ function makeBody(team, kind) {
   if (!med) parts.push({ node: gun, key: team + '_w_' + kind, name: 'weapon' });
   for (const p of parts) { p.mesh = getMesh(p.key); p.hidden = false; }
   const skinT = new THREE.Color(rnd(.86, 1.06), rnd(.8, .98), rnd(.74, .92));
-  const b = { skinT, root, hips, spine, neck, head, helmet, shL, elL, shR, elR, gun, hipL, knL, hipR, knR, parts, kind, team, tint: new THREE.Color(rnd(.9, 1.05), rnd(.9, 1.05), rnd(.9, 1.05)), removed: false, settled: false, ikT: 0, fore: WFORE[kind] || WFORE.rifle };
+  const gv = ((seed * 2654435761) >>> 0) % 3;   // variante deterministica dal numero del soldato
+  const b = { gv, skinT, root, hips, spine, neck, head, helmet, shL, elL, shR, elR, gun, hipL, knL, hipR, knR, parts, kind, team, tint: new THREE.Color(rnd(.9, 1.05), rnd(.9, 1.05), rnd(.9, 1.05)), removed: false, settled: false, ikT: 0, fore: WFORE[kind] || WFORE.rifle };
   BODIES.push(b);
   return b;
 }
@@ -332,18 +336,29 @@ function solveArm(S, T, pole, up, fore) {
   _q2.copy(up.quaternion).invert(); fore.quaternion.copy(_q2.multiply(_q1));
 }
 // posa dell'arma interpolata e braccia agganciate
-function poseWeapon(b, wAim, wHip, wBoat, wPort = 0, sway = null) {
+const _qk = new THREE.Quaternion(), _ek = new THREE.Euler(), _bo = new V3();
+function poseWeapon(b, wAim, wHip, wBoat, wPort = 0, sway = null, o = null) {
   const g = b.gun;
   g.position.copy(WPOSES.ready.p); g.quaternion.copy(WPOSES.ready.q);
+  if (o && o.low > 0) { g.position.lerp(WPOSES.low.p, o.low); g.quaternion.slerp(WPOSES.low.q, o.low); }
   if (wPort > 0) { g.position.lerp(WPOSES.port.p, wPort); g.quaternion.slerp(WPOSES.port.q, wPort); }
   if (wAim > 0) { g.position.lerp(WPOSES.aim.p, wAim); g.quaternion.slerp(WPOSES.aim.q, wAim); }
   if (sway) g.position.add(sway);
+  // mitra: calcio corto, arma più bassa e più vicina al busto; tiro a raffiche dall'anca-spalla
+  if (b.kind === 'smg') g.position.add(_bo.set(-.01, -.035 * wAim, .06 * wAim));
+  if (o) {
+    if (o.cant) { _ek.set(0, 0, o.cant); g.quaternion.multiply(_qk.setFromEuler(_ek)); }
+    // rinculo: l'arma arretra nella spalla e la volata sale, poi torna
+    if (o.kick > 0) { g.position.z += .05 * o.kick; g.position.y += .015 * o.kick; _ek.set(.12 * o.kick, 0, 0); g.quaternion.multiply(_qk.setFromEuler(_ek)); }
+  }
   if (wHip > 0) { g.position.lerp(WPOSES.hip.p, wHip); g.quaternion.slerp(WPOSES.hip.q, wHip); }
   if (wBoat > 0) { g.position.lerp(WPOSES.boat.p, wBoat); g.quaternion.slerp(WPOSES.boat.q, wBoat); }
   if (b.kind === 'medic') { solveArm(SH_R, _tL.set(.18, .12, -.12), POLE_R, b.shR, b.elR); solveArm(SH_L, _tL.set(-.18, .12, -.12), POLE_L, b.shL, b.elL); return; }
   solveArm(SH_R, g.position, POLE_R, b.shR, b.elR);
   _tL.copy(b.fore).applyQuaternion(g.quaternion).add(g.position);
   solveArm(SH_L, _tL, POLE_L, b.shL, b.elL);
+  // otturatore girevole-scorrevole: la mano destra va alla leva, la apre, arretra e richiude (la sinistra tiene l'arma)
+  if (o && o.bolt > 0) { const k = o.bolt, pull = Math.sin(Math.min(1, k) * PI); _bo.set(.045, .045, -.04 + pull * .09).applyQuaternion(g.quaternion).add(g.position); solveArm(SH_R, _bo, POLE_R, b.shR, b.elR); }
 }
 
 // ---------- corpo unico deformabile (soldati vicini) ----------
@@ -352,7 +367,7 @@ const SKIN = { tpl: {}, pool: {}, used: {}, mat: null, max: 30, dist: 40 };
 const SKIN_BONES = ['root', 'hips', 'spine', 'neck', 'helmet', 'shL', 'elL', 'shR', 'elR', 'gun', 'hipL', 'knL', 'hipR', 'knR'];
 // nome parte: [osso, osso padre, verso dell'arto (+1 su, -1 giù), mezza ampiezza della sfumatura]
 const SKIN_MAP = { pelvis: [1, 1, 0, 0], chest: [2, 1, 1, .09], head: [3, 2, 1, .04], helmet: [4, 4, 0, 0], uarmL: [5, 2, -1, .07], farmL: [6, 5, -1, .05], uarmR: [7, 2, -1, .07], farmR: [8, 7, -1, .05], weapon: [9, 9, 0, 0], thighL: [10, 1, -1, .08], shinL: [11, 10, -1, .06], thighR: [12, 1, -1, .08], shinR: [13, 12, -1, .06] };
-const skinKey = b => b.team + '|' + b.kind;
+const skinKey = b => b.team + '|' + b.kind + '|' + (b.gv || 0);
 // atlante: colonna del corpo (u 0..0.5, con un quarto ripetuto oltre la cucitura), colonna delle braccia (0.5..0.75), zona neutra per elmetto e arma
 const SKIN_UA = .4, SKIN_UB = .5, SKIN_US = .2, SKIN_W = 1024, SKIN_H = 2048;
 function paintSoldier(team) {
@@ -434,12 +449,13 @@ function skinMaterial(team) {
 }
 function skinTemplate(b) {
   const key = skinKey(b); let t = SKIN.tpl[key]; if (t) return t;
-  const r = makeBody(b.team, b.kind); BODIES.pop();
+  const r = makeBody(b.team, b.kind); BODIES.pop(); GEAR_V = b.gv || 0;
   r.root.updateMatrixWorld(true);
   const parts = [], ranges = [], white = new THREE.Color(1, 1, 1);
   const base = typeof BASE_MALE !== 'undefined';
   if (base) { const g = baseBodyGeo(b.team); parts.push({ g, m: new THREE.Matrix4(), c: white, vc: true, uvs: 1 }); ranges.push(['base', g.attributes.position.count, null]); }
   for (const p of r.parts) { if (base && p.name === 'head' && useScanHead(p.key)) continue; const g = (p.name === 'weapon' && gunGeo(b.team, b.kind)) || buildPartGeo(p.key, true, base); parts.push({ g, m: p.node.matrixWorld.clone(), c: white, vc: true, uvs: 1 }); ranges.push([p.name, g.attributes.position.count, p.node.matrixWorld.clone().invert()]); }
+  GEAR_V = 0;
   const geo = mergeGeos(parts), n = geo.attributes.position.count, si = new Float32Array(n * 4), sw = new Float32Array(n * 4), pa = geo.attributes.position, v = new V3();
   let o = 0;
   for (const [name, cnt, inv] of ranges) {

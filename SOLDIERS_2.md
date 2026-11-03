@@ -45,16 +45,53 @@ Confronto prima e dopo fatto con la stessa scena e la stessa luce (viste frontal
 Per soldato vicino: circa 14.900 triangoli invece di 12.400. Media e lunga distanza: invariate.
 Gli FPS e i tempi di disegno non si possono misurare qui, perché la grafica è software. Il tempo di aggiornamento varia da un giro all'altro anche senza modifiche: il valore di 20 soldati dopo (1,10 ms) è rumore di misura.
 
+## Seconda fase: varianti e pose
+**Varianti dell'equipaggiamento** (soldati vicini), deterministiche dal numero del soldato, 3 per fazione:
+- americani: completo, senza coperta arrotolata, senza pala;
+- tedeschi: con o senza il contenitore della maschera antigas, spesso lasciato nelle retrovie.
+
+Ogni variante è un modello pelle condiviso: al massimo 3 modelli per fazione e arma.
+
+**Pose e animazioni** (`src/soldier.js`, `src/crowd.js`). Si aggiungono al sistema procedurale esistente, che aveva già:
+- passo legato alla velocità, quindi niente piedi che scivolano;
+- inclinazione in accelerazione e in curva, respiro;
+- accovacciato e prono con transizioni morbide;
+- braccia sull'arma con cinematica inversa;
+- pose pronto, mira, arma sul petto in corsa, al fianco per la mitragliatrice.
+
+Nuovo:
+- **In ginocchio** quando il soldato è fermo e basso (in copertura, sotto il fuoco, in mira accovacciato): ginocchio destro a terra, piede sinistro avanti, al posto dello squat «seduto nel vuoto»;
+- **A riposo e in allerta**: senza nemici e senza fuoco addosso l'arma si abbassa con la volata verso terra, il peso passa da una gamba all'altra e la testa si guarda intorno; con un bersaglio torna pronta in pochi decimi di secondo;
+- **Mira orientata dal busto**: il busto si gira subito verso il bersaglio (fino a ~30°), i piedi seguono più lentamente;
+- **Rinculo**: a ogni colpo l'arma arretra nella spalla, la volata sale e la spalla cede, meno per i mitra;
+- **Otturatore**: con Kar98k e Springfield, dopo ogni colpo la mano destra va alla leva, la apre, arretra e richiude, mentre la sinistra tiene l'arma; il Garand, semiautomatico, no;
+- **Mitra** (Thompson, MP 40): arma più bassa e più vicina al busto in mira;
+- **Sotto il fuoco**: appostato e non impegnato a sparare, testa incassata e spalle basse in proporzione alla soppressione;
+- **Reazione al colpo per zona**: al busto spinto indietro, alla gamba il ginocchio cede, al braccio la spalla scatta;
+- **Variazioni individuali**: ampiezza dei gesti, ritmo dello sguardo e inclinazione dell'arma diversi per ogni soldato, oltre a fase del passo e del respiro già casuali.
+
+Restano invariati:
+- l'altezza di petto, occhi e bocca dell'arma usata dal combattimento (`chest`, `eye`, `muzzle`);
+- velocità, IA, danni e rete.
+
+Le sfere dei colpi seguono le ossa come prima: in ginocchio stanno dove sta il corpo.
+
+**Verifica**: foglio delle pose dalla scena studio (riposo, mira, sparo, otturatore, riparo, corsa) con americani e tedeschi, fucile e mitra; triangoli invariati rispetto alla prima fase.
+
 ## Non fatto in questa fase (onestamente)
 - **Nessun modello nuovo creato**: niente Blender, niente GLB nuovi; corpo e volto sono quelli già presenti, con licenze libere.
-- **Varianti di equipaggiamento per soldato**: tutti i fucilieri di una fazione hanno lo stesso equipaggiamento (varia solo il volto, la barba, le proporzioni della testa e la tinta).
 - **Nuovi ruoli visivi** (ufficiale, cecchino, equipaggi dei carri).
-- **Animazioni**: transizioni, reazioni ai colpi diverse per zona, morti diverse per postura, piedi adattati al terreno.
+- **Animazioni ancora mancanti**:
+  - ricarica visibile (l'IA non ha caricatori: andrebbe aggiunta anche nel gioco);
+  - pose specifiche per finestra, albero e sacchetti di sabbia (oggi la posa dipende solo da accovacciato o in piedi, non dall'altezza della copertura);
+  - piedi adattati alla pendenza;
+  - morti diverse per postura (alla morte c'è già il ragdoll);
+  - mitragliatrice su bipiede da prono (cambierebbe l'altezza del bersaglio, quindi il gameplay).
 - **Mani**: geometria delle mani rifatta.
 - **Normal map e ambient occlusion** sui tessuti.
 - **Verifica dei 50 FPS sul tuo PC.**
 
-Proposta per la fase successiva:
+Proposta per la fase successiva (dopo questa seconda fase):
 1. varianti deterministiche dell'equipaggiamento (seme per soldato, 3–4 modelli per fazione e ruolo);
 2. mani a pugno rifatte;
 3. normal map del tessuto nell'atlante;
