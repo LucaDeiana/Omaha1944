@@ -99,7 +99,8 @@ class Panzer {
     if (byPlayer) { P.shake += .5; this.kick = 1; }
     let p;
     if (byPlayer) { const r = hitscan(o.clone().addScaledVector(d, 1), d, 1200); p = o.clone().addScaledVector(d, r.t + 1); }
-    else { const tp = this.target === P ? P.pos : this.target ? this.target.pos : o.clone().addScaledVector(d, 200); const dist = tp.distanceTo(o); p = tp.clone().add(new V3(rnd(-1, 1) * dist * .03, 0, rnd(-1, 1) * dist * .03)); }
+    else { const tp = this.target === P ? P.pos : this.target ? this.target.pos : o.clone().addScaledVector(d, 200); const dist = tp.distanceTo(o); p = tp.clone().add(new V3(rnd(-1, 1) * dist * .03, 0, rnd(-1, 1) * dist * .03));
+      const h = tlRay(o, p, 'shell', 0); if (h) { p = o.clone().addScaledVector(p.clone().sub(o).normalize(), Math.max(0, h.t - .3)); TL.st.shellSolid++; if (h.s && typeof cityBlast === 'function') cityBlast(p, 6, 220); } }
     fxTracer(o, p, 2);
     after(Math.min(1.2, p.distanceTo(o) / 700), () => { p.y = Math.max(p.y, Hf(p.x, p.z)); explode(p, 6, 420, { byPlayer, bomb: true }); });
   }
@@ -149,10 +150,14 @@ class Panzer {
     if (this.aiT <= 0) {
       this.aiT = 1.2;
       if (!this.goal) { const gz = MISSION.stage >= 5 || (PT === 'E' && MISSION.stage >= 3) ? -235 : -112; this.goal = new V3(roadPathX(gz) + rnd(-50, 50), 0, gz + rnd(-8, 8)); }
-      let best = null, bd = 260 * 260;
-      for (const a of allies) { if (!a.alive || a.state === 'boat') continue; const d2 = a.pos.distanceToSquared(this.pos); if (d2 < bd) { bd = d2; best = a; } }
-      if (PT === 'A' && P.targetable() && P.pos.distanceToSquared(this.pos) < bd * 1.3) best = P;
-      this.target = best;
+      // solo bersagli in vista reale (terreno ed edifici): i più vicini per primi, al massimo 8 prove per pensiero
+      const mem = tlForget(this, 1.2), cand = [];
+      for (const a of allies) { if (!a.alive || a.state === 'boat') continue; const d2 = a.pos.distanceToSquared(this.pos); if (d2 < 260 * 260) cand.push([d2 * (a === mem.tgt ? .7 : 1), a]); }
+      if (PT === 'A' && P.targetable() && P.pos.distanceToSquared(this.pos) < 260 * 260) cand.push([P.pos.distanceToSquared(this.pos) * .75, P]);
+      cand.sort((x, y) => x[0] - y[0]); let best = null;
+      for (let i = 0; i < cand.length && i < 8; i++) if (tlSee(this, cand[i][1])) { best = cand[i][1]; break; }
+      if (best) tlSaw(this, best); else if (this.target && mem.state === TL_VISIBLE) { mem.state = TL_KNOWN; TL.st.hiddenStop++; }
+      this.target = best; this.tlWhy = best ? '' : mem.state === TL_KNOWN ? 'bersaglio coperto: attendo' : 'nessun bersaglio visibile';
     }
     const g = this.goal, dx = g.x - this.pos.x, dz = g.z - this.pos.z, d = Math.hypot(dx, dz);
     let want = 0, hdg = this.yaw;
@@ -164,8 +169,11 @@ class Panzer {
       const tp = this.target.pos, rel = Math.atan2(-(tp.x - this.pos.x), -(tp.z - this.pos.z)) - this.yaw;
       if (!this.jam) this.tyaw = angLerpMax(this.tyaw, rel, dt * vpTraverse(this));
       const hd = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z); this.gpitch = clamp(this.gpitch + clamp(Math.atan2(tp.y + 1 - this.pos.y - 2.1, hd) + hd * .00004 - this.vp.th - this.gpitch, -dt * vpElev(this), dt * vpElev(this)), this.vc.elevMin, this.vc.elevMax);
-      if (Math.abs(angDiff(this.tyaw, rel)) < .05 && this.speed < 2) this.fireMain(false);
-      if (hd < 140 && R() < dt * 3) this.fireMG(false);
+      const ap = this.target === P ? P.chest(new V3()) : this.target.chest ? this.target.chest(new V3()) : tp.clone().setY(tp.y + 1);
+      const lof = Math.abs(angDiff(this.tyaw, rel)) < .05 ? tlLOF(this, ap, 0, 5) : false;   // il colpo è esplosivo: qualunque muro lo ferma
+      if (lof && this.speed < 2) this.fireMain(false); else if (Math.abs(angDiff(this.tyaw, rel)) < .05 && !lof) { TL.st.noLOF++; this.tlWhy = 'non sparo: ' + this._tlf.why; }
+      if (lof && hd < 140 && R() < dt * 3) this.fireMG(false);
+    } else if (!this.jam) { const m = tlMem(this), toward = m.state === TL_KNOWN && m.hidT < 6 ? Math.atan2(-(m.p.x - this.pos.x), -(m.p.z - this.pos.z)) - this.yaw : 0; this.tyaw = angLerpMax(this.tyaw, toward, dt * vpTraverse(this) * .5);
     }
   }
   drive(dt) {

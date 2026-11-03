@@ -337,8 +337,14 @@ class KasTank {
     if (this.aiT <= 0) {
       this.aiT = .6;
       let best = null, bs = 1e9;
-      for (const o of KAS.tanks) { if (!o.alive || o.team === this.team) continue; const d = o.pos.distanceTo(this.pos); if (d > 1400) continue; if (!kasLOS(this.pos, o.pos)) continue; const s = d * (o.player ? .8 : 1) * (o.type === 'tiger' ? .85 : 1); if (s < bs) { bs = s; best = o; } }
-      if (this.team === 'A') for (const gp of KAS.guns) { if (!gp.alive) continue; const d = gp.pos.distanceTo(this.pos); if (d < 900 && d * 1.2 < bs && kasLOS(this.pos, gp.pos)) { bs = d * 1.2; best = gp; } }
+      const mem = tlForget(this, .6);
+      for (const o of KAS.tanks) { if (!o.alive || o.team === this.team) continue; const d = o.pos.distanceTo(this.pos); if (d > 1400) continue; if (!tlSee(this, o)) continue; const s = d * (o.player ? .8 : 1) * (o.type === 'tiger' ? .85 : 1) * (o === mem.tgt ? .8 : 1); if (s < bs) { bs = s; best = o; } }
+      if (this.team === 'A') for (const gp of KAS.guns) { if (!gp.alive) continue; const d = gp.pos.distanceTo(this.pos); if (d < 900 && d * 1.2 < bs && tlSee(this, gp)) { bs = d * 1.2; best = gp; } }
+      if (best) tlSaw(this, best); else if (this.target && mem.state === TL_VISIBLE) { mem.state = TL_KNOWN; TL.st.hiddenStop++; }
+      // bersaglio nascosto dietro un edificio: si aspetta un poco, poi si cerca un altro angolo di tiro (non chi difende una posizione fissa)
+      if (!best && mem.state === TL_KNOWN && mem.hidT > 3 && !this.flankP && !this.retreat && !this.immob && !(this.team === 'E' && this.defend && this.defend.distanceTo(this.pos) < 30 && R() < .5)) { this.flankP = tlFirePos(this, mem.p); this.flankT = 20; if (this.flankP) TL.st.reposition++; }
+      if (best || mem.state === TL_UNKNOWN) this.flankP = null;
+      this.tlWhy = best ? '' : mem.state === TL_KNOWN ? 'bersaglio coperto (' + ((this._tlc && this._tlc.get(mem.tgt) || {}).why || '?') + ')' + (this.flankP ? ': cerco un angolo di tiro' : ': attendo') : 'nessun bersaglio visibile';
       if (best !== this.target) this.err.set(rnd(-1, 1), rnd(-.5, .5), rnd(-1, 1)).multiplyScalar(this.team === 'E' ? 4.5 : 3);
       this.target = best;
       // ritirata: scafo o motore molto danneggiati, cannone fuori uso → copertura verso le proprie linee
@@ -347,10 +353,12 @@ class KasTank {
       if (this.retreat && this.retreat.distanceTo(this.pos) < 8) this.retreatDone = true;
     }
     // movimento
-    const cp = KAS_PTS[Math.min(KAS.stage, 2)], hold = this.team === 'E' && this.defend, goal = this.retreat && !this.retreatDone ? this.retreat : hold ? this.defend : new V3(cp.x, 0, cp.z).add(this.goalOff);
+    if (this.flankP && ((this.flankT -= dt) <= 0 || this.flankP.distanceTo(this.pos) < 6)) { if (this.flankP.distanceTo(this.pos) >= 6) this.flankP = null; }
+    const cp = KAS_PTS[Math.min(KAS.stage, 2)], hold = this.team === 'E' && this.defend, goal = this.retreat && !this.retreatDone ? this.retreat : this.flankP ? this.flankP : hold ? this.defend : new V3(cp.x, 0, cp.z).add(this.goalOff);
     const dx = goal.x - this.pos.x, dz = goal.z - this.pos.z, d = Math.hypot(dx, dz), tdist = this.target ? this.target.pos.distanceTo(this.pos) : 1e9;
     let want = 0, hdg = Math.atan2(-dx, -dz);
     if (this.retreat && !this.retreatDone) { want = this.vc.vmax * .7; const back = angDiff(this.yaw, hdg); if (Math.abs(back) > 2 && this.target) { want = -this.vc.vrev; hdg += PI; } }   // indietreggia mostrando il fronte
+    else if (this.flankP) want = d > 6 ? this.vc.vmax * .5 : 0;
     else if (d > 12) { want = this.vc.vmax * .75; if (this.target && tdist < 1000) want *= this.type === 'tiger' ? 0 : .35; }
     // fermo per sparare: il cannone non è stabilizzato (tranne lo Sherman, solo in elevazione)
     if (this.target && this.reload < .8 && tdist < 1300 && !this.retreat) want = Math.min(want, this.type === 'sherman' ? 2.5 : 0);
@@ -368,8 +376,15 @@ class KasTank {
       const hd = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z), mz = this.muzzle(new V3()), want = Math.atan2(tp.y - mz.y, hd) + .5 * Math.asin(clamp(9.8 * hd / (this.T.v * this.T.v), -1, 1));
       const wel = Math.asin(clamp(this.aimDir(new V3()).y, -1, 1));   // alzo reale della canna nel mondo (lo scafo può essere inclinato)
       const ev = vpElev(this); this.gpitch = clamp(this.gpitch + clamp(want - wel, -dt * ev, dt * ev), this.vc.elevMin, this.vc.elevMax);
-      if (Math.abs(angDiff(this.tyaw, rel)) < .012 && Math.abs(want - wel) < .003 && Math.abs(this.speed) < 3.5 && tdist < 1300) this.fireMain(false);
-    } else if (!this.jam) this.tyaw = angLerpMax(this.tyaw, 0, dt * vpTraverse(this) * .5);
+      if (Math.abs(angDiff(this.tyaw, rel)) < .012 && Math.abs(want - wel) < .003 && Math.abs(this.speed) < 3.5 && tdist < 1300) {
+        if (tlLOF(this, tp, this.ammo === 'he' ? 0 : this.T.pen)) this.fireMain(false);
+        else { TL.st.noLOF++; this.tlWhy = 'non sparo: ' + this._tlf.why; this.lofBadT = (this.lofBadT || 0) + dt; if (this.lofBadT > 3 && !this.flankP && !this.immob) { this.flankP = tlFirePos(this, t.pos); this.flankT = 15; this.lofBadT = 0; } }
+      }
+    } else if (!this.jam) {
+      // bersaglio noto ma coperto: la torretta resta sull'ultima posizione per qualche secondo, poi torna in avanti (niente brandeggio infinito verso un nemico nascosto)
+      const m = tlMem(this), toward = m.state === TL_KNOWN && m.hidT < 6 ? Math.atan2(-(m.p.x - this.pos.x), -(m.p.z - this.pos.z)) - this.yaw : 0;
+      this.tyaw = angLerpMax(this.tyaw, toward, dt * vpTraverse(this) * .5);
+    }
   }
   drive(dt) {
     this.cmdThr = (KEYS.KeyW ? 1 : 0) - (KEYS.KeyS ? 1 : 0); this.cmdSteer = (KEYS.KeyA ? 1 : 0) - (KEYS.KeyD ? 1 : 0);
@@ -387,16 +402,20 @@ class KasGun {
     this.box = { min: new V3(x - 1.6, this.pos.y, z - 1.6), max: new V3(x + 1.6, this.pos.y + 1.8, z + 1.6) }; this.T = { pen: 135, v: 790, cal: 75, reload: 5 };
     MISSION.vehicles.push(this); KAS.guns.push(this);
   }
+  muzzle(o) { this.g.updateMatrixWorld(true); return o.set(0, 0, -3.3).applyMatrix4(this.gg.matrixWorld); }
+  aimDir(o) { this.g.updateMatrixWorld(true); return o.set(0, 0, -1).transformDirection(this.gg.matrixWorld); }
   hit(p, dir, sh) { if (sh.he) explode(p, 7, 260, { byPlayer: !!(sh.owner && sh.owner.player), bomb: true }); this.damage(60, sh.owner && sh.owner.player); }
   damage(a, byPlayer) { if (!this.alive) return; this.hp -= a; if (this.hp > 0) return; this.alive = false; burnMeshes(this.g); this.gg.rotation.x = -.4; fxExplosion(this.pos.clone().add(new V3(0, 1, 0)), 2, false); sfxBoom(this.pos, 2); if (byPlayer) { STATS.kills += 2; feed('Pak 40 distrutto'); } }
   update(dt) {
     if (!this.alive) return; this.reload -= dt;
-    let best = null, bd = 1100; for (const o of KAS.tanks) if (o.alive && o.team === 'A') { const d = o.pos.distanceTo(this.pos); if (d < bd && kasLOS(this.pos, o.pos)) { bd = d; best = o; } }
-    if (!best) return;
+    let best = null, bd = 1100; for (const o of KAS.tanks) if (o.alive && o.team === 'A') { const d = o.pos.distanceTo(this.pos); if (d < bd && tlSee(this, o)) { bd = d; best = o; } }
+    if (best) tlSaw(this, best); else tlForget(this, dt);
+    this.target = best; if (!best) return;
     const tp = best.pos.clone(); tp.y += 1.3; const rel = angDiff(Math.atan2(-(tp.x - this.pos.x), -(tp.z - this.pos.z)), this.yaw);
     if (Math.abs(rel) > 1.1) return;   // fuori dal settore di tiro
     this.aim = lerp(this.aim, rel, dt * .8); this.gg.rotation.y = this.aim;
     const hd = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z); this.el = Math.atan2(tp.y - this.pos.y - 1, hd) + .5 * Math.asin(clamp(9.8 * hd / (790 * 790), -1, 1)); this.gg.rotation.x = this.el;
+    if (this.reload <= 0 && Math.abs(this.aim - rel) < .02 && !tlLOF(this, tp, this.T.pen)) { this.tlWhy = 'non sparo: ' + this._tlf.why; TL.st.noLOF++; return; }
     if (this.reload <= 0 && Math.abs(this.aim - rel) < .02) {
       this.reload = rnd(5, 8); this.g.updateMatrixWorld(true);
       const o = new V3(0, 0, -3.3).applyMatrix4(this.gg.matrixWorld), d = new V3(0, 0, -1).transformDirection(this.gg.matrixWorld); d.x += rnd(-.004, .004); d.y += rnd(-.002, .003); d.normalize();
@@ -405,7 +424,8 @@ class KasGun {
   }
 }
 // linea di vista: il terreno non deve coprire la congiungente fra le torrette
-function kasLOS(a, b) { const n = 10; for (let i = 1; i < n; i++) { const t = i / n, x = lerp(a.x, b.x, t), z = lerp(a.z, b.z, t), y = lerp(a.y + 2.2, b.y + 1.6, t); if (Hf(x, z) > y) return false; } return true; }
+function kasLOS(a, b) { return !tlRay(_kasLa.set(a.x, a.y + 2.2, a.z), _kasLb.set(b.x, b.y + 1.6, b.z), 'sight'); }   // terreno ed edifici
+const _kasLa = new V3(), _kasLb = new V3();
 // ---------- solchi dei cingoli sulla sabbia ----------
 const KAS_TRK = { mesh: null, n: 0, max: 2400, m: new THREE.Matrix4(), q: new THREE.Quaternion(), e: new THREE.Euler() };
 function kasTrackMark(t) {
@@ -432,7 +452,7 @@ function kasDamagePanel(t) {
 const KAS_SHELL_G = new THREE.CylinderGeometry(.06, .06, 1, 5).rotateX(PI / 2);
 function kasShell(o, d, T, owner) {
   const m = new THREE.Mesh(KAS_SHELL_G, new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 2.6, 1.2), transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false }));
-  m.scale.set(1, 1, 6); scene.add(m); KAS.shells.push({ p: o.clone(), v: d.clone().multiplyScalar(T.v), T, owner, m, life: 4, travel: 0, he: !!T.he });
+  m.scale.set(1, 1, 6); scene.add(m); KAS.shells.push({ p: o.clone(), v: d.clone().multiplyScalar(T.v), T, owner, m, life: 4, travel: 0, he: !!T.he, pen: T.pen || 0, prev: o.clone() });
 }
 function kasUpdateShells(dt) {
   const tmp = new V3();
@@ -440,7 +460,11 @@ function kasUpdateShells(dt) {
     const s = KAS.shells[i]; s.life -= dt; let hit = false;
     const steps = Math.max(1, Math.ceil(s.v.length() * dt / 2.5)), h = dt / steps;
     for (let k = 0; k < steps && !hit; k++) {
-      s.v.y -= 9.8 * h; tmp.copy(s.v).multiplyScalar(h); s.p.add(tmp); s.travel += tmp.length();
+      s.v.y -= 9.8 * h; tmp.copy(s.v).multiplyScalar(h); s.prev.copy(s.p); s.p.add(tmp); s.travel += tmp.length();
+      // edifici e muri: segmento continuo fra la posizione precedente e la nuova (niente tunneling); prima dei carri
+      { const hs = tlRay(s.prev, s.p, 'shell', s.he ? 0 : s.pen, true);
+        if (_tlHit.pen.length) for (const [, so, m] of _tlHit.pen) { if (!s.thru) s.thru = new Set(); if (s.thru.has(so)) continue; s.thru.add(so); s.pen -= m.pen; s.T = Object.assign({}, s.T, { pen: Math.max(0, s.pen) }); TL.st.shellPen++; fxImpact(s.p, m.fx); }
+        if (hs && !(s.thru && s.thru.has(hs.s))) { hit = true; s.p.copy(s.prev).addScaledVector(tmp.normalize(), hs.t); TL.st.shellSolid++; KAS.st = KAS.st || {}; KAS.st.solid = (KAS.st.solid || 0) + 1; fxImpact(s.p, hs.mat.fx); fxDebris && fxDebris(s.p, 8, 1.2); sfxBoom(s.p, .5); if (s.he) explode(s.p, 5, 200, { byPlayer: !!(s.owner && s.owner.player), bomb: true }); if (typeof cityBlast === 'function') cityBlast(s.p, s.he ? 6 : 4, s.he ? 220 : 120); break; } }
       if (s.p.y < Hf(s.p.x, s.p.z)) { hit = true; KAS.st = KAS.st || {}; KAS.st.ground = (KAS.st.ground || 0) + 1; if (s.owner && s.owner.target) { const e = s.p.distanceTo(s.owner.target.pos); KAS.st.err = (KAS.st.err || 0) + e; KAS.st.short = (KAS.st.short || 0) + (s.owner.pos.distanceTo(s.p) < s.owner.pos.distanceTo(s.owner.target.pos) - 10 ? 1 : 0); } const p = s.p.clone(); p.y = Hf(p.x, p.z) + .2; if (s.he) { explode(p, 7, 260, { byPlayer: !!(s.owner && s.owner.player), bomb: true }); for (const g of KAS.guns) if (g.alive && g.pos.distanceTo(p) < 8) g.damage(30 * (1 - g.pos.distanceTo(p) / 9), s.owner && s.owner.player); break; } fxImpact(p, 'dirt'); for (let j = 0; j < 16; j++) PS_GRAIN.emit(p.x, p.y, p.z, rnd(-3, 3), rnd(3, 8), rnd(-3, 3), 1, .08, .08, .9, ...C_DIRT, .5, 9.8); PS_SMOKE.emit(p.x, p.y + .5, p.z, 0, 1.5, 0, 3, 1, 3, .7, .8, .72, .58, .9); sfxBoom(p, .6); for (const g of KAS.guns) if (g.alive && g.pos.distanceTo(p) < 3) g.damage(25, s.owner && s.owner.player); break; }
       for (const t of KAS.tanks) {
         if (t === s.owner || !t.alive) continue;
