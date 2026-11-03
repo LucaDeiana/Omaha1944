@@ -150,7 +150,7 @@ function playerFire() {
   const w = WEAPONS[s.id];
   if (P.fireCD > 0 || P.reloadT > 0 || P.switchT > 0 || P.throwT > 0 || P.carry || P.swim || P.inBoat || P.dead || P.interacting || P.meleeT > 0) return;
   if (s.mag <= 0) { sfxMech('dry'); P.fireCD = .3; if (s.res > 0) startReload(); P.trigger = false; return; }
-  s.mag--; P.fireCD = w.rate; STATS.shots++;
+  s.mag--; P.fireCD = w.rate; STATS.shots++; P.lastShotT = GAME.time; if (typeof infHear === 'function' && (STATS.shots % 2 === 0)) infHear(P, P.pos, 1);
   P.recoil = 1; P.kickP += w.kick * (P.adsK > .5 ? .55 : 1) * (P.stance === 2 ? .5 : 1); P.kickY += rnd(-1, 1) * w.kick * .35;
   P.pitch += w.kick * .18 + (w.climb || 0) * (P.stance === 2 ? .5 : 1);
   if (!w.auto) P.trigger = false;

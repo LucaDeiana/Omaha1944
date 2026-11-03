@@ -182,7 +182,8 @@ class Soldier {
         const hd = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z);
         this.aim = lerp(this.aim, clamp(Math.atan2(tp.y - this.pos.y - 1.3, hd), -.6, .6), dt * 5);
       }
-    } else { this.aim = lerp(this.aim, 0, dt * 4); this.tYaw = this.yaw; }
+    } else if (this.watchP && !this.moving) { this.tYaw = Math.atan2(-(this.watchP.x - this.pos.x), -(this.watchP.z - this.pos.z)); this.yaw = angLerp(this.yaw, this.tYaw, dt * 1.5); this.aim = lerp(this.aim, 0, dt * 4); }   // sorveglia l'ultima posizione nota
+    else { this.aim = lerp(this.aim, 0, dt * 4); this.tYaw = this.yaw; }
     this.root.rotation.y = this.yaw;
 
     const posted = this.state === 'post' || this.state === 'cover' || this.state === 'hold';
@@ -202,7 +203,7 @@ class Soldier {
     else if (posted) wc = this.duck ? 1 : (this.inTrench || this.inBunker || this.kind === 'mg' ? 0 : (this.team === 'A' && this.cover && this.cover.kind === 'bank' ? .55 : .15));
     if (this.role === 'mortar' || this.healT > 0) wc = 1;
     this.crouch = lerp(this.crouch, wc, dt * 6);
-    const firing = !this.duck && !this.moving && this.target && this.tVis && !this.flee && !this.role && !this.healTarget;
+    const firing = !this.duck && !this.moving && this.target && this.tVis && !this.flee && !this.role && !this.healTarget && !this.pinned && !this.routed;
     this.aimW = lerp(this.aimW, firing || (this.target && !this.moving) ? 1 : 0, dt * 5);
     if (this.reloadT > 0) this.reloadT -= dt;
     if (firing && !(this.reloadT > 0)) {
@@ -398,7 +399,7 @@ class Soldier {
     // con netta superiorità numerica locale si va all'assalto
     if (threat.cnt && foesNear(this.team === 'A' ? 'E' : 'A', p.x, p.z, 22).cnt >= threat.cnt * 2.5 + 2) threat = { cnt: 0 };
     const front = this.team === 'A' && !Z.defend ? frontAt(p.x) : -1e9;
-    if (threat.cnt && this.team === 'A') { this.state = 'cover'; this.wait = rnd(1.5, 3); if (threat.best && !this.target) { this.target = threat.best; this.tVis = true; } }
+    if (threat.cnt && this.team === 'A') { this.state = 'cover'; this.wait = rnd(1.5, 3); }
     for (const c of covers) {
       if (c.occ >= 2 || c.z > Z.zMax || c.z < Z.zMin || c.x < Z.xMin || c.x > Z.xMax) continue;
       if (threat.cnt) { const dd = Math.hypot(c.x - p.x, c.z - p.z); if (dd > 12 || Math.hypot(c.x - threat.best.pos.x, c.z - threat.best.pos.z) < threat.d - 1) continue; }
@@ -435,7 +436,7 @@ class Soldier {
     if (this.toPost && !this.dest && this.objective) { this.dest = this.objective.clone(); this.state = 'move'; this.crouchRun = R() < .6; }
     if (this.state === 'assault' && !this.dest) {
       this.wait -= this.thinkDt * (this.supp > .45 ? .25 : 1);
-      if (this.wait <= 0) { const th = foesNear(this.team, this.pos.x, this.pos.z, 24); if (th.cnt) { this.wait = rnd(1.5, 3); if (!this.target) { this.target = th.best; this.tVis = true; } } }
+      if (this.wait <= 0) { const th = foesNear(this.team, this.pos.x, this.pos.z, 24); if (th.cnt) { this.wait = rnd(1.5, 3); } }
       if (this.wait <= 0) {
         const o = this.objective, dx = o.x - this.pos.x, dz = o.z - this.pos.z, d = Math.hypot(dx, dz);
         if (d < 22) this.state = 'hold';
@@ -476,7 +477,7 @@ class Soldier {
     else p *= this.team === 'E' ? (t === P ? D.acc : D.acc * .45) : (d > 60 ? .5 : 1.15);
     if (this.supp > .3) p *= .6;
     if (t === P) { p *= P.hitMul(); if (!losClear(from, tp)) p = 0; }
-    else if (t.isBoat) p = 0;
+    else if (t.isBoat || t.isSupp) p = 0;   // fuoco di soppressione sull'ultima posizione nota: non colpisce, spaventa
     else {
       if (t.crouch > .5) p *= .55; if (t.prone > .5) p *= .4; if (t.inTrench) p *= .5; if (t.moving) p *= .75; if (t.state === 'cover') p *= .75;
       if (t.pos.z > -56.5) p *= 1.15;
@@ -528,7 +529,7 @@ function throwNadeAt(s, tgt, team) {
 
 let AI_FRAME = 0;
 function updateAI(dt) {
-  AI_BUDGET.n = 0; tactUpdate(dt); AI_FRAME++;
+  AI_BUDGET.n = 0; tactUpdate(dt); AI_FRAME++; if (typeof updateInfantry === 'function') updateInfantry(dt);
   for (const list of [allies, enemies]) {
     for (const s of list) {
       if (s.removed || !s.alive) continue;
