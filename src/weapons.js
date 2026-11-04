@@ -87,7 +87,8 @@ function addSights(g, kind, y, rz, fz, mat, hood, x = 0) {
 function buildViewmodel(id) {
   const i = (typeof wglbGun === 'function' && wglbGun(id, 'FP')) || buildGun(id), g = i.group;   // modello Blender se pronto
   const rh = i.grip, lh = i.fore;
-  if (!(i.hq && typeof wglbArms === 'function' && wglbArms(i, new V3(rh.x + .03, rh.y - .03, rh.z + .05), new V3(.24, -.42, .34)))) {   // mani Blender se pronte
+  if (typeof fpaAttach === 'function' && SCEN === 'aaa' && fpaAttach(i)) { /* braccia con scheletro: solo tech demo */ }
+  else if (!(i.hq && typeof wglbArms === 'function' && wglbArms(i, new V3(rh.x + .03, rh.y - .03, rh.z + .05), new V3(.24, -.42, .34)))) {   // mani Blender se pronte
     hand(g, new V3(rh.x + .012, rh.y, rh.z), 1);
     limb(g, new V3(rh.x + .03, rh.y - .03, rh.z + .05), new V3(.24, -.42, .34), .034, VM.sleeve);
     i.lhand = new THREE.Group(); g.add(i.lhand);
@@ -494,6 +495,7 @@ function updateViewmodel(dt) {
   if (typeof wglbInspectPose === 'function' && WGLB.inspectT > 0) { const o = { x, y, z, rx, ry, rz }; wglbInspectPose(o); ({ x, y, z, rx, ry, rz } = o); }
   g.position.set(x, y, z); g.rotation.set(rx, ry, rz);
   if (typeof wglbAnimate === 'function') wglbAnimate(dt);
+  if (typeof fpaUpdate === 'function' && SCEN === 'aaa') fpaUpdate(dt);
   if (P.flashT > 0) { P.flashT -= dt; vmFlash.visible = P.flashT > 0; } else vmFlash.visible = false;
   const scoped = w.scope && k > .92;
   $('scope').style.display = scoped ? 'block' : 'none';

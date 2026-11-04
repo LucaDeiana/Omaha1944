@@ -1,0 +1,27 @@
+{
+ "id": "fp_arms_rig",
+ "formato": "omaha1944-arms-1",
+ "blender": "5.2.3 LTS",
+ "triangoli": 19632,
+ "ossa": {
+  "FPA_R": 22,
+  "FPA_L": 22
+ },
+ "proporzioni": {
+  "braccio": 0.3,
+  "avambraccio": 0.26
+ },
+ "assi": "glTF: Y in alto; braccio a riposo lungo -Z dalla spalla",
+ "texture": "pelle e lana procedurali (nessuna texture CC0 adatta)",
+ "tempo_s": 0.5,
+ "validazione": {
+  "errori": [],
+  "avvisi": [],
+  "kb": 863.0,
+  "skins": 2,
+  "ossa": [
+   22,
+   22
+  ]
+ }
+}

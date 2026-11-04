@@ -218,6 +218,7 @@ function aaaInit() {
   if (typeof labInit === 'function') labInit();
   if (typeof xpcInit === 'function') xpcInit();   // Movement Lab (controller sperimentale)
   if (typeof xaeEnable === 'function') xaeEnable(true);   // Audio Overhaul (motore sperimentale)
+  if (typeof fpaLoad === 'function') fpaLoad();   // braccia con scheletro (prima persona)
   showMsg('Normandy Village — Photorealism Test · preset ' + AAA.preset, 4);
 }
 // fasci di luce dalle finestre della casa A esposte al sole (volumi additivi, solo all'interno)

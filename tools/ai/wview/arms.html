@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#888">
+<script src="../../../assets/lib/three/build/three.min.js"></script>
+<script src="../../../assets/lib/three/examples/js/GLTFLoader.js"></script>
+<script src="../../../assets/aaa/arms/fp_arms_rig.js"></script>
+<script>
+// vista di controllo del rig delle braccia (solo test headless)
+const R=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});R.setSize(1200,600);R.outputEncoding=THREE.sRGBEncoding;R.toneMapping=THREE.ACESFilmicToneMapping;R.physicallyCorrectLights=true;document.body.appendChild(R.domElement);
+const S=new THREE.Scene();S.background=new THREE.Color(0x9aa4ad);const C=new THREE.PerspectiveCamera(30,2,.01,50);
+S.add(new THREE.HemisphereLight(0xdde8f0,0x554433,1.4));const D=new THREE.DirectionalLight(0xffffff,3);D.position.set(1,2,1.5);S.add(D);
+const bin=Uint8Array.from(atob(FPA_GLB.glb),c=>c.charCodeAt(0));
+window.ready=new Promise(res=>new THREE.GLTFLoader().parse(bin.buffer,'',g=>{window.G=g.scene;S.add(g.scene);res();}));
+window.pose=(curl)=>{G.traverse(o=>{if(o.isBone){const m=o.name.match(/^(index|middle|ring|pinky)_([123])|^thumb_([12])/);if(m){o.userData.r0=o.userData.r0||o.quaternion.clone();o.quaternion.copy(o.userData.r0).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),curl*(m[2]==='1'?.9:1.1)));}}});};
+window.shot=(cx,cy,cz,tx,ty,tz,fov,wire)=>{G.traverse(o=>{if(o.isMesh)o.material.wireframe=!!wire;});C.fov=fov||30;C.updateProjectionMatrix();C.position.set(cx,cy,cz);C.lookAt(tx,ty,tz);R.render(S,C);return R.domElement.toDataURL('image/jpeg',.9);};
+</script>
