@@ -96,6 +96,12 @@ Ogni parte ha riquadro, connessioni, stato e uno slot `danneggiato`; `v2SetPart(
 - **Ombre statiche**: il riquadro di ±88 m si ricentra quando la camera si sposta di oltre 30 m.
 - **Altre misure**: geometria unita per materiale e per edificio, materiali condivisi, vegetazione a istanze con blocchi spaziali, frustum culling di Three.js.
 - **Streaming per settori**: valutato e **non introdotto**. L'intero villaggio si costruisce in circa 0,7 s e sta in memoria. I settori (40 m) servono solo a conteggi e debug.
+- **Shader precompilati al caricamento**: `renderer.compile` più un rendering completo con le ombre. Prima ogni materiale nuovo bloccava un fotogramma quando entrava in vista. Misura in SwiftShader (CPU), dal punto di partenza:
+  - prima dell'espansione: 444 ms per fotogramma;
+  - con l'espansione, senza precompilazione: 2.667 ms;
+  - con la precompilazione: 667 ms; il caricamento si allunga di circa 9 s, quasi tutti di compilazione in SwiftShader.
+
+  A regime, una volta compilati gli shader, un fotogramma costa 3 ms anche in SwiftShader. Dalla piazza: 264 draw call, 774k triangoli.
 - **FPS**: in SwiftShader (CPU) misuro solo draw call e triangoli, non gli FPS. Gli FPS veri vanno misurati sul tuo PC con F9, nel Benchmark Lab.
 
 ## Debug della mappa (F4)
