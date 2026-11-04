@@ -30,6 +30,7 @@ function aaaPads() {
   AV.pads.length = 0; const D = AAA_DEFS();
   for (const k in D) { const d = D[k]; let lo = 1e9; for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]]) lo = Math.min(lo, aaaH(AV.cx + d.u + a * d.w / 2, AV.cz + d.v + b * d.d / 2)); AV.pads.push({ x0: d.u - d.w / 2 - .6, x1: d.u + d.w / 2 + .6, z0: d.v - d.d / 2 - .6, z1: d.v + d.d / 2 + .6, y: lo + .05 }); d.base = lo + .2; }
   AAA.defs = D;
+  if (typeof v2Pads === 'function' && V2.on) v2Pads();   // villaggio esteso 2.0
 }
 function aaaBuildWorld() {
   AAA.extras = []; AAA.plants = []; const t0 = performance.now(); AAA.on = true; AAA.st = { hq: AAA.st.hq, assetMs: AAA.st.assetMs, models: AAA.st.models, texHQ: AAA.st.texHQ }; AAA.rooms.length = 0; AAA.objs.length = 0;
@@ -80,13 +81,14 @@ function aaaBuildWorld() {
   // recinzioni dei campi a sud
   apFence(G, [U(-6, 17.5), U(-6, 40), U(4, 60)], 9);
   G.build(); aaaPlaceModels(); if (typeof pipeVillage === 'function') pipeVillage();
+  if (typeof v2Build === 'function' && V2.on) { v2Build(); AAA.st.v2 = V2.stats; }   // villaggio esteso 2.0 (centro storico, residenziale, fattoria, zona militare, periferia)
   // vegetazione: bocage, querce, frutteto, alberi lungo il viottolo, erba, fiori, edera
   const tOak = aaaTreeTemplate('oak', 7), tApple = aaaTreeTemplate('apple', 9), tBush = aaaTreeTemplate('bush', 13);
   const oaks = aaaBocage(tBush, tOak).concat([[...U(22, -1.5), 1.15, .4], [...U(-34, -6), 1.05, 2.1], [...U(6, -42), .95, 1], [...U(-2, 28), 1.1, 3], [...U(60, 6), 1, 4]]);
   aaaPlantInstances(tOak, oaks.map(o => [o[0], o[1], o[2], o[3]]));
   const apples = []; { const sr = seeded(5); for (let i = 0; i < 9; i++) apples.push([...U(-30 + (i % 3) * 8 + (sr() - .5) * 2.5, -19 - Math.floor(i / 3) * 8 + (sr() - .5) * 2.5), .85 + sr() * .35, sr() * 6]); }
   aaaPlantInstances(tApple, apples); if (typeof aaaFallenLeaves === 'function') aaaFallenLeaves(oaks.concat(apples));
-  AAA.noGrass = (u, v) => AV.pads.some(p => u > p.x0 - .3 && u < p.x1 + .3 && v > p.z0 - .3 && v < p.z1 + .3) || (u > 26 && u < 52 && v > -24 && v < -4) || Math.abs(v - avRoadV(u)) < 2.8;
+  AAA.noGrass = (u, v) => (typeof V2 !== 'undefined' && V2.on && (v2RoadD(u, v) < .4 || v2PlazaD(u, v) < .6)) || AV.pads.some(p => u > p.x0 - .3 && u < p.x1 + .3 && v > p.z0 - .3 && v < p.z1 + .3) || (u > 26 && u < 52 && v > -24 && v < -4) || Math.abs(v - avRoadV(u)) < 2.8;
   aaaGrass(); aaaFlowers();
   aaaIvy(bA.faces['+z'], ax - 5.8, ax - 1.6, A.base + 5.4, A.base, 101, 1); aaaIvy(bA.faces['-x'], az - 3.5, az + 3.5, A.base + 3.5, A.base, 102, .7);
   aaaIvy(bB.faces['+z'], bx + 3, bx + 7.5, Bd.base + 2.8, Bd.base, 103, .8); aaaIvy({ axis: 'z', fixed: AV.cx + 27, out: -1 }, AV.cz - 9, AV.cz - 4.5, aaaH(AV.cx + 27, AV.cz - 6) + 1.5, aaaH(AV.cx + 27, AV.cz - 6) - .1, 104, .9);
@@ -95,6 +97,7 @@ function aaaBuildWorld() {
 }
 // chiesa lontana (silhouette per la composizione, a nord-ovest, fuori dalla zona esplorabile)
 function aaaChurch() {
+  if (typeof V2 !== 'undefined' && V2.on) return;   // con il villaggio esteso c'è la chiesa vera nel centro storico
   const G = new AGeo(), M = AAA.mats, x = AV.cx - 95, z = AV.cz - 150, y = aaaOuterH(x, z) - .5;
   G.add(M.stone, ABX.box, x, y + 5, z, 0, .3, 0, 9, 10, 22); G.add(M.stone, ABX.box, x + 1, y + 9, z + 13, 0, .3, 0, 5, 18, 5);
   const sp = new THREE.ConeGeometry(3.4, 11, 8); G.add(M.vc, sp, x + 1, y + 23.5, z + 13, 0, .3 + PI / 8, 0, 1, 1, 1, 0x4e545c);
@@ -243,7 +246,7 @@ function aaaDust() {
   const p = new THREE.Points(g, m); p.frustumCulled = false; scene.add(p); AAA.dust = p; (AAA.extras || (AAA.extras = [])).push(p);
 }
 function aaaUpdate(dt) {
-  MISSION.stageT += dt; AAA.time.value += dt; updateSubs(dt); aaaChunkTick(dt);
+  MISSION.stageT += dt; AAA.time.value += dt; updateSubs(dt); aaaChunkTick(dt); if (typeof v2Tick === 'function') v2Tick(dt);
   const t = AAA.time.value; if (!AAA.windOff) AAA.wind.value.set(.7 + .35 * Math.sin(t * .23), .3 + .2 * Math.sin(t * .17 + 1));
   if (AAA.windS) { const g = .18 + .08 * Math.sin(t * .3); AAA.windS.set(g, 0, 1); }
   if ((AAA.boomT -= dt) <= 0) { AAA.boomT = 28 + Math.random() * 40; const a = Math.random() * TAU; sfxBoom(new V3(P.pos.x + Math.cos(a) * 2500, 20, P.pos.z + Math.sin(a) * 2500), .6); }

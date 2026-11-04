@@ -286,6 +286,7 @@ addEventListener('keydown', e => {
   if (SCEN !== 'aaa' || !GAME.started) return;
   if (e.code === 'F8') { e.preventDefault(); LAB.ov = !LAB.ov; labOverlay(); if (LAB.panel) labUi(); }
   else if (e.code === 'F9') { e.preventDefault(); labPanel(!LAB.panel); }
+  else if (e.code === 'F4' && typeof v2DbgOpen === 'function') { e.preventDefault(); v2DbgOpen(); }
   else if (e.code === 'Escape' && LAB.run) labStop(true);
   else if (e.code === 'Escape' && LAB.panel) { e.preventDefault(); labPanel(false); }
   else return;
@@ -299,7 +300,7 @@ function labBlock(e) {
   const inPanel = e.target && e.target.closest && e.target.closest('#labPanel,#srPanel,#xalPanel,#xpcPanel,#falPanel');
   if (side && !LAB.panel && !sr && !inPanel) return;   // fuori dal pannello il gioco continua (si gioca con il pannello aperto)
   if (sr && !LAB.panel && !inPanel && /^(mousedown|mouseup|mousemove|wheel|contextmenu)$/.test(e.type)) return;   // camera orbitale dello showroom: la gestiscono i suoi listener
-  if (e.type.startsWith('key') && /^(F6|F7|F8|F9|F10|F11|Escape)$/.test(e.code)) return;   // tasti del laboratorio e dello showroom
+  if (e.type.startsWith('key') && /^(F4|F6|F7|F8|F9|F10|F11|Escape)$/.test(e.code)) return;   // tasti del laboratorio e dello showroom
   if (e.type.startsWith('key')) { if (inPanel && /^(Tab|Enter|Space|Arrow)/.test(e.code)) return; e.stopImmediatePropagation(); return; }
   if (inPanel) return;
   e.stopImmediatePropagation(); if (e.type !== 'mousemove') e.preventDefault();

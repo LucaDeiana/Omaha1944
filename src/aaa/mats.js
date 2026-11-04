@@ -23,7 +23,12 @@ uniform vec3 uInMin[8];uniform vec3 uInMax[8];
 float aInside(vec3 p){float r=0.;for(int i=0;i<8;i++){vec3 a=step(uInMin[i]-.06,p)*step(p,uInMax[i]+.06);r=max(r,a.x*a.y*a.z);}return r;}`;
 const AAA_IN_MIN = Array.from({ length: 8 }, () => new V3(1e5, 1e5, 1e5)), AAA_IN_MAX = Array.from({ length: 8 }, () => new V3(-1e5, -1e5, -1e5));
 // stanza interna (fino a 4 volumi): lì la luce indiretta (cielo e ambiente) è ridotta, il sole diretto no
-function aaaRoom(x0, y0, z0, x1, y1, z1) { const i = AAA.rooms.length; if (i >= 8) return; AAA.rooms.push([x0, y0, z0, x1, y1, z1]); AAA_IN_MIN[i].set(x0, y0, z0); AAA_IN_MAX[i].set(x1, y1, z1); }
+function aaaRoom(x0, y0, z0, x1, y1, z1) { const i = AAA.rooms.length; AAA.rooms.push([x0, y0, z0, x1, y1, z1]); if (i < 8) { AAA_IN_MIN[i].set(x0, y0, z0); AAA_IN_MAX[i].set(x1, y1, z1); } }
+// con più di 8 stanze (villaggio esteso) lo shader riceve le 8 più vicine alla camera (aggiornato 4 volte al secondo)
+function aaaRoomTick() {
+  const R = AAA.rooms; if (R.length <= 8) return; const c = camera.position, d = r => Math.hypot(Math.max(r[0] - c.x, 0, c.x - r[3]), Math.max(r[2] - c.z, 0, c.z - r[5]));
+  const near = R.slice().sort((a, b) => d(a) - d(b)).slice(0, 8); near.forEach((r, i) => { AAA_IN_MIN[i].set(r[0], r[1], r[2]); AAA_IN_MAX[i].set(r[3], r[4], r[5]); });
+}
 
 // patch comune: posizione nel mondo, interni, (opzionale) umidità/muschio e vento
 function aaaPatch(m, o = {}) {

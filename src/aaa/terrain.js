@@ -6,7 +6,7 @@
 //  La mesh vicina è fitta (0,28–1 m secondo il preset) e fonde erba, terra, fango e ghiaia con miscela per altezza
 //  della texture; il bagnato abbassa la rugosità. Le pozzanghere sono piani d'acqua posati nei punti bassi dei solchi.
 // ============================================================
-const AV = { cx: 0, cz: -100, half: 78, pads: [], banks: [] };
+const AV = { cx: 0, cz: -100, half: 146, dense: 92, pads: [], banks: [] };   // half: 78 → 146 m con il villaggio esteso 2.0 (griglia fitta entro ±dense)
 const avRoadV = u => 6 + 3.4 * Math.sin(u * .026 + .4);                 // strada principale (est-ovest), v locale
 const avLaneU = v => 13 + 2.2 * Math.sin(v * .045 + 1.1);               // viottolo verso nord (v negativi)
 // distanza da un segmento
@@ -26,7 +26,8 @@ function aaaH(x, z) {
   // aie degli edifici: piano, con raccordo di 2 m
   for (const p of AV.pads) { const dx = Math.max(p.x0 - u, 0, u - p.x1), dz = Math.max(p.z0 - v, 0, v - p.z1), d = Math.hypot(dx, dz); if (d < 3) y = lerp(p.y, y, smooth(d / 3)); }
   // argini del bocage (terrapieno con fosso)
-  const db = avBankD(u, v); if (db < 3.2) y += 1.15 * Math.exp(-((db / 1.25) ** 2)) - (db > 1.6 ? .32 * Math.exp(-(((db - 2.4) / .5) ** 2)) : 0);
+  const db = avBankD(u, v); if (db < 3.2 && !(typeof v2RoadD === 'function' && v2RoadD(u, v) < 2.5)) y += 1.15 * Math.exp(-((db / 1.25) ** 2)) - (db > 1.6 ? .32 * Math.exp(-(((db - 2.4) / .5) ** 2)) : 0);
+  // villaggio esteso 2.0: strade secondarie, piazza, trincee (gli argini si interrompono dove una strada li attraversa)
   // incrocio: leggermente spianato
   const dq = Math.hypot(u - 13, v - 6); if (dq < 11) y = lerp(y, 16 + .016 * 13 - .011 * 6 - .15, smooth(1 - dq / 11) * .8);
   // strada principale: piano stradale, bordi rialzati, due solchi con profondità variabile, dosso centrale
@@ -39,6 +40,7 @@ function aaaH(x, z) {
   }
   // viottolo: solchi più leggeri, striscia d'erba al centro
   if (v < rv - 1) { const lu = avLaneU(v), dl = u - lu, al = Math.abs(dl); if (al < 2.8) { y -= .08 * smooth(clamp((2.8 - al) / 1, 0, 1)); if (al < 1.6) { const rut = o => Math.exp(-(((dl - o) / .22) ** 2)); y -= .07 * (rut(-.72) + rut(.72)); } } }
+  if (typeof v2H === 'function' && V2.on) y = v2H(u, v, y);
   return y;
 }
 // pesi dei materiali: erba, terra, fango, ghiaia + bagnato
@@ -55,7 +57,8 @@ function aaaSplat(x, z) {
   for (const p of AV.pads) { const dx = Math.max(p.x0 - u, 0, u - p.x1), dz = Math.max(p.z0 - v, 0, v - p.z1), dd = Math.hypot(dx, dz); if (dd < 1.6) { const k = 1 - dd / 1.6; g *= 1 - k * .7; d += k * .6; gr += k * .2; } }
   const db = avBankD(u, v); if (db < 2.6) { g = Math.max(g, .4); d += .35 * Math.exp(-(((db - 2.3) / .6) ** 2)); wet += .25 * Math.exp(-(((db - 2.4) / .4) ** 2)); }
   d += (1 - g) * .1 + .06 * smooth(clamp((n - .66) * 4, 0, 1));   // chiazze di terra nell'erba
-  const s = g + d + m + gr || 1; return [g / s, d / s, m / s, gr / s, clamp(wet, 0, 1)];
+  const s = g + d + m + gr || 1, out = [g / s, d / s, m / s, gr / s, clamp(wet, 0, 1)];
+  return typeof v2Splat === 'function' && V2.on ? v2Splat(u, v, out) : out;
 }
 // shader del terreno: quattro strati fotografici fusi per altezza (luminanza come altezza), anti-ripetizione, bagnato
 function aaaTerrainMat() {
@@ -102,10 +105,13 @@ function aaaTerrainMat() {
   return m;
 }
 function aaaBuildTerrain() {
-  const PZ = AAA_PRESETS[AAA.preset], st = PZ.terr, h = AV.half + 6, n = Math.ceil(h * 2 / st) + 1;
+  const PZ = AAA_PRESETS[AAA.preset], st = PZ.terr, h = AV.half + 6;
+  // coordinate della griglia: passo del preset entro ±AV.dense, poi fino a 1,2 m verso il bordo (griglia rettilinea: nessuna crepa)
+  const ax = []; { const inner = Math.min(AV.dense, h); for (let a = -inner; a <= inner + 1e-6; a += st) ax.push(a); let a = inner, s2 = st; while (a < h - 1e-6) { s2 = Math.min(1.2, s2 * 1.08); a = Math.min(h, a + s2); ax.push(a); ax.unshift(-a); } }
+  const n = ax.length;
   const pos = new Float32Array(n * n * 3), spl = new Float32Array(n * n * 4), wet = new Float32Array(n * n), uv = new Float32Array(n * n * 2);
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
-    const k = j * n + i, x = AV.cx - h + i * st, z = AV.cz - h + j * st, s = aaaSplat(x, z);
+    const k = j * n + i, x = AV.cx + ax[i], z = AV.cz + ax[j], s = aaaSplat(x, z);
     pos[k * 3] = x; pos[k * 3 + 1] = aaaH(x, z); pos[k * 3 + 2] = z; spl.set(s.slice(0, 4), k * 4); wet[k] = s[4];
   }
   const idx = new Uint32Array((n - 1) * (n - 1) * 6); let o = 0;

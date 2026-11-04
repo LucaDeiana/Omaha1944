@@ -99,7 +99,7 @@ function pipeVillage() {
 }
 // ricerca deterministica: griglia attorno al villaggio, ingombro + 2 m libero da solidi, pendenza entro 0.5 m
 function pipeFindSpot(A) {
-  const W = A.man.parametri.width + 1.4, D = A.man.parametri.depth + 2.2, cands = [];
+  const W = A.man.parametri.width + 1.4, D = A.man.parametri.depth + 2.2, cands = [[AV.cx + 4.7, AV.cz - 17.4]];   // punto storico della casa (prima scelta)
   for (let r = 18; r <= 90; r += 4) for (let k = 0; k < 24; k++) { const a = k / 24 * Math.PI * 2; cands.push([AV.cx + Math.cos(a) * r, AV.cz + Math.sin(a) * r]); }
   for (const [x, z] of cands) {
     const hs = []; for (const [u, v] of [[-.5, -.5], [.5, -.5], [.5, .5], [-.5, .5], [0, 0], [0, -.5], [0, .5]]) hs.push(aaaH(x + u * W, z + v * D));
