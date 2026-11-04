@@ -35,6 +35,7 @@ async function aaaLoadAssets() {
     jobs.push(new Promise(res => loader.parse(bin.buffer, '', g => { AAA_M[k] = g.scene; res(); }, err => { console.warn('GLB', k, err); res(); })));
   }
   await Promise.all(jobs);
+  if (typeof pipeLoad === 'function') await Promise.all(PIPE_IDS.map(pipeLoad));   // asset della pipeline Blender (dopo le texture condivise)
   AAA.st.hq = true; AAA.st.assetMs = Math.round(performance.now() - t0); AAA.st.models = Object.keys(AAA_M).length; AAA.st.texHQ = Object.keys(TEXH).length;
 }
 // istanza di un modello: copia leggera (geometrie e materiali condivisi), ombre, luce degli interni, collisione semplice

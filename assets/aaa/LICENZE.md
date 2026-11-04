@@ -61,3 +61,6 @@ Caricatore glTF: `assets/lib/three/examples/js/GLTFLoader.js` da three@0.128.0 (
 | corteccia degli alberi | Bark 012 (`Bark012`, 1K) | https://ambientcg.com/view?id=Bark012 |
 
 I rametti di `assets/aaa/aaa_leaf.js` sono composti da me con le foglie scansionate (rotazione, scala, tinta), poi salvati in WebP.
+
+## Asset della pipeline Blender (`assets/aaa/pipeline/`)
+Geometria generata da script originali del progetto (`tools/asset-pipeline/`) con Blender 5.2.3 (`bpy`; il programma è GPL, i file generati non lo sono). I GLB non contengono texture: a runtime usano le texture Poly Haven CC0 elencate sopra.

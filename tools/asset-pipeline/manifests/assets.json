@@ -1,0 +1,9 @@
+{
+ "_nota": "Asset della pipeline: generatore (modulo in blender/generators), seme, parametri, distanze dei LOD per preset (metri), budget.",
+ "normandy_house_01": {
+  "generator": "normandy_house", "seed": 1944,
+  "params": { "width": 12.4, "depth": 6.6, "front_windows": 3, "back_windows": 2, "door_slot": 1, "wear": 0.45, "chimneys": "both" },
+  "lod_distances": { "LOW": [10, 35], "MEDIUM": [22, 60], "HIGH": [30, 80], "ULTRA": [42, 110] },
+  "budget": { "lod0_tri": 90000, "kb": 7000, "materials": 18 }
+ }
+}

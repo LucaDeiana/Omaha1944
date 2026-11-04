@@ -1,0 +1,66 @@
+{
+ "file": {
+  "percorso": "assets/aaa/pipeline/normandy_house_01.glb",
+  "kb": 6105.8
+ },
+ "mesh": {
+  "normandy_house_01_LOD0": {
+   "triangoli": 70358,
+   "primitive": 15
+  },
+  "normandy_house_01_LOD1": {
+   "triangoli": 12788,
+   "primitive": 15
+  },
+  "normandy_house_01_LOD2": {
+   "triangoli": 1392,
+   "primitive": 12
+  }
+ },
+ "errori": [],
+ "avvisi": [],
+ "materiali": [
+  "stone",
+  "plaster_int",
+  "quoin",
+  "wood_paint",
+  "glass",
+  "wood",
+  "iron",
+  "oak_beam",
+  "stone_wet",
+  "stone_attic",
+  "brick",
+  "clay",
+  "slate",
+  "floor",
+  "soot",
+  "glass_far",
+  "slate_far"
+ ],
+ "texture": 0,
+ "immagini": 0,
+ "bbox": {
+  "min": [
+   -6.367,
+   -0.6,
+   -3.745
+  ],
+  "max": [
+   6.367,
+   8.683,
+   3.764
+  ],
+  "dimensioni": [
+   12.735,
+   9.283,
+   7.509
+  ]
+ },
+ "lod_triangoli": [
+  70358,
+  12788,
+  1392
+ ],
+ "collisioni": 60
+}

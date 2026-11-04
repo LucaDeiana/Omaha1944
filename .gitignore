@@ -9,3 +9,4 @@ assets/music/personali/*
 versione.txt
 dist/
 /local-assets/
+__pycache__/

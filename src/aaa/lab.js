@@ -152,6 +152,7 @@ const LAB_FEAT = {
   wind: ['Animazione della vegetazione', on => { AAA.windOff = on; if (on) AAA.wind.value.set(0, 0); }],
   refl: ['Riflessi delle pozzanghere e dei vetri', on => { for (const m of [AAA.mats.water, AAA.mats.glass]) { if (on) (LAB.orig.env || (LAB.orig.env = new Map())).set(m, m.envMap); m.envMap = on ? null : LAB.orig.env.get(m); m.needsUpdate = true; } }],
   post: ['Post-processing (bloom, grading, FXAA, SSAO)', on => { AAA.noPost = on; }],
+  pipe: ['Asset della pipeline Blender (casa normanna)', on => { if (AAA.pipeHouse) { AAA.pipeHouse.obj.visible = !on; AAA.shadowDirty = 3; } }],
   extra: ['Dettagli non essenziali (oggetti, pulviscolo, fasci di luce)', on => { for (const o of AAA.extras || []) { if (on) o.userData.labVis = o.visible; o.visible = on ? false : o.userData.labVis !== false; } }],
 };
 function labSetFeat(k, on) { if (!!LAB.feat[k] === !!on) return; LAB.feat[k] = !!on; LAB_FEAT[k][1](!!on); }
@@ -223,7 +224,7 @@ function labUi(msg) {
   <div style="${LAB_SEC}">2 · RUN BENCHMARK</div>Durata <select id="labDur">${[20, 30, 60, 90, 120].map(d => `<option ${d === 60 ? 'selected' : ''}>${d}</option>`).join('')}</select> s · percorso A–H ${B('run', LAB.run ? 'In corso…' : 'Avvia', LAB.run ? 'disabled' : '')} ${B('stop', 'Interrompi')} ${B('all', 'Tutti i preset in sequenza')}<br><span style="opacity:.7">Riscaldamento escluso dalle statistiche · risoluzione dinamica sospesa · comandi del giocatore disattivati durante la misura · punti del percorso dentro i muri: ${LAB.pathBad ?? '?'}</span>
   <div style="${LAB_SEC}">3 · GRAPHICS PRESETS</div>Attivo <b>${AAA.preset}</b> · risoluzione interna ${labRes()} · ${Object.keys(AAA_PRESETS).map(k => B('preset_' + k, k)).join('')} <span style="opacity:.7">(ricarica la demo con il preset scelto)</span>
   <div style="${LAB_SEC}">4 · FEATURE ISOLATION</div>${Object.entries(LAB_FEAT).map(([k, [n]]) => `<label style="display:block"><input type="checkbox" data-f="${k}" ${LAB.feat[k] ? 'checked' : ''}> spegni ${n}</label>`).join('')}
-  ${B('sweep', 'Misura il costo di ogni effetto (20 s ciascuno)')} ${B('reset', 'Ripristina configurazione')}
+  ${B('sweep', 'Misura il costo di ogni effetto (15 s × 2)')} ${B('showroom', '3D Asset Showroom (F10)')} ${B('reset', 'Ripristina configurazione')}
   ${LAB.costs ? `<canvas id="labCost" width="520" height="${22 * LAB.costs.length + 10}"></canvas><div style="opacity:.7">Differenza di frame time medio rispetto al riferimento, stesso percorso. I costi non sono additivi.</div>` : ''}
   <div style="${LAB_SEC}">5 · RESULTS</div>
   <table style="width:100%;border-collapse:collapse;font-size:11px"><tr style="text-align:left;opacity:.7"><th></th><th>Preset</th><th>FPS</th><th>1% low</th><th>ms</th><th>P99</th><th>Draw</th><th>Tri</th><th>Note</th></tr>
@@ -257,6 +258,7 @@ function labClick(e) {
   else if (a === 'run') labStart(); else if (a === 'stop') { LAB.sweep = null; LAB.queue = null; try { sessionStorage.removeItem('aaa_lab_queue'); } catch (e2) { } labStop(true); }
   else if (a === 'reset') { labResetFeat(); for (const k in LAB.dg || {}) labDiag(k, false); LAB.dg = {}; labUi('Configurazione ripristinata.'); }
   else if (a === 'sweep') labFeatureSweep(15, 2);
+  else if (a === 'showroom' && typeof srOpen === 'function') { labPanel(false); srOpen(true); }
   else if (a === 'json') labDownload('omaha1944_lab_' + Date.now() + '.json', labJSON(), 'application/json');
   else if (a === 'csv') labDownload('omaha1944_lab_' + Date.now() + '.csv', labCSV(), 'text/csv');
   else if (a === 'shots') { const s = labShots(); for (const [k, v] of Object.entries(s)) { const l = document.createElement('a'); l.download = `omaha1944_${AAA.preset}_${k}.jpg`; l.href = v.full; l.click(); } labUi('Foto acquisite per ' + AAA.preset + ' (' + labRes() + ').'); }
@@ -291,8 +293,11 @@ addEventListener('keydown', e => {
 }, true);
 // pannello aperto: mouse e tastiera servono al pannello, il soldato non riceve input
 function labBlock(e) {
-  if (SCEN !== 'aaa' || !LAB.panel || typeof GAME === 'undefined' || !GAME.started) return;
-  const inPanel = e.target && e.target.closest && e.target.closest('#labPanel');
+  const sr = typeof ASR !== 'undefined' && ASR.on;
+  if (SCEN !== 'aaa' || !(LAB.panel || sr) || typeof GAME === 'undefined' || !GAME.started) return;
+  const inPanel = e.target && e.target.closest && e.target.closest('#labPanel,#srPanel');
+  if (sr && !LAB.panel && !inPanel && /^(mousedown|mouseup|mousemove|wheel|contextmenu)$/.test(e.type)) return;   // camera orbitale dello showroom: la gestiscono i suoi listener
+  if (e.type.startsWith('key') && /^(F8|F9|F10|Escape)$/.test(e.code)) return;   // tasti del laboratorio e dello showroom
   if (e.type.startsWith('key')) { if (inPanel && /^(Tab|Enter|Space|Arrow)/.test(e.code)) return; e.stopImmediatePropagation(); return; }
   if (inPanel) return;
   e.stopImmediatePropagation(); if (e.type !== 'mousemove') e.preventDefault();

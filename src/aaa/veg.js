@@ -45,6 +45,7 @@ function aaaPlantInstances(tpl, list, tint) {
   b.castShadow = b.receiveShadow = l.castShadow = l.receiveShadow = true; b.userData.chunk = l.userData.chunk = [40, 0]; l.customDepthMaterial = AAA.mats.leafDepth;
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color();
   list.forEach(([x, z, s, ry, t], i) => { q.setFromAxisAngle(new V3(0, 1, 0), ry); m4.compose(new V3(x, aaaH(x, z), z), q, new V3(s, s * (.9 + (i % 5) * .05), s)); if (i < b.count) b.setMatrixAt(i, m4); l.setMatrixAt(i, m4); c.setRGB(...(t || tint || [1, 1, 1])); l.setColorAt(i, c); });
+  const pr = tpl.kind === 'bush' ? 1.8 : 4.5; for (const e of list) (AAA.plants || (AAA.plants = [])).push([e[0], e[1], e[2] * pr]);   // ingombro della chioma (posa degli asset della pipeline)
   l.instanceColor.needsUpdate = true; scene.add(b, l); AAA.st.trees = (AAA.st.trees || 0) + list.length; return [b, l];
 }
 // erba: ciuffi di lame (base scura, punta chiara), normali verso l'alto, istanze dove il terreno è erboso

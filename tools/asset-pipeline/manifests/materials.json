@@ -1,0 +1,210 @@
+{
+ "_nota": "Libreria materiali della pipeline. Le mesh portano solo il NOME dello slot; a runtime ogni slot diventa un MeshStandardMaterial condiviso fra tutti gli asset, con le texture PBR CC0 già incorporate in assets/aaa/aaa_tex.js (nessuna copia). tile = metri coperti da una ripetizione della texture (le UV della pipeline sono in metri). 'proc' = materiale procedurale senza texture fotografica dedicata (limite documentato).",
+ "stone": {
+  "tex": "muro_pietra",
+  "tile": 2.2,
+  "tint": [
+   1.0,
+   0.97,
+   0.92
+  ],
+  "rough": 1.0,
+  "desc": "Pietrame calcareo irregolare (Poly Haven rustic_stone_wall_02)",
+  "moss": 0.5,
+  "damp": 0.8
+ },
+ "stone_wet": {
+  "tex": "muro_pietra",
+  "tile": 1.6,
+  "tint": [
+   0.62,
+   0.62,
+   0.6
+  ],
+  "rough": 0.72,
+  "desc": "Pietra umida dello zoccolo: stessa texture, più scura e meno ruvida",
+  "moss": 1.0,
+  "damp": 1.0
+ },
+ "stone_attic": {
+  "tex": "muro_pietra",
+  "tile": 2.2,
+  "tint": [
+   0.55,
+   0.5,
+   0.45
+  ],
+  "rough": 1.0,
+  "desc": "Faccia interna dei timpani nel sottotetto"
+ },
+ "quoin": {
+  "tex": "intonaco_interno",
+  "tile": 1.4,
+  "tint": [
+   1.32,
+   1.27,
+   1.12
+  ],
+  "rough": 0.95,
+  "desc": "Pietra da taglio chiara (cantonali, mostre). Nessuna texture CC0 di pietra di Caen nel progetto: si usa l'intonaco a calce consumato (superficie liscia con macchie) schiarito e scaldato",
+  "moss": 0.35,
+  "damp": 0.6
+ },
+ "plaster_int": {
+  "tex": "intonaco_pietra",
+  "tile": 2.0,
+  "tint": [
+   2.5,
+   2.42,
+   2.25
+  ],
+  "rough": 1.0,
+  "desc": "Intonaco a calce su pietrame (Poly Haven plastered_stone_wall), schiarito"
+ },
+ "wood": {
+  "tex": "tavole_vecchie",
+  "tile": 1.6,
+  "tint": [
+   0.95,
+   0.9,
+   0.85
+  ],
+  "rough": 0.9,
+  "desc": "Legno consumato (Poly Haven old_planks_02)"
+ },
+ "wood_paint": {
+  "tex": "tavole_vecchie",
+  "tile": 1.6,
+  "tint": [
+   0.52,
+   0.66,
+   0.6
+  ],
+  "rough": 0.85,
+  "desc": "Scuri e infissi verniciati di verde salvia sbiadito (stessa texture tinta)"
+ },
+ "oak_beam": {
+  "tex": "tavole_fienile",
+  "tile": 2.0,
+  "tint": [
+   0.62,
+   0.5,
+   0.4
+  ],
+  "rough": 0.9,
+  "desc": "Quercia scura di travi e telai (Poly Haven raw_plank_wall)"
+ },
+ "floor": {
+  "tex": "pavimento_pietra",
+  "tile": 1.2,
+  "tint": [
+   1.6,
+   1.5,
+   1.4
+  ],
+  "rough": 0.95,
+  "desc": "Lastre di pietra (Poly Haven slate_floor)"
+ },
+ "slate": {
+  "tex": "ardesia",
+  "tile": 4.5,
+  "tint": [
+   0.5,
+   0.56,
+   0.66
+  ],
+  "rough": 0.62,
+  "desc": "Ardesia: ogni lastra è geometria; la texture roof_slates_02 dà solo grana e variazione di tono",
+  "moss": 0.0
+ },
+ "slate_far": {
+  "tex": "ardesia",
+  "tile": 1.4,
+  "tint": [
+   0.47,
+   0.52,
+   0.62
+  ],
+  "rough": 0.75,
+  "desc": "Falda piana del LOD2 con texture di ardesia a corsi"
+ },
+ "clay": {
+  "tex": "coppi",
+  "tile": 2.0,
+  "tint": [
+   0.72,
+   0.58,
+   0.52
+  ],
+  "rough": 0.85,
+  "desc": "Coppi di colmo e comignoli in terracotta (Poly Haven clay_roof_tiles_02)"
+ },
+ "brick": {
+  "tex": "mattoni",
+  "tile": 1.2,
+  "tint": [
+   0.9,
+   0.85,
+   0.8
+  ],
+  "rough": 0.9,
+  "desc": "Mattoni della testa del comignolo (Poly Haven brick_wall_005)"
+ },
+ "iron": {
+  "tex": "metallo",
+  "tile": 0.6,
+  "tint": [
+   0.3,
+   0.3,
+   0.32
+  ],
+  "rough": 0.75,
+  "metal": 0.6,
+  "desc": "Ferro ossidato e ghisa (Poly Haven rusty_metal_02)"
+ },
+ "glass": {
+  "proc": true,
+  "color": [
+   0.32,
+   0.38,
+   0.4
+  ],
+  "rough": 0.06,
+  "metal": 0.0,
+  "opacity": 0.38,
+  "env": 1.0,
+  "desc": "Vetro sottile leggermente verdastro (procedurale, riflessi dalla cubemap della demo)"
+ },
+ "glass_far": {
+  "proc": true,
+  "color": [
+   0.07,
+   0.08,
+   0.09
+  ],
+  "rough": 0.3,
+  "desc": "Vano scuro della finestra nel LOD2 (procedurale)"
+ },
+ "moss": {
+  "tex": "erba",
+  "tile": 0.5,
+  "tint": [
+   0.42,
+   0.52,
+   0.26
+  ],
+  "rough": 1.0,
+  "desc": "Muschio: forme di geometria con texture d'erba tinta (approssimazione: nessuna texture CC0 di muschio nel progetto)"
+ },
+ "soot": {
+  "tex": "muro_pietra",
+  "tile": 1.5,
+  "tint": [
+   0.13,
+   0.12,
+   0.11
+  ],
+  "rough": 1.0,
+  "desc": "Fondo del camino annerito dal fumo"
+ }
+}

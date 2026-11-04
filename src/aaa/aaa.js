@@ -32,8 +32,8 @@ function aaaPads() {
   AAA.defs = D;
 }
 function aaaBuildWorld() {
-  AAA.extras = []; const t0 = performance.now(); AAA.on = true; AAA.st = { hq: AAA.st.hq, assetMs: AAA.st.assetMs, models: AAA.st.models, texHQ: AAA.st.texHQ }; AAA.rooms.length = 0; AAA.objs.length = 0;
-  for (let i = 0; i < 6; i++) { AAA_IN_MIN[i].set(1e5, 1e5, 1e5); AAA_IN_MAX[i].set(-1e5, -1e5, -1e5); }
+  AAA.extras = []; AAA.plants = []; const t0 = performance.now(); AAA.on = true; AAA.st = { hq: AAA.st.hq, assetMs: AAA.st.assetMs, models: AAA.st.models, texHQ: AAA.st.texHQ }; AAA.rooms.length = 0; AAA.objs.length = 0;
+  for (let i = 0; i < 8; i++) { AAA_IN_MIN[i].set(1e5, 1e5, 1e5); AAA_IN_MAX[i].set(-1e5, -1e5, -1e5); }
   WORLD.mortarPits = []; WORLD.aaSites = []; WORLD.tobruks = []; WORLD.bombard = 'off';
   aaaPads(); buildHF(); buildHC(); buildWater(); if (WORLD.waterMesh) WORLD.waterMesh.visible = false;
   aaaMats(); aaaBuildTerrain(); aaaPuddles(); aaaRocks();
@@ -79,7 +79,7 @@ function aaaBuildWorld() {
   apCalvary(G, ...U(20.5, 12)); apSign(G, ...U(17.8, 1.4), -.3, 'VIERVILLE 3 KM');
   // recinzioni dei campi a sud
   apFence(G, [U(-6, 17.5), U(-6, 40), U(4, 60)], 9);
-  G.build(); aaaPlaceModels();
+  G.build(); aaaPlaceModels(); if (typeof pipeVillage === 'function') pipeVillage();
   // vegetazione: bocage, querce, frutteto, alberi lungo il viottolo, erba, fiori, edera
   const tOak = aaaTreeTemplate('oak', 7), tApple = aaaTreeTemplate('apple', 9), tBush = aaaTreeTemplate('bush', 13);
   const oaks = aaaBocage(tBush, tOak).concat([[...U(22, -1.5), 1.15, .4], [...U(-34, -6), 1.05, 2.1], [...U(6, -42), .95, 1], [...U(-2, 28), 1.1, 3], [...U(60, 6), 1, 4]]);

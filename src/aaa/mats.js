@@ -19,11 +19,11 @@ const AAA_GLSL_NOISE = `
 float aH(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float aN(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(aH(i),aH(i+vec2(1,0)),f.x),mix(aH(i+vec2(0,1)),aH(i+vec2(1,1)),f.x),f.y);}
 float aF(vec2 p){return aN(p)*.5+aN(p*2.03+7.)*.3+aN(p*4.1+3.)*.2;}
-uniform vec3 uInMin[6];uniform vec3 uInMax[6];
-float aInside(vec3 p){float r=0.;for(int i=0;i<6;i++){vec3 a=step(uInMin[i]-.06,p)*step(p,uInMax[i]+.06);r=max(r,a.x*a.y*a.z);}return r;}`;
-const AAA_IN_MIN = Array.from({ length: 6 }, () => new V3(1e5, 1e5, 1e5)), AAA_IN_MAX = Array.from({ length: 6 }, () => new V3(-1e5, -1e5, -1e5));
+uniform vec3 uInMin[8];uniform vec3 uInMax[8];
+float aInside(vec3 p){float r=0.;for(int i=0;i<8;i++){vec3 a=step(uInMin[i]-.06,p)*step(p,uInMax[i]+.06);r=max(r,a.x*a.y*a.z);}return r;}`;
+const AAA_IN_MIN = Array.from({ length: 8 }, () => new V3(1e5, 1e5, 1e5)), AAA_IN_MAX = Array.from({ length: 8 }, () => new V3(-1e5, -1e5, -1e5));
 // stanza interna (fino a 4 volumi): lì la luce indiretta (cielo e ambiente) è ridotta, il sole diretto no
-function aaaRoom(x0, y0, z0, x1, y1, z1) { const i = AAA.rooms.length; if (i >= 6) return; AAA.rooms.push([x0, y0, z0, x1, y1, z1]); AAA_IN_MIN[i].set(x0, y0, z0); AAA_IN_MAX[i].set(x1, y1, z1); }
+function aaaRoom(x0, y0, z0, x1, y1, z1) { const i = AAA.rooms.length; if (i >= 8) return; AAA.rooms.push([x0, y0, z0, x1, y1, z1]); AAA_IN_MIN[i].set(x0, y0, z0); AAA_IN_MAX[i].set(x1, y1, z1); }
 
 // patch comune: posizione nel mondo, interni, (opzionale) umidità/muschio e vento
 function aaaPatch(m, o = {}) {
