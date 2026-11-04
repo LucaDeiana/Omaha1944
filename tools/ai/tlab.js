@@ -48,7 +48,7 @@ const URL = 'file://' + path.resolve(__dirname, '../../index.html');
   const soak = await p.evaluate(() => new Promise(r => { labSoak(2, 8); const w = setInterval(() => { if (LAB.soakRes) { clearInterval(w); r(LAB.soakRes); } }, 500); }));
   ok('test di accumulo: geometrie, texture e programmi non crescono fra un giro e l\'altro', soak.crescita.geometrie <= 0 && soak.crescita.texture <= 0 && soak.crescita.programmi <= 0, JSON.stringify(soak.crescita));
   // cambio di preset: ricarica e avvio automatico con il nuovo preset
-  await p.evaluate(() => labReload('MEDIUM', false)); await p.waitForLoadState('load'); await p.waitForTimeout(2500); for (let i = 0; i < 90 && await p.evaluate(() => !(typeof GAME !== 'undefined' && GAME.started)); i++) await p.waitForTimeout(1000); await p.waitForTimeout(2500);
+  await Promise.all([p.waitForNavigation(), p.evaluate(() => { setTimeout(() => labReload('MEDIUM', false), 50); })]); await p.waitForTimeout(2500); for (let i = 0; i < 90 && await p.evaluate(() => !(typeof GAME !== 'undefined' && GAME.started)).catch(() => true); i++) await p.waitForTimeout(1000); await p.waitForTimeout(2500);
   ok('cambio di preset: la demo riparte da sola con MEDIUM e il pannello aperto', await p.evaluate(() => AAA.preset === 'MEDIUM' && SCEN === 'aaa' && LAB.panel));
   // ritorno al menù: ricarica senza avvio automatico
   await Promise.all([p.waitForNavigation(), p.evaluate(() => { sessionStorage.removeItem('aaa_autostart'); setTimeout(() => location.reload(), 50); })]); await p.waitForTimeout(3000);
