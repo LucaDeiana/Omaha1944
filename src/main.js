@@ -70,6 +70,7 @@ async function startGame() {
   try {
     await step('Caricamento delle texture fotografiche…'); await preloadPhotos();
     await step('Preparazione del motore grafico e delle texture…'); initEngine(); initFX(); initWeapons(); buildPlaneGeos();
+    if (SCEN === 'aaa' && typeof aaaLoadAssets === 'function') { await step('Caricamento di texture e modelli della tech demo…'); await aaaLoadAssets(); }
     await step('Generazione della costa normanna…'); buildWorld();
     await step('Imbarco delle truppe…'); initMission(); initHUD(); initFun(); initNPC(); initStations(); initInput();
     await step('Registrazione dei suoni…'); await audioP;

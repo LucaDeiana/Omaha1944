@@ -59,7 +59,7 @@ function apTool(G, x, z, ry, kind, lean = .25, y0) {
 // muro a secco: pietre irregolari una per una, con copertina; collider unico
 function apDryWall(G, x0, z0, x1, z1, h = 1.3, seed = 1, gap) {
   const M = AAA.mats, sr = seeded(seed), r = (a, b) => a + sr() * (b - a), L = Math.hypot(x1 - x0, z1 - z0), ry = Math.atan2(-(z1 - z0), x1 - x0), dx = (x1 - x0) / L, dz = (z1 - z0) / L;
-  const stone = AAA.mats.wallStone || (AAA.mats.wallStone = aaaTri('stone', .7, { nStr: 1.6, macro: .3, moss: 1.3, damp: 1, color: 0xc8bea8 }));
+  const stone = AAA.mats.wallStone || (AAA.mats.wallStone = aaaTri('stone', .7, { nStr: 1.6, macro: .3, moss: 1.3, damp: 1, hq: 'muro_secco', hqScale: .6, color: 0xc8bea8 }));
   const ico = AP.rock || (AP.rock = (() => { const g = new THREE.IcosahedronGeometry(1, 1), p = g.attributes.position; for (let i = 0; i < p.count; i++) { const k = .85 + ((i * 7919) % 13) / 13 * .3; p.setXYZ(i, p.getX(i) * k, p.getY(i) * k, p.getZ(i) * k); } g.computeVertexNormals(); return g; })());
   const segs = gap ? [[0, gap[0]], [gap[1], L]] : [[0, L]];
   for (const [a0, a1] of segs) {

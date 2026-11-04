@@ -61,16 +61,23 @@ function aaaSplat(x, z) {
 function aaaTerrainMat() {
   const m = new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0, map: TEX.grass.map, normalMap: TEX.grass.normal });
   m.onBeforeCompile = sh => {
-    for (const [k, t] of [['tG', TEX.grass], ['tD', TEX.dirt], ['tR', TEX.cobble], ['tS', TEX.sand]]) { sh.uniforms[k] = { value: t.map }; sh.uniforms[k + 'n'] = { value: t.normal }; }
+    const H = typeof TEXH !== 'undefined' && TEXH.erba ? TEXH : null;
+    for (const [k, t] of [['tG', H ? H.erba : TEX.grass], ['tD', H ? H.terra : TEX.dirt], ['tR', H ? H.ghiaia : TEX.cobble], ['tS', H ? H.ghiaia : TEX.sand], ['tM', H ? H.fango : TEX.dirt]]) { sh.uniforms[k] = { value: t.map }; sh.uniforms[k + 'n'] = { value: t.normal }; }
+    sh.uniforms.tMn = sh.uniforms.tMn;
+    if (H) sh.fragmentShader = '#define AAA_HQT\n' + sh.fragmentShader;
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec4 spl;attribute float wet;varying vec4 vSpl;varying float vWet;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvSpl=spl;vWet=wet;');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec4 vSpl;varying float vWet;uniform sampler2D tG,tD,tR,tS,tGn,tDn,tRn,tSn;')
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec4 vSpl;varying float vWet;uniform sampler2D tG,tD,tR,tS,tM,tGn,tDn,tRn,tSn,tMn;')
       .replace('#include <map_fragment>', `
         vec2 w = vAW.xz; float mx = smoothstep(.3,.7,aN(w*.06));
         vec2 uA = w*.42, uB = vec2(w.y,-w.x)*.17+.3;
         vec4 g1 = mapTexelToLinear(texture2D(tG, uA*1.3)), g2 = mapTexelToLinear(texture2D(tG, uB*1.1));
         vec4 cG = mix(g1, g2, mx*.6); cG.rgb *= vec3(.86,.95,.7) * (.8 + .4*aN(w*.33));
         vec4 cD = mix(mapTexelToLinear(texture2D(tD, uA)), mapTexelToLinear(texture2D(tD, uB*1.4)), mx*.5); cD.rgb *= vec3(.72,.66,.58);
-        vec4 cM = cD; cM.rgb *= vec3(.48,.43,.37);
+        #ifdef AAA_HQT
+          vec4 cM = mapTexelToLinear(texture2D(tM, uA*1.1)); cM.rgb *= vec3(.86,.74,.6); cG.rgb *= vec3(.82,1.,.62); cD.rgb *= .95;
+        #else
+          vec4 cM = cD; cM.rgb *= vec3(.48,.43,.37);
+        #endif
         vec4 cR = mapTexelToLinear(texture2D(tR, uA*1.6)); cR.rgb = mix(cR.rgb, mapTexelToLinear(texture2D(tS, uA*2.1)).rgb, .45) * vec3(.85,.82,.76);
         // miscela per altezza: il materiale "più alto" vince ai bordi (sassi che emergono dal fango, ciuffi d'erba)
         float hG = dot(cG.rgb, vec3(.33))*1.4 + vSpl.x*2.2, hD = dot(cD.rgb,vec3(.33)) + vSpl.y*2.2, hM = .35 + vSpl.z*2.2, hR = dot(cR.rgb,vec3(.33))*1.6 + vSpl.w*2.2;
@@ -84,7 +91,7 @@ function aaaTerrainMat() {
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = clamp(aRough*.9 + .08, .06, 1.);')
       .replace('#include <normal_fragment_maps>', `
         vec3 nG = texture2D(tGn, uA*1.3).xyz*2.-1., nD = texture2D(tDn, uA).xyz*2.-1., nR = texture2D(tRn, uA*1.6).xyz*2.-1.;
-        vec3 tn = nG*bw.x + nD*(bw.y + bw.z*.5) + nR*bw.w*1.3; tn.xy *= 1. - wetK*.6;
+        vec3 nM = texture2D(tMn, uA*1.1).xyz*2.-1.; vec3 tn = nG*bw.x + nD*bw.y + nM*bw.z + nR*bw.w*1.3; tn.xy *= 1. - wetK*.6;
         vec3 wn = normalize(vNormalW + vec3(tn.x, 0., tn.y)*.9);
         normal = normalize(mat3(viewMatrix)*wn);`);
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vNormalW;').replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nvNormalW = normalize(mat3(modelMatrix)*objectNormal);');

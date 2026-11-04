@@ -49,7 +49,7 @@ function aaaPatch(m, o = {}) {
         }` : '') + '\n#include <project_vertex>')
       .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n{ vec4 w4 = vec4(transformed,1.);\n#ifdef USE_INSTANCING\nw4 = instanceMatrix * w4;\n#endif\nvAW = (modelMatrix * w4).xyz; }');
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vAW;uniform float uBaseY,uMoss,uDamp;' + AAA_GLSL_NOISE)
-      .replace('#include <aomap_fragment>', `{ float ins = aInside(vAW); reflectedLight.indirectDiffuse *= mix(vec3(1.), vec3(.42,.36,.3), ins); reflectedLight.indirectSpecular *= mix(1., .25, ins); }
+      .replace('#include <aomap_fragment>', `{ float ins = aInside(vAW); reflectedLight.indirectDiffuse *= mix(vec3(1.), vec3(.6,.52,.42), ins); reflectedLight.indirectSpecular *= mix(1., .25, ins); }
         #include <aomap_fragment>`);
     if (o.moss || o.damp) sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
         { float hy = vAW.y - uBaseY, n = aF(vAW.xz*1.7 + vAW.y*.9), n2 = aF(vec2(vAW.x+vAW.z, vAW.y)*3.1);
@@ -65,13 +65,13 @@ function aaaPatch(m, o = {}) {
 }
 // materiale fotografico triplanare in coordinate del mondo, due scale miscelate, rugosità dall'alfa
 function aaaTri(name, scale, o = {}) {
-  const tex = TEX[name]; const m = new THREE.MeshStandardMaterial({ vertexColors: !!o.vc, map: tex.map, normalMap: tex.normal, roughness: o.rough ?? 1, metalness: o.metal || 0, color: o.color ?? 0xffffff, side: o.side || THREE.FrontSide });
+  const hq = o.hq && typeof TEXH !== 'undefined' && TEXH[o.hq], tex = hq || TEX[name]; if (hq && o.hqScale) scale = o.hqScale; const m = new THREE.MeshStandardMaterial({ vertexColors: !!o.vc, map: tex.map, normalMap: tex.normal, roughness: o.rough ?? 1, metalness: o.metal || 0, color: o.color ?? 0xffffff, side: o.side || THREE.FrontSide });
   m.color.convertSRGBToLinear();
   const p0 = m.onBeforeCompile;
   m.onBeforeCompile = (sh, r) => {
-    sh.uniforms.uTS = { value: scale }; sh.uniforms.uTN = { value: o.nStr ?? 1 }; sh.uniforms.uMacro = { value: o.macro ?? .18 };
+    sh.uniforms.uTS = { value: scale }; sh.uniforms.uTN = { value: hq ? (o.nStrHQ ?? 1.1) : (o.nStr ?? 1) }; sh.uniforms.uMacro = { value: o.macro ?? .18 }; sh.uniforms.tArm = { value: hq ? hq.arm : tex.map };
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vTN;').replace('#include <begin_vertex>', '#include <begin_vertex>\n{ mat3 nm = mat3(modelMatrix);\n#ifdef USE_INSTANCING\nnm = mat3(modelMatrix*instanceMatrix);\n#endif\nvTN = normalize(nm*objectNormal); }');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vTN;uniform float uTS,uTN,uMacro;')
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vTN;uniform float uTS,uTN,uMacro;uniform sampler2D tArm;' + (hq ? '\n#define AAA_HQ' : ''))
       .replace('#include <map_fragment>', `
         vec3 bw=pow(abs(vTN),vec3(5.));bw/=dot(bw,vec3(1.));
         vec2 tx=vAW.zy*uTS,ty=vAW.xz*uTS,tz=vAW.xy*uTS; vec2 tx2=vec2(-vAW.y,vAW.z)*uTS*.43+.37,ty2=vec2(vAW.z,-vAW.x)*uTS*.43+.61,tz2=vec2(-vAW.y,vAW.x)*uTS*.43+.13;
@@ -80,8 +80,11 @@ function aaaTri(name, scale, o = {}) {
         vec4 c2=mapTexelToLinear(texture2D(map,tx2))*bw.x+mapTexelToLinear(texture2D(map,ty2))*bw.y+mapTexelToLinear(texture2D(map,tz2))*bw.z;
         vec4 tcol = mix(c1, c2, bl*.5);
         float mac = aF(vAW.xz*.09 + vAW.y*.05); tcol.rgb *= 1. + (mac-.5)*uMacro*2.;
-        diffuseColor *= vec4(tcol.rgb,1.);`)
-      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor *= mix(.62,1.,tcol.a);')
+        diffuseColor *= vec4(tcol.rgb,1.);
+        #ifdef AAA_HQ
+          vec4 arm = texture2D(tArm,tx)*bw.x+texture2D(tArm,ty)*bw.y+texture2D(tArm,tz)*bw.z; diffuseColor.rgb *= mix(1., arm.r, .75);
+        #endif`)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n#ifdef AAA_HQ\nroughnessFactor *= mix(.55, 1., arm.g);\n#else\nroughnessFactor *= mix(.62,1.,tcol.a);\n#endif')
       .replace('#include <normal_fragment_maps>', `
         vec3 nx=texture2D(normalMap,tx).xyz*2.-1.,ny=texture2D(normalMap,ty).xyz*2.-1.,nz=texture2D(normalMap,tz).xyz*2.-1.;
         vec3 wn=normalize(vTN+uTN*(bw.x*vec3(0.,nx.y,nx.x)+bw.y*vec3(ny.x,0.,ny.y)+bw.z*vec3(nz.x,nz.y,0.)));
@@ -89,7 +92,7 @@ function aaaTri(name, scale, o = {}) {
     if (p0) p0(sh, r);
   };
   aaaPatch(m, o);
-  const k0 = m.customProgramCacheKey; m.customProgramCacheKey = () => 'tri' + name + k0();
+  const k0 = m.customProgramCacheKey; m.customProgramCacheKey = () => 'tri' + name + (hq ? 'hq' : '') + k0();
   return m;
 }
 // materiali condivisi della demo (creati una volta)
@@ -101,12 +104,12 @@ function aaaMats() {
   M.stoneDark = aaaTri('stone', .55, { nStr: 1.6, macro: .2, moss: 1.2, damp: 1.3, color: 0xa89e8a });
   M.plaster = aaaTri('plaster', .45, { nStr: 1, macro: .25, damp: 1.2, moss: .4, color: 0xe6dcc4 });
   M.brick = aaaTri('brick', .75, { nStr: 1.3, macro: .16, damp: 1, moss: .5, color: 0xe0b8a0 });
-  M.wood = aaaTri('wood', .9, { nStr: 1.1, macro: .25, color: 0xa08a70 });
-  M.woodDark = aaaTri('wood', .9, { nStr: 1.1, macro: .25, color: 0x6a5a48 });
-  M.woodOld = aaaTri('wood', .7, { nStr: 1.3, macro: .3, color: 0x8a8070, damp: .8, moss: .5 });
-  M.paint = aaaTri('wood', .9, { nStr: .8, macro: .3, vc: true, rough: .9 });   // persiane e porte dipinte: colore dai vertici
-  M.metal = aaaTri('metal', .8, { nStr: .8, rough: .7, metal: .35, macro: .3, color: 0x9a9690 });
-  M.rust = aaaTri('metal', .6, { nStr: 1, rough: .85, metal: .2, macro: .4, color: 0x8a5a3e });
+  M.wood = aaaTri('wood', .9, { nStr: 1.1, macro: .25, color: 0xb8a088, hq: 'tavole_vecchie', hqScale: .55 });
+  M.woodDark = aaaTri('wood', .9, { nStr: 1.1, macro: .25, color: 0x7a6a58, hq: 'tavole_vecchie', hqScale: .6 });
+  M.woodOld = aaaTri('wood', .7, { nStr: 1.3, macro: .3, color: 0xa89c88, damp: .8, moss: .5, hq: 'tavole_fienile', hqScale: .5 });
+  M.paint = aaaTri('wood', .9, { nStr: .8, macro: .3, vc: true, rough: .9, hq: 'tavole_vecchie', hqScale: .7 });   // persiane e porte dipinte: colore dai vertici
+  M.metal = aaaTri('metal', .8, { nStr: .8, rough: .7, metal: .35, macro: .3, color: 0x9a9690, hq: 'metallo', hqScale: 1.2 });
+  M.rust = aaaTri('metal', .6, { nStr: 1, rough: .85, metal: .2, macro: .4, color: 0xc8a088, hq: 'metallo', hqScale: 1 });
   M.roofTile = aaaPatch(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .86, metalness: 0, normalMap: TEX.roof.normal, normalScale: new THREE.Vector2(.5, .5) }), { key: 'tile' });
   M.vc = aaaPatch(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .85 }), { key: 'vc' });
   M.cloth = aaaPatch(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95, normalMap: TEX.fabric.normal, normalScale: new THREE.Vector2(.6, .6) }), { key: 'cloth' });

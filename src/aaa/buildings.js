@@ -184,7 +184,7 @@ function aaaGutter(G, o) {
 function aaaBuilding(def) {
   const M = aaaMats(), sr = seeded(def.seed || 1), G = new AGeo();
   const base = def.base, t = def.t || .55, top = base + def.storeys * def.sh;
-  const wallMat = def.wall === 'intonaco' ? aaaTri('plaster', .45, { nStr: 1, macro: .28, damp: 1.3, moss: .5, baseY: base, color: def.wallCol || 0xe2d6bc }) : def.wall === 'mattoni' ? aaaTri('brick', .75, { nStr: 1.3, macro: .2, damp: 1.2, moss: .6, baseY: base, color: 0xa88878 }) : aaaTri(def.rubble ? 'cobble' : 'stone', def.rubble ? .36 : .5, { nStr: 1.7, macro: .26, moss: 1.1, damp: 1.2, baseY: base, color: def.wallCol || 0xc4b8a0 });
+  const wallMat = def.wall === 'intonaco' ? aaaTri('plaster', .45, { nStr: 1, macro: .28, damp: 1.3, moss: .5, baseY: base, color: def.wallCol || 0xe2d6bc, hq: 'intonaco_pietra', hqScale: .42 }) : def.wall === 'mattoni' ? aaaTri('brick', .75, { nStr: 1.3, macro: .2, damp: 1.2, moss: .6, baseY: base, color: 0xc8a898, hq: 'mattoni', hqScale: .55 }) : aaaTri(def.rubble ? 'cobble' : 'stone', def.rubble ? .36 : .5, { nStr: 1.7, macro: .26, moss: 1.1, damp: 1.2, baseY: base, color: def.wallCol || 0xc4b8a0, hq: 'muro_pietra', hqScale: .45 });
   const { x: cx, z: cz, w, d } = def;
   const faces = {
     '+z': { axis: 'x', fixed: cz + d / 2, out: 1, a0: cx - w / 2, a1: cx + w / 2, y0: base - .5, y1: top, t },

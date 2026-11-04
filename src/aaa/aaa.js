@@ -32,7 +32,7 @@ function aaaPads() {
   AAA.defs = D;
 }
 function aaaBuildWorld() {
-  const t0 = performance.now(); AAA.on = true; AAA.st = {}; AAA.rooms.length = 0; AAA.objs.length = 0;
+  const t0 = performance.now(); AAA.on = true; AAA.st = { hq: AAA.st.hq, assetMs: AAA.st.assetMs, models: AAA.st.models, texHQ: AAA.st.texHQ }; AAA.rooms.length = 0; AAA.objs.length = 0;
   for (let i = 0; i < 6; i++) { AAA_IN_MIN[i].set(1e5, 1e5, 1e5); AAA_IN_MAX[i].set(-1e5, -1e5, -1e5); }
   WORLD.mortarPits = []; WORLD.aaSites = []; WORLD.tobruks = []; WORLD.bombard = 'off';
   aaaPads(); buildHF(); buildHC(); buildWater(); if (WORLD.waterMesh) WORLD.waterMesh.visible = false;
@@ -66,21 +66,20 @@ function aaaBuildWorld() {
   apDryWall(G, ...U(27, -3.6), ...U(47.5, -3.6), 1.4, 7, [9, 13]);
   apDryWall(G, ...U(-5, 13.2), ...U(9, 13.2), 1.2, 8);
   // cortile: carro, botti, legnaia, secchi, bidoni, attrezzi, balle di fieno
-  apCart(G, ...U(41, -12), 2.4); apFirewood(G, ...U(30.5, -22.8), 0, 3.2, 1.1); apBarrel(G, ...U(46, -11), 0); apBarrel(G, ...U(46.7, -11.8), 1); apBarrel(G, ...U(45.6, -12.4), 0, true);
-  apBucket(G, ...U(33.5, -9)); apChurn(G, ...U(44.6, -3.9 - .6)); apChurn(G, ...U(45.1, -4.5)); apTool(G, ...U(28.2, -20), PI / 2, 'fork', .3); apTool(G, ...U(28.2, -20.6), PI / 2, 'spade', .28);
+  const HQ = !!AAA.st.hq; apCart(G, ...U(41, -12), 2.4); apFirewood(G, ...U(30.5, -22.8), 0, 3.2, 1.1); if (!HQ) { apBarrel(G, ...U(46, -11), 0); apBarrel(G, ...U(46.7, -11.8), 1); apBarrel(G, ...U(45.6, -12.4), 0, true); }
+  if (!HQ) apBucket(G, ...U(33.5, -9)); apChurn(G, ...U(44.6, -3.9 - .6)); apChurn(G, ...U(45.1, -4.5)); apTool(G, ...U(28.2, -20), PI / 2, 'fork', .3); apTool(G, ...U(28.2, -20.6), PI / 2, 'spade', .28);
   apHay(G, ...U(32, -24.2), .1); apHay(G, ...U(33.1, -24.3), -.05); { const [hx, hz] = U(32.5, -24.2); apHay(G, hx, hz, .02, aaaH(hx, hz) + .5); }
   // casa A: botte, panca, secchio, cesta di legna vicino alla porta; ruota appoggiata al muro
-  apBarrel(G, ...U(-9.2, -1.6), 0); apBucket(G, ...U(-12, -2.7)); apFirewood(G, ...U(-19.2, -1.2), .02, 1.4, .7);
+  if (!HQ) { apBarrel(G, ...U(-9.2, -1.6), 0); apBucket(G, ...U(-12, -2.7)); } apFirewood(G, ...U(-19.2, -1.2), .02, 1.4, .7);
   { const [wx, wz] = U(-17.6, -2.75), y = aaaH(wx, wz); G.add(AAA.mats.woodDark, new THREE.TorusGeometry(.62, .05, 6, 22), wx, y + .64, wz, 0, 0, -.12); for (let sp = 0; sp < 12; sp++) G.add(AAA.mats.woodDark, ABX.box, wx, y + .64, wz, 0, 0, sp / 12 * PI, .035, 1.2, .035); }
   // Sherman parcheggiato sul ciglio sud, sacchi a terra e casse accanto; casse militari e taniche
   const sh = U(2.5, 10.4); apSherman(sh[0], sh[1], -PI / 2 + .06);
-  apSandbags(G, ...U(-3.5, 12.6), ...U(-.5, 12.6), 3); apCrate(G, ...U(8.6, 12.2), .2, .9, .55, .6, true); apCrate(G, ...U(9.4, 12.5), -.3, .8, .5, .5, true); { const [cx2, cz2] = U(8.8, 12.3); apCrate(G, cx2, cz2, .05, .8, .45, .5, true, aaaH(cx2, cz2) + .55); }
-  apJerry(G, ...U(7.6, 12.6), .3); apJerry(G, ...U(7.9, 12.75), .5);
+  apSandbags(G, ...U(-3.5, 12.6), ...U(-.5, 12.6), 3); if (!HQ) apCrate(G, ...U(8.6, 12.2), .2, .9, .55, .6, true); apCrate(G, ...U(9.4, 12.5), -.3, .8, .5, .5, true); if (!HQ) { const [cx2, cz2] = U(8.8, 12.3); apCrate(G, cx2, cz2, .05, .8, .45, .5, true, aaaH(cx2, cz2) + .55); apJerry(G, ...U(7.6, 12.6), .3); apJerry(G, ...U(7.9, 12.75), .5); }
   // incrocio: calvario, cartello
   apCalvary(G, ...U(20.5, 12)); apSign(G, ...U(17.8, 1.4), -.3, 'VIERVILLE 3 KM');
   // recinzioni dei campi a sud
   apFence(G, [U(-6, 17.5), U(-6, 40), U(4, 60)], 9);
-  G.build();
+  G.build(); aaaPlaceModels();
   // vegetazione: bocage, querce, frutteto, alberi lungo il viottolo, erba, fiori, edera
   const tOak = aaaTreeTemplate('oak', 7), tApple = aaaTreeTemplate('apple', 9), tBush = aaaTreeTemplate('bush', 13);
   const oaks = aaaBocage(tBush, tOak).concat([[...U(22, -1.5), 1.15, .4], [...U(-34, -6), 1.05, 2.1], [...U(6, -42), .95, 1], [...U(-2, 28), 1.1, 3], [...U(60, 6), 1, 4]]);
@@ -104,14 +103,16 @@ function aaaChurch() {
 }
 // interno della casa A: pavimenti, tramezzo con porta, travi del solaio, scala, camino, mobili, oggetti
 function aaaInteriorA(A, b) {
+  const HQ = !!AAA.st.hq;
   const M = AAA.mats, G = new AGeo(), sr = seeded(77), base = A.base, t = .55, x0 = A.x - A.w / 2 + t, x1 = A.x + A.w / 2 - t, z0 = A.z - A.d / 2 + t, z1 = A.z + A.d / 2 - t, fy = base + A.sh, px = A.x - 1.1;
-  const flag = AAA.mats.flag || (AAA.mats.flag = aaaTri('stone', 1.1, { nStr: 1.4, macro: .3, color: 0xb8ae98, rough: .9 }));
+  const flag = AAA.mats.flag || (AAA.mats.flag = aaaTri('stone', 1.1, { nStr: 1.4, macro: .3, rough: .9, hq: 'pavimento_pietra', hqScale: .55, color: 0xffffff }));
   // cucina (ovest): lastre di pietra irregolari; stanza (est): tavolato
   for (let x = x0; x < px - .05; x += .62) for (let z = z0; z < z1 - .05; z += .55) { const w = Math.min(.6, px - x) - .02, d = Math.min(.53, z1 - z) - .02; G.add(flag, ABX.box, x + w / 2, base - .05 + sr() * .01, z + d / 2, (sr() - .5) * .01, 0, (sr() - .5) * .01, w, .1, d); }
-  for (let z = z0; z < z1; z += .2) G.add(M.wood, ABX.box, (px + x1) / 2, base - .04, z + .1, 0, 0, 0, x1 - px, .08, .19);
+  const floorW = AAA.mats.floorW || (AAA.mats.floorW = aaaTri('wood', .9, { color: 0xc0a890, hq: 'pavimento_legno', hqScale: .5 }));
+  for (let z = z0; z < z1; z += .2) G.add(floorW, ABX.box, (px + x1) / 2, base - .04, z + .1, 0, 0, 0, x1 - px, .08, .19);
   FLOORS.push({ x0, x1, z0, z1, y: base + .01 });
   // tramezzo (intonaco a calce) con porta verso il retro
-  const plasterIn = AAA.mats.plasterIn || (AAA.mats.plasterIn = aaaTri('plaster', .5, { nStr: .7, macro: .3, damp: .6, baseY: base, color: 0xd8d0bc }));
+  const plasterIn = AAA.mats.plasterIn || (AAA.mats.plasterIn = aaaTri('plaster', .5, { nStr: .7, macro: .3, damp: .6, baseY: base, hq: 'intonaco_interno', hqScale: .45, color: 0xd8d0bc }));
   const Fp = { axis: 'z', fixed: px + .15, out: 1, a0: z0, a1: z1, y0: base - .1, y1: fy, t: .3 };
   const pd = [{ c: z0 + 1.1, y0: base, w: .95, h: 2.05 }]; aaaWall(G, plasterIn, Fp, pd); aaaWallSolids(Fp, pd, 'house', 'muratura');
   // solaio: travi a vista e tavolato; vano scala sopra la scala (stanza est, lungo il muro nord)
@@ -130,29 +131,29 @@ function aaaInteriorA(A, b) {
   G.add(M.woodDark, ABX.box, cx + .1, base + 1.5, cz, 0, 0, 0, .55, .26, 2.3); G.add(M.stone, ABX.box, cx - .05, base + 2.3, cz, 0, 0, 0, .75, 1.35, 2.1);
   G.add(M.vc, ABX.box, cx - .15, base + .7, cz, 0, 0, 0, .3, 1.2, 1.5, 0x161412);   // fondo annerito
   for (let i = 0; i < 3; i++) G.add(M.woodOld, ABX.cyl6, cx + .05, base + .2 + i * .04, cz - .3 + i * .3, PI / 2, .4 * i, 0, .07, .7, .07);
-  G.add(M.metal, apLathe('pot', [[0, 0], [.16, .02], [.2, .14], [.18, .26], [0, .26]], 14), cx + .1, base + .5, cz + .05, 0, 0, 0, 1, 1, 1);
+  if (!HQ) G.add(M.metal, apLathe('pot', [[0, 0], [.16, .02], [.2, .14], [.18, .26], [0, .26]], 14), cx + .1, base + .5, cz + .05, 0, 0, 0, 1, 1, 1);
   // tavolo con tovaglia a quadri, sedie, credenza con piatti, mensole con barattoli, lanterna, panca
   const tx = x0 + 2.4, tz = (z0 + z1) / 2 - .2;
-  for (const [a, b] of [[-.75, -.4], [.75, -.4], [-.75, .4], [.75, .4]]) G.add(M.woodDark, ABX.box, tx + a, base + .37, tz + b, 0, 0, 0, .07, .74, .07);
-  G.add(M.wood, ABX.box, tx, base + .76, tz, 0, 0, 0, 1.7, .05, .95);
+  if (!HQ) for (const [a, b] of [[-.75, -.4], [.75, -.4], [-.75, .4], [.75, .4]]) G.add(M.woodDark, ABX.box, tx + a, base + .37, tz + b, 0, 0, 0, .07, .74, .07);
+  if (!HQ) G.add(M.wood, ABX.box, tx, base + .76, tz, 0, 0, 0, 1.7, .05, .95);
   const cloth = AAA.mats.check || (AAA.mats.check = aaaPatch(new THREE.MeshStandardMaterial({ map: aaaCanvasTex(256, 256, (g, w) => { for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { g.fillStyle = (i + j) % 2 ? '#b0302a' : ((i % 2) ? '#e8e0d0' : '#c87068'); g.fillRect(i * 32, j * 32, 32, 32); } }, false), roughness: .95 }), { key: 'check' }));
-  { const cg = new THREE.BoxGeometry(1.25, .015, .9); const m = new THREE.Mesh(cg, cloth); m.position.set(tx + .1, base + .795, tz); m.rotation.y = .06; m.receiveShadow = true; scene.add(m); }
+  { const ts = HQ && aaaModelSize('painted_wooden_table'); const cg = new THREE.BoxGeometry(1.25, .015, .9); const m = new THREE.Mesh(cg, cloth); m.position.set(tx + .1, ts ? base + .01 + ts.y + .008 : base + .795, tz); m.rotation.y = .06; m.receiveShadow = true; scene.add(m); }
   for (const [a, b, r] of [[-.4, -.75, 0], [.45, -.72, .2], [.3, .8, PI], [-1.1, .1, PI / 2 + .3]]) { const qx = tx + a, qz = tz + b; G.add(M.woodDark, ABX.box, qx, base + .45, qz, 0, r, 0, .42, .04, .42); for (const [c1, c2] of [[-.18, -.18], [.18, -.18], [-.18, .18], [.18, .18]]) G.add(M.woodDark, ABX.box, qx + c1 * Math.cos(r) - c2 * Math.sin(r), base + .22, qz + c1 * Math.sin(r) + c2 * Math.cos(r), 0, r, 0, .04, .45, .04); G.add(M.woodDark, ABX.box, qx - Math.sin(r) * .2, base + .72, qz - Math.cos(r) * .2 * -1, 0, r, 0, .42, .5, .04); }
-  for (let i = 0; i < 4; i++) G.add(M.vc, apLathe('cup', [[0, 0], [.04, 0], [.05, .09], [.045, .09], [0, .01]], 10), tx - .4 + i * .25, base + .8, tz + (i % 2 ? .2 : -.15), 0, 0, 0, 1, 1, 1, [0xe8e4dc, 0x9a5a3e, 0xe8e4dc, 0x3a4a5a][i]);
-  G.add(M.vc, apLathe('jug', [[0, 0], [.08, 0], [.1, .12], [.06, .24], [.07, .3], [0, .3]], 12), tx + .55, base + .8, tz - .1, 0, 0, 0, 1, 1, 1, 0xc8b89a);
+  if (!HQ) for (let i = 0; i < 4; i++) G.add(M.vc, apLathe('cup', [[0, 0], [.04, 0], [.05, .09], [.045, .09], [0, .01]], 10), tx - .4 + i * .25, base + .8, tz + (i % 2 ? .2 : -.15), 0, 0, 0, 1, 1, 1, [0xe8e4dc, 0x9a5a3e, 0xe8e4dc, 0x3a4a5a][i]);
+  if (!HQ) G.add(M.vc, apLathe('jug', [[0, 0], [.08, 0], [.1, .12], [.06, .24], [.07, .3], [0, .3]], 12), tx + .55, base + .8, tz - .1, 0, 0, 0, 1, 1, 1, 0xc8b89a);
   // credenza (dresser) sul muro sud della cucina
   const dz2 = z1 - .3, dx2 = x0 + 2.2;
-  G.add(M.woodDark, ABX.box, dx2, base + .45, dz2, 0, 0, 0, 1.6, .9, .5); G.add(M.woodDark, ABX.box, dx2, base + 1.55, dz2 + .1, 0, 0, 0, 1.6, 1.3, .3);
-  for (const yy of [1.25, 1.62, 1.98]) { G.add(M.wood, ABX.box, dx2, base + yy, dz2 + .02, 0, 0, 0, 1.52, .03, .26); for (let i = 0; i < 5; i++) G.add(M.vc, ABX.cyl, dx2 - .6 + i * .3, base + yy + .14, dz2 + .1, PI / 2 - .25, 0, 0, .13, .015, .13, [0xe8e2d4, 0xd8d0c0, 0x8aa0b8][i % 3]); }
+  if (!HQ) { G.add(M.woodDark, ABX.box, dx2, base + .45, dz2, 0, 0, 0, 1.6, .9, .5); G.add(M.woodDark, ABX.box, dx2, base + 1.55, dz2 + .1, 0, 0, 0, 1.6, 1.3, .3); }
+  if (!HQ) for (const yy of [1.25, 1.62, 1.98]) { G.add(M.wood, ABX.box, dx2, base + yy, dz2 + .02, 0, 0, 0, 1.52, .03, .26); for (let i = 0; i < 5; i++) G.add(M.vc, ABX.cyl, dx2 - .6 + i * .3, base + yy + .14, dz2 + .1, PI / 2 - .25, 0, 0, .13, .015, .13, [0xe8e2d4, 0xd8d0c0, 0x8aa0b8][i % 3]); }
   // mensola con barattoli e lanterna sul tramezzo
   G.add(M.wood, ABX.box, px - .06, base + 1.6, z1 - 1.4, 0, 0, 0, .25, .04, 1.4);
   for (let i = 0; i < 5; i++) G.add(M.vc, apLathe('jar' + (i % 2), [[0, 0], [.06 + (i % 2) * .02, 0], [.07, .16], [.04, .2], [0, .2]], 10), px - .06, base + 1.62, z1 - 1.95 + i * .27, 0, 0, 0, 1, 1, 1, [0x8a6a4a, 0xc8b490, 0x5a6a4a, 0xa88a5a, 0x7a5a3a][i]);
-  G.add(M.metal, ABX.box, tx - .1, base + .92, tz + .25, 0, 0, 0, .14, .22, .14);
+  if (!HQ) G.add(M.metal, ABX.box, tx - .1, base + .92, tz + .25, 0, 0, 0, .14, .22, .14);
   // stanza est: armadio, cassapanca, poltrona, quadro
   G.add(M.woodDark, ABX.box, x1 - .4, base + 1.05, z1 - 1.4, 0, 0, 0, .6, 2.1, 1.3); G.add(M.woodOld, ABX.box, px + 1.3, base + .27, z1 - .5, 0, 0, 0, 1.2, .54, .55);
   G.add(M.cloth, ABX.box, px + 1.6, base + .45, z0 + 2.4, 0, .5, 0, .8, .45, .8, 0x6a3a2e); G.add(M.cloth, ABX.box, px + 1.6, base + .8, z0 + 2.75, 0, .5, 0, .8, .6, .15, 0x6a3a2e);
   // primo piano: letto con coperta, comodino, cassettone, sedia
-  const uy = fy + .04; G.add(M.woodDark, ABX.box, x0 + 1.2, uy + .25, z1 - 1.1, 0, 0, 0, 1.5, .5, 2.1); G.add(M.cloth, ABX.box, x0 + 1.2, uy + .58, z1 - 1.05, 0, 0, 0, 1.45, .16, 1.95, 0xd8d0c0); G.add(M.cloth, ABX.box, x0 + 1.2, uy + .62, z1 - .7, 0, 0, 0, 1.47, .12, 1.25, 0x7a5a48);
+  const uy = fy + .04; if (!HQ) G.add(M.woodDark, ABX.box, x0 + 1.2, uy + .25, z1 - 1.1, 0, 0, 0, 1.5, .5, 2.1); G.add(M.cloth, ABX.box, x0 + 1.2, uy + .58, z1 - 1.05, 0, 0, 0, 1.45, .16, 1.95, 0xd8d0c0); G.add(M.cloth, ABX.box, x0 + 1.2, uy + .62, z1 - .7, 0, 0, 0, 1.47, .12, 1.25, 0x7a5a48);
   G.add(M.woodDark, ABX.box, x0 + 2.3, uy + .3, z1 - .35, 0, 0, 0, .5, .6, .45); G.add(M.woodDark, ABX.box, x1 - 1.5, uy + .5, z1 - .35, 0, 0, 0, 1.4, 1, .5);
   // stanze per la luce indiretta: piano terra e primo piano separati (il solaio fa da confine)
   AAA.rooms.length = Math.max(0, AAA.rooms.length - 1); const ri = AAA.rooms.length; aaaRoom(x0 - .02, base - .3, z0 - .02, x1 + .02, fy, z1 + .02); aaaRoom(x0 - .02, fy, z0 - .02, x1 + .02, A.base + 2 * A.sh + 3, z1 + .02);
@@ -182,7 +183,7 @@ function aaaWorkshopDetails(Dd, b) {
   const L = Dd.d + 1, n = 64, pos = [], idx = []; for (let i = 0; i <= n; i++) for (let j = 0; j <= 1; j++) { const a = i / n * 2.4, y = Math.sin(i / n * 2.4 / .076 * PI) * .03; pos.push(-a, y - a * .25, j * L - L / 2); }
   for (let i = 0; i < n; i++) { const a = i * 2, b2 = a + 2; idx.push(a, b2, a + 1, a + 1, b2, b2 + 1); }
   const cg = new THREE.BufferGeometry(); cg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); cg.setIndex(idx); cg.computeVertexNormals(); const ng = cg.toNonIndexed();
-  const corr = AAA.mats.corr || (AAA.mats.corr = aaaTri('metal', .5, { nStr: .9, rough: .75, metal: .45, macro: .5, color: 0x8a6a52, side: THREE.DoubleSide }));
+  const corr = AAA.mats.corr || (AAA.mats.corr = aaaTri('metal', .5, { nStr: .9, rough: .75, metal: .45, macro: .5, color: 0xc8b0a0, hq: 'lamiera', hqScale: .5, side: THREE.DoubleSide }));
   G.add(corr, ng, x0 - .05, base + 2.75, Dd.z);
   for (const z of [z0 - .3, z1 + .3]) G.add(M.woodOld, ABX.box, x0 - 2.3, base + 1.1, z, 0, 0, 0, .14, 2.25, .14);
   // banco da lavoro, incudine, bidoni, ruota, attrezzi

@@ -136,6 +136,58 @@ Durante i test ho trovato e corretto un difetto di collisione vero: un pezzo di 
   4. uno Sherman ad alta definizione;
   5. una misura degli FPS sul tuo PC per decidere quanto portarne nelle mappe principali.
 
+
+## Aggiornamento: asset CC0 di Poly Haven (4 novembre 2026)
+Con l'accesso di rete autorizzato ho scaricato dalle API ufficiali di Poly Haven **18 texture PBR a 1k** e **25 modelli glTF a 1k**, tutti **CC0 1.0** (pubblico dominio). L'elenco con nome, autori e link di ogni asset è in **`assets/aaa/LICENZE.md`**.
+
+**Come sono inclusi**
+- Due file JS caricati **solo quando parte la demo**: `assets/aaa/aaa_tex.js` (15 MB) e `assets/aaa/aaa_models.js` (30 MB). Le altre modalità non li scaricano.
+- Il motivo: dal file locale il browser non lascia leggere a WebGL immagini e modelli separati, quindi li ho incorporati come per le texture fotografiche già presenti.
+- I modelli sono impacchettati in GLB e le loro texture ricompresse: JPEG q80 fino a 1024 px, PNG fino a 512 px se hanno trasparenza.
+- Il caricatore glTF è quello di three@0.128.0 (npm, licenza MIT).
+
+**Dove si vedono**
+- **Muri**:
+  - pietrame della casa e del fienile (`rustic_stone_wall_02`);
+  - intonaco su pietra della casetta (`plastered_stone_wall`);
+  - mattoni dell'officina (`brick_wall_005`);
+  - muri a secco (`castle_wall_slates`);
+  - intonaco interno (`worn_mossy_plasterwall`).
+- **Legno e metallo**:
+  - tavole di porte, persiane e mobili (`old_planks_02`);
+  - tavolato del fienile (`raw_plank_wall`);
+  - pavimenti (`old_wooden_floor_01`, `slate_floor`);
+  - lamiera ondulata (`rusty_corrugated_iron`);
+  - ferro (`rusty_metal_02`).
+- I materiali usano anche la mappa **AO/rugosità/metallo** di ciascuna texture.
+- **Terreno**: erba `leafy_grass`, terra `forest_ground_04`, fango `brown_mud_02`, ghiaia `gravel_road`.
+- **Modelli**:
+  - botti di legno, cassette, cesto di vimini, secchi di legno, scala a pioli, vanga, accetta;
+  - casse militari, cassetta di munizioni, taniche, maschera antigas;
+  - tavolo dipinto, credenza, sgabello, lanterna (con una luce calda vera), brocca, pentola smaltata, letto.
+- **Vegetazione di dettaglio istanziata**: le varianti dei set di felci, ortiche, ciuffi d'erba, cespugli e sassi muschiati sono sparse ai piedi dei muri, lungo la strada e sul bocage, con una draw call per variante. La quantità dipende dal preset: niente in LOW, 35% in MEDIUM, 60% in HIGH, tutto in ULTRA.
+
+**Scartati perché fuori luogo**
+- `Barrel_01`: è un fusto di petrolio rosso moderno.
+- `WoodenChair_01`: è una sedia gotica.
+- Alcuni modelli troppo pesanti, come `shrub_01` (6,8 MB) e `boulder_01`, o poco utili.
+- Non ho trovato su Poly Haven alberi da latifoglia normanni, un carro agricolo o uno Sherman: restano quelli procedurali o del gioco.
+
+**Misure dopo l'aggiornamento** (stesse 7 inquadrature, grafica software)
+| Preset | Caricamento | Draw call | Triangoli | Memoria JS |
+|---|---|---|---|---|
+| LOW | 17,6 s | 66–200 | 0,63–0,93 M | 202 MB |
+| HIGH | 32,8 s | 248–532 | 3,1–4,7 M | 242 MB |
+| ULTRA | 37,9 s | 274–587 | 5,9–9,1 M | 273 MB |
+
+- La lettura degli asset richiede circa 2,5 s.
+- **ULTRA è molto pesante**: fino a 9 milioni di triangoli, perché lì tutta la vegetazione di dettaglio proietta ombre.
+- **Gli FPS reali vanno misurati sul tuo PC** con il tasto B.
+
+Foto aggiornate in `docs/aaa/v2/`.
+
+Test: `tools/ai/taaa.js` 8/8 con gli asset caricati.
+
 ## Limiti tecnici
 - Gli edifici hanno collider allineati agli assi.
 - Il frontone ha un collider approssimato.
