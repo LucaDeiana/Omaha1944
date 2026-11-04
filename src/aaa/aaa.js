@@ -85,7 +85,7 @@ function aaaBuildWorld() {
   const oaks = aaaBocage(tBush, tOak).concat([[...U(22, -1.5), 1.15, .4], [...U(-34, -6), 1.05, 2.1], [...U(6, -42), .95, 1], [...U(-2, 28), 1.1, 3], [...U(60, 6), 1, 4]]);
   aaaPlantInstances(tOak, oaks.map(o => [o[0], o[1], o[2], o[3]]));
   const apples = []; { const sr = seeded(5); for (let i = 0; i < 9; i++) apples.push([...U(-30 + (i % 3) * 8 + (sr() - .5) * 2.5, -19 - Math.floor(i / 3) * 8 + (sr() - .5) * 2.5), .85 + sr() * .35, sr() * 6]); }
-  aaaPlantInstances(tApple, apples);
+  aaaPlantInstances(tApple, apples); if (typeof aaaFallenLeaves === 'function') aaaFallenLeaves(oaks.concat(apples));
   AAA.noGrass = (u, v) => AV.pads.some(p => u > p.x0 - .3 && u < p.x1 + .3 && v > p.z0 - .3 && v < p.z1 + .3) || (u > 26 && u < 52 && v > -24 && v < -4) || Math.abs(v - avRoadV(u)) < 2.8;
   aaaGrass(); aaaFlowers();
   aaaIvy(bA.faces['+z'], ax - 5.8, ax - 1.6, A.base + 5.4, A.base, 101, 1); aaaIvy(bA.faces['-x'], az - 3.5, az + 3.5, A.base + 3.5, A.base, 102, .7);

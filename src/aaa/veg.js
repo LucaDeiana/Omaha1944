@@ -40,7 +40,7 @@ function aaaTreeTemplate(kind, seed) {
 }
 // istanze: un'InstancedMesh per corteccia e una per le foglie di ciascun modello
 function aaaPlantInstances(tpl, list, tint) {
-  const M = aaaMats(), leaf = aaaLeafMat(), barkM = AAA.mats.barkW || (AAA.mats.barkW = aaaTri('wood', 1.3, { nStr: 1.8, macro: .35, color: 0x6c6458, moss: .4, wind: .9, key: 'barkw' }));
+  const M = aaaMats(), leaf = aaaLeafMat(), barkM = AAA.mats.barkW || (AAA.mats.barkW = aaaTri('wood', 1.3, { nStr: 1.8, macro: .35, color: 0x6c6458, moss: .4, wind: .9, key: 'barkw', hq: 'corteccia', hqScale: .9, nStrHQ: 1.4 }));
   const b = new THREE.InstancedMesh(tpl.bark, barkM, list.length), l = new THREE.InstancedMesh(tpl.leaves, leaf, list.length);
   b.castShadow = b.receiveShadow = l.castShadow = l.receiveShadow = true; l.customDepthMaterial = AAA.mats.leafDepth;
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color();

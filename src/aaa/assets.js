@@ -11,6 +11,7 @@ async function aaaLoadAssets() {
   try {
     if (!window.AAA_TEX) await aaaLoadScript('assets/aaa/aaa_tex.js');
     if (!window.AAA_GLB) await aaaLoadScript('assets/aaa/aaa_models.js');
+    if (!window.AAA_LEAF) await aaaLoadScript('assets/aaa/aaa_leaf.js').catch(() => null);
     if (!THREE.GLTFLoader) await aaaLoadScript('assets/lib/three/examples/js/GLTFLoader.js');
     if ((AAA_PRESETS[AAA.preset] || {}).ssao && !THREE.SSAOPass) { await aaaLoadScript('assets/lib/three/examples/js/math/SimplexNoise.js'); await aaaLoadScript('assets/lib/three/examples/js/shaders/SSAOShader.js'); await aaaLoadScript('assets/lib/three/examples/js/postprocessing/SSAOPass.js'); }
   } catch (e) { console.warn('AAA: asset di alta qualità non disponibili, uso i materiali del gioco', e); AAA.st.hq = false; return; }
@@ -23,6 +24,10 @@ async function aaaLoadAssets() {
       const T = (im, srgb) => { const t = new THREE.Texture(im || undefined); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = aniso; if (srgb) t.encoding = THREE.sRGBEncoding; t.needsUpdate = !!im; return t; };
       TEXH[k] = { map: T(c, true), normal: T(n), arm: T(a) };
     }));
+  }
+  if (window.AAA_LEAF) {   // foglie fotografate (rametti composti), foglie secche, corteccia di quercia (ambientCG, CC0)
+    const L = window.AAA_LEAF; jobs.push(img(L.leaf).then(i => { AAA.leafImg = i; }), img(L.dry).then(i => { AAA.dryImg = i; }));
+    jobs.push(Promise.all([img(L.bark.c), img(L.bark.n), img(L.bark.a)]).then(([c, n, a]) => { const T = (im, srgb) => { const t = new THREE.Texture(im); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = aniso; if (srgb) t.encoding = THREE.sRGBEncoding; t.needsUpdate = true; return t; }; TEXH.corteccia = { map: T(c, true), normal: T(n), arm: T(a) }; }));
   }
   const loader = new THREE.GLTFLoader();
   for (const k in window.AAA_GLB) {
@@ -99,3 +104,17 @@ function aaaScatter(name, list, dy = 0) {
   AAA.st.scatter = (AAA.st.scatter || 0) + list.length;
 }
 
+
+// foglie secche cadute sotto gli alberi e ai piedi delle siepi: otto foglie dell'atlante, una InstancedMesh ciascuna
+function aaaFallenLeaves(trees) {
+  const n = { LOW: 0, MEDIUM: 900, HIGH: 2200, ULTRA: 4500 }[AAA.preset] || 0; if (!n || !AAA.dryImg) return;
+  const tex = new THREE.Texture(AAA.dryImg); tex.encoding = THREE.sRGBEncoding; tex.anisotropy = renderer.capabilities.getMaxAnisotropy(); tex.needsUpdate = true;
+  const mat = aaaPatch(new THREE.MeshStandardMaterial({ map: tex, alphaTest: .5, side: THREE.DoubleSide, roughness: .92 }), { key: 'dryleaf' });
+  const sr = seeded(4242), r = (a, b) => a + sr() * (b - a), per = Array.from({ length: 8 }, () => []);
+  for (let i = 0; i < n; i++) { const t = trees[(sr() * trees.length) | 0], a = r(0, TAU), d = Math.sqrt(sr()) * 6 * (t[2] || 1); const x = t[0] + Math.cos(a) * d, z = t[1] + Math.sin(a) * d; per[(sr() * 8) | 0].push([x, z, r(0, TAU), r(.1, .17), r(-.25, .25)]); }
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
+  per.forEach((L, k) => { if (!L.length) return; const g = new THREE.PlaneGeometry(1, 1); g.rotateX(-PI / 2); const uv = g.attributes.uv, u0 = (k % 4) / 4, v0 = k < 4 ? .5 : 0; for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + uv.getX(i) * .25, v0 + uv.getY(i) * .5);
+    const im = new THREE.InstancedMesh(g, mat, L.length); im.receiveShadow = true; im.userData.noAO = true;
+    L.forEach(([x, z, ry, s, tilt], i) => { e.set(tilt, ry, tilt * .5, 'YXZ'); q.setFromEuler(e); m4.compose(new V3(x, aaaH(x, z) + .015, z), q, new V3(s, s, s)); im.setMatrixAt(i, m4); }); scene.add(im); });
+  AAA.st.fallen = n;
+}

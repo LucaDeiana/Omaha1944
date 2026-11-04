@@ -210,10 +210,13 @@ Test: `tools/ai/taaa.js` 8/8 con gli asset caricati.
 - Foto: `docs/aaa/v2/HIGH_8_sherman_vernice.jpg`.
 - **La geometria resta quella semplice del gioco**: né Poly Haven né ambientCG hanno modelli di carri armati.
 
-## In attesa: foglie e cortecce fotografiche (ambientCG)
-ambientCG ha set di foglie fotografate con trasparenza (`LeafSet016` quercia, `LeafSet012`) e la corteccia di quercia (`Bark012`), tutti CC0. Sostituirebbero l'atlante di foglie disegnato a mano degli alberi procedurali.
-
-I file però si scaricano da `acg-download.struffelproductions.com`, che la rete di questa sessione blocca: va aggiunto ai domini consentiti dell'ambiente.
+## Aggiornamento: foglie e cortecce fotografiche (ambientCG, CC0)
+- Le foglie di quercia scansionate (`LeafSet016`) sono **composte in rametti**: tante foglie per scheda, con rotazione, scala e tinta variate, lungo rami disegnati. Un riquadro ciascuno per quercia, albero da frutto e siepe; l'edera resta procedurale.
+  - Le foglie disegnate a mano sono sostituite; da vicino si vedono foglie lobate con le venature.
+- **Corteccia di quercia** (`Bark012`) con colore, normale, AO e rugosità sui tronchi.
+- **Foglie secche cadute** (`LeafSet012`) sotto querce, meli e siepi: 900 in MEDIUM, 2.200 in HIGH, 4.500 in ULTRA, una draw call per variante (8).
+- File `assets/aaa/aaa_leaf.js` (1,7 MB), caricato solo nella demo. Licenze in `assets/aaa/LICENZE.md`.
+- Foto: `docs/aaa/v2/*_foglie.jpg`.
 
 ## Limiti tecnici
 - Gli edifici hanno collider allineati agli assi.

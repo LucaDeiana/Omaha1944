@@ -52,3 +52,12 @@ Scaricati il 2026-11-04 dalle API ufficiali (api.polyhaven.com, dl.polyhaven.org
 | cingoli | Metal Plate 02 (`metal_plate_02`) | Rob Tuytel | texture | https://polyhaven.com/a/metal_plate_02 |
 
 Caricatore glTF: `assets/lib/three/examples/js/GLTFLoader.js` da three@0.128.0 (npm), licenza MIT come il resto di Three.js.
+
+## ambientCG (https://ambientcg.com), licenza CC0 1.0
+| Uso | Asset | Fonte |
+|---|---|---|
+| foglie verdi dei rametti (quercia) | Leaf Set 016 (`LeafSet016`, 2K) | https://ambientcg.com/view?id=LeafSet016 |
+| foglie secche cadute | Leaf Set 012 (`LeafSet012`, 1K) | https://ambientcg.com/view?id=LeafSet012 |
+| corteccia degli alberi | Bark 012 (`Bark012`, 1K) | https://ambientcg.com/view?id=Bark012 |
+
+I rametti di `assets/aaa/aaa_leaf.js` sono composti da me con le foglie scansionate (rotazione, scala, tinta), poi salvati in WebP.

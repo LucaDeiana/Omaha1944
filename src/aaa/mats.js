@@ -127,8 +127,9 @@ function aaaLeafAtlas() {
   if (AAA.leafTex) return AAA.leafTex;
   const sr = seeded(4401), r = (a, b) => a + sr() * (b - a);
   // 4 quadranti: 0 quercia, 1 melo/foglia ovale, 2 siepe fitta (biancospino/nocciolo), 3 edera
-  AAA.leafTex = aaaCanvasTex(1024, 1024, (g) => {
-    g.clearRect(0, 0, 1024, 1024);
+  const PH = AAA.leafImg, SZ = PH ? 2048 : 1024;
+  AAA.leafTex = aaaCanvasTex(SZ, SZ, (g) => {
+    g.clearRect(0, 0, SZ, SZ); if (PH) { g.drawImage(PH, 0, 0, SZ, SZ); g.scale(SZ / 1024, SZ / 1024); }
     const leaf = (x, y, s, a, kind, col) => {
       g.save(); g.translate(x, y); g.rotate(a); g.scale(s, s); g.fillStyle = col; g.beginPath();
       if (kind === 0) { // quercia lobata
@@ -139,7 +140,7 @@ function aaaLeafAtlas() {
       g.fill(); g.strokeStyle = 'rgba(30,40,15,.35)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, kind === 3 ? -40 : -64); g.stroke(); g.restore();
     };
     const pal = [['#3d5a22', '#4a6a28', '#56742e', '#2f4a1a', '#6a7a32'], ['#4a6a2a', '#5a7a32', '#3e5a22', '#6a8238'], ['#34501e', '#3e5a22', '#486a28', '#2a4218', '#5a6e2a'], ['#22381a', '#2e4a20', '#3a5a26', '#1e3016']];
-    for (let q = 0; q < 4; q++) {
+    for (let q = PH ? 3 : 0; q < 4; q++) {
       const ox = (q % 2) * 512, oy = Math.floor(q / 2) * 512, n = q === 2 ? 240 : q === 3 ? 90 : 150;
       g.save(); g.beginPath(); g.rect(ox, oy, 512, 512); g.clip();
       // rametti
