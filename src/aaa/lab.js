@@ -207,7 +207,7 @@ function labPanel(on) {
   LAB.panel = on; let el = $('labPanel');
   if (!el) { el = document.createElement('div'); el.id = 'labPanel'; el.style.cssText = 'position:fixed;left:12px;top:12px;bottom:12px;width:min(560px,94vw);z-index:72;overflow:auto;background:rgba(10,11,10,.93);color:#e8e6dc;font:12px/1.45 system-ui,sans-serif;padding:10px 14px;border:1px solid #555'; document.body.appendChild(el); el.addEventListener('click', labClick); el.addEventListener('change', labClick); }
   el.style.display = on ? 'block' : 'none';
-  if (on) { if (document.pointerLockElement) document.exitPointerLock(); setTimeout(() => { GAME.running = true; if ($('pause')) $('pause').classList.add('hidden'); }, 60); labUi(); }
+  if (on) { labFreeInput(); if (document.pointerLockElement) document.exitPointerLock(); setTimeout(() => { GAME.running = true; if ($('pause')) $('pause').classList.add('hidden'); }, 60); labUi(); }
   else if (!LAB.run) lockPointer();
 }
 const LAB_SEC = 'margin:10px 0 4px;font:600 12px system-ui;letter-spacing:.12em;color:#c8b070';
@@ -284,5 +284,18 @@ addEventListener('keydown', e => {
   if (e.code === 'F8') { e.preventDefault(); LAB.ov = !LAB.ov; labOverlay(); if (LAB.panel) labUi(); }
   else if (e.code === 'F9') { e.preventDefault(); labPanel(!LAB.panel); }
   else if (e.code === 'Escape' && LAB.run) labStop(true);
-});
+  else if (e.code === 'Escape' && LAB.panel) { e.preventDefault(); labPanel(false); }
+  else return;
+  e.stopImmediatePropagation();
+}, true);
+// pannello aperto: mouse e tastiera servono al pannello, il soldato non riceve input
+function labBlock(e) {
+  if (SCEN !== 'aaa' || !LAB.panel || typeof GAME === 'undefined' || !GAME.started) return;
+  const inPanel = e.target && e.target.closest && e.target.closest('#labPanel');
+  if (e.type.startsWith('key')) { if (inPanel && /^(Tab|Enter|Space|Arrow)/.test(e.code)) return; e.stopImmediatePropagation(); return; }
+  if (inPanel) return;
+  e.stopImmediatePropagation(); if (e.type !== 'mousemove') e.preventDefault();
+}
+for (const t of ['keydown', 'keyup', 'mousedown', 'mouseup', 'click', 'mousemove', 'wheel', 'contextmenu']) addEventListener(t, labBlock, { capture: true, passive: false });
+function labFreeInput() { try { if (typeof KEYS !== 'undefined') for (const k in KEYS) KEYS[k] = false; if (typeof mouseL !== 'undefined') mouseL = false; if (typeof P !== 'undefined') { P.trigger = false; P.adsHeld = false; } } catch (e) { } }
 if (document.readyState !== 'loading') labAutostart(); else addEventListener('DOMContentLoaded', labAutostart);
