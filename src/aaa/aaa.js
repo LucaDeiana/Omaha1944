@@ -216,6 +216,7 @@ function aaaInit() {
   AAA.boomT = 25; if (!AAA.t0) AAA.t0 = performance.now();
   aaaHudInit();
   if (typeof labInit === 'function') labInit();
+  if (typeof xpcInit === 'function') xpcInit();   // Movement Lab (controller sperimentale)
   showMsg('Normandy Village — Photorealism Test · preset ' + AAA.preset, 4);
 }
 // fasci di luce dalle finestre della casa A esposte al sole (volumi additivi, solo all'interno)

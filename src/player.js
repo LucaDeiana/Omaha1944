@@ -179,74 +179,77 @@ function updatePlayer(dt) {
     updateCamera(dt); updateViewmodel(dt); return;
   }
 
-  const f = (KEYS.KeyW ? 1 : 0) - (KEYS.KeyS ? 1 : 0), st = (KEYS.KeyD ? 1 : 0) - (KEYS.KeyA ? 1 : 0);
-  // senza fiato: si torna a correre solo dopo aver recuperato un po' (evita lo scatto on/off a ogni fotogramma)
-  if (P.stamina <= .02) P.winded = true; else if (P.stamina > .3) P.winded = false;
-  P.sprint = !!KEYS.ShiftLeft && f > 0 && P.stance !== 2 && !P.winded && !P.swim && P.adsK < .3 && P.shock < .5;
-  if (P.sprint && P.stance === 1) P.stance = 0;
-  let sp = [4.3, 2.2, 1.0][P.stance];
-  // strisciata: la spinta arriva quando il braccio sinistro tira il corpo in avanti
-  const crawling = P.stance === 2 && (f || st) && !P.swim;
-  if (crawling) { P.crawlPh = ((P.crawlPh || 0) + dt * .85) % 1; sp *= P.crawlPh > .35 ? .45 + 1.3 * Math.sin((P.crawlPh - .35) / .65 * PI) : .3; if (P.crawlPh > .35 && P.crawlPh - dt * .85 <= .35) play('bodyfall', null, { vol: .12, rate: 1.6 }); }
-  P.crawlK = lerp(P.crawlK || 0, crawling && P.adsK < .3 ? 1 : 0, Math.min(1, dt * 6));
-  if (P.sprint) sp = 6.9;
-  sp *= (w && w.speedMul) || 1;
-  if (P.adsK > .5) sp *= .6;
-  if (P.carry) sp *= .85;
-  if (P.shock > .3) sp *= .55;
-  const g0 = Hf(P.pos.x, P.pos.z), wl = P.pos.z > -10 ? waterLevel(P.pos.x, P.pos.z, GAME.time) : -99;
-  let boatFloor = -99;
-  P.onShip = P.pos.y > 5 && shipDeckY(P.pos.x, P.pos.z) > -99;
-  const shipFloor = P.onShip ? shipDeckY(P.pos.x, P.pos.z) : -99;
-  if (P.onShip) boatFloor = shipFloor;
-  for (const b of WORLD.boats) if (b.landed && Math.abs(P.pos.x - b.x) < 1.5 && P.pos.z > b.z - 7.1 && P.pos.z < b.z + 5) boatFloor = Math.max(boatFloor, b.y + .45);
-  P.depth = Math.max(0, wl - Math.max(g0, boatFloor));
-  P.swim = P.depth > 1.4;
-  if (P.depth > .15) sp *= clamp(1 - P.depth * .42, .4, 1);
-  if (P.swim) { sp = 1.9; P.stance = 0; }
-  // ferito: zoppica (passo irregolare e più lento) e la mira trema
-  if (P.hp < 45 && !P.downed && !P.dead) {
-    const w = 1 - P.hp / 45; sp *= 1 - w * .38 * (.55 + .45 * Math.abs(Math.sin(P.bobPh * .5)));
-    if (P.hp < 25) P.sprint = false;
-    P.kickY += Math.sin(GAME.time * 1.9) * .0009 * w; P.kickP += Math.sin(GAME.time * 2.7 + 1) * .0007 * w;
-  }
-  P.stamina = clamp(P.stamina + (P.sprint && (f || st) ? -.16 : .11) * dt, 0, 1);
-  const sy = Math.sin(P.yaw), cy = Math.cos(P.yaw);
-  let mx = 0, mz = 0;
-  if (f || st) { const l = Math.hypot(f, st); mx = (-sy * f + cy * st) / l; mz = (-cy * f - sy * st) / l; }
-  if (P.shock > .3) { mx += Math.sin(GAME.time * 1.7) * .3 * P.shock; mz += Math.cos(GAME.time * 1.3) * .3 * P.shock; }
-  const acc = P.grounded ? 10 : 2;
-  P.vel.x = lerp(P.vel.x, mx * sp, Math.min(1, dt * acc)); P.vel.z = lerp(P.vel.z, mz * sp, Math.min(1, dt * acc));
-  P.prev.copy(P.pos);
-  P.pos.x += P.vel.x * dt; P.pos.z += P.vel.z * dt;
-  pushOut(P.pos, .38, P.stance === 2 ? .5 : 1.7);
-  applyWire(P.pos, P.prev);
-  for (const o of OBST) {
-    const dx = P.pos.x - o.x, dz = P.pos.z - o.z, d2 = dx * dx + dz * dz, rr = o.r + .3;
-    if (d2 < rr * rr && d2 > 0) { const d = Math.sqrt(d2); P.pos.x = o.x + dx / d * rr; P.pos.z = o.z + dz / d * rr; }
-  }
-  if (P.onShip) { if (shipDeckY(P.pos.x, P.pos.z) < 0) { P.pos.x = P.prev.x; P.pos.z = P.prev.z; } }
-  else { P.pos.x = clamp(P.pos.x, -MAPX + 20, MAPX - 20); P.pos.z = clamp(P.pos.z, -MAPX + 60, 115); }
-  let ground = Math.max(Hf(P.pos.x, P.pos.z), boatFloor, bunkerStep(P.pos.x, P.pos.z), P.onShip ? Math.max(shipFloor, shipDeckY(P.pos.x, P.pos.z)) : -99);
-  if (P.swim) ground = Math.max(ground, wl - 1.4);
-  if (FLOORS.length && !P.onShip) ground = Math.max(ground, worldFloor(P.pos.x, P.pos.z, P.pos.y));
-  if (SCEN === 'snp') { snpClamp(PT, P.pos); ground = Math.max(ground, snpFloor(P.pos.x, P.pos.z, P.pos.y)); }
-  if (KEYS.Space && P.grounded && P.stance === 0 && !P.swim && P.depth < .6) { P.vy = 4.8; P.grounded = false; }
-  P.vy -= 18 * dt; P.pos.y += P.vy * dt;
-  if (P.pos.y <= ground) { if (!P.grounded && P.vy < -7) { P.shake += .25; play('bodyfall', null, { vol: .4 }); } P.pos.y = ground; P.vy = 0; P.grounded = true; }
-  else if (P.grounded && P.pos.y - ground < .7 && P.vy <= 0) { P.pos.y = ground; P.vy = 0; }
-  else P.grounded = false;
-  if (inMinefield(P.pos.x, P.pos.z)) checkMines(P.pos);
-  if (P.depth > .3 && P.moveK > .3 && R() < dt * 3) { PS_GRAIN.emit(P.pos.x + rnd(-.4, .4), wl, P.pos.z + rnd(-.4, .4), rnd(-1, 1), rnd(1, 2.5), rnd(-1, 1), .6, .05, .04, .8, ...C_WATER, .3, 9.8); if (R() < .1) lensSplat('water', .15); }
+  if (typeof xpcActive === 'function' && xpcActive()) xpcUpdate(dt, w);   // controller sperimentale: solo nella tech demo AAA
+  else {
+    const f = (KEYS.KeyW ? 1 : 0) - (KEYS.KeyS ? 1 : 0), st = (KEYS.KeyD ? 1 : 0) - (KEYS.KeyA ? 1 : 0);
+    // senza fiato: si torna a correre solo dopo aver recuperato un po' (evita lo scatto on/off a ogni fotogramma)
+    if (P.stamina <= .02) P.winded = true; else if (P.stamina > .3) P.winded = false;
+    P.sprint = !!KEYS.ShiftLeft && f > 0 && P.stance !== 2 && !P.winded && !P.swim && P.adsK < .3 && P.shock < .5;
+    if (P.sprint && P.stance === 1) P.stance = 0;
+    let sp = [4.3, 2.2, 1.0][P.stance];
+    // strisciata: la spinta arriva quando il braccio sinistro tira il corpo in avanti
+    const crawling = P.stance === 2 && (f || st) && !P.swim;
+    if (crawling) { P.crawlPh = ((P.crawlPh || 0) + dt * .85) % 1; sp *= P.crawlPh > .35 ? .45 + 1.3 * Math.sin((P.crawlPh - .35) / .65 * PI) : .3; if (P.crawlPh > .35 && P.crawlPh - dt * .85 <= .35) play('bodyfall', null, { vol: .12, rate: 1.6 }); }
+    P.crawlK = lerp(P.crawlK || 0, crawling && P.adsK < .3 ? 1 : 0, Math.min(1, dt * 6));
+    if (P.sprint) sp = 6.9;
+    sp *= (w && w.speedMul) || 1;
+    if (P.adsK > .5) sp *= .6;
+    if (P.carry) sp *= .85;
+    if (P.shock > .3) sp *= .55;
+    const g0 = Hf(P.pos.x, P.pos.z), wl = P.pos.z > -10 ? waterLevel(P.pos.x, P.pos.z, GAME.time) : -99;
+    let boatFloor = -99;
+    P.onShip = P.pos.y > 5 && shipDeckY(P.pos.x, P.pos.z) > -99;
+    const shipFloor = P.onShip ? shipDeckY(P.pos.x, P.pos.z) : -99;
+    if (P.onShip) boatFloor = shipFloor;
+    for (const b of WORLD.boats) if (b.landed && Math.abs(P.pos.x - b.x) < 1.5 && P.pos.z > b.z - 7.1 && P.pos.z < b.z + 5) boatFloor = Math.max(boatFloor, b.y + .45);
+    P.depth = Math.max(0, wl - Math.max(g0, boatFloor));
+    P.swim = P.depth > 1.4;
+    if (P.depth > .15) sp *= clamp(1 - P.depth * .42, .4, 1);
+    if (P.swim) { sp = 1.9; P.stance = 0; }
+    // ferito: zoppica (passo irregolare e più lento) e la mira trema
+    if (P.hp < 45 && !P.downed && !P.dead) {
+      const w = 1 - P.hp / 45; sp *= 1 - w * .38 * (.55 + .45 * Math.abs(Math.sin(P.bobPh * .5)));
+      if (P.hp < 25) P.sprint = false;
+      P.kickY += Math.sin(GAME.time * 1.9) * .0009 * w; P.kickP += Math.sin(GAME.time * 2.7 + 1) * .0007 * w;
+    }
+    P.stamina = clamp(P.stamina + (P.sprint && (f || st) ? -.16 : .11) * dt, 0, 1);
+    const sy = Math.sin(P.yaw), cy = Math.cos(P.yaw);
+    let mx = 0, mz = 0;
+    if (f || st) { const l = Math.hypot(f, st); mx = (-sy * f + cy * st) / l; mz = (-cy * f - sy * st) / l; }
+    if (P.shock > .3) { mx += Math.sin(GAME.time * 1.7) * .3 * P.shock; mz += Math.cos(GAME.time * 1.3) * .3 * P.shock; }
+    const acc = P.grounded ? 10 : 2;
+    P.vel.x = lerp(P.vel.x, mx * sp, Math.min(1, dt * acc)); P.vel.z = lerp(P.vel.z, mz * sp, Math.min(1, dt * acc));
+    P.prev.copy(P.pos);
+    P.pos.x += P.vel.x * dt; P.pos.z += P.vel.z * dt;
+    pushOut(P.pos, .38, P.stance === 2 ? .5 : 1.7);
+    applyWire(P.pos, P.prev);
+    for (const o of OBST) {
+      const dx = P.pos.x - o.x, dz = P.pos.z - o.z, d2 = dx * dx + dz * dz, rr = o.r + .3;
+      if (d2 < rr * rr && d2 > 0) { const d = Math.sqrt(d2); P.pos.x = o.x + dx / d * rr; P.pos.z = o.z + dz / d * rr; }
+    }
+    if (P.onShip) { if (shipDeckY(P.pos.x, P.pos.z) < 0) { P.pos.x = P.prev.x; P.pos.z = P.prev.z; } }
+    else { P.pos.x = clamp(P.pos.x, -MAPX + 20, MAPX - 20); P.pos.z = clamp(P.pos.z, -MAPX + 60, 115); }
+    let ground = Math.max(Hf(P.pos.x, P.pos.z), boatFloor, bunkerStep(P.pos.x, P.pos.z), P.onShip ? Math.max(shipFloor, shipDeckY(P.pos.x, P.pos.z)) : -99);
+    if (P.swim) ground = Math.max(ground, wl - 1.4);
+    if (FLOORS.length && !P.onShip) ground = Math.max(ground, worldFloor(P.pos.x, P.pos.z, P.pos.y));
+    if (SCEN === 'snp') { snpClamp(PT, P.pos); ground = Math.max(ground, snpFloor(P.pos.x, P.pos.z, P.pos.y)); }
+    if (KEYS.Space && P.grounded && P.stance === 0 && !P.swim && P.depth < .6) { P.vy = 4.8; P.grounded = false; }
+    P.vy -= 18 * dt; P.pos.y += P.vy * dt;
+    if (P.pos.y <= ground) { if (!P.grounded && P.vy < -7) { P.shake += .25; play('bodyfall', null, { vol: .4 }); } P.pos.y = ground; P.vy = 0; P.grounded = true; }
+    else if (P.grounded && P.pos.y - ground < .7 && P.vy <= 0) { P.pos.y = ground; P.vy = 0; }
+    else P.grounded = false;
+    if (inMinefield(P.pos.x, P.pos.z)) checkMines(P.pos);
+    if (P.depth > .3 && P.moveK > .3 && R() < dt * 3) { PS_GRAIN.emit(P.pos.x + rnd(-.4, .4), wl, P.pos.z + rnd(-.4, .4), rnd(-1, 1), rnd(1, 2.5), rnd(-1, 1), .6, .05, .04, .8, ...C_WATER, .3, 9.8); if (R() < .1) lensSplat('water', .15); }
 
-  const spd = Math.hypot(P.vel.x, P.vel.z);
-  P.moveK = clamp(spd / 4.3, 0, 1.6); P.bobPh += dt * spd * 2.3;
-  P.stepT -= dt * spd;
-  if (P.stepT <= 0 && P.grounded) { P.stepT = P.sprint ? 2.5 : 2.1; sfxStep(P.depth > .1 ? 'water' : Math.abs(P.pos.z - BANK_Z) < 2.5 ? 'peb' : 'sand', P.sprint); }
-
+    const spd = Math.hypot(P.vel.x, P.vel.z);
+    P.moveK = clamp(spd / 4.3, 0, 1.6); P.bobPh += dt * spd * 2.3;
+    P.stepT -= dt * spd;
+    if (P.stepT <= 0 && P.grounded) { P.stepT = P.sprint ? 2.5 : 2.1; sfxStep(P.depth > .1 ? 'water' : Math.abs(P.pos.z - BANK_Z) < 2.5 ? 'peb' : 'sand', P.sprint); }
+  }
   if (s && mouseL && (w.auto || P.trigger) && !P.downed) playerFire();
   updateInteract(dt);
-  updateCamera(dt); updateViewmodel(dt);
+  if (typeof xpcActive === 'function' && xpcActive()) xpcCamera(dt); else updateCamera(dt);
+  updateViewmodel(dt);
 }
 
 function updateInteract(dt) {
