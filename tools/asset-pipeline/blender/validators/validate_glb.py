@@ -174,3 +174,37 @@ if __name__ == '__main__':
     r = validate(p, man, lib)
     print(json.dumps(r, ensure_ascii=False, indent=1))
     sys.exit(1 if r['errori'] else 0)
+
+
+def validate_weapon(path, manifest):
+    """Controlli specifici delle armi: parti mobili, punti di riferimento, tre modelli, scala, texture incorporate."""
+    rep = validate(path)
+    E, W = rep['errori'], rep['avvisi']
+    # i LOD della casa non valgono qui: si tolgono gli errori «LOD» generici e si controllano FP/TP/WD
+    rep['errori'] = E = [e for e in E if 'livello di dettaglio' not in e and 'LOD' not in e]
+    rep['avvisi'] = W = [w for w in W if 'texture' not in w]   # le armi incorporano le proprie texture per scelta
+    js, binc, _ = read_glb(path) if not E else (None, None, None)
+    if js:
+        names = [n.get('name', '') for n in js.get('nodes', [])]
+        for need in ('FP', 'TP', 'WD', 'FP_body', 'FP_bolt', 'FP_oprod', 'FP_clip', 'FP_trigger', 'TP_body', 'WD_body'):
+            if need not in names:
+                E.append('nodo «%s» mancante' % need)
+        for p in ('muzzle', 'port', 'rear_sight', 'front_sight', 'grip_r', 'grip_l'):
+            if 'PT_' + p not in names:
+                E.append('punto di riferimento «%s» mancante' % p)
+        if not js.get('images'):
+            E.append('nessuna texture incorporata')
+        t = manifest['triangoli']
+        if not (t['FP'] > t['TP'] > t['WD']):
+            E.append('i modelli non riducono i triangoli: %s' % t)
+        pts = manifest['punti']
+        L = abs(pts['muzzle'][2]) + 0.342
+        rep['lunghezza_m'] = round(L, 3)
+        if abs(L - 1.107) > .03 and manifest['id'] == 'm1garand':
+            E.append('lunghezza %.3f m (M1 Garand reale: 1.107 m)' % L)
+        rs, fs = pts['rear_sight'], pts['front_sight']
+        if abs(rs[0] - fs[0]) > 1e-4 or abs(rs[1] - fs[1]) > .002:
+            E.append('mire non allineate: diottra %s, mirino %s' % (rs, fs))
+        if t['FP'] > 60000:
+            W.append('modello in prima persona oltre 60.000 triangoli')
+    return rep

@@ -1,0 +1,109 @@
+{
+ "id": "m1garand",
+ "formato": "omaha1944-weapon-1",
+ "blender": "5.2.3 LTS",
+ "unita": "metri",
+ "assi": "glTF: canna verso -Z, alto +Y, origine sul grilletto (stesso sistema di src/guns.js)",
+ "triangoli": {
+  "FP": 8916,
+  "TP": 3756,
+  "WD": 2564
+ },
+ "parti": {
+  "FP": {
+   "body": 5628,
+   "bolt": 248,
+   "oprod": 184,
+   "clip": 2832,
+   "trigger": 24
+  },
+  "TP": {
+   "body": 3756
+  },
+  "WD": {
+   "body": 2564
+  }
+ },
+ "punti": {
+  "muzzle": [
+   0,
+   0.058,
+   -0.767
+  ],
+  "port": [
+   0.012,
+   0.08,
+   -0.035
+  ],
+  "rear_sight": [
+   0,
+   0.091,
+   0.058
+  ],
+  "front_sight": [
+   0,
+   0.091,
+   -0.742
+  ],
+  "grip_r": [
+   0,
+   -0.012,
+   0.072
+  ],
+  "grip_l": [
+   0,
+   -0.018,
+   -0.33
+  ],
+  "charge": [
+   0.03,
+   0.064,
+   -0.125
+  ],
+  "clip_top": [
+   0,
+   0.088,
+   -0.035
+  ]
+ },
+ "perni": {
+  "bolt": [
+   0.0,
+   0.058,
+   -0.0
+  ],
+  "oprod": [
+   0.024,
+   0.062,
+   -0.12
+  ],
+  "clip": [
+   0.0,
+   0.038,
+   -0.035
+  ],
+  "trigger": [
+   0.0,
+   -0.004,
+   -0.004
+  ]
+ },
+ "materiali": [
+  "wood",
+  "steel",
+  "steel_bright",
+  "steel_dark",
+  "brass",
+  "copper"
+ ],
+ "texture": {
+  "legno": "Poly Haven american_walnut_veneer (CC0, Jenelle van Heerden)",
+  "acciaio": "procedurale (build_weapon.py)"
+ },
+ "tempo_s": 0.55,
+ "validazione": {
+  "errori": [],
+  "avvisi": [],
+  "kb": 778.3
+ }
+}

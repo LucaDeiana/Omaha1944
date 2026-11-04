@@ -79,6 +79,16 @@ try:
     check('validatore: materiale sconosciuto al runtime segnalato', any('slate' in e for e in r['errori']))
     r = validate_glb.validate(ga, ma, lib, {'lod0_tri': 1000, 'kb': 10})
     check('validatore: budget superato = avviso (non errore)', r['avvisi'] and not r['errori'], r['avvisi'][:2])
+    # armi: build reale, determinismo, validazione
+    w1, w2 = os.path.join(tmp, 'w1'), os.path.join(tmp, 'w2')
+    rw = [subprocess.run([sys.executable, os.path.join(HERE, 'build_weapon.py'), 'm1garand'], env=dict(os.environ, WPN_OUT=d, WPN_TMP=os.path.join(d, 't')), capture_output=True, text=True) for d in (w1, w2)]
+    check('arma: M1 Garand generato, esportato e validato (Blender)', rw[0].returncode == 0, (rw[0].stdout.strip().splitlines() or ['?'])[-1][:120] if rw[0].returncode == 0 else rw[0].stderr[-300:])
+    wa, wb = os.path.join(w1, 'm1garand.glb'), os.path.join(w2, 'm1garand.glb')
+    check('arma: stesso generatore => stesso GLB', os.path.exists(wb) and sha(wa) == sha(wb), sha(wa)[:12] if os.path.exists(wa) else '')
+    wm = json.load(open(os.path.join(w1, 'm1garand.json')))
+    check('arma: lunghezza reale 1,107 m, mire allineate, tre modelli decrescenti', abs(abs(wm['punti']['muzzle'][2]) + .342 - 1.107) < .01 and wm['punti']['rear_sight'][1] == wm['punti']['front_sight'][1] and wm['triangoli']['FP'] > wm['triangoli']['TP'] > wm['triangoli']['WD'], wm['triangoli'])
+    repo_w = os.path.join(ROOT, 'assets', 'weapons', 'm1garand.glb')
+    check('arma: GLB nel repository aggiornato rispetto ai sorgenti', os.path.exists(repo_w) and sha(repo_w) == sha(wa))
     # il file nel repository corrisponde a quanto genera la pipeline adesso
     repo = os.path.join(ROOT, 'assets', 'aaa', 'pipeline', 'normandy_house_01.glb')
     check('GLB nel repository aggiornato rispetto ai sorgenti', os.path.exists(repo) and sha(repo) == sha(ga))

@@ -10,3 +10,4 @@ versione.txt
 dist/
 /local-assets/
 __pycache__/
+tools/asset-pipeline/.cache/

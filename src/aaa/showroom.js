@@ -16,6 +16,7 @@ const SR_LIGHTS = {
 };
 function srList() {
   const out = PIPE_IDS.map(id => ({ id, nome: id + ' (pipeline)', kind: 'pipe' }));
+  if (typeof WGLB !== 'undefined') for (const id in WGLB.map) { out.push({ id: 'wpn:' + id, nome: 'ARMA ' + WEAPONS[id].name + ' — nuovo (Blender)', kind: 'wpn', gun: id }); out.push({ id: 'old:' + id, nome: 'ARMA ' + WEAPONS[id].name + ' — modello precedente', kind: 'wpnold', gun: id }); }
   if (typeof AAA_M !== 'undefined') for (const k in AAA_M) out.push({ id: k, nome: k + ' (Poly Haven)', kind: 'ph' });
   return out;
 }
@@ -48,12 +49,19 @@ async function srShow(id) {
     ASR.A = A; obj = new THREE.LOD(); const D = A.man.distanzeLod[AAA.preset] || A.man.distanzeLod.HIGH;
     ['LOD0', 'LOD1', 'LOD2'].forEach((k, i) => { const g = new THREE.Group(); g.name = k; for (const m of A.lods[k] || []) { const c = new THREE.Mesh(m.geometry, m.material); c.castShadow = m.castShadow; c.receiveShadow = true; g.add(c); } obj.addLevel(g, [0, D[0], D[1]][i]); });
     info = A.st;
+  } else if (it.kind === 'wpn' || it.kind === 'wpnold') {
+    ASR.A = null;
+    if (it.kind === 'wpn') { await wglbLoad(it.gun); }
+    const D = it.kind === 'wpn' ? WGLB.data[it.gun] : null;
+    if (it.kind === 'wpn' && D) { obj = new THREE.LOD(); ['FP', 'TP', 'WD'].forEach((k, i) => { const gi = wglbGun(it.gun, k); if (i === 0) ASR.wg = gi; obj.addLevel(gi.group, [0, 2.5, 8][i]); }); ASR.wd = D; }
+    else { const gi = buildGun(it.gun); obj = gi.group; obj.visible = true; obj.traverse(o => { o.visible = true; }); ASR.wg = null; ASR.wd = null; }
+    obj.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; } });
   } else {
-    ASR.A = null; obj = AAA_M[id].clone(true); obj.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; } });
+    ASR.A = null; ASR.wg = null; ASR.wd = null; obj = AAA_M[id].clone(true); obj.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; } });
   }
-  ASR.obj = obj; ASR.root.add(obj); obj.updateMatrixWorld(true);
+  ASR.obj = obj; ASR.root.add(obj); if (it.kind === 'wpn' || it.kind === 'wpnold') obj.position.set(0, 1.1, 0); else { ASR.adsView = false; } obj.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(obj.isLOD ? obj.levels[0].object : obj), size = box.getSize(new THREE.Vector3());
-  ASR.box = box; ASR.size = Math.max(size.x, size.y, size.z); ASR.tgt.set((box.min.x + box.max.x) / 2, size.y * .42, (box.min.z + box.max.z) / 2); ASR.dist = ASR.size * 1.9 + 1;
+  ASR.box = box; ASR.size = Math.max(size.x, size.y, size.z); ASR.tgt.set((box.min.x + box.max.x) / 2, box.min.y + size.y * .42, (box.min.z + box.max.z) / 2); ASR.dist = ASR.size * 1.9 + (size.y > 1.5 ? 1 : .15);
   srLight(ASR.light); srApply(); srUi();
 }
 function srClear() { for (const h of ASR.helpers) { ASR.scene.remove(h); h.traverse(o => { if (o.geometry) o.geometry.dispose(); }); } ASR.helpers = []; if (ASR.obj) { ASR.root.remove(ASR.obj); ASR.obj = null; } }
@@ -69,7 +77,29 @@ function srApply() {
     ASR.scene.add(g); ASR.helpers.push(g);
   }
 }
+// anteprima delle animazioni meccaniche dell'arma (stessi movimenti della prima persona) e vista ADS dai punti dell'arma
+function srWeaponAnim() {
+  const g = ASR.wg; if (!g || !g.parts) return;
+  const a = ASR.anim, now = performance.now() / 1000; let back = 0, clipY = 0, trig = 0;
+  if (a) {
+    const t = (now - a.t0) / a.dur;
+    if (t >= 1) ASR.anim = null;
+    else if (a.type === 'fire') { const c = Math.min(1, t * 2.4); back = c < .45 ? Math.sin(c / .45 * PI / 2) : Math.cos((c - .45) / .55 * PI / 2); trig = t < .3 ? -.18 : 0; }
+    else if (a.type === 'reload') { back = t < .78 ? 1 : 1 - Math.min(1, (t - .78) / .05); clipY = t < .2 ? 1 : t < .62 ? 1 - (t - .2) / .42 : 0; if (g.mag) g.mag.visible = t > .12; }
+    else if (a.type === 'empty') { back = 1; if (g.mag) g.mag.visible = false; }
+  } else if (g.mag) g.mag.visible = true;
+  if (g.parts.bolt) g.parts.bolt.position.z = g.boltBase.z + back * .07;
+  if (g.parts.oprod) g.parts.oprod.position.z = g.opBase.z + back * .07;
+  if (g.parts.trigger) g.parts.trigger.rotation.x = trig;
+  if (g.mag) { if (!g.magBase) g.magBase = g.mag.position.clone(); g.mag.position.copy(g.magBase).addScaledVector(g.magOut, clipY); }
+}
 function srCamera() {
+  if (ASR.adsView && ASR.wg && ASR.wg.rear) {   // occhio dietro la diottra, lungo la linea di mira verso il mirino
+    const c = ASR.cam, r = ASR.wg.rear, f = ASR.wg.front, o = ASR.obj; o.updateMatrixWorld(true);
+    const rw = o.localToWorld(r.clone()), fw = o.localToWorld(f.clone()), d = fw.clone().sub(rw).normalize();
+    c.position.copy(rw).addScaledVector(d, -WGLB_EYE); c.fov = WEAPONS[ASR.sel.split(':')[1]].fov || 52; c.near = .02; c.lookAt(fw); c.aspect = innerWidth / innerHeight; c.updateProjectionMatrix(); return;
+  }
+  ASR.cam.fov = 40; ASR.cam.near = .05;
   const c = ASR.cam, d = ASR.dist, p = ASR.pitch, y = ASR.yaw;
   c.position.set(ASR.tgt.x + Math.sin(y) * Math.cos(p) * d, ASR.tgt.y + Math.sin(p) * d, ASR.tgt.z + Math.cos(y) * Math.cos(p) * d);
   c.lookAt(ASR.tgt); c.aspect = innerWidth / innerHeight; c.updateProjectionMatrix();
@@ -77,7 +107,8 @@ function srCamera() {
 // chiamata da renderFrame al posto della scena della demo
 function srRender() {
   if (ASR.auto) ASR.yaw += .004;
-  srCamera(); renderer.info.reset(); ASR.sun.shadow.needsUpdate = true;
+  srCamera();
+  srWeaponAnim(); renderer.info.reset(); ASR.sun.shadow.needsUpdate = true;
   const tm = renderer.toneMapping; renderer.toneMapping = THREE.ACESFilmicToneMapping;   // la scena della demo fa il tone mapping nel post-processing: qui lo fa il renderer
   renderer.render(ASR.scene, ASR.cam); renderer.toneMapping = tm;
   if (ASR.obj && ASR.obj.isLOD && ASR.lod === 'auto') { const i = ASR.obj.getCurrentLevel(); if (i !== ASR.curLod) { ASR.curLod = i; srUi(); } }
@@ -106,6 +137,10 @@ function srUi(msg) {
   <div style="${S}">ASSET</div><select data-a="sel" style="width:100%;background:#222;color:#eee;border:1px solid #666">${srList().map(a => `<option value="${a.id}"${a.id === ASR.sel ? ' selected' : ''}>${a.nome}</option>`).join('')}</select>
   <div style="${S}">VISTA</div>${B('wire', 'Wireframe', ASR.wire)}${B('bbox', 'Ingombro', ASR.bbox)}${A ? B('cols', 'Collisioni', ASR.cols) : ''}${B('auto', 'Giro automatico', ASR.auto)}${B('shot', 'Foto PNG')}
   <div style="${S}">LUCE</div>${Object.keys(SR_LIGHTS).map(k => B('L:' + k, k, ASR.light === k)).join('')}`;
+  if (ASR.wd) { const D = ASR.wd, t = D.man.triangoli; h += `<div style="${S}">ARMA — ANIMAZIONI</div>${B('an:fire', 'Sparo')}${B('an:reload', 'Ricarica (clip en-bloc)')}${B('an:empty', 'Clip vuota')}${B('adsv', 'Vista ADS', ASR.adsView)}
+    <div style="${S}">MODELLI</div><table style="width:100%">${['FP', 'TP', 'WD'].map((k, i) => `<tr><td>${['Prima persona', 'Soldati', 'A terra'][i]} (${k})</td><td style="text-align:right">${t[k].toLocaleString('it')} tri</td></tr>`).join('')}</table>
+    <div>File ${D.kb} KB · caricamento ${D.ms} ms · ${D.mats.size} materiali · ${D.tex.size} texture incorporate · lunghezza ${(Math.abs(D.man.punti.muzzle[2]) + .342).toFixed(3)} m</div>
+    <div style="opacity:.75">Parti mobili: ${Object.keys(D.man.perni).join(', ')} · Punti: ${Object.keys(D.man.punti).join(', ')}</div>`; }
   if (A) h += `<div style="${S}">LIVELLO DI DETTAGLIO</div>${['auto', 'LOD0', 'LOD1', 'LOD2'].map(k => B('lod:' + k, k === 'auto' ? `auto (${'LOD' + (ASR.curLod ?? 0)})` : k, ASR.lod === k)).join('')}
     <div style="opacity:.75">Distanze per ${AAA.preset}: LOD1 da ${A.man.distanzeLod[AAA.preset][0]} m, LOD2 da ${A.man.distanzeLod[AAA.preset][1]} m</div>
     <div style="${S}">STATISTICHE</div><table style="width:100%;border-collapse:collapse">${['LOD0', 'LOD1', 'LOD2'].map(k => `<tr><td>${k}</td><td style="text-align:right">${Math.round(st.triangoli[k] || 0).toLocaleString('it')} tri</td><td style="text-align:right">${st.drawCall[k] || 0} draw call</td></tr>`).join('')}</table>
@@ -121,6 +156,8 @@ function srClick(e) {
   if (e.type === 'change' && a === 'sel') { srShow(t.value); return; } if (e.type !== 'click' || a === 'sel') return;
   if (a === 'close') return srOpen(false);
   if (a === 'wire') ASR.wire = !ASR.wire; else if (a === 'bbox') ASR.bbox = !ASR.bbox; else if (a === 'cols') ASR.cols = !ASR.cols; else if (a === 'auto') ASR.auto = !ASR.auto;
+  else if (a.startsWith('an:')) ASR.anim = { type: a.slice(3), t0: performance.now() / 1000, dur: a === 'an:reload' ? 2.3 : a === 'an:empty' ? 2 : .5 };
+  else if (a === 'adsv') ASR.adsView = !ASR.adsView;
   else if (a.startsWith('L:')) srLight(a.slice(2)); else if (a.startsWith('lod:')) ASR.lod = a.slice(4);
   else if (a === 'shot') { srRender(); const u = renderer.domElement.toDataURL('image/png'); const l = document.createElement('a'); l.download = `showroom_${ASR.sel}_${ASR.light}.png`; l.href = u; l.click(); }
   srApply(); srUi();

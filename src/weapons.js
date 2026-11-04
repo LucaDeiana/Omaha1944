@@ -26,6 +26,7 @@ function initWeapons() {
   vmFlash = new THREE.Group();
   for (let i = 0; i < 3; i++) { const m = new THREE.Mesh(fp, VM.flash); m.rotation.z = i * PI / 3; m.rotation.y = PI / 2; m.scale.set(2.2, 1, 1); m.position.z = -.5; vmFlash.add(m); }
   vmFlash.add(new THREE.Mesh(fp, VM.flash)); vmFlash.visible = false;
+  if (typeof wglbPreload === 'function') wglbPreload();   // armi in alta qualità (in background)
 }
 
 function part(parent, geo, mat, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0) {
@@ -84,7 +85,7 @@ function addSights(g, kind, y, rz, fz, mat, hood, x = 0) {
   else for (const sx of [-1, 1]) part(g, U.box, mat, x + sx * .009, y - .004, fz, .003, .018, .01);
 }
 function buildViewmodel(id) {
-  const i = buildGun(id), g = i.group;
+  const i = (typeof wglbGun === 'function' && wglbGun(id, 'FP')) || buildGun(id), g = i.group;   // modello Blender se pronto
   const rh = i.grip, lh = i.fore;
   hand(g, new V3(rh.x + .012, rh.y, rh.z), 1);
   limb(g, new V3(rh.x + .03, rh.y - .03, rh.z + .05), new V3(.24, -.42, .34), .034, VM.sleeve);
@@ -168,7 +169,7 @@ function playerFire() {
   }
   if (w.ping && s.mag === 0) {
     sfxPing();
-    if (vmCur && vmCur.mag) { const cp = vmCur.group.localToWorld(vmCur.magBase.clone()); fxCasing(cp, new V3(rnd(-.5, .5), 4, 0).addScaledVector(_d, -.5)); }
+    if (vmCur && vmCur.mag) { if (vmCur.hq && typeof wglbEjectClip === 'function') wglbEjectClip(); else { const cp = vmCur.group.localToWorld(vmCur.magBase.clone()); fxCasing(cp, new V3(rnd(-.5, .5), 4, 0).addScaledVector(_d, -.5)); } }
   }
   if (w.bolt && s.mag > 0) {
     P.boltT = 1; sfxMech('bolt', .3); sfxMech('boltc', .55);
@@ -382,7 +383,7 @@ function checkMines(pos) {
 
 // ---------- armi a terra ----------
 function spawnPickup(id, pos, mag, res) {
-  const gi = buildGun(id), g = gi.group;
+  const gi = (typeof wglbGun === 'function' && wglbGun(id, 'WD')) || buildGun(id), g = gi.group;
   g.rotation.set(0, R() * TAU, PI / 2); g.position.set(pos.x, Hf(pos.x, pos.z) + .06, pos.z);
   g.traverse(o => { if (o.isMesh) o.castShadow = true; });
   scene.add(g);
@@ -488,7 +489,9 @@ function updateViewmodel(dt) {
   _ea.copy(_lh).add(T3.set(-.02, -.04, .03));
   const la = vmCur.larm, dv = T5.subVectors(elb, _ea);
   la.position.copy(_ea).addScaledVector(dv, .5); la.quaternion.setFromUnitVectors(T4.set(0, 1, 0), dv.clone().normalize()); la.scale.set(1, dv.length(), 1);
+  if (typeof wglbInspectPose === 'function' && WGLB.inspectT > 0) { const o = { x, y, z, rx, ry, rz }; wglbInspectPose(o); ({ x, y, z, rx, ry, rz } = o); }
   g.position.set(x, y, z); g.rotation.set(rx, ry, rz);
+  if (typeof wglbAnimate === 'function') wglbAnimate(dt);
   if (P.flashT > 0) { P.flashT -= dt; vmFlash.visible = P.flashT > 0; } else vmFlash.visible = false;
   const scoped = w.scope && k > .92;
   $('scope').style.display = scoped ? 'block' : 'none';

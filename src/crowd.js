@@ -548,8 +548,8 @@ function baseBodyGeo(team) {
 const GUN_ID = { A: { rifle: 'garand', sniper: 'springfield', smg: 'thompson', bar: 'bar' }, E: { rifle: 'kar98', sniper: 'kar98zf', smg: 'mp40' } };
 function gunGeo(team, kind) {
   const id = (GUN_ID[team] || {})[kind]; if (!id || typeof buildGun !== 'function' || !VM.wood) return null;
-  const gi = buildGun(id), grp = gi.group, C = SCOL2[team], parts = [];
-  const tint = m => m === VM.wood ? 0x6b4423 : m === VM.wood2 ? 0x5a3a20 : m === VM.bake ? 0x2c1a10 : m === VM.brass ? 0xb08a3a : m === VM.glass ? 0x203040 : m === VM.olive ? 0x4a5236 : C.metal;
+  const gi = (typeof wglbGun === 'function' && wglbGun(id, 'TP')) || buildGun(id), grp = gi.group, C = SCOL2[team], parts = [];
+  const tint = m => m.userData && m.userData.tint ? m.userData.tint : m === VM.wood ? 0x6b4423 : m === VM.wood2 ? 0x5a3a20 : m === VM.bake ? 0x2c1a10 : m === VM.brass ? 0xb08a3a : m === VM.glass ? 0x203040 : m === VM.olive ? 0x4a5236 : C.metal;
   grp.updateMatrixWorld(true);
   const off = new THREE.Matrix4().makeTranslation(-gi.grip.x, -gi.grip.y - .03, -gi.grip.z + .03);
   grp.traverse(o => { if (!o.isMesh) return; const g = o.geometry.index ? o.geometry : o.geometry; parts.push({ g, m: off.clone().multiply(o.matrixWorld), c: col(tint(o.material)), vc: false, uvs: 1 }); });
