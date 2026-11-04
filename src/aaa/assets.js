@@ -12,6 +12,7 @@ async function aaaLoadAssets() {
     if (!window.AAA_TEX) await aaaLoadScript('assets/aaa/aaa_tex.js');
     if (!window.AAA_GLB) await aaaLoadScript('assets/aaa/aaa_models.js');
     if (!THREE.GLTFLoader) await aaaLoadScript('assets/lib/three/examples/js/GLTFLoader.js');
+    if ((AAA_PRESETS[AAA.preset] || {}).ssao && !THREE.SSAOPass) { await aaaLoadScript('assets/lib/three/examples/js/math/SimplexNoise.js'); await aaaLoadScript('assets/lib/three/examples/js/shaders/SSAOShader.js'); await aaaLoadScript('assets/lib/three/examples/js/postprocessing/SSAOPass.js'); }
   } catch (e) { console.warn('AAA: asset di alta qualità non disponibili, uso i materiali del gioco', e); AAA.st.hq = false; return; }
   const aniso = renderer.capabilities.getMaxAnisotropy();
   const img = src => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });

@@ -8,10 +8,10 @@
 // ============================================================
 const AAA = { on: false, preset: 'HIGH', P: null, mats: {}, rooms: [], time: { value: 0 }, wind: { value: new THREE.Vector2(.8, .35) }, cube: null, st: {}, objs: [], photo: false };
 const AAA_PRESETS = {
-  LOW: { q: 'basso', terr: 1.0, grass: 0, flowers: 0, leaves: .45, rocks: 300, tiles: false, reflect: false, dust: 0, shafts: false, ivy: .35, near: 40, outer: 8, cube: 64 },
-  MEDIUM: { q: 'medio', terr: .6, grass: 24000, flowers: 300, leaves: .7, rocks: 1200, tiles: true, reflect: true, dust: 150, shafts: true, ivy: .7, near: 40, outer: 6, cube: 128 },
-  HIGH: { q: 'alto', terr: .4, grass: 70000, flowers: 900, leaves: 1, rocks: 2600, tiles: true, reflect: true, dust: 320, shafts: true, ivy: 1, near: 34, outer: 5, cube: 256 },
-  ULTRA: { q: 'ultra', terr: .28, grass: 150000, flowers: 1800, leaves: 1.3, rocks: 4500, tiles: true, reflect: true, dust: 600, shafts: true, ivy: 1.3, near: 26, outer: 4, cube: 512 },
+  LOW: { q: 'basso', terr: 1.0, grass: 0, flowers: 0, leaves: .45, rocks: 300, tiles: false, reflect: false, dust: 0, shafts: false, ivy: .35, near: 40, outer: 8, cube: 64, ssao: 0 },
+  MEDIUM: { q: 'medio', terr: .6, grass: 24000, flowers: 300, leaves: .7, rocks: 1200, tiles: true, reflect: true, dust: 150, shafts: true, ivy: .7, near: 40, outer: 6, cube: 128, ssao: 0 },
+  HIGH: { q: 'alto', terr: .4, grass: 70000, flowers: 900, leaves: 1, rocks: 2600, tiles: true, reflect: true, dust: 320, shafts: true, ivy: 1, near: 34, outer: 5, cube: 256, ssao: 16 },
+  ULTRA: { q: 'ultra', terr: .28, grass: 150000, flowers: 1800, leaves: 1.3, rocks: 4500, tiles: true, reflect: true, dust: 600, shafts: true, ivy: 1.3, near: 26, outer: 4, cube: 512, ssao: 32 },
 };
 function aaaQ() { const p = AAA_PRESETS[AAA.preset] || AAA_PRESETS.HIGH; return Object.assign({}, QUALITY[p.q], { shadowDist: p.near, grass: 0 }); }
 

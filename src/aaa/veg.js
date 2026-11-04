@@ -61,7 +61,7 @@ function aaaGrass() {
     for (const [a1, b1, c1] of [[0, 1, 2], [2, 1, 3], [2, 3, 4]]) for (const k of [a1, b1, c1]) { pos.push(...V[k]); const t = V[k][1] / h; col.push(...cB.map((v, j) => v + (cT[j] - v) * t)); sw.push(t * t); nor.push(0, 1, 0); }
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setAttribute('wsway', new THREE.Float32BufferAttribute(sw, 1)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
-  const mat = aaaPatch(new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: .85 }), { wind: .32, key: 'grass' });
+  const mat = aaaPatch(new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: .85 }), { wind: .32, key: 'grass' }); mat.userData.grass = true;
   const N = Math.floor(PZ.grass / BL), im = new THREE.InstancedMesh(g, mat, N); im.receiveShadow = true; im.castShadow = AAA.preset === 'ULTRA';
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(); let c = 0;
   for (let t = 0; t < N * 6 && c < N; t++) {

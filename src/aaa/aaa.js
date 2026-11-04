@@ -205,7 +205,7 @@ function aaaInit() {
   if (sun.shadow && sun.shadow.camera) { sun.shadow.bias = -.00025; sun.shadow.normalBias = .025; sun.shadow.radius = AAA.preset === 'ULTRA' ? 3 : 2; sun.shadow.camera.far = 900; sun.shadow.camera.updateProjectionMatrix(); }
   // riflessi: una cubemap del villaggio presa dalla strada, una volta (pozzanghere e vetri riflettono cielo e case)
   try { const PZ = AAA_PRESETS[AAA.preset]; const rt = new THREE.WebGLCubeRenderTarget(PZ.cube, { generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter }); const cc = new THREE.CubeCamera(.3, 600, rt); cc.position.set(AV.cx + 4, aaaH(AV.cx + 4, AV.cz + 6) + 1.1, AV.cz + 6); scene.add(cc); const vm = typeof vmRoot !== 'undefined' && vmRoot ? vmRoot.visible : null; if (vmRoot) vmRoot.visible = false; cc.update(renderer, scene); if (vmRoot && vm !== null) vmRoot.visible = vm; AAA.cube = rt.texture; for (const m of [AAA.mats.water, AAA.mats.glass]) { m.envMap = AAA.cube; m.needsUpdate = true; } } catch (e) { console.warn('cubemap', e); }
-  aaaShafts(); aaaDust();
+  aaaShafts(); aaaDust(); aaaSSAO();
   // audio: vento leggero e artiglieria molto lontana ogni tanto
   try { AAA.windS = loopSound('wind', 0, 'ambience.wind'); } catch (e) { }
   AAA.boomT = 25; AAA.t0 = performance.now();
@@ -308,4 +308,21 @@ function aaaMenu() {
     if (b.dataset.x) { el.remove(); const mm = $('mainMenu'); if (mm) mm.style.display = ''; }
     if (b.dataset.go) { try { localStorage.setItem('aaa_preset', sel); } catch (e2) { } AAA.preset = sel; el.remove(); const mm = $('mainMenu'); if (mm) mm.style.display = 'none'; const sm = $('optMap'); if (![...sm.options].some(o => o.value === 'aaa')) { const o = document.createElement('option'); o.value = 'aaa'; o.textContent = 'AAA Graphics Test'; sm.appendChild(o); } sm.value = 'aaa'; AAA.t0 = performance.now(); startGame(); }
   };
+}
+
+// occlusione ambientale in spazio schermo (SSAOPass di three r128): prende il posto del passaggio di rendering
+// (lo fa già lui, niente doppio disegno), buffer della scena in mezza precisione per il color grading; foglie, erba,
+// edera e fasci di luce esclusi dalla profondità (le schede con trasparenza farebbero aloni quadrati)
+function aaaSSAO() {
+  const k = (AAA_PRESETS[AAA.preset] || {}).ssao; if (!k || !composer || !THREE.SSAOPass) return;
+  const pr = renderer.getPixelRatio(), w = Math.round(innerWidth * pr), h = Math.round(innerHeight * pr);
+  const p = new THREE.SSAOPass(scene, camera, w, h); p.kernelSize = k; p.generateSampleKernel(); p.ssaoMaterial.defines.KERNEL_SIZE = k; p.ssaoMaterial.uniforms.kernel.value = p.kernel; p.ssaoMaterial.needsUpdate = true;
+  p.kernelRadius = .6; p.minDistance = .000005; p.maxDistance = .003;
+  // intensità: curva di potenza sul risultato sfocato (l'occlusione di r128 è tenue)
+  p.blurMaterial.fragmentShader = p.blurMaterial.fragmentShader.replace(/gl_FragColor\s*=\s*vec4\(\s*vec3\(\s*result\s*\/\s*\(\s*5\.0\s*\*\s*5\.0\s*\)\s*\)\s*,\s*1\.0\s*\);/, 'gl_FragColor = vec4( vec3( pow( result / 25.0, 2.6 ) ), 1.0 );'); p.blurMaterial.needsUpdate = true; AAA.st.aoPow = /pow\( result/.test(p.blurMaterial.fragmentShader);
+  p.beautyRenderTarget.dispose(); p.beautyRenderTarget = new THREE.WebGLRenderTarget(w, h, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, type: THREE.HalfFloatType }); p.ssaoMaterial.uniforms.tDiffuse.value = p.beautyRenderTarget.texture;
+  const ov = p.overrideVisibility.bind(p); p.overrideVisibility = function () { ov(); this.scene.traverse(o => { if (o.userData.noAO && o.visible) { this._visibilityCache.set(o, o.visible); o.visible = false; } }); };
+  scene.traverse(o => { const m = o.material; if (!m || o.isPoints) return; if (m === AAA.mats.leaf || m.alphaTest > 0 || m.transparent || m.blending === THREE.AdditiveBlending || (m.userData && m.userData.grass)) o.userData.noAO = true; });
+  const i = composer.passes.findIndex(q => q.constructor && q.constructor.name === 'RenderPass'); if (i >= 0) composer.passes.splice(i, 1, p); else composer.passes.unshift(p);
+  AAA.ssao = p; AAA.st.ssao = k;
 }

@@ -188,6 +188,22 @@ Foto aggiornate in `docs/aaa/v2/`.
 
 Test: `tools/ai/taaa.js` 8/8 con gli asset caricati.
 
+## Aggiornamento: occlusione ambientale (SSAO)
+- Usa il passaggio ufficiale `SSAOPass` di three r128 (npm, licenza MIT), copiato in `assets/lib/three/examples/js/` e caricato **solo nella demo**. Attivo in **HIGH (16 campioni)** e **ULTRA (32)**; spento in LOW e MEDIUM.
+- **Prende il posto del passaggio di rendering normale**, perché ridisegna già lui la scena: si evita un disegno doppio.
+  - Il buffer della scena è in mezza precisione, quindi tone mapping e color grading restano invariati.
+  - Resta comunque un secondo disegno della scena per normali e profondità.
+- Foglie, erba, edera e fasci di luce sono **esclusi dalla profondità**: le schede con trasparenza farebbero aloni quadrati.
+- **Regolazione verificata guardando il buffer SSAO da solo**:
+  - con la camera che arriva a circa 600 m, la soglia minima va tenuta bassissima (0,000005), altrimenti si perdono proprio i contatti sotto i 10 cm;
+  - raggio 0,6 m;
+  - intensità aumentata con una curva di potenza (2,6) sul risultato sfocato.
+- **Effetto visibile**: angoli fra muri e soffitto, giunzioni delle travi, fughe del pavimento, sotto tavolo e sedie, piede dei muri e del fienile. Confronto in `docs/aaa/v2/*_ssao.jpg`.
+- **Costo misurato** (draw call dell'inquadratura, grafica software):
+  - HIGH: da 250–530 a 320–700;
+  - ULTRA: 310–360 nelle viste di facciata e interno, con 7,7–7,9 milioni di triangoli.
+- FPS da verificare sul tuo PC col tasto B: se HIGH scende sotto i 50 FPS, l'SSAO è la prima cosa da spegnere.
+
 ## Limiti tecnici
 - Gli edifici hanno collider allineati agli assi.
 - Il frontone ha un collider approssimato.
