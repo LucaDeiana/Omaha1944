@@ -114,7 +114,7 @@ function aaaMats() {
   M.vc = aaaPatch(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .85 }), { key: 'vc' });
   M.cloth = aaaPatch(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95, normalMap: TEX.fabric.normal, normalScale: new THREE.Vector2(.6, .6) }), { key: 'cloth' });
   M.straw = aaaTri('fabric', 1.6, { nStr: 1.4, macro: .35, color: 0xc8a860 });
-  M.sack = aaaTri('fabric', 1.4, { nStr: 1, macro: .3, color: 0xa89470 });
+  M.sack = aaaTri('fabric', 1.4, { nStr: 1, macro: .3, color: 0x8a7a5c });
   M.glass = aaaPatch(new THREE.MeshStandardMaterial({ color: 0x1a2024, roughness: .06, metalness: .1, transparent: true, opacity: .55, envMapIntensity: 1.4 }), { key: 'glass' });
   M.water = aaaPatch(new THREE.MeshStandardMaterial({ color: new THREE.Color(0x3a3226).convertSRGBToLinear(), vertexColors: true, transparent: true, depthWrite: false, roughness: .06, metalness: 0, envMapIntensity: .95, normalMap: TEX.sand.normal, normalScale: new THREE.Vector2(.035, .035) }), { key: 'water' });
   M.bark = aaaTri('wood', 1.4, { nStr: 1.8, macro: .35, color: 0x6c6458, moss: .6 });

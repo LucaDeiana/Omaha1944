@@ -48,5 +48,7 @@ Scaricati il 2026-11-04 dalle API ufficiali (api.polyhaven.com, dl.polyhaven.org
 | ammo_box | Ammo Box (`ammo_box`) | DanKit | modello | https://polyhaven.com/a/ammo_box |
 | old_gas_mask | Old Gas Mask (`old_gas_mask`) | Michał Wiśniewski | modello | https://polyhaven.com/a/old_gas_mask |
 | old_bed_frame | Old Bed Frame (`old_bed_frame`) | Luca B | modello | https://polyhaven.com/a/old_bed_frame |
+| sherman | Green Metal Rust (`green_metal_rust`) | Rob Tuytel | texture | https://polyhaven.com/a/green_metal_rust |
+| cingoli | Metal Plate 02 (`metal_plate_02`) | Rob Tuytel | texture | https://polyhaven.com/a/metal_plate_02 |
 
 Caricatore glTF: `assets/lib/three/examples/js/GLTFLoader.js` da three@0.128.0 (npm), licenza MIT come il resto di Three.js.

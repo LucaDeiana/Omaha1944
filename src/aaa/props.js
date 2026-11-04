@@ -99,7 +99,11 @@ function apSign(G, x, z, ry, txt) {
 function apSherman(x, z, yaw) {
   const G0 = kasShermanGeo(), g = groupMesh(G0.hull), tg = groupMesh(G0.tur), gg = groupMesh(G0.gun);
   tg.position.set(0, G0.turY, G0.turZ); gg.position.set(0, G0.gunY, G0.gunZ); tg.add(gg); g.add(tg); tg.rotation.y = .35; gg.rotation.x = .04;
-  const mat = wearMaterial(shipPlateMat(), { grime: .85, chips: .35, rust: .06, low: 1.6, scale: 1 }); aaaPatch(mat, { key: 'sherman' });
+  const by = Math.min(aaaH(x, z), aaaH(x + 2, z), aaaH(x - 2, z));
+  // vernice verde oliva consumata con ruggine (Poly Haven, CC0) sopra i colori del modello; fango e umidità in basso
+  const mat = (typeof TEXH !== 'undefined' && TEXH.sherman) ? aaaTri('metal', .9, { vc: true, hq: 'sherman', hqScale: .7, nStrHQ: .9, rough: .85, metal: .25, macro: .25, damp: 1.6, baseY: by + .35, color: 0xffffff, key: 'shermanhq' })
+    : wearMaterial(shipPlateMat(), { grime: .85, chips: .35, rust: .06, low: 1.6, scale: 1 });
+  if (!(typeof TEXH !== 'undefined' && TEXH.sherman)) aaaPatch(mat, { key: 'sherman' }); else mat.color.setRGB(2.1, 2.1, 1.9);   // i colori del modello (oliva scuro) moltiplicano la vernice: compenso
   g.traverse(o => { if (o.isMesh) { if (o.material && o.material.vertexColors) o.material = mat; o.castShadow = o.receiveShadow = true; } });
   const fy = (dx, dz) => aaaH(x + Math.cos(yaw) * dx + Math.sin(yaw) * dz, z - Math.sin(yaw) * dx + Math.cos(yaw) * dz);
   const yf = fy(0, -2.6), yb = fy(0, 2.6), yl = fy(-1.3, 0), yr = fy(1.3, 0);

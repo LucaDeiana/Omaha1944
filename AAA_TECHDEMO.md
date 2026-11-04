@@ -204,6 +204,17 @@ Test: `tools/ai/taaa.js` 8/8 con gli asset caricati.
   - ULTRA: 310–360 nelle viste di facciata e interno, con 7,7–7,9 milioni di triangoli.
 - FPS da verificare sul tuo PC col tasto B: se HIGH scende sotto i 50 FPS, l'SSAO è la prima cosa da spegnere.
 
+## Aggiornamento: Sherman
+- Vernice verde oliva consumata con ruggine (`green_metal_rust`, Poly Haven, CC0) applicata in triplanare sopra i colori del modello del gioco; fango e umidità in basso sullo scafo.
+- Aggiunta al pacchetto anche `metal_plate_02` (non ancora usata).
+- Foto: `docs/aaa/v2/HIGH_8_sherman_vernice.jpg`.
+- **La geometria resta quella semplice del gioco**: né Poly Haven né ambientCG hanno modelli di carri armati.
+
+## In attesa: foglie e cortecce fotografiche (ambientCG)
+ambientCG ha set di foglie fotografate con trasparenza (`LeafSet016` quercia, `LeafSet012`) e la corteccia di quercia (`Bark012`), tutti CC0. Sostituirebbero l'atlante di foglie disegnato a mano degli alberi procedurali.
+
+I file però si scaricano da `acg-download.struffelproductions.com`, che la rete di questa sessione blocca: va aggiunto ai domini consentiti dell'ambiente.
+
 ## Limiti tecnici
 - Gli edifici hanno collider allineati agli assi.
 - Il frontone ha un collider approssimato.
