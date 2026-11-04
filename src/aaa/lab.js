@@ -157,14 +157,14 @@ function labSetFeat(k, on) { if (!!LAB.feat[k] === !!on) return; LAB.feat[k] = !
 function labResetFeat() { for (const k in LAB_FEAT) labSetFeat(k, false); }
 // costo indicativo: stesso percorso, prima tutto attivo, poi un effetto spento alla volta (i costi non sono additivi)
 function labFeatureSweep(dur = 20, reps = 1) {
-  const keys = Object.keys(LAB_FEAT).filter(k => k !== 'post'), jobs = []; for (let r = 0; r < reps; r++) { jobs.push(null); for (const k of keys) jobs.push(k); }
+  const keys = Object.keys(LAB_FEAT), jobs = []; for (let r = 0; r < reps; r++) { jobs.push(null); for (const k of keys) jobs.push(k); }
   const out = []; LAB.sweep = { out };
   const next = () => { labResetFeat(); const k = jobs.shift(); if (k === undefined) { LAB.sweep = null; LAB.costs = labCosts(out); labUi('Isolamento concluso.'); return; } if (k) labSetFeat(k, true);
-    setTimeout(() => labStart({ dur, warm: 3, label: k ? 'senza ' + LAB_FEAT[k][0] : 'riferimento', onEnd: res => { if (res) out.push({ k, ms: res.frame.mean, fps: res.frame.fps }); next(); } }), 300); };
+    setTimeout(() => labStart({ dur, warm: 3, label: k ? 'senza ' + LAB_FEAT[k][0] : 'riferimento', onEnd: res => { if (res) out.push({ k, ms: res.gpu && res.gpu.mean ? res.gpu.mean : res.frame.mean, gpu: !!(res.gpu && res.gpu.mean), fps: res.frame.fps }); next(); } }), 300); };
   next();
 }
 function labCosts(out) { const base = out.filter(o => !o.k).map(o => o.ms), bm = base.reduce((a, b) => a + b, 0) / (base.length || 1), by = {}; for (const o of out) if (o.k) (by[o.k] || (by[o.k] = [])).push(o.ms);
-  return Object.entries(by).map(([k, v]) => { const m = v.reduce((a, b) => a + b, 0) / v.length, sd = v.length > 1 ? Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / v.length) : null; return { k, nome: LAB_FEAT[k][0], costoMs: +(bm - m).toFixed(2), riferimentoMs: +bm.toFixed(2), variabilita: sd === null ? 'una sola misura' : sd.toFixed(2) + ' ms' }; }).sort((a, b) => b.costoMs - a.costoMs); }
+  return Object.entries(by).map(([k, v]) => { const m = v.reduce((a, b) => a + b, 0) / v.length, sd = v.length > 1 ? Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / v.length) : null; return { k, nome: LAB_FEAT[k][0], costoMs: +(bm - m).toFixed(2), riferimentoMs: +bm.toFixed(2), misura: out.every(o => o.gpu) ? 'tempo GPU' : 'tempo fotogramma (quantizzato dal V-Sync)', variabilita: sd === null ? 'una sola misura' : sd.toFixed(2) + ' ms' }; }).sort((a, b) => b.costoMs - a.costoMs); }
 // ---------- esportazione ----------
 function labDownload(name, text, type) { const a = document.createElement('a'); a.download = name; a.href = URL.createObjectURL(new Blob([text], { type })); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 function labJSON() { return JSON.stringify({ formato: 'omaha1944-graphics-lab-1', esportato: new Date().toISOString(), ambiente: LAB.runs.length ? LAB.runs[LAB.runs.length - 1].ambiente : labEnv(), costiEffetti: LAB.costs || null, esecuzioni: LAB.runs }, null, 1); }
@@ -255,7 +255,7 @@ function labClick(e) {
   if (a === 'close') labPanel(false); else if (a === 'ov') { LAB.ov = !LAB.ov; labOverlay(); labUi(); }
   else if (a === 'run') labStart(); else if (a === 'stop') { LAB.sweep = null; LAB.queue = null; try { sessionStorage.removeItem('aaa_lab_queue'); } catch (e2) { } labStop(true); }
   else if (a === 'reset') { labResetFeat(); for (const k in LAB.dg || {}) labDiag(k, false); LAB.dg = {}; labUi('Configurazione ripristinata.'); }
-  else if (a === 'sweep') labFeatureSweep(20, 1);
+  else if (a === 'sweep') labFeatureSweep(15, 2);
   else if (a === 'json') labDownload('omaha1944_lab_' + Date.now() + '.json', labJSON(), 'application/json');
   else if (a === 'csv') labDownload('omaha1944_lab_' + Date.now() + '.csv', labCSV(), 'text/csv');
   else if (a === 'shots') { const s = labShots(); for (const [k, v] of Object.entries(s)) { const l = document.createElement('a'); l.download = `omaha1944_${AAA.preset}_${k}.jpg`; l.href = v.full; l.click(); } labUi('Foto acquisite per ' + AAA.preset + ' (' + labRes() + ').'); }

@@ -18,7 +18,7 @@ const URL = 'file://' + path.resolve(__dirname, '../../index.html');
   await p.evaluate(() => dispatchEvent(new KeyboardEvent('keydown', { code: 'F9' }))); await p.waitForTimeout(400); ok('F9 apre il pannello GRAPHICS BENCHMARK LAB', await p.evaluate(() => LAB.panel && /GRAPHICS BENCHMARK LAB/.test($('labPanel').textContent) && /FEATURE ISOLATION/.test($('labPanel').textContent)));
   ok('percorso A–H: nessun punto della camera dentro muri o terreno', await p.evaluate(() => LAB.pathBad === 0), 'punti in collisione: ' + await p.evaluate(() => LAB.pathBad));
   // misura dei fotogrammi con il contatore: il ciclo gira e registra
-  const fr = await p.evaluate(() => new Promise(r => { const n0 = LAB.n; setTimeout(() => r({ d: LAB.n - n0, s: labStats(labWindow(30).ft) }), 10000); }));
+  const fr = await p.evaluate(() => new Promise(r => { const n0 = LAB.n; setTimeout(() => r({ d: LAB.n - n0, s: labStats(labWindow(600).ft) }), 10000); }));
   ok('contatore: i fotogrammi vengono registrati con il loro intervallo', fr.d >= 2 && fr.s && fr.s.mean > 0, `${fr.d} fotogrammi in 10 s, media ${fr.s ? fr.s.mean.toFixed(1) : '-'} ms`);
   // benchmark completo (breve)
   const n0 = await p.evaluate(() => LAB.runs.length);

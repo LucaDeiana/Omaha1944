@@ -213,7 +213,7 @@ function aaaInit() {
   aaaShafts(); aaaDust(); aaaSSAO();
   // audio: vento leggero e artiglieria molto lontana ogni tanto
   try { AAA.windS = loopSound('wind', 0, 'ambience.wind'); } catch (e) { }
-  AAA.boomT = 25; AAA.t0 = performance.now();
+  AAA.boomT = 25; if (!AAA.t0) AAA.t0 = performance.now();
   aaaHudInit();
   if (typeof labInit === 'function') labInit();
   showMsg('Normandy Village — Photorealism Test · preset ' + AAA.preset, 4);
