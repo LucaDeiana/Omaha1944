@@ -81,3 +81,24 @@ class Weapon:
 
     def build(self):
         raise NotImplementedError
+
+
+def scope(w, y0, y1, z, x=0.0, tube=.0115, obj=.019, eye=.0175, turret=True, mat='steel_blued'):
+    """Cannocchiale: oculare (y0) e obiettivo (y1) a campana, tubo, torretta di alzo/deriva, lenti scure.
+    Restituisce (oculare, obiettivo) per i punti di mira: l'asse ottico è la linea di mira."""
+    b = w.b
+    L = y1 - y0
+    prof = [(0, y0 - .002), (eye - .002, y0 - .002), (eye, y0 + .004), (eye, y0 + .05), (tube, y0 + .075), (tube, y1 - .07), (obj, y1 - .03), (obj, y1), (0, y1)]
+    lathe(b, prof, mat, w.seg + 4, cx=x, cz=z)
+    for yy, r in ((y0 - .0025, eye - .004), (y1 + .0005, obj - .004)):
+        lathe(b, [(0, yy), (r, yy), (r, yy + .001), (0, yy + .001)], 'lens', 20, cx=x, cz=z)
+    if turret and w.detail:
+        ym = y0 + L * .5
+        lathe(b, [(0, 0), (.009, 0), (.009, .014), (0, .015)], mat, 16, M=T((x, ym, z + tube - .002)) @ R('X', -math.pi / 2))
+        lathe(b, [(0, 0), (.009, 0), (.009, .014), (0, .015)], mat, 16, M=T((x + tube - .002, ym, z)) @ R('Z', -math.pi / 2))
+    return (x, y0, z), (x, y1, z)
+
+
+def scope_mount(w, ys, z_from, z_to, x=0.0, mat='steel_blued'):
+    for y in ys:
+        box(w.b, (.018, .016, z_to - z_from), T((x, y, (z_from + z_to) / 2)), mat, .002)

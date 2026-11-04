@@ -39,6 +39,8 @@ MATS = {
     'bakelite': (None, (0.055, 0.022, 0.011), 0.4, 0.0, 1.0),
     'skin': ('skin', (0.92, 0.66, 0.52), 0.55, 0.0, 30.0),
     'cloth': ('wool', (0.17, 0.16, 0.1), 0.95, 0.0, 9.0),
+    'olive': ('park', (0.2, 0.23, 0.13), 0.75, 0.3, 22.0),
+    'lens': (None, (0.04, 0.06, 0.08), 0.05, 0.6, 1.0),
     'brass': (None, (0.78, 0.56, 0.24), 0.32, 1.0, 1.0),
     'copper': (None, (0.72, 0.4, 0.25), 0.36, 1.0, 1.0),
 }
@@ -337,7 +339,7 @@ def build(wid):
 
 
 def main():
-    ids = [a for a in sys.argv[1:] if not a.startswith('-')] or ['m1garand', 'thompson', 'mp40', 'kar98k', 'fp_arms']
+    ids = [a for a in sys.argv[1:] if not a.startswith('-')] or ['m1garand', 'thompson', 'mp40', 'kar98k', 'bar', 'springfield', 'colt', 'bazooka', 'kar98zf', 'enfield', 'mosin', 'g43', 'svt40', 'fp_arms']
     bad = 0
     for w in ids:
         man, rep = build(w)

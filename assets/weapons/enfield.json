@@ -1,0 +1,105 @@
+{
+ "id": "enfield",
+ "formato": "omaha1944-weapon-1",
+ "blender": "5.2.3 LTS",
+ "unita": "metri",
+ "assi": "glTF: canna verso -Z, alto +Y, origine sul grilletto (stesso sistema di src/guns.js)",
+ "triangoli": {
+  "FP": 4068,
+  "TP": 2036,
+  "WD": 1556
+ },
+ "lunghezza_m": 1.13,
+ "parti": {
+  "FP": {
+   "body": 3732,
+   "bolt": 268,
+   "mag": 44,
+   "trigger": 24
+  },
+  "TP": {
+   "body": 2036
+  },
+  "WD": {
+   "body": 1556
+  }
+ },
+ "punti": {
+  "muzzle": [
+   0,
+   0.052,
+   -0.802
+  ],
+  "port": [
+   0.012,
+   0.068,
+   -0.04
+  ],
+  "rear_sight": [
+   -0.012,
+   0.11,
+   0.1
+  ],
+  "front_sight": [
+   -0.012,
+   0.11,
+   -0.18
+  ],
+  "grip_r": [
+   0,
+   -0.015,
+   0.07
+  ],
+  "grip_l": [
+   0,
+   -0.012,
+   -0.34
+  ],
+  "charge": [
+   0.05,
+   0.032,
+   0.035
+  ]
+ },
+ "perni": {
+  "bolt": [
+   0,
+   0.052,
+   0.04
+  ],
+  "mag": [
+   0,
+   0.007,
+   -0.05
+  ],
+  "trigger": [
+   0,
+   -0.002,
+   0
+  ]
+ },
+ "materiali": [
+  "wood",
+  "steel",
+  "steel_bright",
+  "steel_dark",
+  "steel_blued",
+  "bakelite",
+  "skin",
+  "cloth",
+  "olive",
+  "lens",
+  "brass",
+  "copper"
+ ],
+ "texture": {
+  "legno": "Poly Haven american_walnut_veneer (CC0, Jenelle van Heerden)",
+  "acciaio": "procedurale (build_weapon.py)"
+ },
+ "tempo_s": 13.39,
+ "validazione": {
+  "errori": [],
+  "avvisi": [],
+  "kb": 497.8
+ }
+}

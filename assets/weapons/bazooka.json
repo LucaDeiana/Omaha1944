@@ -1,0 +1,99 @@
+{
+ "id": "bazooka",
+ "formato": "omaha1944-weapon-1",
+ "blender": "5.2.3 LTS",
+ "unita": "metri",
+ "assi": "glTF: canna verso -Z, alto +Y, origine sul grilletto (stesso sistema di src/guns.js)",
+ "triangoli": {
+  "FP": 2748,
+  "TP": 1612,
+  "WD": 1272
+ },
+ "lunghezza_m": 1.37,
+ "parti": {
+  "FP": {
+   "body": 2340,
+   "mag": 384,
+   "trigger": 24
+  },
+  "TP": {
+   "body": 1612
+  },
+  "WD": {
+   "body": 1272
+  }
+ },
+ "punti": {
+  "muzzle": [
+   0,
+   0.06,
+   -0.82
+  ],
+  "port": [
+   0,
+   0.06,
+   0.55
+  ],
+  "rear_sight": [
+   -0.066,
+   0.1,
+   0.1
+  ],
+  "front_sight": [
+   -0.066,
+   0.1,
+   -0.4
+  ],
+  "grip_r": [
+   0,
+   -0.05,
+   0.02
+  ],
+  "grip_l": [
+   0,
+   -0.03,
+   -0.3
+  ],
+  "charge": [
+   0,
+   0.06,
+   0.5
+  ]
+ },
+ "perni": {
+  "mag": [
+   0,
+   0.06,
+   0.2
+  ],
+  "trigger": [
+   0,
+   0.0,
+   0
+  ]
+ },
+ "materiali": [
+  "wood",
+  "steel",
+  "steel_bright",
+  "steel_dark",
+  "steel_blued",
+  "bakelite",
+  "skin",
+  "cloth",
+  "olive",
+  "lens",
+  "brass",
+  "copper"
+ ],
+ "texture": {
+  "legno": "Poly Haven american_walnut_veneer (CC0, Jenelle van Heerden)",
+  "acciaio": "procedurale (build_weapon.py)"
+ },
+ "tempo_s": 12.74,
+ "validazione": {
+  "errori": [],
+  "avvisi": [],
+  "kb": 406.0
+ }
+}

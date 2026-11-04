@@ -198,7 +198,8 @@ def validate_weapon(path, manifest):
         if not (t['FP'] > t['TP'] > t['WD']):
             E.append('i modelli non riducono i triangoli: %s' % t)
         pts = manifest['punti']
-        REAL = {'m1garand': 1.107, 'thompson': .811, 'mp40': .833, 'kar98k': 1.11}   # lunghezze storiche (m)
+        REAL = {'m1garand': 1.107, 'thompson': .811, 'mp40': .833, 'kar98k': 1.11, 'bar': 1.214, 'springfield': 1.098, 'colt': .216, 'bazooka': 1.37,
+                'kar98zf': 1.11, 'enfield': 1.13, 'mosin': 1.232, 'g43': 1.13, 'svt40': 1.226}   # lunghezze storiche (m)
         L = manifest.get('lunghezza_m') or 0
         rep['lunghezza_m'] = L
         if manifest['id'] in REAL and abs(L - REAL[manifest['id']]) > .03:

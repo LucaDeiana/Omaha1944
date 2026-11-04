@@ -6,9 +6,12 @@
 //  Si carica in background all'avvio: finché non è pronto, o se manca, il gioco usa i modelli procedurali di
 //  src/guns.js. Cambia SOLO l'aspetto: danni, balistica, munizioni e tempi restano quelli di config.js.
 // ============================================================
-const WGLB = { map: { garand: 'm1garand', thompson: 'thompson', mp40: 'mp40', kar98: 'kar98k', arms: 'fp_arms' },
+const WGLB = { map: { garand: 'm1garand', thompson: 'thompson', mp40: 'mp40', kar98: 'kar98k', bar: 'bar', springfield: 'springfield', colt: 'colt', bazooka: 'bazooka', kar98zf: 'kar98zf', enfield: 'enfield', mosin: 'mosin', g43: 'g43', svt40: 'svt40', arms: 'fp_arms' },
   // meccanica visibile: 'garand' (asta e otturatore, clip en-bloc), 'openbolt' (mitra a otturatore aperto), 'boltaction' (otturatore girevole)
-  mech: { garand: { type: 'garand', stroke: .07, eye: .11 }, thompson: { type: 'openbolt', stroke: .08, eye: .09 }, mp40: { type: 'openbolt', stroke: .075, eye: .1 }, kar98: { type: 'boltaction', eye: .38 } }, data: {}, loading: {}, clipFx: null, inspectT: 0, lastShots: -1, cyc: 0 };
+  mech: { garand: { type: 'garand', stroke: .07, eye: .11 }, thompson: { type: 'openbolt', stroke: .08, eye: .09 }, mp40: { type: 'openbolt', stroke: .075, eye: .1 }, kar98: { type: 'boltaction', eye: .38 },
+    bar: { type: 'openbolt', stroke: .07, eye: .14 }, springfield: { type: 'boltaction', eye: .09 }, kar98zf: { type: 'boltaction', eye: .09 }, enfield: { type: 'boltaction', eye: .09 }, mosin: { type: 'boltaction', eye: .09 },
+    g43: { type: 'semi', stroke: .06, eye: .09 }, svt40: { type: 'semi', stroke: .06, eye: .09 }, colt: { type: 'pistol', eye: .38 }, bazooka: { type: 'rocket', eye: .12 } },
+  data: {}, loading: {}, clipFx: null, inspectT: 0, lastShots: -1, cyc: 0 };
 const WGLB_EYE = .11;     // distanza dell'occhio dalla diottra in mira (appoggio della guancia)
 function wglbScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('non trovato: ' + src)); document.head.appendChild(s); }); }
 function wglbLoad(id) {
@@ -100,6 +103,10 @@ function wglbGun(id, kind) {
   const mc = WGLB.mech[id] || {};
   if (mc.type === 'openbolt') { i.hip = new V3(.12, -.13, -.27); i.magOut = new V3(0, -.25, .05); }
   if (mc.type === 'boltaction') i.magOut = new V3(0, .2, 0);
+  if (mc.type === 'semi') i.magOut = new V3(0, -.25, .03);
+  if (mc.type === 'pistol') { i.hip = new V3(.13, -.14, -.32); i.magOut = new V3(0, -.2, 0); }
+  if (mc.type === 'rocket') { i.hip = new V3(.2, -.13, -.25); i.magOut = new V3(0, 0, .55); }
+  if (kind === 'FP' && mc.type === 'pistol' && parts.slide) { const w = new THREE.Group(); w.add(parts.slide); g.add(w); i.slide = w; delete parts.slide; }   // weapons.js scrive slide.position.z
   const magPart = parts.clip || parts.mag;
   if (kind === 'FP' && magPart) { const w = new THREE.Group(); w.position.copy(magPart.position); magPart.position.set(0, 0, 0); w.add(magPart); g.add(w); i.mag = w; }
   // otturatore girevole: src/weapons.js scrive bolt.position.z = .03 + corsa e bolt.rotation.z; un gruppo intermedio
@@ -116,7 +123,7 @@ function wglbAnimate(dt) {
   if (typeof vmCur === 'undefined' || !vmCur || !vmCur.hq) return;
   const s = P.slot(); if (!s) return;
   const parts = vmCur.parts, mc = WGLB.mech[vmCur.mech] || {}, stroke = mc.stroke || .07;
-  if (mc.type === 'boltaction') { if (parts.trigger) parts.trigger.rotation.x = (P.trigger || P.flashT > 0) ? -.18 : 0; if (WGLB.inspectT > 0) WGLB.inspectT = Math.max(0, WGLB.inspectT - dt); return; }
+  if (mc.type === 'boltaction' || mc.type === 'pistol' || mc.type === 'rocket') { if (parts.trigger) parts.trigger.rotation.x = (P.trigger || P.flashT > 0) ? -.18 : 0; if (WGLB.inspectT > 0) WGLB.inspectT = Math.max(0, WGLB.inspectT - dt); return; }
   if (WGLB.lastShots < 0) WGLB.lastShots = STATS.shots;
   else if (STATS.shots !== WGLB.lastShots) { if (s.id === vmCur.mech) WGLB.cyc = 1; WGLB.lastShots = STATS.shots; }
   let back = 0;
