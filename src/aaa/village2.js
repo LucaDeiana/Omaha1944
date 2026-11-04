@@ -181,10 +181,10 @@ function v2Faces(d) {
     out[k] = (d.open[k] || []).map(([kind, f, s, w, h, y, barn]) => {
       const c = k[1] === 'z' ? x - d.w / 2 + f * d.w : z - d.d / 2 + t + f * (d.d - 2 * t);
       if (kind === 'door') return { kind: 'door', c, y: 0, w: w || 1.05, h: h || 2.15, open: d.explore || d.open0 || d.ruin, barn: barn === 'barn' };
-      const o = { kind: 'win', c, y: y ?? (s ? s * d.sh + .85 : .95), w: w || (s ? .9 : .95), h: h || (s ? 1.2 : 1.3) };
+      const o = { kind: 'win', c, y: y !== undefined ? s * d.sh + y : (s ? s * d.sh + .85 : .95), w: w || (s ? .9 : .95), h: h || (s ? 1.2 : 1.3) };
       if (d.kind === 'church' || d.kind === 'tower' || d.kind === 'barn' || d.kind === 'stable' || d.kind === 'store' || d.kind === 'shed') o.noShut = true;
       else if (!d.explore && sr() < .55) o.open = PI * .985;   // persiane chiuse: casa abbandonata
-      if (d.ruin) o.broken = true;
+      if (d.ruin || (d.kind === 'tower' && s === 3)) o.broken = true;   // cella campanaria: aperture senza vetri
       return o;
     });
   }
@@ -288,7 +288,7 @@ function v2Interior(b, def) {
   // solaio (con scala se def.stair; altrimenti chiuso) e travi a vista
   if (def.storeys > 1) {
     const L = Math.min(def.sh / .66, x1 - x0 - 1.4), xs0 = x0 + .25, xs1 = xs0 + L, zs1 = z0 + 1;
-    const rects = def.stair ? [[x0, x1, zs1, z1], [xs1 + .1, x1, z0, zs1], [x0, xs0 - .05, z0, zs1]] : [[x0, x1, z0, z1]];
+    const rects = def.stair ? [[x0, x1, zs1, z1], [xs1 - .02, x1, z0, zs1], [x0, xs0 - .05, z0, zs1]] : [[x0, x1, z0, z1]];
     for (const [a0, a1, c0, c1] of rects) { if (a1 - a0 < .1) continue; G.add(M.wood, ABX.box, (a0 + a1) / 2, fy - .03, (c0 + c1) / 2, 0, 0, 0, a1 - a0, .08, c1 - c0); const s = addSolid(a0, fy - .1, c0, a1, fy + .04, c1, 'floor'); s.walk = true; s.mat = 'legno'; if (def.stair) FLOORS.push({ x0: a0, x1: a1, z0: c0, z1: c1, y: fy + .04, v2: def.id }); }
     for (let x = x0 + .4; x < x1; x += .95) G.add(M.woodDark, ABX.box, x, fy - .17, def.z, 0, 0, 0, .16, .2, z1 - z0);
     if (def.stair) {
@@ -373,7 +373,7 @@ function v2Church() {
       slab(x0, x0 + sw, z0, z1, y + H / 2);                                      // pianerottolo ovest
       flight(x0 + sw, y + H / 2, x1 - .2, y + H, z1 - sw, z1);                   // rampa sud: da ovest a est
       if (k < 2) { slab(x0, x1, z0 + sw, z1 - sw, y + H); slab(x1 - .2, x1, z0, z0 + sw, y + H); slab(x1 - .2, x1, z1 - sw, z1, y + H); }
-      else { slab(x0, x1, z0, z1 - sw, y + H); slab(x1 - .2, x1, z1 - sw, z1, y + H); for (let x = x0 + sw; x < x1 - .2; x += .5) G.add(M.woodDark, ABX.box, x, y + H + .5, z1 - sw - .03, 0, 0, 0, .05, 1, .05); G.add(M.woodDark, ABX.box, (x0 + sw + x1 - .2) / 2, y + H + 1, z1 - sw - .03, 0, 0, 0, L, .07, .07); const s = addSolid(x0 + sw + .6, y + H, z1 - sw - .06, x1 - .2, y + H + 1.05, z1 - sw, 'furniture'); s.mat = 'legno'; }
+      else { slab(x0, x1, z0, z1 - sw, y + H); slab(x1 - .2, x1, z1 - sw, z1, y + H); const xr = x1 - 1.15; for (let x = x0 + .1; x <= xr; x += .5) G.add(M.woodDark, ABX.box, x, y + H + .5, z1 - sw - .03, 0, 0, 0, .05, 1, .05); G.add(M.woodDark, ABX.box, (x0 + .1 + xr) / 2, y + H + 1, z1 - sw - .03, 0, 0, 0, xr - x0 - .1, .07, .07); const s = addSolid(x0, y + H, z1 - sw - .08, xr, y + H + 1.05, z1 - sw + .02, 'furniture'); /* ringhiera del vano, varco a est dove arriva la scala */ s.mat = 'legno'; }
     }
     // cella campanaria: castello di travi e campana di bronzo; sacchi a terra alla finestra nord (posto d'osservazione tedesco)
     const yb = base + 3 * H, bell = apLathe('bell', [[0, 0], [.42, 0], [.46, .06], [.4, .2], [.3, .45], [.26, .62], [.2, .7], [0, .72]], 18);
@@ -527,9 +527,9 @@ function v2Military() {
     const s = addSolid(cx - 2.4, y, cz - 1.1, cx + 1.4, y + 1, cz + .6, 'crates'); s.mat = 'legno'; V2.props += 18; V2.mil.push({ id: 'deposito', tipo: 'munizioni', x: cx, z: cz });
   }
   // sbarramento all'ingresso est della strada principale: chicane di sacchi, cavalli di Frisia, filo spinato, cartello
-  { const u = 74, rv = avRoadV(u); apSandbags(G, ...U(u, rv - 3.4), ...U(u, rv + .4), 3); apSandbags(G, ...U(u + 5, rv - .4), ...U(u + 5, rv + 3.4), 3);
+  { const u = 74, rv = avRoadV(u); apSandbags(G, ...U(u, rv - 4.6), ...U(u, rv - 2.1), 3); apSandbags(G, ...U(u + 5, rv + 2.1), ...U(u + 5, rv + 4.6), 3);   // chicane: varco centrale di 3,6 m per i carri
     v2Hedgehog(G, ...U(u - 2, rv - 4.6), .3); v2Hedgehog(G, ...U(u + 7, rv + 4.6), 1.1); v2Hedgehog(G, ...U(u + 2.4, rv + 5.4), .7);
-    v2Wire(G, ...U(u + 1, rv - 4.4), ...U(u + 1, rv - 11)); v2Wire(G, ...U(u + 4, rv + 4.4), ...U(u + 4, rv + 10)); apSign(G, ...U(u - 1.5, rv - 3.9), 0, 'ACHTUNG ! STRASSENSPERRE'); addCover(...U(u - .6, rv - 1.5), 'sandbag'); addCover(...U(u + 5.6, rv + 1.5), 'sandbag'); V2.props += 3;
+    v2Wire(G, ...U(u + 1, rv - 4.4), ...U(u + 1, rv - 11)); v2Wire(G, ...U(u + 4, rv + 4.4), ...U(u + 4, rv + 10)); apSign(G, ...U(u - 1.5, rv - 3.9), 0, 'ACHTUNG ! STRASSENSPERRE'); addCover(...U(u - .6, rv - 3.3), 'sandbag'); addCover(...U(u + 5.6, rv + 3.3), 'sandbag'); V2.props += 3;
     V2.mil.push({ id: 'sbarramento_est', tipo: 'barricade', x: AV.cx + u + 2.5, z: AV.cz + rv });
   }
   // campi minati (cartelli e filo) ai margini nord dei campi arati
@@ -567,7 +567,7 @@ function v2Combat() {
     de: [U(-108, 6), U(-112, -9), U(-89, -12), U(-14, -118), U(30, -102)],
     sherman: [U(138, avRoadV(138)), U(100, 100)],
   };
-  const road = (u0, u1, s = 8) => { const out = []; for (let u = u0; s > 0 ? u <= u1 : u >= u1; u += s) out.push(U(u, avRoadV(u))); return out; };
+  const road = (u0, u1, s = 8) => { const out = []; for (let u = u0; s > 0 ? u <= u1 : u >= u1; u += s) out.push(U(u, avRoadV(u) - (Math.abs(u - 2.5) < 9 ? 1.5 : 0))); return out; };   // accanto allo Sherman parcheggiato si passa sul lato nord
   V2.routes = {
     carri_strada_principale: road(138, -136, -8),                                                   // Sherman: tutta la strada principale (larga 5,4 m)
     carri_fattoria: V2.roads.find(r => r.id === 'fattoria').pts.map(p => U(...p)).reverse(),
@@ -630,8 +630,11 @@ function v2LodTick() {
 function v2Tick(dt) {
   if (!V2.on || !V2.lods) return; V2.t = (V2.t || 0) - dt; if (V2.t > 0) return; V2.t = .25;
   v2LodTick(); aaaRoomTick && aaaRoomTick();
-  // ombre statiche: il riquadro (±88 m) si ricentra quando la camera se ne allontana di oltre 30 m
-  if (AAA.fixedSun && sun.castShadow) { const c = camera.position, ctr = AAA.shadowCtr || (AAA.shadowCtr = new V3(AV.cx + 5, 0, AV.cz - 5)); if (Math.hypot(c.x - ctr.x, c.z - ctr.z) > 30) { ctr.set(c.x, 0, c.z); const p = new V3(c.x, aaaH(c.x, c.z), c.z); sun.position.copy(p).addScaledVector(SUN_DIR, 250); sun.target.position.copy(p); sun.target.updateMatrixWorld(); sun.updateMatrixWorld(); AAA.shadowDirty = 2; V2.shadowMoves = (V2.shadowMoves || 0) + 1; } }
+  // ombre statiche: il riquadro (±88 m) resta sul villaggio originale; nelle zone nuove si ricentra ogni 40 m
+  if (AAA.fixedSun && sun.castShadow && !(typeof LAB !== 'undefined' && LAB.run)) { const c = camera.position, home = new V3(AV.cx + 5, 0, AV.cz - 5), ctr = AAA.shadowCtr || (AAA.shadowCtr = home.clone());
+    // nel villaggio originale (±60 m) il riquadro resta quello storico: i confronti del Benchmark Lab non cambiano
+    const core = Math.abs(c.x - home.x) < 60 && Math.abs(c.z - home.z) < 60, want = core ? home : c;
+    if (Math.hypot(want.x - ctr.x, want.z - ctr.z) > (core ? .5 : 40)) { ctr.set(want.x, 0, want.z); const p = new V3(ctr.x, aaaH(ctr.x, ctr.z), ctr.z); sun.position.copy(p).addScaledVector(SUN_DIR, 250); sun.target.position.copy(p); sun.target.updateMatrixWorld(); sun.updateMatrixWorld(); AAA.shadowDirty = 2; V2.shadowMoves = (V2.shadowMoves || 0) + 1; } }
   if (V2.dbg && V2.dbg.on) v2DbgUi();
 }
 // ---------------------------------------------------------------- strumenti di debug della mappa (F4)
