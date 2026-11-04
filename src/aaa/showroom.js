@@ -97,7 +97,7 @@ function srCamera() {
   if (ASR.adsView && ASR.wg && ASR.wg.rear) {   // occhio dietro la diottra, lungo la linea di mira verso il mirino
     const c = ASR.cam, r = ASR.wg.rear, f = ASR.wg.front, o = ASR.obj; o.updateMatrixWorld(true);
     const rw = o.localToWorld(r.clone()), fw = o.localToWorld(f.clone()), d = fw.clone().sub(rw).normalize();
-    c.position.copy(rw).addScaledVector(d, -WGLB_EYE); c.fov = WEAPONS[ASR.sel.split(':')[1]].fov || 52; c.near = .02; c.lookAt(fw); c.aspect = innerWidth / innerHeight; c.updateProjectionMatrix(); return;
+    c.position.copy(rw).addScaledVector(d, -((WGLB.mech[ASR.sel.split(':')[1]] || {}).eye || WGLB_EYE)); c.fov = WEAPONS[ASR.sel.split(':')[1]].fov || 52; c.near = .02; c.lookAt(fw); c.aspect = innerWidth / innerHeight; c.updateProjectionMatrix(); return;
   }
   ASR.cam.fov = 40; ASR.cam.near = .05;
   const c = ASR.cam, d = ASR.dist, p = ASR.pitch, y = ASR.yaw;

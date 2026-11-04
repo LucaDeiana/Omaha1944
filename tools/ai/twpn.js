@@ -42,6 +42,21 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   ok('terza persona: geometria unita dei soldati dal modello TP', T.tp > 3000 && T.tp < 7000 && T.colors, `${Math.round(T.tp)} triangoli`);
   ok('arma a terra: modello WD con materiali PBR', T.wd && T.pk);
   ok('fallback: senza il GLB si usa il modello procedurale', await p.evaluate(() => { const D = WGLB.data.garand; delete WGLB.data.garand; const i = buildViewmodel('garand'); const proc = !i.hq; i.group.parent.remove(i.group); WGLB.data.garand = D; return proc; }));
+  const O = await p.evaluate(() => {
+    const out = {};
+    for (const id of ['thompson', 'mp40', 'kar98']) {
+      P.inv[0] = { id, mag: WEAPONS[id].mag, res: 60 }; P.cur = 0; P.reloadT = 0; P.boltT = 0; P.adsK = 1; for (let k = 0; k < 3; k++) updateViewmodel(1 / 60);
+      const r = { hq: vmCur.hq }; vmCur.group.updateMatrixWorld(true); camera.updateMatrixWorld(true);
+      const a = vmCur.group.localToWorld(vmCur.rear.clone()).project(camera), f = vmCur.group.localToWorld(vmCur.front.clone()).project(camera);
+      r.ads = Math.max(Math.abs(a.x), Math.abs(a.y), Math.abs(f.x), Math.abs(f.y)); P.adsK = 0;
+      if (WGLB.mech[id].type === 'openbolt') { const z0 = vmCur.parts.bolt.position.z; STATS.shots++; updateViewmodel(1 / 60); updateViewmodel(.03); r.mech = Math.abs(vmCur.parts.bolt.position.z - z0) > .02; WGLB.cyc = 0; updateViewmodel(1 / 60); }
+      else { P.boltT = .5; updateViewmodel(1 / 60); r.mech = vmCur.bolt.rotation.z > .3 && vmCur.bolt.position.z > .04; P.boltT = 0; updateViewmodel(1 / 60); }
+      const tp = gunGeo(id === 'kar98' ? 'E' : id === 'mp40' ? 'E' : 'A', id === 'kar98' ? 'rifle' : 'smg'); r.tp = tp ? Math.round(tp.index.count / 3) : 0;
+      out[id] = r;
+    }
+    return out;
+  });
+  for (const id in O) ok(`${id}: modello Blender, ADS dalle mire, meccanica, terza persona`, O[id].hq && O[id].ads < .002 && O[id].mech && O[id].tp > 800, JSON.stringify(O[id]));
   ok('danni, balistica, munizioni e tempi del Garand invariati', await p.evaluate(() => JSON.stringify(WEAPONS.garand)) === W0);
   ok('nessun errore JavaScript', errs.length === 0, errs.slice(0, 3).join(' | '));
   await b.close(); console.log(fails ? `\n${fails} test FALLITI` : '\ntutti i test superati'); process.exit(fails ? 1 : 0);

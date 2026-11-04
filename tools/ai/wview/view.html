@@ -1,14 +1,13 @@
 <!doctype html><meta charset="utf-8"><body style="margin:0;background:#888">
 <script src="../../../assets/lib/three/build/three.min.js"></script>
 <script src="../../../assets/lib/three/examples/js/GLTFLoader.js"></script>
-<script src="../../../assets/weapons/m1garand.js"></script>
+<script src="../../../assets/weapons/m1garand.js"></script><script src="../../../assets/weapons/thompson.js"></script><script src="../../../assets/weapons/mp40.js"></script><script src="../../../assets/weapons/kar98k.js"></script>
 <script>
 // vista di controllo dei modelli delle armi (solo test headless)
 const R=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});R.setSize(1400,600);R.outputEncoding=THREE.sRGBEncoding;R.toneMapping=THREE.ACESFilmicToneMapping;R.physicallyCorrectLights=true;document.body.appendChild(R.domElement);
 const S=new THREE.Scene();S.background=new THREE.Color(0x9aa4ad);const C=new THREE.PerspectiveCamera(30,1400/600,.01,50);
 S.add(new THREE.HemisphereLight(0xdde8f0,0x554433,1.6));const D=new THREE.DirectionalLight(0xffffff,3.2);D.position.set(1,2,1.5);S.add(D);const D2=new THREE.DirectionalLight(0xffeedd,1.2);D2.position.set(-2,.5,-1);S.add(D2);
 const pm=new THREE.PMREMGenerator(R);{const es=new THREE.Scene();es.background=new THREE.Color(0x8a96a2);S.environment=pm.fromScene(es).texture;}
-const bin=Uint8Array.from(atob(WPN_GLB.m1garand.glb),c=>c.charCodeAt(0));
-window.ready=new Promise(res=>new THREE.GLTFLoader().parse(bin.buffer,'',g=>{window.G=g.scene;S.add(g.scene);['TP','WD'].forEach(n=>g.scene.getObjectByName(n).visible=false);res();}));
-window.shot=(lod,cx,cy,cz,tx,ty,tz,fov)=>{['FP','TP','WD'].forEach(n=>G.getObjectByName(n).visible=n===lod);C.fov=fov||30;C.updateProjectionMatrix();C.position.set(cx,cy,cz);C.lookAt(tx,ty,tz);R.render(S,C);return R.domElement.toDataURL('image/jpeg',.88);};
+window.GS={};window.ready=Promise.all(Object.keys(WPN_GLB).map(id=>new Promise(res=>{const bin=Uint8Array.from(atob(WPN_GLB[id].glb),c=>c.charCodeAt(0));new THREE.GLTFLoader().parse(bin.buffer,'',g=>{GS[id]=g.scene;g.scene.visible=false;S.add(g.scene);res();});})));
+window.shot=(id,lod,cx,cy,cz,tx,ty,tz,fov)=>{for(const k in GS)GS[k].visible=k===id;const G=GS[id];['FP','TP','WD'].forEach(n=>G.getObjectByName(n).visible=n===lod);C.fov=fov||30;C.updateProjectionMatrix();C.position.set(cx,cy,cz);C.lookAt(tx,ty,tz);R.render(S,C);return R.domElement.toDataURL('image/jpeg',.88);};
 </script>

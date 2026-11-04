@@ -4,13 +4,13 @@
 | Arma | Id | Modello attuale | Stato |
 |---|---|---|---|
 | M1 Garand | `garand` | **GLB Blender** (FP/TP/WD) | **convertita** |
-| Thompson M1A1 | `thompson` | procedurale (`src/guns.js`) | da convertire |
+| Thompson M1A1 | `thompson` | **GLB Blender** (FP 2.788 / TP 1.580 / WD 1.324) | **convertita**: otturatore aperto, caricatore a stecca |
 | BAR M1918A2 | `bar` | procedurale | da convertire |
 | Springfield M1903A4 | `springfield` | procedurale (ottica) | da convertire |
 | Colt M1911A1 | `colt` | procedurale (carrello animato) | da convertire |
 | M1A1 Bazooka | `bazooka` | procedurale | da convertire |
-| MP 40 | `mp40` | procedurale | da convertire |
-| Karabiner 98k | `kar98` | procedurale (otturatore girevole) | da convertire |
+| MP 40 | `mp40` | **GLB Blender** (FP 3.104 / TP 1.468 / WD 1.304) | **convertita**: calcio aperto, bachelite, leva a sinistra |
+| Karabiner 98k | `kar98` | **GLB Blender** (FP 3.612 / TP 1.912 / WD 1.512) | **convertita**: otturatore girevole |
 | Kar98k ZF39 | `kar98zf` | procedurale (ottica) | da convertire |
 | Lee-Enfield No.4 (T) | `enfield` | procedurale | da convertire |
 | Mosin-Nagant 91/30 PU | `mosin` | procedurale | da convertire |
@@ -52,7 +52,9 @@ L'MG42 esiste solo come arma dell'IA (`AIW.mg`, suono) e non ha un modello gioca
 ## Limiti dichiarati
 - Le **mani e le braccia** sono ancora quelle del gioco, fatte di capsule: niente modello scheletrico. Le animazioni delle mani restano quelle generiche; solo le animazioni meccaniche sono specifiche del Garand.
 - Nessuna fotografia di riferimento consultata in questa sessione: misure da dati tecnici noti.
-- Le altre 12 armi vanno convertite con la stessa pipeline.
+- Restano da convertire 9 armi (BAR, Springfield, Colt, Bazooka, Kar98k ZF39, Enfield, Mosin, G43, SVT-40).
+- Thompson, MP 40 e Kar98k hanno meno dettaglio del Garand (circa 3.000 triangoli in prima persona contro 8.900).
+- La distanza dell'occhio in mira è regolata per arma (`WGLB.mech[id].eye`).
 
 ## Test
 - `node tools/ai/twpn.js`: 12 test (mappa originale, ADS, ciclo, clip vuota, ricarica, ispezione, terza persona, a terra, fallback, valori invariati, nessun errore).

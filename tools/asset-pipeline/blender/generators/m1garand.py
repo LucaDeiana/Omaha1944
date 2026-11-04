@@ -16,7 +16,7 @@ import sys
 from mathutils import Matrix, Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
-from wgeo import Part, box, extrude_profile, lathe, loft, torus  # noqa: E402
+from wgeo import SIDE, Part, box, extrude_profile, lathe, loft, torus  # noqa: E402
 
 BORE = 0.058            # asse della canna sopra il grilletto
 SIGHT = BORE + 0.033    # linea di mira
@@ -126,7 +126,7 @@ class Garand:
         for i in range(25):
             a = math.pi - math.pi * i / 24
             pts.append((.03 * math.cos(a), -.021 * math.sin(a)))
-        extrude_profile(b, pts, .009, T((0, .018, -.004)) @ R('Y', math.pi / 2) @ R('Z', math.pi / 2) @ R('X', 0), 'steel')
+        extrude_profile(b, pts, .009, T((0, .018, -.004)) @ SIDE, 'steel')
         # sicura (davanti al ponticello)
         box(b, (.008, .012, .016), T((0, .056, -.012)), 'steel', .0015)
         # calciolo con sportellino
@@ -177,7 +177,7 @@ class Garand:
     def trigger(self):
         p = self.P('trigger')
         pts = [(0, 0), (.004, 0), (.006, -.01), (.0045, -.02), (.0005, -.021), (.0015, -.01), (-.001, 0)]
-        extrude_profile(p, pts, .005, T((0, .004, -.004)) @ R('Z', math.pi / 2) @ R('X', math.pi / 2) @ R('Z', math.pi / 2), 'steel')
+        extrude_profile(p, pts, .005, T((0, .004, -.004)) @ SIDE, 'steel')
 
     def build(self):
         self.stock()

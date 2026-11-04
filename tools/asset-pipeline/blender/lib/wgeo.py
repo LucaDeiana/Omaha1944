@@ -223,3 +223,44 @@ def extrude_profile(part, pts2d, thick, M, mat, uvscale=1.0, smooth_side=False):
     bm.normal_update()
     part.add_bm(bm, mat, M, uvscale, smooth_side, 1)
     bm.free()
+
+
+# matrice che porta il piano di disegno XY (X = avanti, Y = alto) nel piano verticale dell'arma (Y avanti, Z alto),
+# con l'estrusione lungo X (spessore laterale)
+SIDE = Matrix(((0, 0, 1, 0), (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 0, 1)))
+
+
+def vloft(part, stations, mat, k=24, n=2.4, uvscale=1.0):
+    """Loft verticale (impugnature a pistola, caricatori sagomati): stations = (z, y_centro, semiprofondità lungo Y,
+    semilarghezza lungo X[, esponente]). Le sezioni sono orizzontali, quindi la forma segue l'inclinazione dell'impugnatura."""
+    rings = []
+    for st in stations:
+        z, yc, d, w = st[:4]
+        nn = st[4] if len(st) > 4 else n
+        ring = []
+        for i in range(k):
+            a = 2 * math.pi * i / k
+            c, s = math.cos(a), math.sin(a)
+            ring.append(Vector((w * math.copysign(abs(c) ** (2 / nn), c), yc + d * math.copysign(abs(s) ** (2 / nn), s), z)))
+        rings.append(ring)
+    for j in range(len(rings) - 1):
+        A, B = rings[j], rings[j + 1]
+        ca = sum(A, Vector()) / k
+        for i in range(k):
+            i2 = (i + 1) % k
+            pts = [A[i], A[i2], B[i2], B[i]]
+            uvs = [(p.z * uvscale, (math.atan2(p.y - ca.y, p.x) * .03) * uvscale) for p in pts]
+            nrm = (pts[1] - pts[0]).cross(pts[3] - pts[0])
+            mid = sum(pts, Vector()) / 4
+            if nrm.dot(Vector((mid.x - ca.x, mid.y - ca.y, 0))) < 0:
+                pts.reverse()
+                uvs.reverse()
+            part.face(pts, mat, uvs, True)
+    for idx, sgn in ((0, 1), (len(rings) - 1, -1)):
+        r = list(rings[idx])
+        nrm = (r[1] - r[0]).cross(r[2] - r[0])
+        z_out = -1 if (idx == 0) == (stations[0][0] > stations[-1][0]) else 1
+        z_out = 1 if stations[idx][0] == max(s[0] for s in (stations[0], stations[-1])) else -1
+        if nrm.z * z_out < 0:
+            r.reverse()
+        part.face(r, mat, [(p.x * uvscale, p.y * uvscale) for p in r], False)

@@ -34,6 +34,8 @@ MATS = {
     'steel': ('park', (0.42, 0.43, 0.41), 0.78, 0.75, 22.0),
     'steel_bright': ('park', (0.7, 0.71, 0.7), 0.42, 0.9, 22.0),
     'steel_dark': ('park', (0.12, 0.12, 0.12), 0.85, 0.4, 22.0),
+    'steel_blued': ('park', (0.16, 0.17, 0.2), 0.55, 0.85, 22.0),
+    'bakelite': (None, (0.055, 0.022, 0.011), 0.4, 0.0, 1.0),
     'brass': (None, (0.78, 0.56, 0.24), 0.32, 1.0, 1.0),
     'copper': (None, (0.72, 0.4, 0.25), 0.36, 1.0, 1.0),
 }
@@ -162,7 +164,7 @@ def build(wid):
             for i, mname in enumerate(part.m):
                 sc = MATS[mname][4]
                 part.uv[i] = [(u * sc, v * sc) for u, v in part.uv[i]]
-            pv = g.pivots.get(pname, Vector((0, 0, 0))) if lod == 'fp' else Vector((0, 0, 0))
+            pv = Vector(g.pivots.get(pname, (0, 0, 0))) if lod == 'fp' else Vector((0, 0, 0))
             ob = part.to_object(mats, pivot=Vector(pv))
             ob.name = '%s_%s' % (tag, pname)
             ob.data.name = ob.name
@@ -176,6 +178,11 @@ def build(wid):
                 e.parent = grp
             empties = {k: [round(v, 5) for v in (p[0], p[2], -p[1])] for k, p in g.empties.items()}
             pivots = {k: [round(v, 5) for v in (p[0], p[2], -p[1])] for k, p in g.pivots.items()}
+    lenm = 0.0
+    for o in bpy.context.scene.objects:
+        if o.type == 'MESH' and o.name.startswith('WD_'):
+            ys = [(o.matrix_world @ v.co).y for v in o.data.vertices]
+            lenm = max(ys) - min(ys)
     os.makedirs(OUT, exist_ok=True)
     glb = os.path.join(OUT, wid + '.glb')
     for o in bpy.context.scene.objects:
@@ -185,7 +192,7 @@ def build(wid):
                               export_jpeg_quality=88, export_extras=True, export_cameras=False, export_lights=False, export_animations=False)
     man = dict(id=wid, formato='omaha1944-weapon-1', blender=bpy.app.version_string, unita='metri',
                assi='glTF: canna verso -Z, alto +Y, origine sul grilletto (stesso sistema di src/guns.js)',
-               triangoli={k: sum(v.values()) for k, v in info.items()}, parti=info, punti=empties, perni=pivots,
+               triangoli={k: sum(v.values()) for k, v in info.items()}, lunghezza_m=round(lenm, 3), parti=info, punti=empties, perni=pivots,
                materiali=list(MATS.keys()), texture=dict(legno='Poly Haven american_walnut_veneer (CC0, Jenelle van Heerden)', acciaio='procedurale (build_weapon.py)'),
                tempo_s=round(time.time() - t0, 2))
     import validate_glb  # noqa: E402
@@ -200,7 +207,7 @@ def build(wid):
 
 
 def main():
-    ids = [a for a in sys.argv[1:] if not a.startswith('-')] or ['m1garand']
+    ids = [a for a in sys.argv[1:] if not a.startswith('-')] or ['m1garand', 'thompson', 'mp40', 'kar98k']
     bad = 0
     for w in ids:
         man, rep = build(w)

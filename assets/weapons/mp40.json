@@ -1,0 +1,101 @@
+{
+ "id": "mp40",
+ "formato": "omaha1944-weapon-1",
+ "blender": "5.2.3 LTS",
+ "unita": "metri",
+ "assi": "glTF: canna verso -Z, alto +Y, origine sul grilletto (stesso sistema di src/guns.js)",
+ "triangoli": {
+  "FP": 3104,
+  "TP": 1468,
+  "WD": 1304
+ },
+ "lunghezza_m": 0.831,
+ "parti": {
+  "FP": {
+   "body": 2896,
+   "bolt": 92,
+   "mag": 92,
+   "trigger": 24
+  },
+  "TP": {
+   "body": 1468
+  },
+  "WD": {
+   "body": 1304
+  }
+ },
+ "punti": {
+  "muzzle": [
+   0,
+   0.052,
+   -0.432
+  ],
+  "port": [
+   0.016,
+   0.064,
+   -0.07
+  ],
+  "rear_sight": [
+   0,
+   0.082,
+   0.085
+  ],
+  "front_sight": [
+   0,
+   0.082,
+   -0.41
+  ],
+  "grip_r": [
+   0,
+   -0.045,
+   0.03
+  ],
+  "grip_l": [
+   0,
+   -0.048,
+   -0.12
+  ],
+  "charge": [
+   -0.03,
+   0.052,
+   -0.02
+  ]
+ },
+ "perni": {
+  "bolt": [
+   -0.025,
+   0.052,
+   -0.02
+  ],
+  "mag": [
+   0,
+   0.002,
+   -0.12
+  ],
+  "trigger": [
+   0,
+   0.0,
+   -0.0
+  ]
+ },
+ "materiali": [
+  "wood",
+  "steel",
+  "steel_bright",
+  "steel_dark",
+  "steel_blued",
+  "bakelite",
+  "brass",
+  "copper"
+ ],
+ "texture": {
+  "legno": "Poly Haven american_walnut_veneer (CC0, Jenelle van Heerden)",
+  "acciaio": "procedurale (build_weapon.py)"
+ },
+ "tempo_s": 0.35,
+ "validazione": {
+  "errori": [],
+  "avvisi": [],
+  "kb": 377.8
+ }
+}

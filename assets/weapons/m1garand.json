@@ -9,6 +9,7 @@
   "TP": 3756,
   "WD": 2564
  },
+ "lunghezza_m": 1.109,
  "parti": {
   "FP": {
    "body": 5628,
@@ -93,6 +94,8 @@
   "steel",
   "steel_bright",
   "steel_dark",
+  "steel_blued",
+  "bakelite",
   "brass",
   "copper"
  ],
@@ -100,7 +103,7 @@
   "legno": "Poly Haven american_walnut_veneer (CC0, Jenelle van Heerden)",
   "acciaio": "procedurale (build_weapon.py)"
  },
- "tempo_s": 0.55,
+ "tempo_s": 0.65,
  "validazione": {
   "errori": [],
   "avvisi": [],

@@ -186,7 +186,7 @@ def validate_weapon(path, manifest):
     js, binc, _ = read_glb(path) if not E else (None, None, None)
     if js:
         names = [n.get('name', '') for n in js.get('nodes', [])]
-        for need in ('FP', 'TP', 'WD', 'FP_body', 'FP_bolt', 'FP_oprod', 'FP_clip', 'FP_trigger', 'TP_body', 'WD_body'):
+        for need in ['FP', 'TP', 'WD', 'FP_body', 'TP_body', 'WD_body'] + ['FP_' + k for k in manifest['perni']]:
             if need not in names:
                 E.append('nodo «%s» mancante' % need)
         for p in ('muzzle', 'port', 'rear_sight', 'front_sight', 'grip_r', 'grip_l'):
@@ -198,10 +198,11 @@ def validate_weapon(path, manifest):
         if not (t['FP'] > t['TP'] > t['WD']):
             E.append('i modelli non riducono i triangoli: %s' % t)
         pts = manifest['punti']
-        L = abs(pts['muzzle'][2]) + 0.342
-        rep['lunghezza_m'] = round(L, 3)
-        if abs(L - 1.107) > .03 and manifest['id'] == 'm1garand':
-            E.append('lunghezza %.3f m (M1 Garand reale: 1.107 m)' % L)
+        REAL = {'m1garand': 1.107, 'thompson': .811, 'mp40': .833, 'kar98k': 1.11}   # lunghezze storiche (m)
+        L = manifest.get('lunghezza_m') or 0
+        rep['lunghezza_m'] = L
+        if manifest['id'] in REAL and abs(L - REAL[manifest['id']]) > .03:
+            E.append('lunghezza %.3f m (reale: %.3f m)' % (L, REAL[manifest['id']]))
         rs, fs = pts['rear_sight'], pts['front_sight']
         if abs(rs[0] - fs[0]) > 1e-4 or abs(rs[1] - fs[1]) > .002:
             E.append('mire non allineate: diottra %s, mirino %s' % (rs, fs))
