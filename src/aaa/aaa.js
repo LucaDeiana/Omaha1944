@@ -90,7 +90,7 @@ function aaaBuildWorld() {
   aaaGrass(); aaaFlowers();
   aaaIvy(bA.faces['+z'], ax - 5.8, ax - 1.6, A.base + 5.4, A.base, 101, 1); aaaIvy(bA.faces['-x'], az - 3.5, az + 3.5, A.base + 3.5, A.base, 102, .7);
   aaaIvy(bB.faces['+z'], bx + 3, bx + 7.5, Bd.base + 2.8, Bd.base, 103, .8); aaaIvy({ axis: 'z', fixed: AV.cx + 27, out: -1 }, AV.cz - 9, AV.cz - 4.5, aaaH(AV.cx + 27, AV.cz - 6) + 1.5, aaaH(AV.cx + 27, AV.cz - 6) - .1, 104, .9);
-  aaaChurch();
+  aaaChurch(); aaaChunkAll();
   AAA.st.buildMs = Math.round(performance.now() - t0);
 }
 // chiesa lontana (silhouette per la composizione, a nord-ovest, fuori dalla zona esplorabile)
@@ -239,7 +239,7 @@ function aaaDust() {
   const p = new THREE.Points(g, m); p.frustumCulled = false; scene.add(p); AAA.dust = p;
 }
 function aaaUpdate(dt) {
-  MISSION.stageT += dt; AAA.time.value += dt; updateSubs(dt);
+  MISSION.stageT += dt; AAA.time.value += dt; updateSubs(dt); aaaChunkTick(dt);
   const t = AAA.time.value; AAA.wind.value.set(.7 + .35 * Math.sin(t * .23), .3 + .2 * Math.sin(t * .17 + 1));
   if (AAA.windS) { const g = .18 + .08 * Math.sin(t * .3); AAA.windS.set(g, 0, 1); }
   if ((AAA.boomT -= dt) <= 0) { AAA.boomT = 28 + Math.random() * 40; const a = Math.random() * TAU; sfxBoom(new V3(P.pos.x + Math.cos(a) * 2500, 20, P.pos.z + Math.sin(a) * 2500), .6); }
@@ -330,4 +330,32 @@ function aaaSSAO() {
   scene.traverse(o => { const m = o.material; if (!m || o.isPoints) return; if (m === AAA.mats.leaf || m.alphaTest > 0 || m.transparent || m.blending === THREE.AdditiveBlending || (m.userData && m.userData.grass)) o.userData.noAO = true; });
   const i = composer.passes.findIndex(q => q.constructor && q.constructor.name === 'RenderPass'); if (i >= 0) composer.passes.splice(i, 1, p); else composer.passes.unshift(p);
   AAA.ssao = p; AAA.st.ssao = k;
+}
+
+// istanze divise in blocchi spaziali: limiti di visibilità veri (prima la sfera era quella del modello, centrata nell'origine
+// del mondo) e distanza massima per erba e piccoli oggetti, dove la foschia li copre già
+const AAA_DIST = { grass: { LOW: 0, MEDIUM: 32, HIGH: 42, ULTRA: 55 }, detail: { LOW: 0, MEDIUM: 45, HIGH: 60, ULTRA: 75 }, small: { LOW: 30, MEDIUM: 35, HIGH: 45, ULTRA: 60 } };
+function aaaChunkAll() {
+  const list = []; scene.traverse(o => { if (o.isInstancedMesh && o.userData.chunk && !o.userData.chunked) list.push(o); });
+  const m4 = new THREE.Matrix4(), p = new V3(), q = new THREE.Quaternion(), s = new V3(), c = new THREE.Color(); AAA.chunks = AAA.chunks || [];
+  for (const im of list) {
+    const [cell, kind] = im.userData.chunk, maxD = kind ? (AAA_DIST[kind] || {})[AAA.preset] || 0 : 0, cells = new Map();
+    let smax = 0; for (let i = 0; i < im.count; i++) { im.getMatrixAt(i, m4); m4.decompose(p, q, s); smax = Math.max(smax, s.x, s.y, s.z); const k = Math.floor(p.x / cell) + ',' + Math.floor(p.z / cell); (cells.get(k) || cells.set(k, []).get(k)).push(i); }
+    const g = im.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); const br = g.boundingSphere.radius + g.boundingSphere.center.length();
+    g.boundingSphere = new THREE.Sphere(new V3(0, 0, 0), br * smax + cell * .75);
+    for (const [k, idx] of cells) {
+      const [ci, cj] = k.split(',').map(Number), cx = (ci + .5) * cell, cz = (cj + .5) * cell, ch = new THREE.InstancedMesh(g, im.material, idx.length);
+      ch.position.set(cx, 0, cz); ch.castShadow = im.castShadow; ch.receiveShadow = im.receiveShadow; ch.customDepthMaterial = im.customDepthMaterial; ch.userData = Object.assign({}, im.userData, { chunked: true });
+      idx.forEach((i, n) => { im.getMatrixAt(i, m4); m4.elements[12] -= cx; m4.elements[14] -= cz; ch.setMatrixAt(n, m4); if (im.instanceColor) { im.getColorAt(i, c); ch.setColorAt(n, c); } });
+      if (ch.instanceColor) ch.instanceColor.needsUpdate = true; ch.updateMatrixWorld(true); scene.add(ch); AAA.chunks.push({ m: ch, x: cx, z: cz, d: maxD });
+    }
+    scene.remove(im); im.dispose();
+  }
+  AAA.st.chunks = AAA.chunks.length;
+}
+// visibilità per distanza (quattro volte al secondo); durante il calcolo delle ombre statiche tutto resta visibile
+function aaaChunkTick(dt) {
+  if (!AAA.chunks) return; if ((AAA.chunkT = (AAA.chunkT || 0) - dt) > 0) return; AAA.chunkT = .25;
+  const cp = camera.position, all = AAA.shadowDirty > 0;
+  for (const c of AAA.chunks) c.m.visible = all || !c.d || Math.hypot(c.x - cp.x, c.z - cp.z) < c.d;
 }

@@ -142,7 +142,7 @@ function aaaPuddles() {
 function aaaRocks() {
   const PZ = AAA_PRESETS[AAA.preset], n = PZ.rocks, g = new THREE.IcosahedronGeometry(1, 1), p = g.attributes.position, sr = seeded(91), r = (a, b) => a + sr() * (b - a);
   for (let i = 0; i < p.count; i++) { const k = .75 + sr() * .45; p.setXYZ(i, p.getX(i) * k, p.getY(i) * k * .7, p.getZ(i) * k); } g.computeVertexNormals();
-  const im = new THREE.InstancedMesh(g, aaaTri('stone', 1.6, { nStr: 1.2, color: 0x7a7266, macro: .3 }), n); im.castShadow = im.receiveShadow = true;
+  const im = new THREE.InstancedMesh(g, aaaTri('stone', 1.6, { nStr: 1.2, color: 0x7a7266, macro: .3 }), n); im.castShadow = im.receiveShadow = true; im.userData.chunk = [22, 'small'];
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(); let c = 0;
   for (let t = 0; t < n * 4 && c < n; t++) {
     const u = r(-75, 75), v = r(-75, 75), s = aaaSplat(AV.cx + u, AV.cz + v), w = s[1] * .6 + s[3] * 1.4 + s[2] * .25; if (sr() > w * .8 + .02) continue;

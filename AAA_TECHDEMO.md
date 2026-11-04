@@ -253,6 +253,27 @@ La panoramica in ULTRA resta la vista più pesante: SSAO e chiome viste tutte in
 
 **Da rimisurare sul tuo PC** con il tasto B, in ciascun preset.
 
+## Seconda misura dell'utente e blocchi spaziali
+**Misura dell'utente dopo l'ottimizzazione precedente**: ULTRA circa 30 FPS (prima 15–19), MEDIUM circa 50 (prima 30–35).
+
+**Difetto trovato**: le istanze di alberi, erba e piante usavano come volume di visibilità la sfera del singolo modello, centrata nell'origine del mondo. Il motore quindi non scartava quelle fuori dall'inquadratura, e in teoria poteva anche nasconderle per errore.
+
+**Correzione** (`aaaChunkAll`, `aaaChunkTick`):
+- Ogni gruppo di istanze è diviso in blocchi spaziali, con limiti veri:
+  - alberi e siepi in celle da 40 m;
+  - erba, vegetazione di dettaglio e piccoli oggetti in celle da 22 m.
+- **Distanza massima di disegno**, dove la foschia li copre già:
+
+  | | MEDIUM | HIGH | ULTRA |
+  |---|---|---|---|
+  | Erba | 32 m | 42 m | 55 m |
+  | Vegetazione di dettaglio | 45 m | 60 m | 75 m |
+  | Sassi e foglie cadute | 35 m | 45 m | 60 m |
+
+- Durante il calcolo delle ombre statiche tutto resta visibile, così le ombre sono complete.
+
+**Triangoli disegnati** (tre inquadrature): MEDIUM 0,8–1,1 M (prima circa 1,5), HIGH 1,2–1,5 M, ULTRA 3,0–3,8 M compreso il passaggio SSAO. Draw call fra 240 e 800.
+
 ## Limiti tecnici
 - Gli edifici hanno collider allineati agli assi.
 - Il frontone ha un collider approssimato.

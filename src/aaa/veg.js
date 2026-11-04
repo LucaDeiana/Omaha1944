@@ -42,7 +42,7 @@ function aaaTreeTemplate(kind, seed) {
 function aaaPlantInstances(tpl, list, tint) {
   const M = aaaMats(), leaf = aaaLeafMat(), barkM = AAA.mats.barkW || (AAA.mats.barkW = aaaTri('wood', 1.3, { nStr: 1.8, macro: .35, color: 0x6c6458, moss: .4, wind: .9, key: 'barkw', hq: 'corteccia', hqScale: .9, nStrHQ: 1.4 }));
   const b = new THREE.InstancedMesh(tpl.bark, barkM, tpl.kind === 'bush' ? 0 : list.length), l = new THREE.InstancedMesh(tpl.leaves, leaf, list.length);
-  b.castShadow = b.receiveShadow = l.castShadow = l.receiveShadow = true; l.customDepthMaterial = AAA.mats.leafDepth;
+  b.castShadow = b.receiveShadow = l.castShadow = l.receiveShadow = true; b.userData.chunk = l.userData.chunk = [40, 0]; l.customDepthMaterial = AAA.mats.leafDepth;
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color();
   list.forEach(([x, z, s, ry, t], i) => { q.setFromAxisAngle(new V3(0, 1, 0), ry); m4.compose(new V3(x, aaaH(x, z), z), q, new V3(s, s * (.9 + (i % 5) * .05), s)); if (i < b.count) b.setMatrixAt(i, m4); l.setMatrixAt(i, m4); c.setRGB(...(t || tint || [1, 1, 1])); l.setColorAt(i, c); });
   l.instanceColor.needsUpdate = true; scene.add(b, l); AAA.st.trees = (AAA.st.trees || 0) + list.length; return [b, l];
@@ -62,7 +62,7 @@ function aaaGrass() {
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setAttribute('wsway', new THREE.Float32BufferAttribute(sw, 1)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
   const mat = aaaPatch(new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: .85 }), { wind: .32, key: 'grass' }); mat.userData.grass = true;
-  const N = Math.floor(PZ.grass / BL), im = new THREE.InstancedMesh(g, mat, N); im.receiveShadow = true; im.castShadow = AAA.preset === 'ULTRA';
+  const N = Math.floor(PZ.grass / BL), im = new THREE.InstancedMesh(g, mat, N); im.receiveShadow = true; im.castShadow = AAA.preset === 'ULTRA'; im.userData.chunk = [22, 'grass'];
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(); let c = 0;
   for (let t = 0; t < N * 6 && c < N; t++) {
     const u = r(-76, 76), v = r(-76, 76), x = AV.cx + u, z = AV.cz + v, s = aaaSplat(x, z); if (s[0] < .55 + sr() * .3) continue; const core = Math.max(Math.abs(u - 5), Math.abs(v)); if (core > 40 && sr() < .55) continue;

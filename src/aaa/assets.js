@@ -99,7 +99,7 @@ function aaaScatter(name, list, dy = 0) {
   const vars = []; src.traverse(m => { if (!m.isMesh) return; const g = m.geometry.clone().applyMatrix4(m.matrixWorld); g.computeBoundingBox(); const c = g.boundingBox.getCenter(new V3()); g.translate(-c.x, -g.boundingBox.min.y, -c.z); const mt = m.material; if (!mt.userData.aaa) { mt.userData.aaa = true; if (mt.alphaTest > 0 || mt.transparent || /leaf|grass|fern|nettle|shrub/i.test(name)) { mt.alphaTest = Math.max(mt.alphaTest, .45); mt.transparent = false; mt.side = THREE.DoubleSide; } aaaPatch(mt, { key: 'sc_' + name + '_' + mt.uuid.slice(0, 4) }); } vars.push({ g, mt }); });
   const by = vars.map(() => []); list.forEach((p, i) => by[(i * 7 + Math.abs(Math.floor(p[0] * 13 + p[1] * 7))) % vars.length].push(p));
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
-  vars.forEach((v, k) => { const L2 = by[k]; if (!L2.length) return; const im = new THREE.InstancedMesh(v.g, v.mt, L2.length); im.receiveShadow = true; im.castShadow = AAA.preset === 'ULTRA' || /rock|shrub/.test(name); if (v.mt.alphaTest > 0) im.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: v.mt.map, alphaTest: .45 });
+  vars.forEach((v, k) => { const L2 = by[k]; if (!L2.length) return; const im = new THREE.InstancedMesh(v.g, v.mt, L2.length); im.receiveShadow = true; im.userData.chunk = [22, 'detail']; im.castShadow = AAA.preset === 'ULTRA' || /rock|shrub/.test(name); if (v.mt.alphaTest > 0) im.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: v.mt.map, alphaTest: .45 });
     L2.forEach(([x, z, ry, s], i) => { q.setFromAxisAngle(new V3(0, 1, 0), ry); m4.compose(new V3(x, aaaH(x, z) + dy, z), q, new V3(s, s, s)); im.setMatrixAt(i, m4); }); scene.add(im); });
   AAA.st.scatter = (AAA.st.scatter || 0) + list.length;
 }
@@ -114,7 +114,7 @@ function aaaFallenLeaves(trees) {
   for (let i = 0; i < n; i++) { const t = trees[(sr() * trees.length) | 0], a = r(0, TAU), d = Math.sqrt(sr()) * 6 * (t[2] || 1); const x = t[0] + Math.cos(a) * d, z = t[1] + Math.sin(a) * d; per[(sr() * 8) | 0].push([x, z, r(0, TAU), r(.1, .17), r(-.25, .25)]); }
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
   per.forEach((L, k) => { if (!L.length) return; const g = new THREE.PlaneGeometry(1, 1); g.rotateX(-PI / 2); const uv = g.attributes.uv, u0 = (k % 4) / 4, v0 = k < 4 ? .5 : 0; for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + uv.getX(i) * .25, v0 + uv.getY(i) * .5);
-    const im = new THREE.InstancedMesh(g, mat, L.length); im.receiveShadow = true; im.userData.noAO = true;
+    const im = new THREE.InstancedMesh(g, mat, L.length); im.receiveShadow = true; im.userData.noAO = true; im.userData.chunk = [22, 'small'];
     L.forEach(([x, z, ry, s, tilt], i) => { e.set(tilt, ry, tilt * .5, 'YXZ'); q.setFromEuler(e); m4.compose(new V3(x, aaaH(x, z) + .015, z), q, new V3(s, s, s)); im.setMatrixAt(i, m4); }); scene.add(im); });
   AAA.st.fallen = n;
 }
