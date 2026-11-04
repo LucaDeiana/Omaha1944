@@ -145,6 +145,7 @@ function labLoad() { try { LAB.runs = JSON.parse(localStorage.getItem('aaa_lab_r
 const LAB_FEAT = {
   ombre: ['Ombre', on => { if (on) LAB.orig.cast = sun.castShadow; sun.castShadow = on ? false : LAB.orig.cast; if (!on && sun.castShadow) AAA.shadowDirty = 3; scene.traverse(o => { if (o.material) for (const m of [].concat(o.material)) m.needsUpdate = true; }); }],
   ao: ['Occlusione ambientale (SSAO)', on => { if (!AAA.ssao || !composer) return; LAB.rp = LAB.rp || new THREE.RenderPass(scene, camera); const i = composer.passes.indexOf(on ? AAA.ssao : LAB.rp); if (i >= 0) composer.passes.splice(i, 1, on ? LAB.rp : AAA.ssao); }],
+  fxaa: ['Antialiasing FXAA', on => { if (typeof fxaaPass !== 'undefined' && fxaaPass) { if (on) LAB.orig.fxaa = fxaaPass.enabled; fxaaPass.enabled = on ? false : LAB.orig.fxaa; } }],
   bloom: ['Bloom', on => { if (typeof bloomPass !== 'undefined' && bloomPass) { if (on) LAB.orig.bloom = bloomPass.enabled; bloomPass.enabled = on ? false : LAB.orig.bloom; } }],
   fog: ['Foschia', on => { if (on) { LAB.fogD = scene.fog.density; scene.fog.density = 1e-6; } else if (LAB.fogD) scene.fog.density = LAB.fogD; }],
   decor: ['Vegetazione decorativa (erba, piante, sassi, foglie)', on => { AAA.hideDecor = on; AAA.chunkT = 0; for (const c of AAA.chunks || []) if (c.m.userData.chunk && c.m.userData.chunk[1]) c.m.visible = !on; }],
