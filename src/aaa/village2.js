@@ -203,7 +203,7 @@ function v2Pads() {
 
 // ---------------------------------------------------------------- costruzione
 function v2Build() {
-  const t0 = performance.now(), M = aaaMats(); V2.built = []; V2.destr = []; V2.lods = []; V2.props = 0; V2.st0 = solids.length;
+  const t0 = performance.now(), M = aaaMats(), nScene = scene.children.length; V2.built = []; V2.destr = []; V2.lods = []; V2.props = 0; V2.st0 = solids.length;
   for (const d of V2.defs) {
     const def = Object.assign({}, d, { x: AV.cx + d.u, z: AV.cz + d.v, faces: v2Faces(d) });
     if (d.ruin) { v2Ruin(def); continue; }
@@ -217,9 +217,23 @@ function v2Build() {
   }
   v2Church(); v2Plaza(); v2ResidentialProps(); v2FarmProps(); v2Military(); v2Periphery(); v2Vegetation();
   v2Combat(); v2Sectors();
+  V2.objs = scene.children.slice(nScene);
+  v2Precompile();   // tutto ciò che il villaggio esteso ha aggiunto alla scena
   V2.stats = { edifici: V2.built.length + 2, esplorabili: V2.defs.filter(d => d.explore).length + 1, props: V2.props, solidi: solids.length - V2.st0, ms: Math.round(performance.now() - t0) };
 }
 // colombage (graticcio normanno): montanti, traverse ai piani e ai davanzali, saette agli angoli, che non coprono le aperture
+// shader compilati durante il caricamento (anche quelli dei LOD lontani): altrimenti ogni materiale nuovo che entra in vista
+// blocca un fotogramma mentre la GPU compila il programma
+function v2Precompile() {
+  const t = performance.now(), hidden = []; for (const L of V2.lods) if (!L.lo.visible) { L.lo.visible = true; hidden.push(L.lo); }
+  try {
+    renderer.compile(scene, camera);
+    // un rendering completo senza culling compila anche i programmi delle ombre (profondità) di ogni materiale
+    const fc = []; for (const o of V2.objs) o.traverse(q => { if (q.isMesh && q.frustumCulled) { q.frustumCulled = false; fc.push(q); } });
+    const su = sun.shadow.needsUpdate; sun.shadow.needsUpdate = true; renderer.render(scene, camera); sun.shadow.needsUpdate = su; for (const q of fc) q.frustumCulled = true;
+  } catch (e) { console.warn('precompilazione', e); }
+  for (const o of hidden) o.visible = false; V2.compileMs = Math.round(performance.now() - t);
+}
 function v2Timber(b, def) {
   const G = new AGeo(), M = AAA.mats, sr = seeded(def.seed + 9);
   for (const k in b.faces) {
