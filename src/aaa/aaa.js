@@ -217,6 +217,7 @@ function aaaInit() {
   aaaHudInit();
   if (typeof labInit === 'function') labInit();
   if (typeof xpcInit === 'function') xpcInit();   // Movement Lab (controller sperimentale)
+  if (typeof xaeEnable === 'function') xaeEnable(true);   // Audio Overhaul (motore sperimentale)
   showMsg('Normandy Village — Photorealism Test · preset ' + AAA.preset, 4);
 }
 // fasci di luce dalle finestre della casa A esposte al sole (volumi additivi, solo all'interno)
@@ -249,6 +250,7 @@ function aaaUpdate(dt) {
 // dopo il giocatore: modalità foto (telecamera libera), benchmark
 const AAA_KEYS = {};
 function aaaLate(dt) {
+  if (typeof xaeUpdate === 'function') { if (XAE.on && !XAE.ready && typeof AU !== 'undefined' && AU.ready) xaeInit(); xaeUpdate(dt); }
   if (typeof LAB !== 'undefined' && LAB.run) { if (typeof vmRoot !== 'undefined' && vmRoot) vmRoot.visible = false; return labRunFrame(); }
   if (AAA.bench) return aaaBenchTick();
   if (!AAA.photo) return;

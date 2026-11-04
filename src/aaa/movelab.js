@@ -324,7 +324,8 @@ function xpcPanelOpen(on) {
     el.addEventListener('input', e => { const k = e.target.dataset.k; if (k) { XPC.cfg[k] = +e.target.value; xpcPanelTick(true); } });
     el.addEventListener('click', e => { const a = e.target.dataset.a; if (!a) return; if (a === 'reset') { XPC.cfg = Object.assign({}, XPC_DEFAULTS); xpcPanelBuild(); } else if (a === 'toggle') { XPC.on = !XPC.on; XPC.stats = { n: 0, sum: 0 }; xpcPanelBuild(); } else if (a[0] === 'G') xpcGoto(a.slice(1)); e.target.blur(); });
   }
-  el.style.display = on ? 'block' : 'none'; if (on) xpcPanelBuild();
+  el.style.display = on ? 'block' : 'none'; if (on) { xpcPanelBuild(); if (document.pointerLockElement) document.exitPointerLock(); setTimeout(() => { GAME.running = true; const pz = document.getElementById('pause'); if (pz) pz.classList.add('hidden'); }, 60); }
+  else if (typeof lockPointer === 'function' && !(typeof LAB !== 'undefined' && LAB.panel)) lockPointer();
 }
 function xpcPanelBuild() {
   const el = $('xpcPanel'); if (!el) return; const S = 'margin:8px 0 3px;font:600 11px system-ui;letter-spacing:.12em;color:#c8b070';

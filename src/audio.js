@@ -397,6 +397,8 @@ const FARMAP = { garand: 'rifle_far', kar98: 'rifle_far', springfield: 'rifle_fa
 // spari: campione reale + rimbombo all'aperto; passaggio graduale da vicino a lontano; .50 cal più pesanti
 // cx: evento personalizzabile di contesto per lo sparo vicino (es. 'weapon.kar98zf.fire'); il lontano usa '.fire_distant'
 function sfxShot(kind, pos, isPlayer, extraDelay = 0, cx) {
+  // tech demo AAA: motore audio sperimentale (nelle altre mappe xaeActive() è sempre falso)
+  if (typeof xaeActive === 'function' && xaeActive() && xaeShot(isPlayer && P.slot() ? P.slot().id : kind, isPlayer ? null : pos, { delay: extraDelay })) return;
   const cxF = cx && /\.fire$/.test(cx) ? cx.replace(/\.fire$/, '.fire_distant') : null;
   const heavy = kind === 'm2', rate = kind === 'mp40' ? 1.12 : 1, near = heavy ? 'bar' : kind, nr = heavy ? .74 : rate, far = FARMAP[kind] || 'rifle_far', rv = SCEN === 'ard' ? 1.45 : 1;
   if (isPlayer) {
@@ -427,10 +429,15 @@ const MECH = { out: 'mag_out', in: 'mag_in', bolt: 'bolt_open', boltc: 'bolt_clo
 // azioni dell'arma del giocatore: evento personalizzabile per l'arma impugnata, poi generico, poi originale
 const MECH_EV = { out: 'reload_start', in: 'reload_end', clip: 'reload', bolt: 'bolt', boltc: 'bolt_close', dry: 'empty', pick: 'equip' };
 function sfxMech(kind, delay = 0, cx) {
+  if (typeof xaeActive === 'function' && xaeActive()) { if (delay > 0 && typeof vmCur !== 'undefined' && vmCur && vmCur.hq) return; if (xaeMech(kind, delay)) return; }   // ricarica: i suoni arrivano dai marcatori dell'animazione
   if (!cx && MECH_EV[kind] && typeof P !== 'undefined' && P.slot && P.slot()) cx = 'weapon.' + P.slot().id + '.' + MECH_EV[kind];
   play(MECH[kind] || kind, null, { vol: .55, delay, cx });
 }
-function sfxWhiz(from) { const sp = spatial(from, 1e9); sp.vol = 1; sp.delay = 0; sp.rev = .04; sp.lp = 20000; play('whiz', null, { sp, vol: .55 }); if (R() < .7) play('crack', null, { sp, vol: .9 }); }
+function sfxWhiz(from) {
+  if (typeof xaeActive === 'function' && xaeActive()) { xaeCrack(null, from); return; }
+  return sfxWhizOrig(from);
+}
+function sfxWhizOrig(from) { const sp = spatial(from, 1e9); sp.vol = 1; sp.delay = 0; sp.rev = .04; sp.lp = 20000; play('whiz', null, { sp, vol: .55 }); if (R() < .7) play('crack', null, { sp, vol: .9 }); }
 function sfxCrack() { play('crack', null, { vol: .8 }); }
 function sfxRicochet(pos) { }   // il fischio di rimbalzo sintetico è stato tolto: restano solo i colpi sordi
 function sfxImpact(pos, kind) { const n = 'imp_' + kind; if (AU.buf[n]) play(n, pos, { ref: 7, vol: .8 }); }

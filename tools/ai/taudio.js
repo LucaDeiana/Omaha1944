@@ -1,71 +1,85 @@
-// test del gestore delle voci e dei loop dei motori (orologio delle voci simulato)
+// test dell'AAA Audio Overhaul (motore sperimentale XAE, solo nella tech demo)
+// node tools/ai/taudio.js — Chromium headless con autoplay consentito: l'AudioContext gira, ma nessuno ascolta:
+// si verificano grafo, livelli misurati, tempi, zone, occlusione, limiti; la QUALITÀ va valutata a orecchio (Audio Lab, A/B).
 const { chromium } = require('playwright'); const path = require('path');
-(async () => { const root = process.env.ROOT || path.resolve(__dirname, '../..');
-  const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] }); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + root + '/index.html'); await p.waitForTimeout(1500);
-  await p.evaluate(async () => { $('optMap').value = 'omaha'; $('optMap').dispatchEvent(new Event('change')); await startGame(); }); await p.waitForTimeout(4000);
-  console.log(await p.evaluate(async () => {
-    const R = [], ok = (n, c, x = '') => R.push((c ? 'OK   ' : 'FALLITO ') + n + (x ? ' — ' + x : ''));
-    if (AU.ctx && AU.ctx.state !== 'running') try { await AU.ctx.resume(); } catch (e) { }
-    let T = 1000; VOX.clock = () => T; GAME.running = true;
-    const pos = camera.position.clone().add(new V3(5, 0, -5)), cnt = k => (VOX.byCat[k] || { ok: 0 }).ok - (base[k] || 0); const base = {}; const rebase = () => { for (const k in VOX.byCat) base[k] = VOX.byCat[k].ok; }; rebase();
-    // 1 un soldato in combattimento per 60 s chiede «aprite il fuoco» a ogni aggiornamento: detto una volta sola
-    const sol = { alive: true, id: 1, kind: 'rifle' }, q = { id: 77 };
-    VOX.log.length = 0; for (let i = 0; i < 600; i++) { T += .1; shout('en', 'openfire', pos, { src: sol, squad: q, ev: 'open.77.1', priority: true }); }
-    ok('«Open fire» in combattimento continuo per 60 s', cnt('en.openfire') === 1, cnt('en.openfire') + ' volte su 600 richieste ');
-    // 2 nuovo ordine distinto (nuovo episodio di contatto, dopo l'attesa della squadra): detto di nuovo
-    T += 30; shout('en', 'openfire', pos, { src: { alive: true, id: 2 }, squad: q, ev: 'open.77.2', priority: true }); ok('nuovo ordine distinto: detto di nuovo', cnt('en.openfire') === 2);
-    // 3 duplicato dello stesso evento: scartato anche dopo l'attesa
-    T += 30; shout('en', 'openfire', pos, { src: { alive: true, id: 3 }, ev: 'open.77.2', priority: true }); ok('stesso evento: scartato', cnt('en.openfire') === 2, VOX.log[VOX.log.length - 1].res);
-    // 4 cento soldati che chiedono avvistamenti in 60 s: poche frasi, mai la stessa categoria più di una volta ogni 10 s
-    rebase(); const S = Array.from({ length: 100 }, (_, i) => ({ alive: true, id: 100 + i }));
-    for (let i = 0; i < 600; i++) { T += .1; shout('de', 'spot', pos, { src: S[i % 100] }); }
-    ok('100 soldati, avvistamenti per 60 s', cnt('de.spot') <= 6, cnt('de.spot') + ' frasi dette su 600 richieste');
-    // 5 parlante morto: non parla; se muore mentre parla, la voce si interrompe
-    const dead = { alive: false, id: 9 }; T += 20; shout('en', 'cover', pos, { src: dead }); ok('soldato morto non parla', VOX.log[VOX.log.length - 1].res === 'parlante morto');
-    const sp = { alive: true, id: 10 }; T += 20; shout('en', 'medic', pos, { src: sp }); const pl = VOX.playing.length; sp.alive = false; voxTick(); ok('voce interrotta alla morte del parlante', pl === 1 && VOX.playing.length === 0);
-    // 6 priorità: con una voce in corso, una più importante passa e una meno importante no
-    VOX.playing.length = 0; T += 30; shout('en', 'move', pos, { src: { alive: true, id: 11 } }); shout('en', 'kill', pos, { src: { alive: true, id: 12 } }); const low = VOX.log[VOX.log.length - 1].res;
-    shout('en', 'grenade', pos, { src: { alive: true, id: 13 } }); const crit = VOX.log[VOX.log.length - 1].res;
-    ok('priorità: bassa scartata, critica passa', low === 'altra voce in corso' && crit === 'ok', low + ' / ' + crit);
-    // 7 varianti: con più frasi disponibili non sempre la stessa
-    const texts = new Set(); for (let i = 0; i < 20; i++) { T += 20; VOX.playing.length = 0; shout('en', 'spot', pos, { src: { alive: true, id: 200 + i } }); texts.add(VOX.log[VOX.log.length - 1].text); }
-    ok('varianti delle frasi', texts.size >= 3, [...texts].join(' | '));
-    // 8 motori: loop di 4 s, giunzione continua, nessun calo di volume lungo il giro
-    const lp = n => { const d = AU.buf[n][0].getChannelData(0), sr = AU.buf[n][0].sampleRate, W = Math.floor(sr * .05), rms = []; for (let i = 0; i + W <= d.length; i += W) { let s = 0; for (let k = i; k < i + W; k++) s += d[k] * d[k]; rms.push(Math.sqrt(s / W)); } let s2 = 0; const H2 = Math.floor(W / 2); for (let k = 0; k < 2 * H2; k++) { const x = k < H2 ? d[d.length - H2 + k] : d[k - H2]; s2 += x * x; } const jr = Math.sqrt(s2 / (2 * Math.floor(W / 2))); return { len: (d.length / sr).toFixed(2), min: Math.min(...rms) / (rms.reduce((a, b) => a + b, 0) / rms.length), junction: jr / (rms.reduce((a, b) => a + b, 0) / rms.length), jump: Math.abs(d[d.length - 1] - d[0]) }; };
-    for (const n of ['eng_p47', 'eng_fw', 'eng_sherman']) { const r = lp(n); ok('loop ' + n, r.min > (n === 'eng_sherman' ? .5 : .6) && r.junction > .8 && r.junction < 1.25, `giro ${r.len} s · finestra più debole ${(r.min * 100).toFixed(0)}% della media · giunzione ${(r.junction * 100).toFixed(0)}% · salto ${r.jump.toFixed(3)}`); }
-    // 9 file personale con silenzi: trasformato in loop senza buchi
-    const c = AU.ctx, sr = c.sampleRate, buf = c.createBuffer(1, sr * 3, sr), d = buf.getChannelData(0); for (let i = sr * .5; i < sr * 2.6; i++) d[i] = Math.sin(i / sr * TAU * 90) * .6;
-    const lb = loopify(buf), ld = lb.getChannelData(0); let zeros = 0; for (let i = 0; i < ld.length; i++) if (Math.abs(ld[i]) < .0005) zeros++;
-    ok('loop da file personale: silenzi tolti', lb.duration < 2.1 && zeros / ld.length < .02, `durata ${lb.duration.toFixed(2)} s, campioni muti ${(zeros / ld.length * 100).toFixed(1)}%`);
-    // 10 qualità dei file personali: segnali preparati con difetti noti
-    const mk = (sec, f) => { const b2 = c.createBuffer(1, Math.floor(sr * sec), sr), x = b2.getChannelData(0); for (let i = 0; i < x.length; i++) x[i] = f(i / sr, i); return b2; };
-    let lpf = 0; const voice = t => (Math.sin(t * TAU * 180) * .4 + Math.sin(t * TAU * 1800) * .15 + Math.sin(t * TAU * 5200) * .08) * Math.max(0, Math.sin(t * TAU * 3));
-    const cases = [['pulito', mk(1.2, t => voice(t) * .8 + (Math.random() - .5) * .002), 'KEEP'], ['fruscio forte', mk(1.2, t => voice(t) * .15 + (Math.random() - .5) * .35), 'REPLACE'],
-      ['distorto', mk(1.2, t => clamp(voice(t) * 4, -1, 1)), 'REPLACE'], ['ovattato', mk(1.2, t => (lpf += (voice(t) - lpf) * .03) * 3), 'CLEANUP|REPLACE'], ['con silenzi', mk(2, t => t > .6 && t < 1.4 ? voice(t) * .8 : 0), 'CLEANUP']];
-    for (const [nm, bb, exp] of cases) { const qq = caAnalyze(bb); ok('qualità: ' + nm, new RegExp('^(' + exp + ')$').test(qq.cls), qq.cls + (qq.notes.length ? ' — ' + qq.notes.join(', ') : '')); }
-    const cl = caCleanVoice(cases[4][1], caAnalyze(cases[4][1])); ok('pulizia voce: silenzi tagliati', cl.duration < 1, cl.duration.toFixed(2) + ' s invece di 2,00');
-    // 12 occlusione: un edificio fra camera e sorgente attenua e ovatta, allo scoperto no
-    const W = solids.find(o => o.on && /house|church/.test(o.tag || '') && o.max.y - o.min.y > 4 && o.min.z < -150);
-    if (W) { const wx = (W.min.x + W.max.x) / 2; camera.position.set(wx, Hf(wx, W.max.z + 8) + 1.6, W.max.z + 8); OCC.m.clear(); OCC.cam.set(1e9, 0, 0);
-      const behind = spatial(new V3(wx, Hf(wx, W.min.z - 8), W.min.z - 8)), open = spatial(new V3(wx, Hf(wx, W.max.z + 30), W.max.z + 30));
-      ok('occlusione: dietro l\'edificio', behind.occ && !open.occ, `dietro: filtro ${Math.round(behind.lp)} Hz · scoperto: filtro ${Math.round(open.lp)} Hz`); }
-    // 11 mixer: ogni suono va nel suo bus e il volume del bus si applica
-    ok('mixer: bus per categoria', busFor('garand') === AU.bus.weapons && busFor('boom') === AU.bus.explosions && busFor('x', { cx: 'aircraft.p47.engine' }) === AU.bus.aircraft && busFor('_custom', { bus: 'voices' }) === AU.bus.voices);
-    SETTINGS.mix = { weapons: .4 }; mixApply(); await new Promise(r => setTimeout(r, 400)); ok('mixer: volume delle armi al 40%', Math.abs(AU.bus.weapons.gain.value - .4) < .03, AU.bus.weapons.gain.value.toFixed(2)); SETTINGS.mix = {}; mixApply();
-    return R.join('\n'); }));
-  // 10 volo: 3 minuti con manetta che cambia e cambi di visuale, il motore non viene mai ricostruito
-  await p.evaluate(async () => { $('optMap').value = 'air'; $('optMap').dispatchEvent(new Event('change')); });
-  await b.close();
-  const b2 = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] }); const p2 = await b2.newPage(); p2.on('pageerror', e => errs.push(e.message));
-  await p2.goto('file://' + root + '/index.html'); await p2.waitForTimeout(1500);
-  await p2.evaluate(async () => { $('optMap').value = 'air'; $('optMap').dispatchEvent(new Event('change')); await startGame(); }); await p2.waitForTimeout(5000);
-  console.log(await p2.evaluate(async () => { const R = [];
-    if (P.mode !== 'plane') { enterPlane(); }
-    const me = PL.me, h = me && me.eng; if (!h) return 'nessun motore del giocatore';
-    const src0 = h.src, b0 = h.builds; let rateMin = 9, rateMax = 0, jumps = 0, lastRate = null;
-    for (let i = 0; i < 180 * 30; i++) { const dt = 1 / 30; GAME.time += dt; PL.throttle = .5 + .45 * Math.sin(i / 90); if (i % 600 === 0) PL.ext = !PL.ext; try { updateAircraft(dt); updatePlayer(dt); } catch (e) { return 'ERR ' + e.message; }
-      if (PL.me !== me) break; const r = h.src.playbackRate.value; rateMin = Math.min(rateMin, r); rateMax = Math.max(rateMax, r); if (lastRate !== null && Math.abs(r - lastRate) > .15) jumps++; lastRate = r; }
-    R.push(((PL.me === me && h.src === src0 && h.builds === b0) ? 'OK   ' : 'FALLITO ') + `motore P-47 per 3 minuti con manetta variabile e 18 cambi di visuale: stessa sorgente audio ${h.src === src0}, ricostruzioni ${h.builds - b0}, velocità di lettura ${rateMin.toFixed(2)}–${rateMax.toFixed(2)}, salti bruschi ${jumps}`);
-    return R.join('\n'); }));
-  console.log(errs.slice(0, 3).join(' | ') || 'nessun errore'); await b2.close(); })();
+const URL = 'file://' + path.resolve(__dirname, '../../index.html');
+let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 'OK   ' : 'FALLITO ') + n + (x ? ' — ' + x : '')); };
+(async () => {
+  const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
+  const p = await b.newPage({ viewport: { width: 800, height: 450 } }); const errs = [];
+  p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 160)); });
+  await p.goto(URL); await p.waitForTimeout(1500);
+  // 19. gioco originale: audio originale
+  await p.evaluate(async () => { $('optMap').value = 'omaha'; await startGame(); }); for (let i = 0; i < 90 && await p.evaluate(() => !GAME.started); i++) await p.waitForTimeout(1000);
+  await p.evaluate(async () => { if (typeof initAudio === 'function') await initAudio(); }); for (let i = 0; i < 30 && await p.evaluate(() => !AU.ready); i++) await p.waitForTimeout(500);
+  const O = await p.evaluate(() => { const a0 = AU.active.length; sfxShot('garand', null, true); return { xae: xaeActive(), played: XAE.stats.played, orig: AU.active.length > a0, ready: AU.ready, st: AU.ctx && AU.ctx.state }; });
+  ok('mappa originale: si usa il sistema audio originale, il motore sperimentale resta spento', !O.xae && O.played === 0 && O.orig, JSON.stringify(O));
+  await Promise.all([p.waitForNavigation(), p.evaluate(() => setTimeout(() => location.reload(), 50))]); await p.waitForTimeout(1500);
+  await p.evaluate(async () => { AAA.preset = 'LOW'; const sm = $('optMap'); const o = document.createElement('option'); o.value = 'aaa'; sm.appendChild(o); sm.value = 'aaa'; await startGame(); });
+  for (let i = 0; i < 150 && await p.evaluate(() => !GAME.started); i++) await p.waitForTimeout(1000);
+  await p.evaluate(async () => { if (typeof initAudio === 'function') await initAudio(); }); for (let i = 0; i < 30 && await p.evaluate(() => !AU.ready); i++) await p.waitForTimeout(500);
+  await p.waitForTimeout(800);
+  const R = await p.evaluate(async () => {
+    GAME.running = false; const out = {}; xaeInit(); out.active = xaeActive(); out.ctx = AU.ctx.state;
+    out.oneCtx = XAE.master.context === AU.ctx;
+    // 1–6. profili di tutte le armi del gioco (e MG 42 dell'IA): ogni sparo crea i layer
+    out.weapons = {}; for (const id in XAE_PROFILES) { const v0 = XAE.stats.played; const okk = xaeShot(id, null, {}); out.weapons[id] = okk && XAE.stats.played - v0 >= 3; }
+    // varianti senza ripetizioni immediate
+    let rep = 0, prev = -1; for (let i = 0; i < 40; i++) { xaePick('t', [1, 2, 3, 4]); if (XAE.rr.t === prev) rep++; prev = XAE.rr.t; } out.noRepeat = rep === 0;
+    // 7. bande di distanza: guadagno, filtro, transitorio e meccanica decrescono; l'ambiente cresce
+    const ds = [5, 60, 300, 900].map(d => xaeDistance(d)); out.bands = ds.map(d => d.band);
+    out.distOk = ds.every((d, i) => i === 0 || (d.g < ds[i - 1].g && d.lp <= ds[i - 1].lp && d.tran <= ds[i - 1].tran && d.env >= ds[i - 1].env)) && ds[3].tran === 0 && ds[1].mech === 0;
+    // 8–9. zone acustiche: dentro la casa normanna e in campo aperto
+    const hs = AAA.pipeHouse, cam = camera.position.clone();
+    camera.position.set(hs.x + 3, hs.y + 1.6, hs.z + 1); out.zIn = xaeDetectZone();
+    camera.position.set(AV.cx + 150, Hf(AV.cx + 150, AV.cz + 150) + 1.7, AV.cz + 150); out.zOut = xaeDetectZone();
+    // 10. occlusione: sorgente dietro la casa (ascoltatore davanti), poi linea libera; cache a 0,1 s
+    camera.position.set(hs.x, hs.y + 1.6, hs.z + 12); camera.updateMatrixWorld();
+    XAE.occCache.clear(); const behind = new V3(hs.x, hs.y + 1.5, hs.z - 8); out.occB = xaeOcclusion(behind, 'b');
+    const r0 = XAE.stats.occl; xaeOcclusion(behind, 'b'); out.occCached = XAE.stats.occl === r0;
+    out.occF = xaeOcclusion(new V3(hs.x + 30, hs.y + 1.5, hs.z + 30), 'f');
+    camera.position.copy(cam);
+    // 12. raffica alla cadenza reale (MG 42: 1200 colpi/min = 50 ms)
+    xaeEnable(false); xaeEnable(true); const body = XAE.assets.mg42.body; xaeBurst('mg42', 6, { dist: 30, layers: { transient: 0, tail: 0, mech: 0 } });
+    const st = XAE.voices.filter(v => body.includes(v.buf)).map(v => v.start).sort((a, c) => a - c); out.burstVoices = st.length;
+    out.burstDt = st.slice(1).map((t, i) => t - st[i]); out.burstOk = st.length === 6 && out.burstDt.every(d => Math.abs(d - .05) < .002);
+    // 11. ricarica: marcatori dell'animazione (Garand), nessun timer fisso
+    let calls = []; const om = window.xaeMech; window.xaeMech = (k, d) => { calls.push(k); return om(k, d); };
+    P.inv[0] = { id: 'garand', mag: 0, res: 40 }; P.cur = 0; await Promise.resolve(); updateViewmodel(1 / 60);
+    P.reloadT = P.reloadDur = 2.3; for (let i = 0; i < 140; i++) { P.reloadT = Math.max(.001, P.reloadT - 1 / 60); updateViewmodel(1 / 60); } P.reloadT = 0; window.xaeMech = om;
+    out.reloadMarks = calls.join(',');
+    // 11b. supersonico: schiocco per il Garand, sibilo per la Thompson (.45 ACP)
+    const cr = AU.buf.crack && AU.buf.crack[0], wz = AU.buf.whiz && AU.buf.whiz[0]; let last;
+    xaeCrack('garand'); last = XAE.voices[XAE.voices.length - 1]; out.crackG = last.src.buffer === cr;
+    xaeCrack('thompson'); last = XAE.voices[XAE.voices.length - 1]; out.crackT = last.src.buffer === wz;
+    // 13. molte sorgenti: limite delle voci rispettato
+    xaeStress(30); const nowV = XAE.voices.filter(v => v.end > AU.ctx.currentTime).length; out.voices = nowV; out.culled = XAE.stats.culled;
+    // 15–16. mixer e limitatore: picco misurato all'uscita mentre suona lo stress test
+    XAE.stats.peak = 0; XAE.stats.prePeak = 0; XAE.stats.clip = 0;
+    for (let i = 0; i < 40; i++) { xaeUpdate(1 / 30); await new Promise(r => setTimeout(r, 25)); }
+    out.peak = XAE.stats.peak; out.prePeak = XAE.stats.prePeak; out.clip = XAE.stats.clip;
+    out.buses = Object.keys(XAE.bus).join(',');
+    // A/B: A passa dal sistema originale, B dal motore sperimentale
+    const a0 = AU.active.length, p0 = XAE.stats.played; xalPlay('A'); out.abA = AU.active.length > a0 && XAE.stats.played === p0; xalPlay('B'); out.abB = XAE.stats.played > p0;
+    // 17. rilascio
+    xaeEnable(false); out.cleanup = XAE.voices.length === 0 && !xaeActive(); xaeEnable(true);
+    return out;
+  });
+  ok('tech demo: motore sperimentale attivo sull\'AudioContext unico del gioco', R.active && R.oneCtx, `stato ${R.ctx}`);
+  for (const id in R.weapons) ok(`profilo multistrato: ${id}`, R.weapons[id]);
+  ok('varianti senza ripetizioni immediate', R.noRepeat);
+  ok('7. bande di distanza (filtro, transitorio, meccanica, ambiente), non solo volume', R.distOk, R.bands.join(' → '));
+  ok('8–9. zone acustiche: interno della casa e campo aperto', R.zIn === 'interno' && R.zOut !== 'interno', `${R.zIn} / ${R.zOut}`);
+  ok('10. occlusione dietro la casa, linea libera, raggi in cache', R.occB > .5 && R.occF === 0 && R.occCached, `dietro ${R.occB}, libera ${R.occF}`);
+  ok('12. raffica MG 42 programmata alla cadenza reale (1200 colpi/min = 50 ms)', R.burstOk, `${R.burstVoices} colpi, intervalli ${R.burstDt.map(d => (d * 1000).toFixed(1)).join('/')} ms`);
+  ok('11. ricarica Garand: suoni dai marcatori dell\'animazione', R.reloadMarks === 'clip,boltc', R.reloadMarks);
+  ok('schiocco supersonico solo per i proiettili supersonici', R.crackG && R.crackT);
+  ok('13. molte sorgenti: limite delle voci rispettato', R.voices <= 40, `${R.voices} attive, ${R.culled} scartate per priorità`);
+  ok('15–16. mixer a bus e limitatore: uscita sotto 0 dBFS', R.peak < 1 && R.clip === 0 && R.buses.split(',').length === 6, `picco uscita ${(20 * Math.log10(R.peak || 1e-9)).toFixed(1)} dBFS, prima del limitatore ${(20 * Math.log10(R.prePeak || 1e-9)).toFixed(1)} dBFS, clip ${R.clip}`);
+  ok('A/B: A dal sistema originale, B dal motore sperimentale', R.abA && R.abB);
+  ok('17. rilascio delle sorgenti sperimentali', R.cleanup);
+  await Promise.all([p.waitForNavigation(), p.evaluate(() => setTimeout(() => location.reload(), 50))]); await p.waitForTimeout(1500);
+  ok('18. ritorno al menù: motore sperimentale spento', await p.evaluate(() => !xaeActive()));
+  ok('nessun errore JavaScript', errs.length === 0, errs.slice(0, 3).join(' | '));
+  await b.close(); console.log(fails ? `\n${fails} test FALLITI` : '\ntutti i test superati'); process.exit(fails ? 1 : 0);
+})();

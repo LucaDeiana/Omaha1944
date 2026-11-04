@@ -119,9 +119,21 @@ function wglbGun(id, kind) {
 // animazioni meccaniche del Garand: ciclo otturatore/asta a ogni colpo, otturatore aperto a clip vuota,
 // rilascio dell'otturatore a fine ricarica, grilletto, espulsione della clip vuota (pool di un solo oggetto)
 const _wgT = new V3();
+// marcatori audio della ricarica: i suoni partono quando l'animazione raggiunge il punto, non con timer fissi
+const WGLB_MARK = { garand: [[.6, 'clip'], [.78, 'boltc']], openbolt: [[.3, 'out'], [.68, 'in'], [.86, 'boltc']], semi: [[.3, 'out'], [.68, 'in'], [.86, 'boltc']], boltaction: [[.06, 'bolt'], [.3, 'in'], [.45, 'in'], [.6, 'in'], [.88, 'boltc']], pistol: [[.25, 'out'], [.66, 'in'], [.85, 'boltc']], rocket: [[.62, 'in']] };
+function wglbMarkers() {
+  if (!(typeof xaeActive === 'function' && xaeActive())) return;
+  // otturatore girevole dopo lo sparo: suoni sull'apertura e sulla chiusura dell'animazione (P.boltT)
+  if (P.boltT > 0) { const b = 1 - P.boltT, b0 = WGLB.lastBT || 0; if (b0 < .12 && b >= .12) xaeMech('bolt'); if (b0 < .82 && b >= .82) xaeMech('boltc'); WGLB.lastBT = b; } else WGLB.lastBT = 0;
+  if (P.reloadT <= 0) { WGLB.lastRT = 0; return; }
+  const mc = WGLB.mech[vmCur.mech] || {}, t = 1 - P.reloadT / P.reloadDur, t0 = WGLB.lastRT || 0;
+  for (const [m, k] of WGLB_MARK[mc.type] || []) if (t0 < m && t >= m) xaeMech(k);
+  WGLB.lastRT = t;
+}
 function wglbAnimate(dt) {
   if (typeof vmCur === 'undefined' || !vmCur || !vmCur.hq) return;
   const s = P.slot(); if (!s) return;
+  wglbMarkers();
   const parts = vmCur.parts, mc = WGLB.mech[vmCur.mech] || {}, stroke = mc.stroke || .07;
   if (mc.type === 'boltaction' || mc.type === 'pistol' || mc.type === 'rocket') { if (parts.trigger) parts.trigger.rotation.x = (P.trigger || P.flashT > 0) ? -.18 : 0; if (WGLB.inspectT > 0) WGLB.inspectT = Math.max(0, WGLB.inspectT - dt); return; }
   if (WGLB.lastShots < 0) WGLB.lastShots = STATS.shots;
