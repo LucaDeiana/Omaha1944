@@ -92,10 +92,10 @@
   "legno": "Poly Haven american_walnut_veneer (CC0, Jenelle van Heerden)",
   "acciaio": "procedurale (build_weapon.py)"
  },
- "tempo_s": 0.36,
+ "tempo_s": 13.38,
  "validazione": {
   "errori": [],
   "avvisi": [],
-  "kb": 458.8
+  "kb": 497.9
  }
 }

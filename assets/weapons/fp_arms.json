@@ -1,0 +1,58 @@
+{
+ "id": "fp_arms",
+ "formato": "omaha1944-weapon-1",
+ "blender": "5.2.3 LTS",
+ "unita": "metri",
+ "assi": "glTF: canna verso -Z, alto +Y, origine sul grilletto (stesso sistema di src/guns.js)",
+ "triangoli": {
+  "FP": 6936
+ },
+ "lunghezza_m": 0.0,
+ "parti": {
+  "FP": {
+   "hand_r": 3056,
+   "hand_l": 3056,
+   "arm": 824
+  }
+ },
+ "punti": {},
+ "perni": {
+  "hand_r": [
+   0,
+   0,
+   0
+  ],
+  "hand_l": [
+   0,
+   0,
+   0
+  ],
+  "arm": [
+   0,
+   0,
+   0
+  ]
+ },
+ "materiali": [
+  "wood",
+  "steel",
+  "steel_bright",
+  "steel_dark",
+  "steel_blued",
+  "bakelite",
+  "skin",
+  "cloth",
+  "brass",
+  "copper"
+ ],
+ "texture": {
+  "legno": "Poly Haven american_walnut_veneer (CC0, Jenelle van Heerden)",
+  "acciaio": "procedurale (build_weapon.py)"
+ },
+ "tempo_s": 14.71,
+ "validazione": {
+  "errori": [],
+  "avvisi": [],
+  "kb": 474.2
+ }
+}

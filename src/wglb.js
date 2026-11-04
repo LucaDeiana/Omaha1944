@@ -6,7 +6,7 @@
 //  Si carica in background all'avvio: finché non è pronto, o se manca, il gioco usa i modelli procedurali di
 //  src/guns.js. Cambia SOLO l'aspetto: danni, balistica, munizioni e tempi restano quelli di config.js.
 // ============================================================
-const WGLB = { map: { garand: 'm1garand', thompson: 'thompson', mp40: 'mp40', kar98: 'kar98k' },
+const WGLB = { map: { garand: 'm1garand', thompson: 'thompson', mp40: 'mp40', kar98: 'kar98k', arms: 'fp_arms' },
   // meccanica visibile: 'garand' (asta e otturatore, clip en-bloc), 'openbolt' (mitra a otturatore aperto), 'boltaction' (otturatore girevole)
   mech: { garand: { type: 'garand', stroke: .07, eye: .11 }, thompson: { type: 'openbolt', stroke: .08, eye: .09 }, mp40: { type: 'openbolt', stroke: .075, eye: .1 }, kar98: { type: 'boltaction', eye: .38 } }, data: {}, loading: {}, clipFx: null, inspectT: 0, lastShots: -1, cyc: 0 };
 const WGLB_EYE = .11;     // distanza dell'occhio dalla diottra in mira (appoggio della guancia)
@@ -28,11 +28,51 @@ function wglbLoad(id) {
       if (m.normalMap) m.normalScale.set(.8, .8);
       m.envMapIntensity = .9;
     });
-    src.glb = null; D.ms = Math.round(performance.now() - t0); WGLB.data[id] = D;
+    if (src.bake) await wglbBake(D, src.bake);
+    src.glb = null; src.bake = null; D.ms = Math.round(performance.now() - t0); WGLB.data[id] = D;
     // la vista in prima persona già costruita con il modello procedurale viene ricostruita col nuovo
+    if (id === 'arms' && typeof vmCache !== 'undefined') for (const k in vmCache) if (vmCache[k].hq) { const o = vmCache[k]; o.group.parent && o.group.parent.remove(o.group); delete vmCache[k]; if (vmCurId === k) { vmCur = null; vmCurId = null; } }
     if (typeof vmCache !== 'undefined' && vmCache[id]) { const old = vmCache[id]; old.group.parent && old.group.parent.remove(old.group); delete vmCache[id]; if (vmCurId === id) { vmCur = null; vmCurId = null; } }
     return D;
   })().catch(e => { console.warn('arma HQ non caricata', id, e); return null; }));
+}
+// occlusione (R) e spigoli consumati (G) cotti in Blender sul modello in prima persona (secondo set di UV):
+// gli incavi si scuriscono anche alla luce diretta, gli spigoli dell'acciaio si schiariscono e diventano più lisci,
+// quelli del legno si consumano. Solo il modello FP: soldati e armi a terra restano leggeri.
+async function wglbBake(D, uri) {
+  const im = await new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = uri; }); if (!im) return;
+  const t = new THREE.Texture(im); t.flipY = false; t.needsUpdate = true; t.anisotropy = 4; D.tex.add(t); D.bake = t;
+  const fp = D.scene.getObjectByName('FP'), cache = new Map();
+  fp.traverse(o => {
+    if (!o.isMesh || !o.geometry.attributes.uv2) return;
+    let m = cache.get(o.material.uuid);
+    if (!m) {
+      m = o.material.clone(); m.aoMap = t; m.aoMapIntensity = 1;
+      const steel = /steel/.test(m.name), wood = /wood|bakelite/.test(m.name);
+      const ek = steel ? .32 : wood ? .25 : .1, ec = steel ? new THREE.Color(.62, .62, .6) : new THREE.Color(.75, .55, .38), er = steel ? .32 : .5;
+      m.onBeforeCompile = sh => {
+        sh.uniforms.uEK = { value: ek }; sh.uniforms.uEC = { value: ec }; sh.uniforms.uER = { value: er };
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uEK,uER;uniform vec3 uEC;')
+          .replace('#include <map_fragment>', '#include <map_fragment>\n#ifdef USE_AOMAP\nvec4 wBk = texture2D(aoMap, vUv2); float wEdge = smoothstep(.45, .98, wBk.g) * uEK;\ndiffuseColor.rgb = mix(diffuseColor.rgb, uEC * (.8 + diffuseColor.rgb), wEdge) * mix(.45, 1., wBk.r);\n#endif')
+          .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n#ifdef USE_AOMAP\nroughnessFactor = mix(roughnessFactor, uER, wEdge);\n#endif');
+      };
+      m.name = o.material.name; m.userData = Object.assign({}, o.material.userData); cache.set(o.material.uuid, m); D.mats.add(m);
+    }
+    o.material = m;
+  });
+}
+// mani e avambracci dalla pipeline (fp_arms): sostituiscono capsule e cilindri del modello procedurale
+function wglbArms(i, A, B) {
+  const D = WGLB.data.arms; if (!D) return false;
+  const src = n => D.scene.getObjectByName('FP_' + n);
+  const hr = src('hand_r').clone(true); hr.position.copy(i.grip); i.group.add(hr);
+  const arm = (a, b) => { const m = src('arm').clone(true), dv = new V3().subVectors(b, a); m.position.copy(a).addScaledVector(dv, .5); m.quaternion.setFromUnitVectors(new V3(0, 1, 0), dv.clone().normalize()); m.scale.set(1, dv.length(), 1); return m; };
+  i.group.add(arm(A, B));
+  i.lhand = new THREE.Group(); i.group.add(i.lhand); i.lbase = i.fore.clone(); i.lhand.position.copy(i.fore);
+  const hl = src('hand_l').clone(true); hl.position.set(0, 0, 0); i.lhand.add(hl);
+  i.larm = src('arm').clone(true); i.group.add(i.larm);
+  i.arms = 'fp_arms';
+  return true;
 }
 function wglbPreload() { if (!SETTINGS || SETTINGS.hqGuns !== false) for (const id in WGLB.map) wglbLoad(id); }
 const _wv = (a) => new V3(a[0], a[1], a[2]);

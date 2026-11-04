@@ -49,8 +49,12 @@ L'MG42 esiste solo come arma dell'IA (`AIW.mg`, suono) e non ha un modello gioca
   - Caricamento in background; se il GLB manca si usa il modello procedurale.
 - Showroom (F10, nella demo AAA): voci «nuovo» e «modello precedente», animazioni di sparo, ricarica e clip vuota, vista ADS, statistiche.
 
+## Resa (aggiornamento)
+- **Occlusione e usura cotte con Cycles** sul modello in prima persona: secondo set di UV senza sovrapposizioni, AO nel canale R, spigoli convessi (pointiness) nel canale G. A runtime gli incavi si scuriscono e gli spigoli dell'acciaio si schiariscono e si lisciano; il legno si consuma sugli spigoli.
+- **Mani e avambracci da Blender** (`fp_arms`, 6.936 triangoli): dita a tre falangi in posa d'impugnatura, pollice, palmo modellato, polso, manica di lana della giacca M1941 con polsino e pieghe. Pelle e lana con texture procedurali. Sostituiscono capsule e cilindri quando l'arma è un modello Blender.
+
 ## Limiti dichiarati
-- Le **mani e le braccia** sono ancora quelle del gioco, fatte di capsule: niente modello scheletrico. Le animazioni delle mani restano quelle generiche; solo le animazioni meccaniche sono specifiche del Garand.
+- Mani **rigide in posa fissa**, senza scheletro: le dita non si muovono durante la ricarica. Le animazioni delle mani restano quelle generiche; solo le animazioni meccaniche sono specifiche del Garand.
 - Nessuna fotografia di riferimento consultata in questa sessione: misure da dati tecnici noti.
 - Restano da convertire 9 armi (BAR, Springfield, Colt, Bazooka, Kar98k ZF39, Enfield, Mosin, G43, SVT-40).
 - Thompson, MP 40 e Kar98k hanno meno dettaglio del Garand (circa 3.000 triangoli in prima persona contro 8.900).

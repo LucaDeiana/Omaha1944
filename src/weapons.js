@@ -87,12 +87,14 @@ function addSights(g, kind, y, rz, fz, mat, hood, x = 0) {
 function buildViewmodel(id) {
   const i = (typeof wglbGun === 'function' && wglbGun(id, 'FP')) || buildGun(id), g = i.group;   // modello Blender se pronto
   const rh = i.grip, lh = i.fore;
-  hand(g, new V3(rh.x + .012, rh.y, rh.z), 1);
-  limb(g, new V3(rh.x + .03, rh.y - .03, rh.z + .05), new V3(.24, -.42, .34), .034, VM.sleeve);
-  i.lhand = new THREE.Group(); g.add(i.lhand);
-  i.lbase = lh.clone(); i.lhand.position.copy(lh);
-  hand(i.lhand, new V3(-.01, -.01, 0), -1);
-  i.larm = new THREE.Mesh(new THREE.CylinderGeometry(.036, .04, 1, 14), VM.sleeve); g.add(i.larm);
+  if (!(i.hq && typeof wglbArms === 'function' && wglbArms(i, new V3(rh.x + .03, rh.y - .03, rh.z + .05), new V3(.24, -.42, .34)))) {   // mani Blender se pronte
+    hand(g, new V3(rh.x + .012, rh.y, rh.z), 1);
+    limb(g, new V3(rh.x + .03, rh.y - .03, rh.z + .05), new V3(.24, -.42, .34), .034, VM.sleeve);
+    i.lhand = new THREE.Group(); g.add(i.lhand);
+    i.lbase = lh.clone(); i.lhand.position.copy(lh);
+    hand(i.lhand, new V3(-.01, -.01, 0), -1);
+    i.larm = new THREE.Mesh(new THREE.CylinderGeometry(.036, .04, 1, 14), VM.sleeve); g.add(i.larm);
+  }
   i.elbowL = new V3(-.34, -.46, .02);
   if (i.mag) i.magBase = i.mag.position.clone();
   g.traverse(o => { if (o.isMesh) o.frustumCulled = false; });

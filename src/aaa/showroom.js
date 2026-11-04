@@ -16,7 +16,7 @@ const SR_LIGHTS = {
 };
 function srList() {
   const out = PIPE_IDS.map(id => ({ id, nome: id + ' (pipeline)', kind: 'pipe' }));
-  if (typeof WGLB !== 'undefined') for (const id in WGLB.map) { out.push({ id: 'wpn:' + id, nome: 'ARMA ' + WEAPONS[id].name + ' — nuovo (Blender)', kind: 'wpn', gun: id }); out.push({ id: 'old:' + id, nome: 'ARMA ' + WEAPONS[id].name + ' — modello precedente', kind: 'wpnold', gun: id }); }
+  if (typeof WGLB !== 'undefined') for (const id in WGLB.map) if (WEAPONS[id]) { out.push({ id: 'wpn:' + id, nome: 'ARMA ' + WEAPONS[id].name + ' — nuovo (Blender)', kind: 'wpn', gun: id }); out.push({ id: 'old:' + id, nome: 'ARMA ' + WEAPONS[id].name + ' — modello precedente', kind: 'wpnold', gun: id }); }
   if (typeof AAA_M !== 'undefined') for (const k in AAA_M) out.push({ id: k, nome: k + ' (Poly Haven)', kind: 'ph' });
   return out;
 }
