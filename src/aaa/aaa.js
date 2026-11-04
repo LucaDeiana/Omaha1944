@@ -202,7 +202,12 @@ function aaaInit() {
   SUN_DIR.set(.72, .34, .6).normalize(); sun.color.setHex(0xffd2a4); sun.intensity = 2.7;
   scene.traverse(o => { if (o.isHemisphereLight) { o.color.setHex(0xbccad8); o.groundColor.setHex(0x5a5444); o.intensity = .5; } });
   FOG_COL.setHex(0xa8afb2); scene.fog.color.copy(FOG_COL); FOG_K = 1.7; scene.fog.density = FOG_BASE * FOG_K; if (scene.background && scene.background.isColor) scene.background.copy(FOG_COL);
-  if (sun.shadow && sun.shadow.camera) { sun.shadow.bias = -.00025; sun.shadow.normalBias = .025; sun.shadow.radius = AAA.preset === 'ULTRA' ? 3 : 2; sun.shadow.camera.far = 900; sun.shadow.camera.updateProjectionMatrix(); }
+  if (sun.castShadow) {   // ombre statiche sull'intero villaggio: calcolate una volta (più una al primo fotogramma), niente cascata lontana
+    const c = sun.shadow.camera, H = 88; c.left = -H; c.right = H; c.top = H; c.bottom = -H; c.near = 5; c.far = 520; c.updateProjectionMatrix();
+    const ctr = new V3(AV.cx + 5, aaaH(AV.cx + 5, AV.cz - 5), AV.cz - 5); sun.position.copy(ctr).addScaledVector(SUN_DIR, 250); sun.target.position.copy(ctr); sun.target.updateMatrixWorld(); sun.updateMatrixWorld();
+    AAA.fixedSun = true; AAA.shadowDirty = 3; if (typeof sunFar !== 'undefined' && sunFar) { sunFar.castShadow = false; }
+  }
+  if (sun.shadow && sun.shadow.camera) { sun.shadow.bias = -.0003; sun.shadow.normalBias = .05; sun.shadow.radius = AAA.preset === 'ULTRA' ? 3 : 2;  }
   // riflessi: una cubemap del villaggio presa dalla strada, una volta (pozzanghere e vetri riflettono cielo e case)
   try { const PZ = AAA_PRESETS[AAA.preset]; const rt = new THREE.WebGLCubeRenderTarget(PZ.cube, { generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter }); const cc = new THREE.CubeCamera(.3, 600, rt); cc.position.set(AV.cx + 4, aaaH(AV.cx + 4, AV.cz + 6) + 1.1, AV.cz + 6); scene.add(cc); const vm = typeof vmRoot !== 'undefined' && vmRoot ? vmRoot.visible : null; if (vmRoot) vmRoot.visible = false; cc.update(renderer, scene); if (vmRoot && vm !== null) vmRoot.visible = vm; AAA.cube = rt.texture; for (const m of [AAA.mats.water, AAA.mats.glass]) { m.envMap = AAA.cube; m.needsUpdate = true; } } catch (e) { console.warn('cubemap', e); }
   aaaShafts(); aaaDust(); aaaSSAO();

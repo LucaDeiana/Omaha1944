@@ -269,8 +269,9 @@ function updateEngine(dt, center, time) {
   _ctr.copy(center).addScaledVector(_fw, Q.shadowDist * .5);
   if (Q.shadows) { const g = Q.shadowDist * 2 / Q.shadows * 4; _snap.set(Math.round(_ctr.x / g) * g, Math.round(_ctr.y / g) * g, Math.round(_ctr.z / g) * g); }
   else _snap.copy(center);
-  sun.position.copy(_snap).addScaledVector(SUN_DIR, 350);
-  sun.target.position.copy(_snap);
+  if (SCEN === 'aaa' && typeof AAA !== 'undefined' && AAA.fixedSun) { /* tech demo: sole e ombre fissi sul villaggio */ }
+  else { sun.position.copy(_snap).addScaledVector(SUN_DIR, 350);
+  sun.target.position.copy(_snap); }
   if (sunFar) { const sf = sunFar.shadow.camera, g = (sf.right - sf.left) / sunFar.shadow.mapSize.x * 4; _ctr.copy(center).addScaledVector(_fw, Q.shadowDist * 2);
     _snapF.set(Math.round(_ctr.x / g) * g, Math.round(_ctr.y / g) * g, Math.round(_ctr.z / g) * g); sunFar.position.copy(_snapF).addScaledVector(SUN_DIR, 700); sunFar.target.position.copy(_snapF); }
   skyMat.uniforms.uTime.value = time;
@@ -292,7 +293,8 @@ function renderFrame(time) {
   if (typeof cityLodUpdate === 'function') cityLodUpdate();
   for (const f of FOGCULL) f.obj.visible = f.s.center.distanceTo(cp) - f.s.radius < lim * (f.k || 1);
   // aggiornamento: vicina a ogni fotogramma (alto/ultra) o a fotogrammi alterni; lontana ogni 4
-  if (renderer.shadowMap.enabled) { _shF++; sun.shadow.needsUpdate = Q.shadows >= 4096 || (_shF & 1) === 0; if (sunFar) sunFar.shadow.needsUpdate = (_shF & 3) === 1; }
+  if (renderer.shadowMap.enabled && SCEN === 'aaa' && typeof AAA !== 'undefined' && AAA.fixedSun) { sun.shadow.needsUpdate = AAA.shadowDirty > 0; if (AAA.shadowDirty > 0) AAA.shadowDirty--; }
+  else if (renderer.shadowMap.enabled) { _shF++; sun.shadow.needsUpdate = Q.shadows >= 4096 || (_shF & 1) === 0; if (sunFar) sunFar.shadow.needsUpdate = (_shF & 3) === 1; }
   if (composer) { gradePass.uniforms.uTime.value = time; composer.render(); }
   else renderer.render(scene, camera);
 }

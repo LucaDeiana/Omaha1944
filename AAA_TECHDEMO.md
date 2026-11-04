@@ -218,6 +218,41 @@ Test: `tools/ai/taaa.js` 8/8 con gli asset caricati.
 - File `assets/aaa/aaa_leaf.js` (1,7 MB), caricato solo nella demo. Licenze in `assets/aaa/LICENZE.md`.
 - Foto: `docs/aaa/v2/*_foglie.jpg`.
 
+## Ottimizzazione dopo la prima misura sul PC dell'utente
+**Misura riportata dall'utente**: ULTRA 15–19 FPS, MEDIUM 30–35 FPS. Il traguardo dei 50 FPS non era raggiunto.
+
+**Analisi dei costi**, triangoli per categoria misurati nella scena:
+- **Ombre ridisegnate a ogni fotogramma**: tutta la scena di nuovo, a ogni frame in ULTRA e a frame alterni in MEDIUM, più una cascata lontana.
+- **ULTRA**:
+  - terreno a 0,28 m: 720.000 triangoli;
+  - ciuffi d'erba e ortiche dettagliati: oltre 800.000;
+  - erba procedurale: 450.000;
+  - passaggio SSAO, che ridisegna la scena.
+- **Tronchi**: 227.000 triangoli, quasi tutti rametti dentro i cespugli della siepe, invisibili.
+
+**Interventi**
+- **Ombre statiche**: una sola mappa (2048 in MEDIUM, 4096 in HIGH e ULTRA) su tutto il villaggio (176 × 176 m), calcolata al caricamento perché la scena è ferma. **Niente cascata lontana.**
+  - Le ombre delle foglie non seguono il vento: è il compromesso accettato.
+- **Terreno**: 0,7 m in MEDIUM, 0,5 m in HIGH, 0,4 m in ULTRA (prima 0,6 / 0,4 / 0,28).
+- **Erba procedurale**: 16.000 / 40.000 / 80.000 lame (prima 24.000 / 70.000 / 150.000).
+- **Vegetazione dettagliata**: 15% / 30% / 50% (prima 35% / 60% / 100%).
+- **Foglie degli alberi**: 85% in HIGH, 110% in ULTRA.
+- **Cespugli della siepe senza tronco.**
+- **Risoluzione interna**: al massimo 1 in MEDIUM e HIGH, 1,25 in ULTRA. Prima ULTRA arrivava a 2 sugli schermi ad alta densità.
+- **SSAO solo in ULTRA**, con 16 campioni.
+
+**Confronto** sulle stesse inquadrature, grafica software: vale solo come rapporto, non come FPS.
+
+| Vista | Preset | Prima | Dopo |
+|---|---|---|---|
+| Panoramica | MEDIUM | 2.082 ms | 778 ms |
+| Panoramica | ULTRA | 2.477 ms | 2.343 ms |
+| Cortile | ULTRA | 3.222 ms | 258 ms |
+
+La panoramica in ULTRA resta la vista più pesante: SSAO e chiome viste tutte insieme.
+
+**Da rimisurare sul tuo PC** con il tasto B, in ciascun preset.
+
 ## Limiti tecnici
 - Gli edifici hanno collider allineati agli assi.
 - Il frontone ha un collider approssimato.

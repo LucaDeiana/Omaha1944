@@ -36,15 +36,15 @@ function aaaTreeTemplate(kind, seed) {
   // rametti sottili verso le schede (silhouette meno «a palla»)
   const merge = list => THREE.BufferGeometryUtils ? THREE.BufferGeometryUtils.mergeBufferGeometries(list.map(g => g.index ? g.toNonIndexed() : g)) : aaaMerge(list.map(g => { g = g.index ? g.toNonIndexed() : g; if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2)); return g; }));
   for (const g of bark) { if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2)); }
-  return { bark: merge(bark), leaves: merge(leaves), h: P.h };
+  return { bark: merge(bark), leaves: merge(leaves), h: P.h, kind };
 }
 // istanze: un'InstancedMesh per corteccia e una per le foglie di ciascun modello
 function aaaPlantInstances(tpl, list, tint) {
   const M = aaaMats(), leaf = aaaLeafMat(), barkM = AAA.mats.barkW || (AAA.mats.barkW = aaaTri('wood', 1.3, { nStr: 1.8, macro: .35, color: 0x6c6458, moss: .4, wind: .9, key: 'barkw', hq: 'corteccia', hqScale: .9, nStrHQ: 1.4 }));
-  const b = new THREE.InstancedMesh(tpl.bark, barkM, list.length), l = new THREE.InstancedMesh(tpl.leaves, leaf, list.length);
+  const b = new THREE.InstancedMesh(tpl.bark, barkM, tpl.kind === 'bush' ? 0 : list.length), l = new THREE.InstancedMesh(tpl.leaves, leaf, list.length);
   b.castShadow = b.receiveShadow = l.castShadow = l.receiveShadow = true; l.customDepthMaterial = AAA.mats.leafDepth;
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color();
-  list.forEach(([x, z, s, ry, t], i) => { q.setFromAxisAngle(new V3(0, 1, 0), ry); m4.compose(new V3(x, aaaH(x, z), z), q, new V3(s, s * (.9 + (i % 5) * .05), s)); b.setMatrixAt(i, m4); l.setMatrixAt(i, m4); c.setRGB(...(t || tint || [1, 1, 1])); l.setColorAt(i, c); });
+  list.forEach(([x, z, s, ry, t], i) => { q.setFromAxisAngle(new V3(0, 1, 0), ry); m4.compose(new V3(x, aaaH(x, z), z), q, new V3(s, s * (.9 + (i % 5) * .05), s)); if (i < b.count) b.setMatrixAt(i, m4); l.setMatrixAt(i, m4); c.setRGB(...(t || tint || [1, 1, 1])); l.setColorAt(i, c); });
   l.instanceColor.needsUpdate = true; scene.add(b, l); AAA.st.trees = (AAA.st.trees || 0) + list.length; return [b, l];
 }
 // erba: ciuffi di lame (base scura, punta chiara), normali verso l'alto, istanze dove il terreno è erboso

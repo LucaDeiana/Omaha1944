@@ -83,7 +83,7 @@ function aaaPlaceModels() {
     aaaModel('wooden_stool_01', I.px + 1.3, I.z0 + 2.2, .5, 1, { y: fl, solid: false });
   }
   // vegetazione di dettaglio istanziata: varianti singole dei set (felci, ortiche, ciuffi d'erba, cespugli, sassi muschiati)
-  const KS = { LOW: 0, MEDIUM: .35, HIGH: .6, ULTRA: 1 }[AAA.preset] ?? .6, keep = () => sr() < KS;
+  const KS = { LOW: 0, MEDIUM: .15, HIGH: .3, ULTRA: .5 }[AAA.preset] ?? .3, keep = () => sr() < KS;
   const L = { grass_medium_01: [], fern_02: [], nettle_plant: [], shrub_02: [], rock_moss_set_01: [] };
   const wallFoot = [[-21, -7, -2.9], [26.4, 26.4, -24, -5, 'z'], [27.5, 47, -3], [-5, 9, 13.9]];
   for (const [a0, a1, b, b1, ax] of wallFoot) for (let k = 0; k < 26; k++) { const t = r(0, 1); const u = ax === 'z' ? a0 + r(-.6, .6) : lerp(a0, a1, t), v = ax === 'z' ? lerp(b, b1, t) : b + r(-.5, .5); if (keep()) L[sr() < .55 ? 'grass_medium_01' : sr() < .6 ? 'nettle_plant' : 'fern_02'].push([...U(u, v), r(0, TAU), r(.7, 1.15)]); }
