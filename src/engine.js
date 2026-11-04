@@ -295,6 +295,6 @@ function renderFrame(time) {
   // aggiornamento: vicina a ogni fotogramma (alto/ultra) o a fotogrammi alterni; lontana ogni 4
   if (renderer.shadowMap.enabled && SCEN === 'aaa' && typeof AAA !== 'undefined' && AAA.fixedSun) { sun.shadow.needsUpdate = AAA.shadowDirty > 0; if (AAA.shadowDirty > 0) AAA.shadowDirty--; }
   else if (renderer.shadowMap.enabled) { _shF++; sun.shadow.needsUpdate = Q.shadows >= 4096 || (_shF & 1) === 0; if (sunFar) sunFar.shadow.needsUpdate = (_shF & 3) === 1; }
-  if (composer) { gradePass.uniforms.uTime.value = time; composer.render(); }
+  if (composer && !(SCEN === 'aaa' && typeof AAA !== 'undefined' && AAA.noPost)) { gradePass.uniforms.uTime.value = time; composer.render(); }
   else renderer.render(scene, camera);
 }

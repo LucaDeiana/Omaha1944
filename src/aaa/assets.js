@@ -7,7 +7,7 @@
 const TEXH = {}; const AAA_M = {};
 function aaaLoadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('asset non trovato: ' + src)); document.head.appendChild(s); }); }
 async function aaaLoadAssets() {
-  const t0 = performance.now();
+  const t0 = performance.now(); if (!AAA.t0) AAA.t0 = t0;
   try {
     if (!window.AAA_TEX) await aaaLoadScript('assets/aaa/aaa_tex.js');
     if (!window.AAA_GLB) await aaaLoadScript('assets/aaa/aaa_models.js');
@@ -49,7 +49,7 @@ function aaaModel(name, x, z, ry = 0, s = 1, o = {}) {
   const g = src.clone(); const y = o.y ?? aaaH(x, z);
   g.position.set(x, y + (o.dy || 0), z); g.rotation.set(o.rx || 0, ry, o.rz || 0); g.scale.setScalar(s); scene.add(g); g.updateMatrixWorld(true);
   if (o.solid !== false) { _amBox.setFromObject(g); if (o.round) OBST.push({ x, z, r: Math.max(_amBox.max.x - _amBox.min.x, _amBox.max.z - _amBox.min.z) / 2 }); else if (_amBox.max.y - _amBox.min.y > .25) { const so = addSolid(_amBox.min.x, _amBox.min.y, _amBox.min.z, _amBox.max.x, _amBox.max.y, _amBox.max.z, o.tag || 'crate'); so.mat = o.mat || 'legno'; } }
-  AAA.st.modelInst = (AAA.st.modelInst || 0) + 1; return g;
+  AAA.st.modelInst = (AAA.st.modelInst || 0) + 1; (AAA.extras || (AAA.extras = [])).push(g); return g;
 }
 // misura di un modello (per appoggiarlo su altri oggetti)
 function aaaModelSize(name) { const src = AAA_M[name]; if (!src) return null; _amBox.setFromObject(src); return _amBox.getSize(new V3()); }

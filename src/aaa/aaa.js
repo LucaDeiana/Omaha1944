@@ -32,7 +32,7 @@ function aaaPads() {
   AAA.defs = D;
 }
 function aaaBuildWorld() {
-  const t0 = performance.now(); AAA.on = true; AAA.st = { hq: AAA.st.hq, assetMs: AAA.st.assetMs, models: AAA.st.models, texHQ: AAA.st.texHQ }; AAA.rooms.length = 0; AAA.objs.length = 0;
+  AAA.extras = []; const t0 = performance.now(); AAA.on = true; AAA.st = { hq: AAA.st.hq, assetMs: AAA.st.assetMs, models: AAA.st.models, texHQ: AAA.st.texHQ }; AAA.rooms.length = 0; AAA.objs.length = 0;
   for (let i = 0; i < 6; i++) { AAA_IN_MIN[i].set(1e5, 1e5, 1e5); AAA_IN_MAX[i].set(-1e5, -1e5, -1e5); }
   WORLD.mortarPits = []; WORLD.aaSites = []; WORLD.tobruks = []; WORLD.bombard = 'off';
   aaaPads(); buildHF(); buildHC(); buildWater(); if (WORLD.waterMesh) WORLD.waterMesh.visible = false;
@@ -215,6 +215,7 @@ function aaaInit() {
   try { AAA.windS = loopSound('wind', 0, 'ambience.wind'); } catch (e) { }
   AAA.boomT = 25; AAA.t0 = performance.now();
   aaaHudInit();
+  if (typeof labInit === 'function') labInit();
   showMsg('Normandy Village — Photorealism Test · preset ' + AAA.preset, 4);
 }
 // fasci di luce dalle finestre della casa A esposte al sole (volumi additivi, solo all'interno)
@@ -226,7 +227,7 @@ function aaaShafts() {
     fragmentShader: 'uniform float uT;varying vec2 vU;varying vec3 vP;float h(vec3 p){return fract(sin(dot(p,vec3(12.9,78.2,37.7)))*43758.5);}void main(){float a=(1.-vU.y)*smoothstep(0.,.15,vU.y)*smoothstep(0.,.25,vU.x)*smoothstep(1.,.75,vU.x);float n=.75+.25*sin(vP.x*3.+vP.y*2.+uT*.4);gl_FragColor=vec4(vec3(1.,.9,.72)*a*n*.075,1.);}' });
   for (const [c, y, w, h] of [[ax - 3.7, A.base + .95, .95, 1.3], [ax + 3.6, A.base + .95, .95, 1.3], [ax + .5, A.base, 1.1, 2.2]]) {
     const L = 5, g = new THREE.PlaneGeometry(w, L, 1, 1); g.translate(0, -L / 2, 0); g.rotateX(PI / 2);
-    for (const k of [0, 1]) { const m = new THREE.Mesh(g, mat); m.position.set(c, y + h * (k ? .8 : .25), az + A.d / 2 - .3); m.lookAt(m.position.clone().add(sd)); m.rotateX(-PI / 2); m.renderOrder = 5; scene.add(m); }
+    for (const k of [0, 1]) { const m = new THREE.Mesh(g, mat); m.position.set(c, y + h * (k ? .8 : .25), az + A.d / 2 - .3); m.lookAt(m.position.clone().add(sd)); m.rotateX(-PI / 2); m.renderOrder = 5; scene.add(m); (AAA.extras || (AAA.extras = [])).push(m); }
   }
 }
 // pulviscolo nell'aria (punti illuminati che fluttuano lentamente), più fitto dentro casa
@@ -236,17 +237,18 @@ function aaaDust() {
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   const m = new THREE.PointsMaterial({ color: 0xfff0d8, size: .018, transparent: true, opacity: .55, depthWrite: false, sizeAttenuation: true });
   m.onBeforeCompile = sh => { sh.uniforms.uT = AAA.time; sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uT;').replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += vec3(sin(uT*.21+position.y*3.)*.25, sin(uT*.13+position.x*2.)*.12, cos(uT*.17+position.z*2.5)*.25);'); };
-  const p = new THREE.Points(g, m); p.frustumCulled = false; scene.add(p); AAA.dust = p;
+  const p = new THREE.Points(g, m); p.frustumCulled = false; scene.add(p); AAA.dust = p; (AAA.extras || (AAA.extras = [])).push(p);
 }
 function aaaUpdate(dt) {
   MISSION.stageT += dt; AAA.time.value += dt; updateSubs(dt); aaaChunkTick(dt);
-  const t = AAA.time.value; AAA.wind.value.set(.7 + .35 * Math.sin(t * .23), .3 + .2 * Math.sin(t * .17 + 1));
+  const t = AAA.time.value; if (!AAA.windOff) AAA.wind.value.set(.7 + .35 * Math.sin(t * .23), .3 + .2 * Math.sin(t * .17 + 1));
   if (AAA.windS) { const g = .18 + .08 * Math.sin(t * .3); AAA.windS.set(g, 0, 1); }
   if ((AAA.boomT -= dt) <= 0) { AAA.boomT = 28 + Math.random() * 40; const a = Math.random() * TAU; sfxBoom(new V3(P.pos.x + Math.cos(a) * 2500, 20, P.pos.z + Math.sin(a) * 2500), .6); }
 }
 // dopo il giocatore: modalità foto (telecamera libera), benchmark
 const AAA_KEYS = {};
 function aaaLate(dt) {
+  if (typeof LAB !== 'undefined' && LAB.run) { if (typeof vmRoot !== 'undefined' && vmRoot) vmRoot.visible = false; return labRunFrame(); }
   if (AAA.bench) return aaaBenchTick();
   if (!AAA.photo) return;
   P.pos.copy(AAA.frozen); P.vy = 0;   // il soldato resta dov'era
@@ -272,7 +274,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyP') aaaPhoto(!AAA.photo);
   else if (e.code === 'KeyH') aaaHud(!AAA.noHud);
   else if (e.code === 'KeyK') aaaShot();
-  else if (e.code === 'KeyB' && !e.ctrlKey) aaaBenchStart();
+  else if (e.code === 'KeyB' && !e.ctrlKey) { if (typeof labStart === 'function') labStart(); else aaaBenchStart(); }
 });
 addEventListener('wheel', e => { if (SCEN === 'aaa' && AAA.photo) { AAA.fov = clamp(AAA.fov + Math.sign(e.deltaY) * 3, 15, 100); e.stopImmediatePropagation(); } }, { capture: true, passive: true });
 
@@ -357,5 +359,5 @@ function aaaChunkAll() {
 function aaaChunkTick(dt) {
   if (!AAA.chunks) return; if ((AAA.chunkT = (AAA.chunkT || 0) - dt) > 0) return; AAA.chunkT = .25;
   const cp = camera.position, all = AAA.shadowDirty > 0;
-  for (const c of AAA.chunks) c.m.visible = all || !c.d || Math.hypot(c.x - cp.x, c.z - cp.z) < c.d;
+  for (const c of AAA.chunks) c.m.visible = (all || !c.d || Math.hypot(c.x - cp.x, c.z - cp.z) < c.d) && !(AAA.hideDecor && c.m.userData.chunk && c.m.userData.chunk[1]);
 }

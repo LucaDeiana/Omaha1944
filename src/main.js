@@ -126,6 +126,7 @@ function frame(now) {
   const raw = Math.min(.1, Math.max(0, (now - last) / 1000)); last = now;
   FPS.v = lerp(FPS.v, 1 / Math.max(raw, 1e-3), .05);
   if (!GAME.started) return;
+  if (SCEN === 'aaa' && typeof labFrameStart === 'function') labFrameStart(now);   // laboratorio di benchmark (solo tech demo)
   if (GAME.running) {
     GAME.timeScale = 1;
     const dt = Math.min(SCEN === 'sea' ? .1 : .05, raw) * GAME.timeScale;  // in mare navi e proiettili vanno a sottopassi: anche a pochi fotogrammi il tempo resta reale
@@ -150,7 +151,7 @@ function frame(now) {
   else if (P.mode === 'foot' && !(typeof CUT !== 'undefined' && CUT.active) && !P.inBoat && P.pos.lengthSq() > 0) { try { updateCamera(0); } catch (e) { } }
   camera.updateMatrixWorld();
   updateCrowd();
-  renderFrame(GAME.time);
+  renderFrame(GAME.time); if (SCEN === 'aaa' && typeof labFrameEnd === 'function') labFrameEnd();
 }
 
 // audio sospeso quando la scheda non è visibile
