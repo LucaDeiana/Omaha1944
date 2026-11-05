@@ -31,6 +31,7 @@ function aaaPads() {
   for (const k in D) { const d = D[k]; let lo = 1e9; for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]]) lo = Math.min(lo, aaaH(AV.cx + d.u + a * d.w / 2, AV.cz + d.v + b * d.d / 2)); AV.pads.push({ x0: d.u - d.w / 2 - .6, x1: d.u + d.w / 2 + .6, z0: d.v - d.d / 2 - .6, z1: d.v + d.d / 2 + .6, y: lo + .05 }); d.base = lo + .2; }
   AAA.defs = D;
   if (typeof v2Pads === 'function' && V2.on) v2Pads();   // villaggio esteso 2.0
+  if (typeof xdzPads === 'function') xdzPads();   // cortile del Destruction Lab
 }
 function aaaBuildWorld() {
   AAA.extras = []; AAA.plants = []; const t0 = performance.now(); AAA.on = true; AAA.st = { hq: AAA.st.hq, assetMs: AAA.st.assetMs, models: AAA.st.models, texHQ: AAA.st.texHQ }; AAA.rooms.length = 0; AAA.objs.length = 0;
@@ -81,7 +82,8 @@ function aaaBuildWorld() {
   // recinzioni dei campi a sud
   apFence(G, [U(-6, 17.5), U(-6, 40), U(4, 60)], 9);
   G.build(); aaaPlaceModels(); if (typeof pipeVillage === 'function') pipeVillage();
-  if (typeof v2Build === 'function' && V2.on) { v2Build(); AAA.st.v2 = V2.stats; }   // villaggio esteso 2.0 (centro storico, residenziale, fattoria, zona militare, periferia)
+  if (typeof v2Build === 'function' && V2.on) { v2Build(); AAA.st.v2 = V2.stats; }
+  if (typeof xdzBuild === 'function') xdzBuild();   // Dynamic Destruction Lab (asincrono: kit di frattura)   // villaggio esteso 2.0 (centro storico, residenziale, fattoria, zona militare, periferia)
   // vegetazione: bocage, querce, frutteto, alberi lungo il viottolo, erba, fiori, edera
   const tOak = aaaTreeTemplate('oak', 7), tApple = aaaTreeTemplate('apple', 9), tBush = aaaTreeTemplate('bush', 13);
   const oaks = aaaBocage(tBush, tOak).concat([[...U(22, -1.5), 1.15, .4], [...U(-34, -6), 1.05, 2.1], [...U(6, -42), .95, 1], [...U(-2, 28), 1.1, 3], [...U(60, 6), 1, 4]]);
@@ -246,7 +248,7 @@ function aaaDust() {
   const p = new THREE.Points(g, m); p.frustumCulled = false; scene.add(p); AAA.dust = p; (AAA.extras || (AAA.extras = [])).push(p);
 }
 function aaaUpdate(dt) {
-  MISSION.stageT += dt; AAA.time.value += dt; updateSubs(dt); aaaChunkTick(dt); if (typeof v2Tick === 'function') v2Tick(dt);
+  MISSION.stageT += dt; AAA.time.value += dt; updateSubs(dt); aaaChunkTick(dt); if (typeof v2Tick === 'function') v2Tick(dt); if (typeof xdzTick === 'function') xdzTick(dt);
   const t = AAA.time.value; if (!AAA.windOff) AAA.wind.value.set(.7 + .35 * Math.sin(t * .23), .3 + .2 * Math.sin(t * .17 + 1));
   if (AAA.windS) { const g = .18 + .08 * Math.sin(t * .3); AAA.windS.set(g, 0, 1); }
   if ((AAA.boomT -= dt) <= 0) { AAA.boomT = 28 + Math.random() * 40; const a = Math.random() * TAU; sfxBoom(new V3(P.pos.x + Math.cos(a) * 2500, 20, P.pos.z + Math.sin(a) * 2500), .6); }

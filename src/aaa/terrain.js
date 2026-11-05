@@ -108,7 +108,7 @@ function aaaBuildTerrain() {
   const PZ = AAA_PRESETS[AAA.preset], st = PZ.terr, h = AV.half + 6;
   // coordinate della griglia: passo del preset entro ±AV.dense, poi fino a 1,2 m verso il bordo (griglia rettilinea: nessuna crepa)
   const ax = []; { const inner = Math.min(AV.dense, h); for (let a = -inner; a <= inner + 1e-6; a += st) ax.push(a); let a = inner, s2 = st; while (a < h - 1e-6) { s2 = Math.min(1.2, s2 * 1.08); a = Math.min(h, a + s2); ax.push(a); ax.unshift(-a); } }
-  const n = ax.length;
+  const n = ax.length; AAA.terrAx = ax;   // assi della griglia (crateri del Destruction Lab)
   const pos = new Float32Array(n * n * 3), spl = new Float32Array(n * n * 4), wet = new Float32Array(n * n), uv = new Float32Array(n * n * 2);
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
     const k = j * n + i, x = AV.cx + ax[i], z = AV.cz + ax[j], s = aaaSplat(x, z);

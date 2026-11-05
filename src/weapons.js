@@ -208,6 +208,7 @@ function playerFire() {
   if (r.type === 'solid') {
     const t = r.obj.tag, k = t === 'boat' || t === 'tank' || t === 'flak' ? 'metal' : t === 'hedge' ? 'dirt' : (t === 'house' || t === 'ruin' || t === 'wall' || t === 'church' || t === 'tower' || t === 'bunker') ? 'stone' : 'wood';
     fxImpact(p.clone(), k); if (r.t < 40) { sfxImpact(p, k); if ((k === 'metal' || k === 'stone') && R() < .3) sfxRicochet(p); }
+    if (SCEN === 'aaa' && typeof xdzBullet === 'function') xdzBullet(r.obj, p, _d, w);   // Destruction Lab (solo tech demo)
   }
   if (s.mag === 0 && s.res > 0) setTimeout(() => { if (P.slot() === s && s.mag === 0) startReload(); }, w.ping ? 450 : 350);
 }
@@ -339,7 +340,7 @@ const _exO = new V3();
 function explode(p, radius, dmg, o = {}) {
   const wet = p.z > -9 && Hf(p.x, p.z) < WATER_Y && p.y < WATER_Y + .8;
   fxExplosion(p, radius / 4.5, wet); sfxBoom(p, radius / 5, wet);
-  if (!NET.client) { cityBlast(p, radius, dmg); depotBlast(p, radius, dmg); if (typeof dzExplosion === 'function') dzExplosion(p, radius, dmg, o); }
+  if (!NET.client) { cityBlast(p, radius, dmg); depotBlast(p, radius, dmg); if (typeof dzExplosion === 'function') dzExplosion(p, radius, dmg, o); if (SCEN === 'aaa' && typeof xdzExplosion === 'function') xdzExplosion(p, radius); }
   treeBlast(p, radius);
   if (radius >= 4 && Math.abs(p.z - WIRE_Z) < 2.6 && !NET.client && addWireGap(p.x)) onWireGap(p.x);
   if (NET.host) netHostEvent([1, r1(p.x), r1(p.y), r1(p.z), radius, wet ? 1 : 0]); else if (NET.on && o.byPlayer) netSend({ t: 'boom', p: [p.x, p.y, p.z], r: radius });

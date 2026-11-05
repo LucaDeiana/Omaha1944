@@ -1,0 +1,35 @@
+{
+ "id": "fracture_kit",
+ "formato": "omaha1944-fracture-1",
+ "blender": "5.2.3 LTS",
+ "metodo": "Voronoi (piani bisettori, celle convesse)",
+ "unita": "cubo [-0,5; 0,5]^3 scalato a runtime; glTF Y in alto (asse y del pannello = altezza)",
+ "set": {
+  "frac_stone": {
+   "celle": 18,
+   "volume": 1.0,
+   "chiuse": true
+  },
+  "frac_wood": {
+   "celle": 18,
+   "volume": 1.0,
+   "chiuse": true
+  },
+  "frac_beam": {
+   "celle": 6,
+   "volume": 1.0,
+   "chiuse": true
+  },
+  "rubble": {
+   "celle": 4,
+   "volume": 0.6771,
+   "chiuse": true
+  }
+ },
+ "triangoli": 1004,
+ "kb": 82.6,
+ "validazione": {
+  "errori": []
+ },
+ "tempo_s": 0.2
+}

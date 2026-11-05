@@ -295,12 +295,12 @@ addEventListener('keydown', e => {
 // pannello aperto: mouse e tastiera servono al pannello, il soldato non riceve input
 function labBlock(e) {
   const sr = typeof ASR !== 'undefined' && ASR.on;
-  const side = (typeof XAL !== 'undefined' && XAL.open) || (typeof XPC !== 'undefined' && XPC.panel) || (typeof FAL !== 'undefined' && FAL.on);   // pannelli laterali del Movement Lab e dell'Audio Lab
+  const side = (typeof XAL !== 'undefined' && XAL.open) || (typeof XPC !== 'undefined' && XPC.panel) || (typeof FAL !== 'undefined' && FAL.on) || (typeof XDZ !== 'undefined' && XDZ.ui && XDZ.ui.on);   // pannelli laterali del Movement Lab e dell'Audio Lab
   if (SCEN !== 'aaa' || !(LAB.panel || sr || side) || typeof GAME === 'undefined' || !GAME.started) return;
-  const inPanel = e.target && e.target.closest && e.target.closest('#labPanel,#srPanel,#xalPanel,#xpcPanel,#falPanel');
+  const inPanel = e.target && e.target.closest && e.target.closest('#labPanel,#srPanel,#xalPanel,#xpcPanel,#falPanel,#xdzPanel');
   if (side && !LAB.panel && !sr && !inPanel) return;   // fuori dal pannello il gioco continua (si gioca con il pannello aperto)
   if (sr && !LAB.panel && !inPanel && /^(mousedown|mouseup|mousemove|wheel|contextmenu)$/.test(e.type)) return;   // camera orbitale dello showroom: la gestiscono i suoi listener
-  if (e.type.startsWith('key') && /^(F4|F6|F7|F8|F9|F10|F11|Escape)$/.test(e.code)) return;   // tasti del laboratorio e dello showroom
+  if (e.type.startsWith('key') && /^(F3|F4|F6|F7|F8|F9|F10|F11|Escape)$/.test(e.code)) return;   // tasti del laboratorio e dello showroom
   if (e.type.startsWith('key')) { if (inPanel && /^(Tab|Enter|Space|Arrow)/.test(e.code)) return; e.stopImmediatePropagation(); return; }
   if (inPanel) return;
   e.stopImmediatePropagation(); if (e.type !== 'mousemove') e.preventDefault();
