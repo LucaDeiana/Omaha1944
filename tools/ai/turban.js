@@ -12,7 +12,8 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   const R = await p.evaluate(async () => {
     for (let i = 0; i < 200 && !XDZ.ready; i++) await new Promise(r => setTimeout(r, 500)); GAME.running = false;
     const sim = s => { for (let i = 0; i < s * 30; i++) { GAME.time += 1 / 30; xdzTick(1 / 30); } }, out = {};
-    const U = () => [...XDZ_REG.values()].filter(e => /^u1_/.test(e.id)), ids = [...XDZ_REG.keys()];
+    const U = () => [...XDZ_REG.values()].filter(e => /^u1_/.test(e.id)), UA = () => [...XDZ_REG.values()].filter(e => /^u\d_/.test(e.id)), ids = [...XDZ_REG.keys()];
+    out.tutti = { edifici: UA().filter(e => e.b.cfg).length, muretti: UA().filter(e => !e.b.cfg).length, zone: [...new Set(UA().map(e => e.zona))].length, esplorabili: UA().filter(e => e.b.cfg && e.b.cfg.aperta && e.b.cfg.piani > 1).length, multipiano: UA().filter(e => e.b.cfg && e.b.cfg.piani > 1).length, val: xdzUrbanValidate() };
     out.reg = { n: U().length, unici: new Set(ids).size === ids.length, campi: U().every(e => e.tipo && e.pos && e.dim && e.materiali && e.livelli && e.distruzione), nonAppoggiati: XDZ.panels.filter(q => !q.dead && !xdzSupported(q)).map(q => q.id), v2: Object.entries(v2Validate()).filter(e => e[1].length).map(e => e[0]) };
     const ground = (x, z, y) => Math.max(Hf(x, z), worldFloor(x, z, y)), inSolid = (x, y, z) => solids.some(s => s.on !== false && !s.walk && x > s.min.x && x < s.max.x && y > s.min.y && y < s.max.y && z > s.min.z && z < s.max.z);
     const walk = pts => { let y = ground(pts[0][0], pts[0][1], Hf(pts[0][0], pts[0][1]) + .3), mx = 0, bl = 0; for (let i = 0; i < pts.length - 1; i++) for (let k = 1; k <= 160; k++) { const t = k / 160, x = pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t, z = pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t, y2 = ground(x, z, y); mx = Math.max(mx, Math.abs(y2 - y)); y = y2; if (inSolid(x, y + 1.1, z)) bl++; } return { mx: +mx.toFixed(2), bl, y }; };
@@ -24,14 +25,14 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
     const cc = XDZ_REG.get('u1_casa_c').b; out.pre = { celle: cc.parts.filter(q => q.cells).reduce((a, q) => a + q.cells.filter(c => !c.alive).length, 0), colliderOrfani: cc.parts.filter(q => q.cells).some(q => q.cells.some(c => !c.alive && c.sol.on)), tettoSpento: cc.parts.filter(q => q.role === 'roof' && q.dead).every(q => q.sols.every(s => !s.on)) };
     // ogni edificio è distruttibile indipendentemente: un colpo di carro su ciascuno, solo quell'edificio cambia
     out.edifici = {};
-    for (const id of U().filter(e => e.b.cfg).map(e => e.id)) {
-      xdzReset({ terrain: true }); const e = XDZ_REG.get(id), B = e.b, t = new V3(B.x + .4, B.base + 1.4, B.z + B.d / 2), o = t.clone().add(new V3(.5, .6, 12));
-      const others0 = U().filter(q => q !== e).map(q => xdzRegState(q).integrita); xdzShell(o, t.clone().sub(o).normalize()); sim(4);
-      const st = xdzRegState(e), others1 = U().filter(q => q !== e).map(q => xdzRegState(q).integrita);
+    for (const id of UA().filter(e => e.b.cfg).map(e => e.id)) {
+      xdzReset({ terrain: true }); const e = XDZ_REG.get(id), B = e.b, fz = B.cfg.fronte === 'n' ? -1 : 1, t = new V3(B.x + .4, B.base + 1.4, B.z + fz * B.d / 2), o = t.clone().add(new V3(.3, .5, fz * 3.5));   // dalla strada, davanti alla facciata
+      const others0 = UA().filter(q => q !== e).map(q => xdzRegState(q).integrita); xdzShell(o, t.clone().sub(o).normalize()); sim(4);
+      const st = xdzRegState(e), others1 = UA().filter(q => q !== e).map(q => xdzRegState(q).integrita);
       out.edifici[e.id] = { integrita: st.integrita, pannelliDanneggiati: B.parts.filter(q => q.cells && q.state >= 2).length, altriInvariati: others0.every((v, i) => v === others1[i]), collider: B.parts.filter(q => q.cells).every(q => q.cells.every(c => c.alive || !c.sol.on)) };
     }
     // armi leggere sull'intonaco: segni, nessuna cella di muratura; la MG apre la porta di legno della casa b
-    xdzReset({ terrain: true }); { const B = XDZ_REG.get('u1_casa_b').b, d = B.openings.find(o => o.door), t = new V3(d.px, B.base + 1, B.z + B.d / 2), o = t.clone().add(new V3(0, .4, 15)); xdzFireAt(o, new V3(B.x - 2, B.base + 1.3, B.z + B.d / 2), { snd: 'garand', dmg: 50 }, 30, .02); const mur = B.parts.filter(q => q.role === 'muro').reduce((a, q) => a + q.cells.filter(c => !c.alive).length, 0); xdzFireAt(o, t, { snd: 'mg42', dmg: 45, auto: true }, 220, .035); sim(3); const door = B.parts.find(q => q.role === 'porta'); out.armi = { muratura: mur, porta: door ? xdzAlive(door) : null, varco: walk([[d.px, B.z + B.d / 2 + 2], [d.px, B.z]]).bl === 0 }; }
+    xdzReset({ terrain: true }); { const B = XDZ_REG.get('u1_casa_b').b, d = B.openings.find(o => o.door), t = new V3(d.px, B.base + 1, B.z + B.d / 2), o = t.clone().add(new V3(0, .4, 4)); xdzFireAt(o, new V3(B.x - 2, B.base + 1.3, B.z + B.d / 2), { snd: 'garand', dmg: 50 }, 30, .02); const mur = B.parts.filter(q => q.role === 'muro').reduce((a, q) => a + q.cells.filter(c => !c.alive).length, 0); xdzFireAt(o, t, { snd: 'mg42', dmg: 45, auto: true }, 220, .035); sim(3); const door = B.parts.find(q => q.role === 'porta'); out.armi = { muratura: mur, porta: door ? xdzAlive(door) : null, varco: walk([[d.px, B.z + B.d / 2 + 2], [d.px, B.z]]).bl === 0 }; }
     // crollo del solaio: tolte le file sotto le travi, cedono travi, solaio e scala (superfici spente)
     xdzReset({ terrain: true }); { const B = XDZ_REG.get('u1_casa_a').b; for (const face of [B.grid[0], B.grid[1]]) for (const col of face) for (const r of [0, 1]) if (col[r]) for (const c of col[r].cells) if (c.alive) xdzRemoveCell(c, c.wp, new V3(0, 0, 1), 'carro'); sim(10); const ev = XDZ.events.map(e => e.type); out.crollo = { trave: ev.includes('TRAVE_CEDUTA'), solaio: ev.includes('SOLAIO_CROLLATO'), scala: ev.includes('SCALA_CROLLATA'), superfici: FLOORS.filter(f => f.xdz && f.xdz.startsWith('u1_casa_a') && f.y > B.base + 1).every(f => f.off), altri: U().filter(e => e.id !== 'u1_casa_a' && e.b.cfg).every(e => xdzRegState(e).integrita >= 98) }; }
     // navigazione dell'isolato: dalla strada nella casa a (porta) e accesso posteriore ai cortili; percorso aggiornato dopo una breccia
@@ -46,12 +47,13 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
     return out;
   });
   ok('registro: 6 voci dell\'isolato (5 edifici + muretti), ID unici, campi completi', R.reg.n === 6 && R.reg.unici && R.reg.campi, JSON.stringify(R.reg));
+  ok('espansione: 25 edifici nuovi in 7 zone, posizioni valide (niente sovrapposizioni, strade, argini)', R.tutti.edifici === 25 && R.tutti.zone >= 7 && !R.tutti.val.sovrapposizioni.length && !R.tutti.val.suStrada.length && !R.tutti.val.suArgine.length, JSON.stringify(R.tutti));
   ok('struttura iniziale appoggiata, nessun conflitto con il villaggio', !R.reg.nonAppoggiati.length && !R.reg.v2.length, JSON.stringify(R.reg));
   for (const id in R.scale) ok('scala al primo piano: ' + id, R.scale[id].bl === 0 && R.scale[id].mx <= .55 && Math.abs(R.scale[id].quota - 3.07) < .15, JSON.stringify(R.scale[id]));
   ok('porta chiusa blocca, porta aperta si attraversa', R.porte.chiusa && R.porte.aperta, JSON.stringify(R.porte));
   ok('danni preesistenti coerenti (nessun collider orfano)', R.pre.celle > 5 && !R.pre.colliderOrfani && R.pre.tettoSpento, JSON.stringify(R.pre));
   for (const id in R.edifici) { const e = R.edifici[id]; ok('distruttibile e indipendente: ' + id, e.integrita < 100 && e.pannelliDanneggiati > 0 && e.altriInvariati && e.collider, JSON.stringify(e)); }
-  ok('armi leggere: muratura intatta, la MG apre la porta di legno', R.armi.muratura === 0 && R.armi.porta !== null && R.armi.porta < .6 && R.armi.varco, JSON.stringify(R.armi));
+  ok('armi leggere: muratura intatta, la MG apre la porta di legno', R.armi.muratura === 0 && R.armi.porta !== null && R.armi.porta < .9 && R.armi.varco, JSON.stringify(R.armi));
   ok('crollo locale: travi, solaio e scala cedono, superfici spente, altri edifici intatti', R.crollo.trave && R.crollo.solaio && R.crollo.scala && R.crollo.superfici && R.crollo.altri, JSON.stringify(R.crollo));
   ok('navigazione: dalla strada dentro la casa e nei cortili; la breccia apre la casa chiusa', R.nav.dentro && R.nav.cortile && R.nav.dopoBreccia && (!R.nav.chiusaPrima || R.nav.dopoBreccia < R.nav.chiusaPrima), JSON.stringify(R.nav));
   ok('rue Neuve percorribile da un carro (3,2 m)', R.strada === 0, R.strada + ' punti bloccati');

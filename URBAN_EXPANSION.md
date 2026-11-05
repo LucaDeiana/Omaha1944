@@ -62,4 +62,28 @@ Regressioni: `tdestruct` e `tvillage` superati.
 - La conversione degli edifici del Villaggio 2.0 al sistema distruttibile.
 - Soffitte e cantine accessibili; combattimento urbano dell'IA, che richiede soldati nella demo.
 
-**Numero attuale di edifici nuovi dell'Urban Expansion 3.0: 5, più i muretti.**
+## H–K. Altri isolati (fatti)
+- rue Neuve, lato sud: 4 edifici (facciate a nord).
+- rue de l'Église: casa del sagrestano e ufficio postale.
+- Grande Rue: lato nord con caffè-tabacchi, casa danneggiata e casa a 3 piani; lato sud con 3 case.
+- Ferme de la Croix: casa colonica, fienile, stalla, rimessa dei carri, muri della corte.
+- rue des Ateliers: officina, magazzino, forgia, rimessa, muro del cortile.
+
+Strade nuove: rue de l'Église, accesso della fattoria, rue des Ateliers. Ogni zona ha una griglia di navigazione propria.
+
+**Ottimizzazioni**:
+- un collider per colonna di pannelli integri, diviso al primo danno: 791 solidi per 1.152 pannelli;
+- intonaci con un solo materiale colorato per istanza;
+- fino a 2.048 istanze per pool.
+
+**Test** (`turban`, tutti superati): 25 edifici in 7 zone con posizioni valide, ognuno distruttibile e indipendente (un colpo di carro su ciascuno).
+
+**Numero attuale di edifici nuovi dell'Urban Expansion 3.0: 25, più 3 gruppi di muretti.**
+
+## Limite principale (da risolvere)
+**Il dettaglio visivo NON è al livello della casa Blender** (`normandy_house_01`):
+- le finestre sono vani senza telai né davanzali;
+- persiane e porte sono tavole piatte;
+- i tetti non hanno comignoli, gronde né abbaini.
+
+Prossimo passo richiesto: facciate e tetti generati in Blender con il dettaglio della casa Blender, già divisi nei pannelli fratturati del sistema di distruzione.

@@ -52,7 +52,7 @@ function xdzMat(key) {
     : key === 'legno' ? aaaTri('wood', .7, { nStr: 1.3, macro: .3, color: 0xa08a70, hq: 'tavole_fienile', hqScale: .5, key: 'xdzwood' })
     : key === 'trave' ? aaaTri('wood', .9, { nStr: 1.1, macro: .25, color: 0x7a6a58, hq: 'tavole_vecchie', hqScale: .6, key: 'xdzbeam' })
     : key === 'mattoni' ? aaaTri('brick', .75, { nStr: 1.3, macro: .2, damp: 1, moss: .5, color: 0xc8a898, hq: 'mattoni', hqScale: .55, key: 'xdzbrick' })
-    : key.startsWith('intonaco') ? aaaTri('plaster', .45, { nStr: 1, macro: .28, damp: 1.2, moss: .4, color: +(key.split(':')[1] || 0xe2d6bc), hq: 'intonaco_pietra', hqScale: .42, key: 'xdzplaster' + key })
+    : key.startsWith('intonaco') ? aaaTri('plaster', .45, { nStr: 1, macro: .28, damp: 1.2, moss: .4, color: key.includes(':') ? +key.split(':')[1] : 0xffffff, hq: 'intonaco_pietra', hqScale: .42, key: 'xdzplaster' + key })
     : key === 'tegole' ? aaaTri('stone', .9, { nStr: 1, macro: .25, color: 0x9a5a42, rough: .8, key: 'xdztile' })
     : aaaTri('stone', .9, { nStr: 1, macro: .2, color: 0x5e646c, rough: .6, key: 'xdzslate' });
   return (XDZ.mats[key] = base);
@@ -60,7 +60,7 @@ function xdzMat(key) {
 // un'InstancedMesh per (cella del kit, materiale): pochi draw call anche con molti pannelli
 function xdzPool(tpl, k, mat) {
   const key = tpl + k + mat; let P_ = XDZ.pools.get(key); if (P_) return P_;
-  const cap = 512, im = new THREE.InstancedMesh(XDZ.kit[tpl][k].geo, xdzMat(mat), cap); im.count = 0; im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3);
+  const cap = 2048, im = new THREE.InstancedMesh(XDZ.kit[tpl][k].geo, xdzMat(mat), cap); im.count = 0; im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3);
   im.castShadow = im.receiveShadow = true; im.frustumCulled = false; scene.add(im); P_ = { im, n: 0, cap }; XDZ.pools.set(key, P_); return P_;
 }
 const _xm = new THREE.Matrix4(), _xq = new THREE.Quaternion(), _xs = new V3(), _xp = new V3(), _xe = new THREE.Euler(), _xdzC = new THREE.Color(), _xZ = new THREE.Matrix4().makeScale(0, 0, 0);
@@ -69,10 +69,11 @@ const _xm = new THREE.Matrix4(), _xq = new THREE.Quaternion(), _xs = new V3(), _
 // pannello fratturato: centro, rotazione attorno a y, dimensioni (w lungo il muro, h, t spessore), materiale, modello di frattura
 function xdzPanel(b, role, mat, tpl, cx, cy, cz, ry, w, h, t, o = {}) {
   const kit = XDZ.kit[tpl], M = XDZ_MAT[mat === 'trave' ? 'legno' : mat.split(':')[0]], p = { id: `${b.id}/${role}${b.parts.length}`, b, role, mat, tpl, c: new V3(cx, cy, cz), ry, w, h, t, cells: [], state: 0, supp: true, sup: [], lat: [], covers: [], structural: o.structural ?? true, dead: false, burn: 0, M, o };
+  p.mk = String(mat).startsWith('intonaco') ? 'intonaco' : mat; p.tint = new THREE.Color(String(mat).startsWith('intonaco') ? +(String(mat).split(':')[1] || 0xe2d6bc) : 0xffffff);   // intonaci: un materiale, colore per istanza
   _xq.setFromAxisAngle(_xp.set(0, 1, 0), ry); if (o.vertical) _xq.multiply(new THREE.Quaternion().setFromAxisAngle(_xp.set(0, 0, 1), PI / 2));   // pilastro: l'asse lungo del modello diventa verticale
   p.m = new THREE.Matrix4().compose(p.c, _xq.clone(), o.vertical ? new V3(h, w, t) : new V3(w, h, t));
   kit.forEach((K, k) => {
-    const P_ = xdzPool(tpl, k, mat); if (P_.n >= P_.cap) return; const i = P_.n++; P_.im.count = P_.n;
+    const P_ = xdzPool(tpl, k, p.mk); if (P_.n >= P_.cap) return; const i = P_.n++; P_.im.count = P_.n; P_.im.setColorAt(i, p.tint); P_.im.instanceColor.needsUpdate = true;
     const mi = p.m.clone().multiply(new THREE.Matrix4().makeTranslation(K.c.x, K.c.y, K.c.z)); P_.im.setMatrixAt(i, _xZ); P_.im.instanceMatrix.needsUpdate = true;   // nascosta finché il pannello è integro
     const wp = K.c.clone().applyMatrix4(p.m), bb = K.geo.boundingBox.clone().applyMatrix4(mi), sh = bb.getSize(new V3()).multiplyScalar(.08);
     const vol = K.vol * w * h * t, cell = { p, k, P: P_, i, mi, wp, hp: Math.max(40, vol * M.hp), max: 0, alive: true, vol, bb };
@@ -82,19 +83,31 @@ function xdzPanel(b, role, mat, tpl, cx, cy, cz, ry, w, h, t, o = {}) {
   // collider unico del pannello integro (pochi solidi a riposo: il giocatore e l'audio li scorrono a ogni fotogramma)
   { const bb = new THREE.Box3(); for (const c of p.cells) bb.union(c.bb); p.sol = addSolid(bb.min.x, bb.min.y, bb.min.z, bb.max.x, bb.max.y, bb.max.z, 'xdz_' + mat); p.sol.mat = mat === 'pietra' ? 'muratura' : 'legno'; p.sol.xdzPanel = p; }
   // pelle integra: una superficie unica (niente giunti di frattura visibili su un muro sano); le celle compaiono al primo distacco
-  const SK = xdzSkinPool(mat); if (SK.n < SK.cap) { p.skin = SK.n++; SK.im.count = SK.n; SK.im.setMatrixAt(p.skin, p.m); SK.im.instanceMatrix.needsUpdate = true; p.SK = SK; }
+  const SK = xdzSkinPool(p.mk); if (SK.n < SK.cap) { p.skin = SK.n++; SK.im.count = SK.n; SK.im.setMatrixAt(p.skin, p.m); SK.im.setColorAt(p.skin, p.tint); SK.im.instanceColor.needsUpdate = true; SK.im.instanceMatrix.needsUpdate = true; p.SK = SK; }
   p.n0 = p.cells.length; b.parts.push(p); XDZ.panels.push(p); return p;
 }
 function xdzSkinPool(mat) {
   const key = 'skin' + mat; let P_ = XDZ.pools.get(key); if (P_) return P_; const g = new THREE.BoxGeometry(1, 1, 1);
-  const im = new THREE.InstancedMesh(g, xdzMat(mat), 512); im.count = 0; im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(512 * 3).fill(1), 3); im.castShadow = im.receiveShadow = true; im.frustumCulled = false; scene.add(im);
-  P_ = { im, n: 0, cap: 512 }; XDZ.pools.set(key, P_); return P_;
+  const im = new THREE.InstancedMesh(g, xdzMat(mat), 2048); im.count = 0; im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(2048 * 3).fill(1), 3); im.castShadow = im.receiveShadow = true; im.frustumCulled = false; scene.add(im);
+  P_ = { im, n: 0, cap: 2048 }; XDZ.pools.set(key, P_); return P_;
 }
 // apertura del pannello: via la pelle, dentro le celle ancora vive (con la loro tinta)
 function xdzOpenPanel(p) {
-  if (p.opened) return; p.opened = true; if (p.sol) { p.sol.on = false; const i = solids.indexOf(p.sol); if (i >= 0) solids.splice(i, 1); } for (const c of p.cells) if (c.alive) solids.push(c.sol);
+  if (p.opened) return; p.opened = true; if (p.run && p.run.sol.on) xdzSplitRun(p.run);
+  if (p.sol) { p.sol.on = false; const i = solids.indexOf(p.sol); if (i >= 0) solids.splice(i, 1); } for (const c of p.cells) if (c.alive) solids.push(c.sol);
   if (p.SK) { p.SK.im.setMatrixAt(p.skin, _xZ); p.SK.im.instanceMatrix.needsUpdate = true; }
   for (const c of p.cells) if (c.alive) { c.P.im.setMatrixAt(c.i, c.mi); c.P.im.instanceMatrix.needsUpdate = true; }
+}
+function xdzSplitRun(run) {
+  run.sol.on = false; const i = solids.indexOf(run.sol); if (i >= 0) solids.splice(i, 1);
+  for (const q of run.ps) if (!q.opened && !q.dead && q.sol) { q.sol.on = true; solids.push(q.sol); }
+}
+// colonne di pannelli integri contigui (stessa facciata, stessa colonna): un solo collider finché nessuno si apre
+function xdzMakeRuns(b) {
+  for (const face of b.grid) for (const col of face) {
+    let run = null; const flush = () => { if (run && run.ps.length > 1) { const bb = new THREE.Box3(); for (const q of run.ps) { bb.expandByPoint(q.sol.min); bb.expandByPoint(q.sol.max); const k = solids.indexOf(q.sol); if (k >= 0) solids.splice(k, 1); q.run = run; } run.sol = addSolid(bb.min.x, bb.min.y, bb.min.z, bb.max.x, bb.max.y, bb.max.z, 'xdz_' + run.ps[0].mat); run.sol.mat = run.ps[0].sol.mat; run.sol.xdzRun = run; } run = null; };
+    for (const q of col) { if (!q) { flush(); continue; } (run || (run = { ps: [] })).ps.push(q); } flush();
+  }
 }
 function xdzAlive(p) { return p.cells.reduce((a, c) => a + (c.alive ? 1 : 0), 0) / Math.max(1, p.n0); }
 function xdzState(p) { if (p.dead) return 4; const f = xdzAlive(p); return f <= 0 ? 4 : f < .5 ? 3 : f < .97 ? 2 : p.hits > 0 ? 1 : 0; }
@@ -115,7 +128,7 @@ function xdzSlab(b, role, geo, mat, supports, o = {}) {
 //      fori: { s|n|o|e: [[colonna, fila], …] } (finestre), porta: [colonna] sul fronte (+z), aperta: porta aperta,
 //      scala: scala interna al primo piano, persiane: le finestre chiuse da ante di legno (distruttibili)
 function xdzHouse(id, x, z, cfg = {}) {
-  const C = Object.assign({ w: 8, d: 6.4, piani: 2, mat: 'pietra', tetto: 'ardesia', pitch: .8, porta: [1], aperta: true, fori: { s: [[3, 2]], n: [[1, 1]], o: [[1, 2]], e: [] }, scala: false, persiane: false, tipo: 'casa' }, cfg);
+  const C = Object.assign({ w: 8, d: 6.4, piani: 2, mat: 'pietra', tetto: 'ardesia', pitch: .8, porta: [1], aperta: true, fori: { s: [[3, 2]], n: [[1, 1]], o: [[1, 2]], e: [] }, scala: false, persiane: false, tipo: 'casa', fronte: 's' }, cfg);
   const b = { id, kind: C.tipo, x, z, w: C.w, d: C.d, parts: [], base: 0, cfg: C }, t = .55, sh = 3, nr = C.piani * 2;
   let lo = 1e9; for (const [a, c] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]]) lo = Math.min(lo, Hf(x + a * b.w / 2, z + c * b.d / 2)); b.base = lo + .02; const y0 = b.base - .35;
   const H = C.piani * sh + .35, ph = H / nr, M0 = C.mat.split(':')[0];
@@ -128,11 +141,11 @@ function xdzHouse(id, x, z, cfg = {}) {
   b.grid = []; b.openings = [];
   for (const F of faces) {
     const L = F.a1 - F.a0, nc = Math.max(2, Math.round(L / 1.9)), pw = L / nc, col = [], holes = (C.fori[F.k] || []).map(h => h[0] + ',' + h[1]);
-    if (F.k === 's') for (const c of C.porta) holes.push(c + ',0', c + ',1');
+    if (F.k === C.fronte) for (const c of C.porta) holes.push(c + ',0', c + ',1');
     for (let c = 0; c < nc; c++) { const stack = []; for (let r = 0; r < nr; r++) {
       const a = F.a0 + (c + .5) * pw, yc = y0 + (r + .5) * ph, [px, pz] = F.ax === 'x' ? [a, F.fixed] : [F.fixed, a];
       if (holes.includes(c + ',' + r)) {
-        stack.push(null); const door = F.k === 's' && C.porta.includes(c) && r <= 1; b.openings.push({ face: F.k, c, r, door, px, pz, yc, w: pw, h: ph, ry: F.ry });
+        stack.push(null); const door = F.k === C.fronte && C.porta.includes(c) && r <= 1; b.openings.push({ face: F.k, c, r, door, px, pz, yc, w: pw, h: ph, ry: F.ry });
         // porta chiusa o persiane: anta di legno nel vano (non portante, distruttibile, colpita prima del muro)
         if ((door && !C.aperta && r === 0) || (!door && C.persiane)) { const hh = door ? ph * 2 - .3 : ph - .35, yy = door ? y0 + .35 + hh / 2 : yc; const q = xdzPanel(b, door ? 'porta' : 'persiana', 'legno', 'frac_wood', px, yy, pz, F.ry, pw - .5, hh, .06, { structural: false }); q.door = door; q.sup = []; q.hang = true; }
         continue;
@@ -175,6 +188,7 @@ function xdzHouse(id, x, z, cfg = {}) {
     xdzSlab(b, 'roof', g, C.tetto, sup, { solid: true });
   }
   for (const sd of [-1, 1]) { const sh2 = new THREE.Shape(); sh2.moveTo(-b.d / 2, 0); sh2.lineTo(b.d / 2, 0); sh2.lineTo(0, rh); sh2.lineTo(-b.d / 2, 0); const g = new THREE.ExtrudeGeometry(sh2, { depth: t, bevelEnabled: false }); g.rotateY(PI / 2); g.translate(x + sd * (b.w / 2) - (sd > 0 ? t : 0), top, z); const sl = xdzSlab(b, 'timpano', g, C.mat, b.grid[sd < 0 ? 2 : 3].map(c => c[nr - 1]).filter(Boolean), { solid: true }); sl.isGable = true; }
+  xdzMakeRuns(b);
   aaaRoom(ix0, b.base - .3, iz0, ix1, top + rh, iz1); b.room = AAA.rooms[AAA.rooms.length - 1]; b.top = top + rh; b.M0 = M0;
   XDZ.bldgs.push(b); return b;
 }
@@ -215,7 +229,8 @@ function xdzBarn(id, x, z) {
 // ---------------------------------------------------------------- danni localizzati
 // colpo di arma leggera su una cella (dal ramo «solid» di playerFire): segno sempre, danno solo sopra la soglia del materiale
 function xdzBullet(sol, p, dir, w) {
-  let cell = sol && sol.xdz; if (!cell && sol && sol.xdzPanel) cell = sol.xdzPanel.cells.filter(c => c.alive).sort((a, b) => a.wp.distanceTo(p) - b.wp.distanceTo(p))[0];
+  let cell = sol && sol.xdz; if (!cell && sol && sol.xdzRun) { const q = sol.xdzRun.ps.filter(q => !q.dead).sort((a, c) => a.c.distanceTo(p) - c.c.distanceTo(p))[0]; if (q) sol = q.sol; }
+  if (!cell && sol && sol.xdzPanel) cell = sol.xdzPanel.cells.filter(c => c.alive).sort((a, b) => a.wp.distanceTo(p) - b.wp.distanceTo(p))[0];
   if (!cell || !cell.alive) return false;
   const kind = w && (w.snd === 'mg42' || w.snd === 'bar') ? 'mg' : w && w.auto ? 'mitra' : 'fucile', W = XDZ_WPN[kind];
   XDZ.st.hits++; xdzDecal(p, dir, cell.p.mat); cell.p.hits = (cell.p.hits || 0) + 1;
@@ -262,7 +277,7 @@ function xdzShell(o, d, o2 = {}) {
   const r = raySolids(o, d, 400), tt = rayTerrain(o, d, r ? r.t : 400); let t = r ? r.t : 400, onGround = false; if (tt >= 0 && tt < t) { t = tt; onGround = true; }
   const p = o.clone().addScaledVector(d, t); fxTracer && fxTracer(o.clone(), p.clone());
   xdzBlast(p.clone().addScaledVector(d, onGround ? 0 : .15), o2.kind || 'carro', { dir: d.clone(), ground: onGround || o2.ground });
-  xdzEvent('COLPO_CARRO', r && r.s && (r.s.xdz || r.s.xdzPanel) ? (r.s.xdz ? r.s.xdz.p.id : r.s.xdzPanel.id) : onGround ? 'terreno' : 'altro'); return p;
+  xdzEvent('COLPO_CARRO', r && r.s && (r.s.xdz || r.s.xdzPanel || r.s.xdzRun) ? (r.s.xdz ? r.s.xdz.p.id : r.s.xdzPanel ? r.s.xdzPanel.id : r.s.xdzRun.ps[0].id) : onGround ? 'terreno' : 'altro'); return p;
 }
 // effetti per tipo d'impatto: armi leggere (segni e schegge), granata, carro (lampo, onda di polvere, schegge, fumo), bombardamento
 function xdzBoomFx(p, kind) {
@@ -279,7 +294,7 @@ function xdzDecal(p, dir, mat) {
   const n = dir ? dir.clone().negate() : new V3(0, 0, 1); _xq.setFromUnitVectors(new V3(0, 0, 1), n); const s = mat === 'pietra' ? rnd(.8, 1.4) : rnd(.6, 1); _xm.compose(p.clone().addScaledVector(n, .012), _xq, _xs.set(s, s, 1)); XDZ.decals.setMatrixAt(i, _xm); XDZ.decals.instanceMatrix.needsUpdate = true;
   { const mk = mat === 'trave' ? 'legno' : String(mat).split(':')[0]; fxImpact(p.clone(), XDZ_MAT[mk] ? XDZ_MAT[mk].imp : 'stone'); } if (typeof sfxImpact === 'function' && P.pos.distanceTo(p) < 40) sfxImpact(p, mat === 'pietra' ? 'stone' : 'wood');
 }
-function xdzTint(cell, k) { _xdzC.setScalar(k).multiplyScalar(cell.p.burn ? .35 : 1); cell.P.im.setColorAt(cell.i, _xdzC); cell.P.im.instanceColor.needsUpdate = true; const p = cell.p; if (p.SK && !p.opened) { const a = p.cells.reduce((s, c) => s + c.hp / c.max, 0) / p.n0; _xdzC.setScalar(.7 + .3 * a).multiplyScalar(p.burn ? .4 : 1); p.SK.im.setColorAt(p.skin, _xdzC); p.SK.im.instanceColor.needsUpdate = true; } }
+function xdzTint(cell, k) { _xdzC.copy(cell.p.tint).multiplyScalar(k * (cell.p.burn ? .35 : 1)); cell.P.im.setColorAt(cell.i, _xdzC); cell.P.im.instanceColor.needsUpdate = true; const p = cell.p; if (p.SK && !p.opened) { const a = p.cells.reduce((s, c) => s + c.hp / c.max, 0) / p.n0; _xdzC.copy(p.tint).multiplyScalar((.7 + .3 * a) * (p.burn ? .4 : 1)); p.SK.im.setColorAt(p.skin, _xdzC); p.SK.im.instanceColor.needsUpdate = true; } }
 
 // ---------------------------------------------------------------- grafo dei supporti e crolli
 function xdzSupported(p, seen = new Set()) {
@@ -292,7 +307,7 @@ function xdzSupported(p, seen = new Set()) {
   if (p.sup.some(q => !q.dead && xdzAlive(q) >= .45 && xdzSupported(q, seen))) return true;
   // architrave: senza appoggio sotto regge se integro e appoggiato su entrambi i lati
   // architrave: senza appoggio sotto (apertura o breccia) regge se è quasi integro e almeno un vicino di fila è appoggiato
-  return f >= .7 && p.lat.some(q => !q.dead && xdzAlive(q) >= .6 && (q.ground || q.sup.some(r => !r.dead && xdzAlive(r) >= .45)));
+  return f >= .7 && p.lat.some(q => !q.dead && xdzAlive(q) >= .6 && (q.ground || q.sup.some(r => !r.dead && xdzAlive(r) >= .45) || xdzSupported(q, seen)));   // anche per catena di architravi (con controllo dei cicli)
 }
 function xdzPanelEval(p, kind) {
   const st = xdzState(p); if (st !== p.state) { p.state = st; xdzEvent(['INTEGRO', 'DANNO_LEGGERO', 'DANNO_MEDIO', 'DANNO_GRAVE', 'CROLLATO'][st], p.id); }
@@ -497,7 +512,7 @@ function xdzReset(o = {}) {
   if (o.terrain) xdzResetTerrain();
   XDZ.rng = seeded(XDZ.seed = o.seed ?? XDZ.seed ?? 1944); XDZ.log.length = 0; XDZ.events.length = 0; XDZ.navDirty = []; for (const k in XDZ.st) XDZ.st[k] = 0;
   XDZ_REG.clear(); xdzRegister(xdzHouse('casa_lab', ...v2W(XDZ_LAB.house[0], XDZ_LAB.house[1]))); xdzRegister(xdzBarn('fienile_lab', ...v2W(XDZ_LAB.barn[0], XDZ_LAB.barn[1])));
-  xdzUrbanBuild(); xdzCovers();
+  xdzUrbanBuild(); xdzRowsBuild(); xdzCovers();
   for (const N of XDZ.navs || []) xdzNavUpdate(new THREE.Box3(new V3(N.x0, -1e3, N.z0), new V3(N.x0 + N.nx * N.s, 1e3, N.z0 + N.nz * N.s)));
   if (typeof AAA !== 'undefined') AAA.shadowDirty = 2; xdzEvent('RESET', o.terrain ? 'scenario' : 'edifici');
 }
@@ -515,7 +530,7 @@ function xdzResetTerrain() {
 const XDZ_LAB = { house: [116, 74], barn: [131, 75], yard: [104, 60, 142, 90] };
 function xdzShooter(target, dist, h = 1.6, yaw = 0) { const o = new V3(target.x + Math.sin(yaw) * dist, 0, target.z + Math.cos(yaw) * dist); o.y = Hf(o.x, o.z) + h; return o; }
 function xdzFireAt(o, target, w, n, spread = .02) {
-  let hits = 0; for (let i = 0; i < n; i++) { const d = target.clone().sub(o).normalize(); d.x += (XDZ.rng() - .5) * spread; d.y += (XDZ.rng() - .5) * spread; d.z += (XDZ.rng() - .5) * spread; d.normalize(); const r = raySolids(o, d, 200); if (r && r.s && (r.s.xdz || r.s.xdzPanel) && xdzBullet(r.s, o.clone().addScaledVector(d, r.t), d, w)) hits++; else if (r) { const p = o.clone().addScaledVector(d, r.t); xdzDecal(p, d, r.s.mat === 'acciaio' ? 'pietra' : 'pietra'); } }
+  let hits = 0; for (let i = 0; i < n; i++) { const d = target.clone().sub(o).normalize(); d.x += (XDZ.rng() - .5) * spread; d.y += (XDZ.rng() - .5) * spread; d.z += (XDZ.rng() - .5) * spread; d.normalize(); const r = raySolids(o, d, 200); if (r && r.s && (r.s.xdz || r.s.xdzPanel || r.s.xdzRun) && xdzBullet(r.s, o.clone().addScaledVector(d, r.t), d, w)) hits++; else if (r) { const p = o.clone().addScaledVector(d, r.t); xdzDecal(p, d, r.s.mat === 'acciaio' ? 'pietra' : 'pietra'); } }
   return hits;
 }
 const XDZ_SCEN = {
@@ -556,11 +571,11 @@ function xdzTick(dt) {
 }
 // costruzione nella demo: aie piane, kit, edifici, navigazione, shader precompilati
 function xdzPads() {
-  xdzUrbanPads(); for (const [k, w, d] of [['house', 8, 6.4], ['barn', 10, 7]]) { const [u, v] = XDZ_LAB[k]; let lo = 1e9; for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]]) lo = Math.min(lo, aaaH(AV.cx + u + a * w / 2, AV.cz + v + b * d / 2)); AV.pads.push({ x0: u - w / 2 - .8, x1: u + w / 2 + .8, z0: v - d / 2 - .8, z1: v + d / 2 + .8, y: lo + .02, xdz: k }); } }
+  xdzUrbanPads(); xdzRowsPads(); for (const [k, w, d] of [['house', 8, 6.4], ['barn', 10, 7]]) { const [u, v] = XDZ_LAB[k]; let lo = 1e9; for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]]) lo = Math.min(lo, aaaH(AV.cx + u + a * w / 2, AV.cz + v + b * d / 2)); AV.pads.push({ x0: u - w / 2 - .8, x1: u + w / 2 + .8, z0: v - d / 2 - .8, z1: v + d / 2 + .8, y: lo + .02, xdz: k }); } }
 async function xdzBuild() {
   try { await xdzLoadKit(); } catch (e) { console.warn('kit di frattura non caricato', e); return; }
   if (!AAA.on) return; XDZ.on = true; const [x0, z0] = v2W(XDZ_LAB.yard[0], XDZ_LAB.yard[1]), [x1, z1] = v2W(XDZ_LAB.yard[2], XDZ_LAB.yard[3]); XDZ.nav = null;
-  XDZ.navs = []; XDZ.nav = null; xdzNavInit(x0, z0, x1, z1); { const [a0, b0] = v2W(-94, 72), [a1, b1] = v2W(-46, 100); xdzNavInit(a0, b0, a1, b1); }
+  XDZ.navs = []; XDZ.nav = null; xdzNavInit(x0, z0, x1, z1); for (const [u0, v0, u1, v1] of [[-96, 72, -46, 108], [-126, -50, -96, -30], [-80, -12, -50, 18], [32, 8, 68, 62], [44, -54, 100, -32]]) { const [a0, b0] = v2W(u0, v0), [a1, b1] = v2W(u1, v1); xdzNavInit(a0, b0, a1, b1); }
   xdzReset({ seed: 1944 });
   apSign(new AGeo(), ...v2W(XDZ_LAB.house[0] - 6, XDZ_LAB.house[1] + 8), .3, 'DESTRUCTION LAB (F3)');
   // shader precompilati (anche ombre): niente blocchi quando il laboratorio entra in vista
@@ -614,7 +629,7 @@ addEventListener('keydown', e => { if (typeof SCEN === 'undefined' || SCEN !== '
 // ============================================================
 // rue Neuve: strada est-ovest a sud del quartiere residenziale, collegata alla strada secondaria
 const XDZ_URBAN = {
-  strada: { id: 'rue_neuve', w: 5, kind: 'road', pts: [[-96, 93.5], [-62, 93.5], [-44, 91], [-36, 72], [-35, 58], [-33, 46], [-31, 41]] },
+  strada: { id: 'rue_neuve', w: 5, kind: 'road', pts: [[-96, 93.5], [-62, 93.6], [-44, 92.6], [-36, 72], [-35, 58], [-33, 46], [-31, 41]] },
   // isolato 1: case a schiera sul lato nord della strada, facciate a sud verso la strada (fronti allineati a v = 90)
   isolato1: [
     { id: 'u1_casa_a', u: -84.4, w: 7.2, d: 6.8, piani: 2, mat: 'pietra', tetto: 'ardesia', pitch: .86, porta: [1], aperta: true, scala: true, fori: { s: [[3, 1], [1, 3], [3, 3]], n: [[1, 1], [2, 3]], o: [[1, 3]], e: [] }, tipo: 'casa a schiera (esplorabile)' },
@@ -658,6 +673,85 @@ function xdzUrbanBuild() {
   for (const u of [-80.9, -73.8, -66.6]) xdzLowWall(wb, ...v2W(u, rear + .3), ...v2W(u, back - .3), 1.6);
   wb.top = wb.base + 1.5; XDZ.bldgs.push(wb); xdzRegister(wb, { zona: 'isolato 1 (cortili)' });
   // stato iniziale danneggiato (casa c): angolo alto colpito e una campata del tetto ceduta, coerente col sistema (celle tolte, collider spenti)
-  const dc = out.find(b => b.cfg.danni); if (dc) { const top = dc.grid[0].map(c => c[c.length - 1]).filter(Boolean).slice(-1)[0]; if (top) for (const c of top.cells.slice(0, 11)) xdzRemoveCell(c, null, null, 'preesistente', true); const rf = dc.parts.find(p => p.role === 'roof'); if (rf) { rf.dead = true; for (const so of rf.sols) so.on = false; scene.remove(rf.mesh); } dc.preDanni = true; }
+  const dc = out.find(b => b.cfg.danni); if (dc) xdzPreDamage(dc);
   return out;
+}
+
+// ---------------------------------------------------------------- fasi H–K: altri isolati (stesso generatore distruttibile)
+// file di edifici lungo una strada: fronte 's' (facciata verso +z) o 'n' (verso -z), linea di facciata v, partenza u, larghezze in sequenza
+const XDZ_ROWS = [
+  { id: 'u2', zona: 'rue Neuve (lato sud)', fronte: 'n', v: 97.2, u0: -91, gap: .1, items: [
+    { w: 6.8, d: 6.6, piani: 2, mat: 'intonaco:0xe0d0a8', tetto: 'tegole', porta: [1], aperta: false, persiane: true, fori: { n: [[3, 1], [1, 3], [3, 3]], s: [[1, 3]] }, tipo: 'casa a schiera' },
+    { w: 7.6, d: 7, piani: 2, mat: 'pietra', tetto: 'ardesia', porta: [2], aperta: true, scala: true, fori: { n: [[0, 1], [0, 3], [3, 3]], s: [[2, 1]] }, tipo: 'casa a schiera (esplorabile)' },
+    { w: 6.4, d: 6.2, piani: 1, mat: 'pietra', tetto: 'ardesia', pitch: .9, porta: [1], aperta: false, persiane: true, fori: { n: [[2, 1]] }, tipo: 'casa rurale', danni: true },
+    { w: 8, d: 6.8, piani: 2, mat: 'mattoni', tetto: 'tegole', porta: [1], aperta: false, persiane: true, fori: { n: [[3, 1], [0, 3], [2, 3]], e: [[1, 3]] }, tipo: 'casa in mattoni' },
+  ] },
+  { id: 'u3', zona: "rue de l'Église", fronte: 's', v: -38.6, u0: -119.4, gap: .1, items: [
+    { w: 6.4, d: 6.6, piani: 2, mat: 'pietra', tetto: 'ardesia', pitch: .9, porta: [1], aperta: false, persiane: true, fori: { s: [[2, 1], [0, 3], [2, 3]], n: [[1, 3]] }, tipo: 'casa del sagrestano' },
+    { w: 8.4, d: 7.2, piani: 2, mat: 'mattoni', tetto: 'ardesia', porta: [2], aperta: true, scala: true, fori: { s: [[0, 1], [4, 1], [0, 3], [2, 3], [4, 3]], n: [[1, 1]] }, tipo: 'ufficio postale (PTT, esplorabile)' },
+  ] },
+  { id: 'u4', zona: 'Grande Rue (lato nord)', fronte: 's', v: -1.8, u0: -76, gap: .1, items: [
+    { w: 7.2, d: 7, piani: 2, mat: 'intonaco:0xd8c8a4', tetto: 'ardesia', porta: [1], aperta: true, scala: true, fori: { s: [[3, 1], [1, 3], [3, 3]], n: [[2, 1]] }, tipo: 'caffè-tabacchi (esplorabile)' },
+    { w: 6.4, d: 6.4, piani: 2, mat: 'pietra', tetto: 'tegole', porta: [2], aperta: false, persiane: true, fori: { s: [[0, 1], [0, 3], [2, 3]] }, tipo: 'casa a schiera', danni: true },
+    { w: 8, d: 7.4, piani: 3, mat: 'mattoni', tetto: 'ardesia', porta: [1], aperta: false, persiane: true, fori: { s: [[3, 1], [0, 3], [2, 3], [0, 5], [3, 5]], n: [[1, 3]] }, tipo: 'casa borghese a tre piani' },
+  ] },
+  { id: 'u5', zona: 'Grande Rue (lato sud)', fronte: 'n', v: 8.6, u0: -70, gap: .1, items: [
+    { w: 6.4, d: 5.6, piani: 1, mat: 'intonaco:0xe8dcc0', tetto: 'tegole', porta: [1], aperta: false, persiane: true, fori: { n: [[3, 1]] }, tipo: 'casa rurale' },
+    { w: 7, d: 5.8, piani: 2, mat: 'pietra', tetto: 'ardesia', porta: [2], aperta: true, scala: true, fori: { n: [[0, 1], [0, 3], [3, 3]] }, tipo: 'casa (esplorabile)' },
+    { w: 6, d: 5.6, piani: 1, mat: 'pietra', tetto: 'ardesia', porta: [0], aperta: false, persiane: true, fori: { n: [[2, 1]] }, tipo: 'casa rurale' },
+  ] },
+  { id: 'u6', zona: 'Ferme de la Croix (agricola)', fronte: 's', v: 44, u0: 36.8, gap: 4.8, items: [
+    { w: 9.6, d: 7, piani: 2, mat: 'pietra', tetto: 'ardesia', pitch: .9, porta: [2], aperta: true, scala: true, fori: { s: [[0, 1], [4, 1], [0, 3], [2, 3], [4, 3]], n: [[2, 1]] }, tipo: 'casa colonica (esplorabile)' },
+    { w: 12, d: 8, piani: 1, mat: 'pietra', tetto: 'ardesia', pitch: .75, porta: [2, 3], aperta: true, fori: { n: [[1, 1], [4, 1]] }, tipo: 'fienile' },
+  ] },
+  { id: 'u7', zona: 'Ferme de la Croix (agricola)', fronte: 'n', v: 52, u0: 36.8, gap: 4.8, items: [
+    { w: 9.6, d: 6, piani: 1, mat: 'mattoni', tetto: 'tegole', porta: [1, 3], aperta: true, fori: { n: [[2, 1]], s: [[1, 1], [3, 1]] }, tipo: 'stalla' },
+    { w: 8, d: 6, piani: 1, mat: 'pietra', tetto: 'tegole', pitch: .7, porta: [1, 2], aperta: true, fori: {}, tipo: 'rimessa dei carri' },
+  ] },
+  { id: 'u8', zona: 'rue des Ateliers (servizi)', fronte: 's', v: -40, u0: 48, gap: .3, items: [
+    { w: 9, d: 7, piani: 1, mat: 'mattoni', tetto: 'ardesia', pitch: .65, porta: [1, 2], aperta: true, fori: { s: [[4, 1]], n: [[1, 1], [3, 1]] }, tipo: 'officina meccanica' },
+    { w: 11, d: 8, piani: 1, mat: 'pietra', tetto: 'ardesia', pitch: .62, porta: [2, 3], aperta: true, fori: { n: [[1, 1], [4, 1]] }, tipo: 'magazzino' },
+    { w: 6, d: 5.6, piani: 1, mat: 'pietra', tetto: 'tegole', pitch: .8, porta: [1], aperta: true, fori: { s: [[2, 1]] }, tipo: 'forgia del maniscalco' },
+    { w: 7.4, d: 6, piani: 1, mat: 'mattoni', tetto: 'tegole', porta: [1, 2], aperta: false, fori: { e: [[1, 1]] }, tipo: 'rimessa' },
+  ] },
+];
+XDZ_URBAN.strade2 = [
+  { id: 'rue_eglise', w: 4.4, kind: 'lane', pts: [[-123, -36.2], [-99, -36.2]] },
+  { id: 'ferme_croix', w: 4.2, kind: 'road', pts: [[49, 12], [49, 49], [49, 58]] },
+  { id: 'rue_ateliers', w: 5, kind: 'road', pts: [[46, -37], [84, -36.6], [96.6, -41]] },
+];
+for (const r of XDZ_URBAN.strade2) { V2.roads.push(r); const us = r.pts.map(q => q[0]), vs = r.pts.map(q => q[1]); r.bb = [Math.min(...us) - 8, Math.max(...us) + 8, Math.min(...vs) - 8, Math.max(...vs) + 8]; }
+// posizioni calcolate una volta (u, v del centro)
+for (const R_ of XDZ_ROWS) { let u = R_.u0; R_.items.forEach((d, i) => { d.id = `${R_.id}_${String.fromCharCode(97 + i)}`; d.fronte = R_.fronte; d.u = u + d.w / 2; d.v = R_.fronte === 's' ? R_.v - d.d / 2 : R_.v + d.d / 2; d.zona = R_.zona; u += d.w + R_.gap; }); }
+function xdzRowsPads() {
+  for (const R_ of XDZ_ROWS) for (const d of R_.items) { let lo = 1e9; for (const [a, c] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]]) lo = Math.min(lo, aaaH(AV.cx + d.u + a * d.w / 2, AV.cz + d.v + c * d.d / 2)); AV.pads.push({ x0: d.u - d.w / 2 - .3, x1: d.u + d.w / 2 + .3, z0: d.v - d.d / 2 - .6, z1: d.v + d.d / 2 + .6, y: lo + .02, xdz: d.id }); }
+}
+function xdzRowsBuild() {
+  const out = [];
+  for (const R_ of XDZ_ROWS) for (const d of R_.items) {
+    const [x, z] = v2W(d.u, d.v), b = xdzHouse(d.id, x, z, d); xdzRegister(b, { zona: d.zona }); out.push(b);
+    if (d.aperta && d.piani > 1 && typeof v2Furn === 'function') { const G = new AGeo(), F = v2Furn(G, seeded(Math.abs(d.u * 7) | 0)), y = b.base + .01; F.table(x + .6, y, z + .3, 0, 1.4, .8); F.chair(x, y, z + 1, PI); F.cupboard(x + b.w / 2 - 1.1, y, z - b.d / 2 + .9, 0, 1.2, 1.9); b.furn = G.build(); }
+    if (d.danni) xdzPreDamage(b);
+  }
+  // corte della fattoria: muretti sui lati ovest ed est (varco della strada al centro), cortile delle officine
+  const wf = { id: 'u6_muri_corte', kind: 'muretti', x: AV.cx + 49, z: AV.cz + 48, w: 28, d: 8, parts: [], base: Hf(AV.cx + 49, AV.cz + 48) };
+  xdzLowWall(wf, ...v2W(36.6, 44.4), ...v2W(36.6, 51.6), 1.7); xdzLowWall(wf, ...v2W(63.8, 44.4), ...v2W(63.8, 51.6), 1.7); wf.top = wf.base + 1.7; XDZ.bldgs.push(wf); xdzRegister(wf, { zona: 'Ferme de la Croix (agricola)' });
+  const wa = { id: 'u8_muro_cortile', kind: 'muretti', x: AV.cx + 64, z: AV.cz - 50, w: 34, d: 2, parts: [], base: Hf(AV.cx + 64, AV.cz - 50) };
+  xdzLowWall(wa, ...v2W(48, -51), ...v2W(73, -51), 1.9); wa.top = wa.base + 1.9; XDZ.bldgs.push(wa); xdzRegister(wa, { zona: 'rue des Ateliers (servizi)' });
+  return out;
+}
+// danni di guerra preesistenti, coerenti col sistema: celle tolte (collider spenti), una campata del tetto ceduta (collider spento)
+function xdzPreDamage(b) {
+  const top = b.grid[0].map(c => c[c.length - 1]).filter(Boolean).slice(-1)[0]; if (top) for (const c of top.cells.slice(0, 11)) xdzRemoveCell(c, null, null, 'preesistente', true);
+  const rf = b.parts.find(p => p.role === 'roof'); if (rf) { rf.dead = true; for (const so of rf.sols) so.on = false; scene.remove(rf.mesh); } b.preDanni = true;
+}
+// validazione delle posizioni: niente sovrapposizioni (fra loro, con il villaggio 2.0, con il villaggio originale, con il laboratorio), niente edifici su strade o argini
+function xdzUrbanValidate() {
+  const all = XDZ_URBAN.isolato1.map(d => ({ id: d.id, u: d.u, v: XDZ_URBAN.front - d.d / 2, w: d.w, d: d.d })).concat(XDZ_ROWS.flatMap(R_ => R_.items.map(d => ({ id: d.id, u: d.u, v: d.v, w: d.w, d: d.d }))));
+  const other = V2.defs.map(d => ({ id: d.id, u: d.u, v: d.v, w: d.w, d: d.d })).concat(Object.values(AAA.defs).map(d => ({ id: d.id, u: d.u, v: d.v, w: d.w, d: d.d }))).concat([{ id: 'lab_casa', u: XDZ_LAB.house[0], v: XDZ_LAB.house[1], w: 8, d: 6.4 }, { id: 'lab_fienile', u: XDZ_LAB.barn[0], v: XDZ_LAB.barn[1], w: 10, d: 7 }]);
+  if (AAA.st.pipe) other.push({ id: 'pipe', u: AAA.st.pipe.x - AV.cx, v: AAA.st.pipe.z - AV.cz, w: 13, d: 10 });
+  const R = { sovrapposizioni: [], suStrada: [], suArgine: [], fuoriMappa: [] }, ov = (a, b, m) => Math.abs(a.u - b.u) < (a.w + b.w) / 2 + m && Math.abs(a.v - b.v) < (a.d + b.d) / 2 + m;
+  for (let i = 0; i < all.length; i++) { for (let j = i + 1; j < all.length; j++) if (ov(all[i], all[j], -.02)) R.sovrapposizioni.push(all[i].id + '/' + all[j].id); for (const o of other) if (ov(all[i], o, .5)) R.sovrapposizioni.push(all[i].id + '/' + o.id); }
+  for (const a of all) for (const [x, y] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0], [0, -1], [0, 1]]) { const u = a.u + x * a.w / 2, v = a.v + y * a.d / 2; if (Math.abs(v - avRoadV(u)) < 3.2 || v2RoadD(u, v) < -.02) R.suStrada.push(a.id); if (avBankD(u, v) < 2.2) R.suArgine.push(a.id); if (Math.max(Math.abs(u), Math.abs(v)) > AV.half - 3) R.fuoriMappa.push(a.id); }
+  for (const k in R) R[k] = [...new Set(R[k])]; R.n = all.length; return R;
 }
