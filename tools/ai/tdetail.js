@@ -6,7 +6,7 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   // file: un GLB (in .js) per ognuno dei 25 edifici, validato in Blender
   const defs = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../assets/aaa/urban/urban_defs.json'), 'utf8')), ids = defs.isolato1.items.map(d => d.id).concat(defs.file.flatMap(R => R.items.map((d, i) => `${R.id}_${String.fromCharCode(97 + i)}`)));
   const man = ids.map(id => { const f = path.resolve(__dirname, `../../assets/aaa/urban/${id}.json`); return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : null; });
-  ok('25 edifici con dettaglio Blender esportato e validato', man.every(m => m && !m.validazione.errori.length) && man.length === 25, `${man.filter(Boolean).length}/25, triangoli ${man.filter(Boolean).map(m => m.triangoli.LOD0).reduce((a, b) => a + b, 0)}`);
+  ok(`${ids.length} edifici con dettaglio Blender esportato e validato`, man.every(m => m && !m.validazione.errori.length) && man.length === 38, `${man.filter(Boolean).length}/${ids.length}, triangoli ${man.filter(Boolean).map(m => m.triangoli.LOD0).reduce((a, b) => a + b, 0)}`);
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const p = await b.newPage({ viewport: { width: 800, height: 450 } }); const errs = [];
   p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 160)); });

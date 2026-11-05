@@ -892,6 +892,429 @@
      "tipo": "rimessa"
     }
    ]
+  },
+  {
+   "id": "u9",
+   "zona": "Grande Rue (lato nord)",
+   "fronte": "s",
+   "v": -2.2,
+   "u0": -82.4,
+   "gap": 0.1,
+   "items": [
+    {
+     "w": 6.2,
+     "d": 6.2,
+     "piani": 2,
+     "mat": "intonaco:0xe4d8bc",
+     "tetto": "ardesia",
+     "porta": [
+      1
+     ],
+     "aperta": false,
+     "persiane": true,
+     "fori": {
+      "s": [
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        2,
+        3
+       ]
+      ]
+     },
+     "tipo": "casa a schiera"
+    }
+   ]
+  },
+  {
+   "id": "u10",
+   "zona": "Grande Rue (lato sud, est)",
+   "fronte": "n",
+   "v": 8.8,
+   "u0": -48.5,
+   "gap": 0.1,
+   "items": [
+    {
+     "w": 7,
+     "d": 5.8,
+     "piani": 2,
+     "mat": "pietra",
+     "tetto": "ardesia",
+     "porta": [
+      1
+     ],
+     "aperta": true,
+     "scala": true,
+     "fori": {
+      "n": [
+       [
+        3,
+        1
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        3,
+        3
+       ]
+      ],
+      "s": [
+       [
+        2,
+        1
+       ]
+      ]
+     },
+     "tipo": "casa del fabbro (esplorabile)"
+    },
+    {
+     "w": 6.2,
+     "d": 5.6,
+     "piani": 1,
+     "mat": "intonaco:0xdccca8",
+     "tetto": "tegole",
+     "pitch": 0.85,
+     "porta": [
+      2
+     ],
+     "aperta": false,
+     "persiane": true,
+     "fori": {
+      "n": [
+       [
+        0,
+        1
+       ]
+      ]
+     },
+     "tipo": "casa rurale"
+    },
+    {
+     "w": 7.8,
+     "d": 5.8,
+     "piani": 2,
+     "mat": "mattoni",
+     "tetto": "ardesia",
+     "porta": [
+      1
+     ],
+     "aperta": false,
+     "persiane": true,
+     "fori": {
+      "n": [
+       [
+        3,
+        1
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        2,
+        3
+       ]
+      ]
+     },
+     "tipo": "casa in mattoni"
+    },
+    {
+     "w": 6.8,
+     "d": 5.6,
+     "piani": 2,
+     "mat": "intonaco:0xe8dcc0",
+     "tetto": "tegole",
+     "porta": [
+      2
+     ],
+     "aperta": false,
+     "persiane": true,
+     "fori": {
+      "n": [
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        3,
+        3
+       ]
+      ]
+     },
+     "tipo": "casa a schiera",
+     "danni": true
+    }
+   ]
+  },
+  {
+   "id": "u11",
+   "zona": "Grande Rue (lato nord, est)",
+   "fronte": "s",
+   "v": -2.2,
+   "u0": -52.2,
+   "gap": 0.1,
+   "items": [
+    {
+     "w": 7.4,
+     "d": 6.6,
+     "piani": 2,
+     "mat": "pietra",
+     "tetto": "tegole",
+     "porta": [
+      1
+     ],
+     "aperta": false,
+     "persiane": true,
+     "fori": {
+      "s": [
+       [
+        3,
+        1
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        3,
+        3
+       ]
+      ],
+      "n": [
+       [
+        2,
+        1
+       ]
+      ]
+     },
+     "tipo": "casa a schiera"
+    },
+    {
+     "w": 8.6,
+     "d": 7.2,
+     "piani": 2,
+     "mat": "intonaco:0xd8c8a4",
+     "tetto": "ardesia",
+     "porta": [
+      2
+     ],
+     "aperta": true,
+     "scala": true,
+     "fori": {
+      "s": [
+       [
+        0,
+        1
+       ],
+       [
+        4,
+        1
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        2,
+        3
+       ],
+       [
+        4,
+        3
+       ]
+      ]
+     },
+     "tipo": "drogheria con abitazione (esplorabile)"
+    },
+    {
+     "w": 6.6,
+     "d": 6.4,
+     "piani": 2,
+     "mat": "mattoni",
+     "tetto": "ardesia",
+     "porta": [
+      1
+     ],
+     "aperta": false,
+     "persiane": true,
+     "fori": {
+      "s": [
+       [
+        3,
+        1
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        3,
+        3
+       ]
+      ]
+     },
+     "tipo": "casa in mattoni"
+    }
+   ]
+  },
+  {
+   "id": "u12",
+   "zona": "Ferme de la Croix (agricola)",
+   "fronte": "n",
+   "v": 52,
+   "u0": 64.4,
+   "gap": 0.1,
+   "items": [
+    {
+     "w": 6.4,
+     "d": 5.6,
+     "piani": 1,
+     "mat": "pietra",
+     "tetto": "tegole",
+     "pitch": 0.75,
+     "porta": [
+      1
+     ],
+     "aperta": true,
+     "fori": {
+      "n": [
+       [
+        2,
+        1
+       ]
+      ]
+     },
+     "tipo": "pressoio del sidro"
+    }
+   ]
+  },
+  {
+   "id": "u13",
+   "zona": "strada della fattoria (ovest)",
+   "fronte": "e",
+   "u": 92.6,
+   "v0": -20.5,
+   "gap": 0.1,
+   "items": [
+    {
+     "w": 6.2,
+     "d": 7.4,
+     "piani": 2,
+     "mat": "pietra",
+     "tetto": "ardesia",
+     "porta": [
+      1
+     ],
+     "aperta": true,
+     "scala": true,
+     "fori": {
+      "e": [
+       [
+        0,
+        3
+       ],
+       [
+        2,
+        3
+       ]
+      ],
+      "o": [
+       [
+        1,
+        1
+       ]
+      ]
+     },
+     "tipo": "osteria della strada (esplorabile)"
+    },
+    {
+     "w": 5.8,
+     "d": 6.6,
+     "piani": 1,
+     "mat": "mattoni",
+     "tetto": "tegole",
+     "porta": [
+      1
+     ],
+     "aperta": false,
+     "persiane": true,
+     "fori": {
+      "e": [
+       [
+        0,
+        1
+       ]
+      ]
+     },
+     "tipo": "casa del cantoniere"
+    }
+   ]
+  },
+  {
+   "id": "u14",
+   "zona": "strada della fattoria (est)",
+   "fronte": "o",
+   "u": 98.6,
+   "v0": -20.5,
+   "gap": 0.1,
+   "items": [
+    {
+     "w": 6,
+     "d": 7,
+     "piani": 2,
+     "mat": "intonaco:0xe0d0a8",
+     "tetto": "ardesia",
+     "porta": [
+      1
+     ],
+     "aperta": false,
+     "persiane": true,
+     "fori": {
+      "o": [
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        2,
+        3
+       ]
+      ]
+     },
+     "tipo": "casa del fattore"
+    },
+    {
+     "w": 6.4,
+     "d": 8,
+     "piani": 1,
+     "mat": "pietra",
+     "tetto": "ardesia",
+     "pitch": 0.7,
+     "porta": [
+      1,
+      2
+     ],
+     "aperta": true,
+     "fori": {},
+     "tipo": "rimessa degli attrezzi"
+    }
+   ]
   }
  ]
 }

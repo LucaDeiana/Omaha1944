@@ -1,0 +1,78 @@
+{
+ "id": "u13_b",
+ "formato": "omaha1944-urban-detail-1",
+ "generatore": "urban_house",
+ "blender": "5.2.3 LTS",
+ "cfg": {
+  "w": 5.8,
+  "d": 6.6,
+  "piani": 1,
+  "mat": "mattoni",
+  "tetto": "tegole",
+  "porta": [
+   1
+  ],
+  "aperta": false,
+  "persiane": true,
+  "fori": {
+   "e": [
+    [
+     0,
+     1
+    ]
+   ]
+  },
+  "tipo": "casa del cantoniere",
+  "id": "u13_b",
+  "fronte": "e"
+ },
+ "gruppi": [
+  "a:e:0:1",
+  "a:e:1:0",
+  "g:1",
+  "o:e:0:1",
+  "o:e:1:0",
+  "p:e:0:0",
+  "p:e:2:0",
+  "p:e:2:1",
+  "p:n:0:0",
+  "p:n:0:1",
+  "p:n:1:0",
+  "p:n:1:1",
+  "p:n:2:0",
+  "p:n:2:1",
+  "p:o:0:0",
+  "p:o:0:1",
+  "p:o:1:0",
+  "p:o:1:1",
+  "p:o:2:0",
+  "p:o:2:1",
+  "p:s:0:0",
+  "p:s:0:1",
+  "p:s:1:0",
+  "p:s:1:1",
+  "p:s:2:0",
+  "p:s:2:1"
+ ],
+ "triangoli": {
+  "LOD0": 5014
+ },
+ "materiali": [
+  "brick",
+  "clay",
+  "glass",
+  "glass_far",
+  "iron",
+  "oak_beam",
+  "quoin",
+  "stone",
+  "stone_wet",
+  "wood",
+  "wood_paint"
+ ],
+ "kb": 386.6,
+ "validazione": {
+  "errori": []
+ },
+ "tempo_s": 0.2
+}

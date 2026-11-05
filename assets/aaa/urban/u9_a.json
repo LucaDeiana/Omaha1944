@@ -1,0 +1,105 @@
+{
+ "id": "u9_a",
+ "formato": "omaha1944-urban-detail-1",
+ "generatore": "urban_house",
+ "blender": "5.2.3 LTS",
+ "cfg": {
+  "w": 6.2,
+  "d": 6.2,
+  "piani": 2,
+  "mat": "intonaco:0xe4d8bc",
+  "tetto": "ardesia",
+  "porta": [
+   1
+  ],
+  "aperta": false,
+  "persiane": true,
+  "fori": {
+   "s": [
+    [
+     0,
+     1
+    ],
+    [
+     0,
+     3
+    ],
+    [
+     2,
+     3
+    ]
+   ]
+  },
+  "tipo": "casa a schiera",
+  "id": "u9_a",
+  "fronte": "s"
+ },
+ "gruppi": [
+  "a:s:0:1",
+  "a:s:0:3",
+  "a:s:1:0",
+  "a:s:2:3",
+  "g:-1",
+  "o:s:0:1",
+  "o:s:0:3",
+  "o:s:1:0",
+  "o:s:2:3",
+  "p:e:0:0",
+  "p:e:0:2",
+  "p:e:0:3",
+  "p:e:1:0",
+  "p:e:1:2",
+  "p:e:1:3",
+  "p:e:2:0",
+  "p:e:2:2",
+  "p:e:2:3",
+  "p:n:0:0",
+  "p:n:0:1",
+  "p:n:0:2",
+  "p:n:0:3",
+  "p:n:1:0",
+  "p:n:1:2",
+  "p:n:1:3",
+  "p:n:2:0",
+  "p:n:2:1",
+  "p:n:2:2",
+  "p:n:2:3",
+  "p:o:0:0",
+  "p:o:0:2",
+  "p:o:0:3",
+  "p:o:1:0",
+  "p:o:1:2",
+  "p:o:1:3",
+  "p:o:2:0",
+  "p:o:2:2",
+  "p:o:2:3",
+  "p:s:0:0",
+  "p:s:0:2",
+  "p:s:1:2",
+  "p:s:1:3",
+  "p:s:2:0",
+  "p:s:2:1",
+  "p:s:2:2"
+ ],
+ "triangoli": {
+  "LOD0": 15806
+ },
+ "materiali": [
+  "brick",
+  "clay",
+  "glass",
+  "glass_far",
+  "iron",
+  "oak_beam",
+  "quoin",
+  "stone",
+  "stone_wet",
+  "wood",
+  "wood_paint"
+ ],
+ "kb": 1162.9,
+ "validazione": {
+  "errori": []
+ },
+ "tempo_s": 1.0
+}

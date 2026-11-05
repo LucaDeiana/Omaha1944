@@ -12,7 +12,7 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   const R = await p.evaluate(async () => {
     for (let i = 0; i < 200 && !XDZ.ready; i++) await new Promise(r => setTimeout(r, 500)); GAME.running = false;
     const sim = s => { for (let i = 0; i < s * 30; i++) { GAME.time += 1 / 30; xdzTick(1 / 30); } }, out = {};
-    const U = () => [...XDZ_REG.values()].filter(e => /^u1_/.test(e.id)), UA = () => [...XDZ_REG.values()].filter(e => /^u\d_/.test(e.id)), ids = [...XDZ_REG.keys()];
+    const U = () => [...XDZ_REG.values()].filter(e => /^u1_/.test(e.id)), UA = () => [...XDZ_REG.values()].filter(e => /^u\d+_/.test(e.id)), ids = [...XDZ_REG.keys()];
     out.tutti = { edifici: UA().filter(e => e.b.cfg).length, muretti: UA().filter(e => !e.b.cfg).length, zone: [...new Set(UA().map(e => e.zona))].length, esplorabili: UA().filter(e => e.b.cfg && e.b.cfg.aperta && e.b.cfg.piani > 1).length, multipiano: UA().filter(e => e.b.cfg && e.b.cfg.piani > 1).length, val: xdzUrbanValidate() };
     out.reg = { n: U().length, unici: new Set(ids).size === ids.length, campi: U().every(e => e.tipo && e.pos && e.dim && e.materiali && e.livelli && e.distruzione), nonAppoggiati: XDZ.panels.filter(q => !q.dead && !xdzSupported(q)).map(q => q.id), v2: Object.entries(v2Validate()).filter(e => e[1].length).map(e => e[0]) };
     const ground = (x, z, y) => Math.max(Hf(x, z), worldFloor(x, z, y)), inSolid = (x, y, z) => solids.some(s => s.on !== false && !s.walk && x > s.min.x && x < s.max.x && y > s.min.y && y < s.max.y && z > s.min.z && z < s.max.z);
@@ -26,7 +26,7 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
     // ogni edificio è distruttibile indipendentemente: un colpo di carro su ciascuno, solo quell'edificio cambia
     out.edifici = {};
     for (const id of UA().filter(e => e.b.cfg).map(e => e.id)) {
-      xdzReset({ terrain: true }); const e = XDZ_REG.get(id), B = e.b, fz = B.cfg.fronte === 'n' ? -1 : 1, t = new V3(B.x + .4, B.base + 1.4, B.z + fz * B.d / 2), o = t.clone().add(new V3(.3, .5, fz * 3.5));   // dalla strada, davanti alla facciata
+      xdzReset({ terrain: true }); const e = XDZ_REG.get(id), B = e.b, fz = B.cfg.fronte === 'n' ? -1 : 1, fx = B.cfg.fronte === 'e' ? 1 : B.cfg.fronte === 'o' ? -1 : 0, t = fx ? new V3(B.x + fx * B.w / 2, B.base + 1.4, B.z + .4) : new V3(B.x + .4, B.base + 1.4, B.z + fz * B.d / 2), o = t.clone().add(fx ? new V3(fx * 3.5, .5, .3) : new V3(.3, .5, fz * 3.5));   // dalla strada, davanti alla facciata   // dalla strada, davanti alla facciata
       const others0 = UA().filter(q => q !== e).map(q => xdzRegState(q).integrita); xdzShell(o, t.clone().sub(o).normalize()); sim(4);
       const st = xdzRegState(e), others1 = UA().filter(q => q !== e).map(q => xdzRegState(q).integrita);
       out.edifici[e.id] = { integrita: st.integrita, pannelliDanneggiati: B.parts.filter(q => q.cells && q.state >= 2).length, altriInvariati: others0.every((v, i) => v === others1[i]), collider: B.parts.filter(q => q.cells).every(q => q.cells.every(c => c.alive || !c.sol.on)) };
@@ -47,7 +47,7 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
     return out;
   });
   ok('registro: 6 voci dell\'isolato (5 edifici + muretti), ID unici, campi completi', R.reg.n === 6 && R.reg.unici && R.reg.campi, JSON.stringify(R.reg));
-  ok('espansione: 25 edifici nuovi in 7 zone, posizioni valide (niente sovrapposizioni, strade, argini)', R.tutti.edifici === 25 && R.tutti.zone >= 7 && !R.tutti.val.sovrapposizioni.length && !R.tutti.val.suStrada.length && !R.tutti.val.suArgine.length, JSON.stringify(R.tutti));
+  ok('espansione: 38 edifici nuovi in 10 zone, posizioni valide (niente sovrapposizioni, strade, argini)', R.tutti.edifici === 38 && R.tutti.zone >= 10 && !R.tutti.val.sovrapposizioni.length && !R.tutti.val.suStrada.length && !R.tutti.val.suArgine.length, JSON.stringify(R.tutti));
   ok('struttura iniziale appoggiata, nessun conflitto con il villaggio', !R.reg.nonAppoggiati.length && !R.reg.v2.length, JSON.stringify(R.reg));
   for (const id in R.scale) ok('scala al primo piano: ' + id, R.scale[id].bl === 0 && R.scale[id].mx <= .55 && Math.abs(R.scale[id].quota - 3.07) < .15, JSON.stringify(R.scale[id]));
   ok('porta chiusa blocca, porta aperta si attraversa', R.porte.chiusa && R.porte.aperta, JSON.stringify(R.porte));

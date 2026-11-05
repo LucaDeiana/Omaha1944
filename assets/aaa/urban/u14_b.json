@@ -1,0 +1,66 @@
+{
+ "id": "u14_b",
+ "formato": "omaha1944-urban-detail-1",
+ "generatore": "urban_house",
+ "blender": "5.2.3 LTS",
+ "cfg": {
+  "w": 6.4,
+  "d": 8,
+  "piani": 1,
+  "mat": "pietra",
+  "tetto": "ardesia",
+  "pitch": 0.7,
+  "porta": [
+   1,
+   2
+  ],
+  "aperta": true,
+  "fori": {},
+  "tipo": "rimessa degli attrezzi",
+  "id": "u14_b",
+  "fronte": "o"
+ },
+ "gruppi": [
+  "o:o:1:0",
+  "o:o:2:0",
+  "p:e:0:0",
+  "p:e:0:1",
+  "p:e:1:0",
+  "p:e:1:1",
+  "p:e:2:0",
+  "p:e:2:1",
+  "p:e:3:0",
+  "p:e:3:1",
+  "p:n:0:0",
+  "p:n:0:1",
+  "p:n:1:0",
+  "p:n:1:1",
+  "p:n:2:0",
+  "p:n:2:1",
+  "p:o:0:0",
+  "p:o:0:1",
+  "p:o:3:0",
+  "p:o:3:1",
+  "p:s:0:0",
+  "p:s:0:1",
+  "p:s:1:0",
+  "p:s:1:1",
+  "p:s:2:0",
+  "p:s:2:1"
+ ],
+ "triangoli": {
+  "LOD0": 8244
+ },
+ "materiali": [
+  "iron",
+  "oak_beam",
+  "quoin",
+  "stone_wet",
+  "wood"
+ ],
+ "kb": 606.5,
+ "validazione": {
+  "errori": []
+ },
+ "tempo_s": 0.4
+}

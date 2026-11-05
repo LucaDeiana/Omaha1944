@@ -114,7 +114,16 @@ Strade nuove: rue de l'Église, accesso della fattoria, rue des Ateliers. Ogni z
   - crollo del timpano con il comignolo;
   - ripristino.
 
+## Crescita a 38 edifici (fatto)
+- **13 edifici nuovi**, tutti con dettaglio Blender e distruzione completa:
+  - Grande Rue: lato nord ovest (1) e lato nord est (3), lato sud est (4);
+  - corte del sidro della Ferme de la Croix (pressoio);
+  - strada della fattoria: osteria e casa del cantoniere a ovest, casa del fattore e rimessa a est. Sono le prime file con la facciata verso est e verso ovest.
+- **Scuri e porte dipinti** con un colore diverso per casa: grigio-azzurro, verde, rosso sangue di bue, grigio, bruno, blu, salvia.
+- **Intonaci più chiari**: niente muschio verde e meno umidità.
+- **Numeri**: 38 edifici nuovi dell'Urban Expansion 3.0, più 3 gruppi di muretti, in 10 zone. Dettaglio Blender: 38 GLB validati. Dalla piazza la scena arriva a 1,8 milioni di triangoli (SwiftShader, non FPS).
+- **Test superati**: `turban` (ognuno dei 38 colpito e verificato indipendente), `tdetail`, `tdestruct`, `tvillage`.
+
 ## Limiti residui
 - I muri sono i pannelli fratturati con le texture triplanari della demo, la stessa famiglia di texture della casa Blender. Non c'è la sbozzatura delle singole pietre.
 - Non ci sono abbaini né interni arredati come nella casa Blender: solo arredo essenziale al pianterreno delle case esplorabili.
-- Le varianti di colore degli scuri non sono ancora per edificio: il colore è unico.

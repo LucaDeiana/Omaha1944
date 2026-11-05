@@ -52,7 +52,7 @@ function xdzMat(key) {
     : key === 'legno' ? aaaTri('wood', .7, { nStr: 1.3, macro: .3, color: 0xa08a70, hq: 'tavole_fienile', hqScale: .5, key: 'xdzwood' })
     : key === 'trave' ? aaaTri('wood', .9, { nStr: 1.1, macro: .25, color: 0x7a6a58, hq: 'tavole_vecchie', hqScale: .6, key: 'xdzbeam' })
     : key === 'mattoni' ? aaaTri('brick', .75, { nStr: 1.3, macro: .2, damp: 1, moss: .5, color: 0xc8a898, hq: 'mattoni', hqScale: .55, key: 'xdzbrick' })
-    : key.startsWith('intonaco') ? aaaTri('plaster', .45, { nStr: 1, macro: .28, damp: 1.2, moss: .4, color: key.includes(':') ? +key.split(':')[1] : 0xffffff, hq: 'intonaco_pietra', hqScale: .42, key: 'xdzplaster' + key })
+    : key.startsWith('intonaco') ? aaaTri('plaster', .45, { nStr: 1, macro: .22, damp: .5, moss: .05, color: key.includes(':') ? +key.split(':')[1] : 0xffffff, hq: 'intonaco_pietra', hqScale: .42, key: 'xdzplaster' + key })
     : key === 'tegole' ? aaaTri('stone', .9, { nStr: 1, macro: .25, color: 0x9a5a42, rough: .8, key: 'xdztile' })
     : aaaTri('stone', .9, { nStr: 1, macro: .2, color: 0x5e646c, rough: .6, key: 'xdzslate' });
   return (XDZ.mats[key] = base);
@@ -591,7 +591,7 @@ function xdzPads() {
 async function xdzBuild() {
   try { await xdzLoadKit(); } catch (e) { console.warn('kit di frattura non caricato', e); return; }
   if (!AAA.on) return; XDZ.on = true; const [x0, z0] = v2W(XDZ_LAB.yard[0], XDZ_LAB.yard[1]), [x1, z1] = v2W(XDZ_LAB.yard[2], XDZ_LAB.yard[3]); XDZ.nav = null;
-  XDZ.navs = []; XDZ.nav = null; xdzNavInit(x0, z0, x1, z1); for (const [u0, v0, u1, v1] of [[-96, 72, -46, 108], [-126, -50, -96, -30], [-80, -12, -50, 18], [32, 8, 68, 62], [44, -54, 100, -32]]) { const [a0, b0] = v2W(u0, v0), [a1, b1] = v2W(u1, v1); xdzNavInit(a0, b0, a1, b1); }
+  XDZ.navs = []; XDZ.nav = null; xdzNavInit(x0, z0, x1, z1); for (const [u0, v0, u1, v1] of [[-96, 72, -46, 108], [-126, -50, -96, -30], [-86, -12, -20, 18], [32, 8, 72, 62], [44, -54, 100, -32], [82, -26, 108, 0]]) { const [a0, b0] = v2W(u0, v0), [a1, b1] = v2W(u1, v1); xdzNavInit(a0, b0, a1, b1); }
   xdzReset({ seed: 1944 });
   apSign(new AGeo(), ...v2W(XDZ_LAB.house[0] - 6, XDZ_LAB.house[1] + 8), .3, 'DESTRUCTION LAB (F3)');
   // shader precompilati (anche ombre): niente blocchi quando il laboratorio entra in vista
@@ -731,6 +731,34 @@ const XDZ_ROWS = [
     { w: 7.4, d: 6, piani: 1, mat: 'mattoni', tetto: 'tegole', porta: [1, 2], aperta: false, fori: { e: [[1, 1]] }, tipo: 'rimessa' },
   ] },
 ];
+// fase di crescita: altri 15 edifici (Grande Rue est, strada della fattoria, corte del sidro)
+XDZ_ROWS.push(
+  { id: 'u9', zona: 'Grande Rue (lato nord)', fronte: 's', v: -2.2, u0: -82.4, gap: .1, items: [
+    { w: 6.2, d: 6.2, piani: 2, mat: 'intonaco:0xe4d8bc', tetto: 'ardesia', porta: [1], aperta: false, persiane: true, fori: { s: [[0, 1], [0, 3], [2, 3]] }, tipo: 'casa a schiera' },
+  ] },
+  { id: 'u10', zona: 'Grande Rue (lato sud, est)', fronte: 'n', v: 8.8, u0: -48.5, gap: .1, items: [
+    { w: 7, d: 5.8, piani: 2, mat: 'pietra', tetto: 'ardesia', porta: [1], aperta: true, scala: true, fori: { n: [[3, 1], [1, 3], [3, 3]], s: [[2, 1]] }, tipo: 'casa del fabbro (esplorabile)' },
+    { w: 6.2, d: 5.6, piani: 1, mat: 'intonaco:0xdccca8', tetto: 'tegole', pitch: .85, porta: [2], aperta: false, persiane: true, fori: { n: [[0, 1]] }, tipo: 'casa rurale' },
+    { w: 7.8, d: 5.8, piani: 2, mat: 'mattoni', tetto: 'ardesia', porta: [1], aperta: false, persiane: true, fori: { n: [[3, 1], [0, 3], [2, 3]] }, tipo: 'casa in mattoni' },
+    { w: 6.8, d: 5.6, piani: 2, mat: 'intonaco:0xe8dcc0', tetto: 'tegole', porta: [2], aperta: false, persiane: true, fori: { n: [[0, 1], [0, 3], [3, 3]] }, tipo: 'casa a schiera', danni: true },
+  ] },
+  { id: 'u11', zona: 'Grande Rue (lato nord, est)', fronte: 's', v: -2.2, u0: -52.2, gap: .1, items: [
+    { w: 7.4, d: 6.6, piani: 2, mat: 'pietra', tetto: 'tegole', porta: [1], aperta: false, persiane: true, fori: { s: [[3, 1], [1, 3], [3, 3]], n: [[2, 1]] }, tipo: 'casa a schiera' },
+    { w: 8.6, d: 7.2, piani: 2, mat: 'intonaco:0xd8c8a4', tetto: 'ardesia', porta: [2], aperta: true, scala: true, fori: { s: [[0, 1], [4, 1], [0, 3], [2, 3], [4, 3]] }, tipo: 'drogheria con abitazione (esplorabile)' },
+    { w: 6.6, d: 6.4, piani: 2, mat: 'mattoni', tetto: 'ardesia', porta: [1], aperta: false, persiane: true, fori: { s: [[3, 1], [0, 3], [3, 3]] }, tipo: 'casa in mattoni' },
+  ] },
+  { id: 'u12', zona: 'Ferme de la Croix (agricola)', fronte: 'n', v: 52, u0: 64.4, gap: .1, items: [
+    { w: 6.4, d: 5.6, piani: 1, mat: 'pietra', tetto: 'tegole', pitch: .75, porta: [1], aperta: true, fori: { n: [[2, 1]] }, tipo: 'pressoio del sidro' },
+  ] },
+  { id: 'u13', zona: 'strada della fattoria (ovest)', fronte: 'e', u: 92.6, v0: -20.5, gap: .1, items: [
+    { w: 6.2, d: 7.4, piani: 2, mat: 'pietra', tetto: 'ardesia', porta: [1], aperta: true, scala: true, fori: { e: [[0, 3], [2, 3]], o: [[1, 1]] }, tipo: 'osteria della strada (esplorabile)' },
+    { w: 5.8, d: 6.6, piani: 1, mat: 'mattoni', tetto: 'tegole', porta: [1], aperta: false, persiane: true, fori: { e: [[0, 1]] }, tipo: 'casa del cantoniere' },
+  ] },
+  { id: 'u14', zona: 'strada della fattoria (est)', fronte: 'o', u: 98.6, v0: -20.5, gap: .1, items: [
+    { w: 6, d: 7, piani: 2, mat: 'intonaco:0xe0d0a8', tetto: 'ardesia', porta: [1], aperta: false, persiane: true, fori: { o: [[0, 1], [0, 3], [2, 3]] }, tipo: 'casa del fattore' },
+    { w: 6.4, d: 8, piani: 1, mat: 'pietra', tetto: 'ardesia', pitch: .7, porta: [1, 2], aperta: true, fori: {}, tipo: 'rimessa degli attrezzi' },
+  ] },
+);
 XDZ_URBAN.strade2 = [
   { id: 'rue_eglise', w: 4.4, kind: 'lane', pts: [[-123, -36.2], [-99, -36.2]] },
   { id: 'ferme_croix', w: 4.2, kind: 'road', pts: [[49, 12], [49, 49], [49, 58]] },
@@ -738,7 +766,10 @@ XDZ_URBAN.strade2 = [
 ];
 for (const r of XDZ_URBAN.strade2) { V2.roads.push(r); const us = r.pts.map(q => q[0]), vs = r.pts.map(q => q[1]); r.bb = [Math.min(...us) - 8, Math.max(...us) + 8, Math.min(...vs) - 8, Math.max(...vs) + 8]; }
 // posizioni calcolate una volta (u, v del centro)
-for (const R_ of XDZ_ROWS) { let u = R_.u0; R_.items.forEach((d, i) => { d.id = `${R_.id}_${String.fromCharCode(97 + i)}`; d.fronte = R_.fronte; d.u = u + d.w / 2; d.v = R_.fronte === 's' ? R_.v - d.d / 2 : R_.v + d.d / 2; d.zona = R_.zona; u += d.w + R_.gap; }); }
+for (const R_ of XDZ_ROWS) {
+  if (R_.fronte === 'e' || R_.fronte === 'o') { let v = R_.v0; R_.items.forEach((d, i) => { d.id = `${R_.id}_${String.fromCharCode(97 + i)}`; d.fronte = R_.fronte; d.u = R_.fronte === 'e' ? R_.u - d.w / 2 : R_.u + d.w / 2; d.v = v + d.d / 2; d.zona = R_.zona; v += d.d + R_.gap; }); continue; }   // facciata lungo z
+  let u = R_.u0; R_.items.forEach((d, i) => { d.id = `${R_.id}_${String.fromCharCode(97 + i)}`; d.fronte = R_.fronte; d.u = u + d.w / 2; d.v = R_.fronte === 's' ? R_.v - d.d / 2 : R_.v + d.d / 2; d.zona = R_.zona; u += d.w + R_.gap; });
+}
 function xdzRowsPads() {
   for (const R_ of XDZ_ROWS) for (const d of R_.items) { let lo = 1e9; for (const [a, c] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]]) lo = Math.min(lo, aaaH(AV.cx + d.u + a * d.w / 2, AV.cz + d.v + c * d.d / 2)); AV.pads.push({ x0: d.u - d.w / 2 - .3, x1: d.u + d.w / 2 + .3, z0: d.v - d.d / 2 - .6, z1: d.v + d.d / 2 + .6, y: lo + .02, xdz: d.id }); }
 }
@@ -788,15 +819,16 @@ function xdzDPatch(m, key) {
   return m;
 }
 // materiali come quelli della casa Blender (pipeMat: texture CC0 della demo, scala nelle UV), con la maschera dei gruppi
-function xdzDMat(name) {
-  if (XDZD.mats[name]) return XDZD.mats[name]; const d = PIPE_MATS[name] || [null, [.6, .6, .6], .8, 0], T_ = d[0] && typeof TEXH !== 'undefined' ? TEXH[d[0]] : null;
+const XDZ_SCURI = [[.36, .46, .52], [.3, .42, .34], [.48, .22, .16], [.5, .49, .44], [.4, .33, .22], [.24, .3, .34], [.55, .6, .52]];   // grigio-azzurro, verde, rosso sangue di bue, grigio, bruno, blu scuro, salvia
+function xdzDMat(name, tint) {
+  const ck = name + (tint ? ':' + tint.join(',') : ''); if (XDZD.mats[ck]) return XDZD.mats[ck]; const d0 = PIPE_MATS[name] || [null, [.6, .6, .6], .8, 0], d = tint ? [d0[0], tint, d0[2], d0[3], d0[4], d0[5]] : d0, T_ = d[0] && typeof TEXH !== 'undefined' ? TEXH[d[0]] : null;
   const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(...d[1]), roughness: d[2], metalness: d[3] });
   if (name === 'glass') { m.transparent = true; m.opacity = .4; m.depthWrite = false; m.side = THREE.DoubleSide; m.envMap = AAA.cube || null; m.roughness = .06; }
   else if (T_) { m.map = T_.map; m.normalMap = T_.normal; m.aoMap = T_.arm; m.roughnessMap = T_.arm; m.metalnessMap = d[3] ? T_.arm : null; m.aoMapIntensity = .8; }
-  xdzDPatch(m); m.name = 'xdzd_' + name;
+  xdzDPatch(m); m.name = 'xdzd_' + ck;
   if (name !== 'glass' && typeof aaaPatch === 'function') aaaPatch(m, { baseY: 0, moss: d[4] || 0, damp: d[5] || 0, key: 'xdzd' });
-  const dm = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking }); xdzDPatch(dm); XDZD.depth[name] = dm;
-  return (XDZD.mats[name] = m);
+  if (!XDZD.depth[name]) { const dm = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking }); xdzDPatch(dm); XDZD.depth[name] = dm; }
+  return (XDZD.mats[ck] = m);
 }
 function xdzDetailLoadAll() { for (const b of XDZ.bldgs) if (b.cfg && b.cfg.dettagli && !b.detail && !XDZD.queue.includes(b)) XDZD.queue.push(b); }
 // uno alla volta, il più vicino alla camera per primo
@@ -823,7 +855,8 @@ async function xdzDetailLoad(b) {
   for (const mn in byMat) {
     let off = 0; const list = byMat[mn]; for (const { g, G } of list) { G.parts.push({ mat: mn, start: off, count: g.attributes.position.count }); off += g.attributes.position.count; }
     const merged = THREE.BufferGeometryUtils ? THREE.BufferGeometryUtils.mergeBufferGeometries(list.map(q => q.g)) : aaaMerge(list.map(q => q.g)); for (const q of list) q.g.dispose();
-    const mesh = new THREE.Mesh(merged, xdzDMat(mn)); mesh.castShadow = mn !== 'glass'; mesh.receiveShadow = true; mesh.customDepthMaterial = XDZD.depth[mn]; root.add(mesh); XDZD.tris += merged.attributes.position.count / 3;
+    const tint = mn === 'wood_paint' ? (b.cfg.scuri || XDZ_SCURI[[...id].reduce((a, ch) => a + ch.charCodeAt(0), 0) % XDZ_SCURI.length]) : null;   // scuri e porte dipinti: colore per casa
+    const mesh = new THREE.Mesh(merged, xdzDMat(mn, tint)); mesh.castShadow = mn !== 'glass'; mesh.receiveShadow = true; mesh.customDepthMaterial = XDZD.depth[mn]; root.add(mesh); XDZD.tris += merged.attributes.position.count / 3;
     for (const { G } of list) G.parts.filter(p => p.mat === mn).forEach(p => p.mesh = mesh);
   }
   scene.add(root);
