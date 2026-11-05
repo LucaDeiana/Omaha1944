@@ -42,7 +42,8 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
     const s1 = xdzSnapshot(); xdzRestore(s1); const s2 = xdzSnapshot();
     out.snap = { pannelli: JSON.stringify(s1.pannelli) === JSON.stringify(s2.pannelli), lastre: s1.lastre.length === s2.lastre.length, crateri: s1.crateri.length === s2.crateri.length, kb: +(JSON.stringify(s1).length / 1024).toFixed(1) };
     // reset: edifici integri, nessun collider orfano
-    xdzReset({ terrain: true }); out.reset = { celle: XDZ.panels.every(q => q.cells.every(c => c.alive && c.sol.on)), corpi: XDZ.bodies.length, soli: solids.filter(s => /^xdz_/.test(s.tag)).length, celleTot: XDZ.panels.reduce((a, q) => a + q.cells.length, 0), rubble: solids.filter(s => s.tag === 'rubble').length };
+    xdzReset({ terrain: true }); out.reset = { celle: XDZ.panels.every(q => q.b.preDanni || q.cells.every(c => c.alive && c.sol.on)),   // la casa c dell'isolato parte danneggiata di proposito
+      corpi: XDZ.bodies.length, soli: solids.filter(s => /^xdz_/.test(s.tag)).length, celleTot: XDZ.panels.reduce((a, q) => a + q.cells.length, 0), rubble: solids.filter(s => s.tag === 'rubble').length };
     // pannello F3
     xdzOpen(true); out.ui = { panel: /DESTRUCTION LAB DEBUG/.test(document.getElementById('xdzPanel').textContent) }; for (const k of ['supporti', 'collider', 'navigazione']) XDZ.ui.f[k] = true; xdzDebugDraw(); out.ui.linee = XDZ.ui.g.geometry.attributes.position.count; xdzOpen(false);
     return out;
