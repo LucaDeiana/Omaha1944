@@ -70,7 +70,8 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   ok('LOD degli edifici: semplificato lontano, dettaglio vicino', R.lod.far && R.lod.near, JSON.stringify(R.lod));
   ok('debug mappa (F4): pannello e 6 livelli', R.dbg.panel && R.dbg.layers === 6, JSON.stringify(R.dbg));
   ok('dati per la distruzione: parti per edificio, sostituzione registrata', R.destr.edifici >= 25 && R.destr.parti > 300 && R.destr.set, JSON.stringify(R.destr));
-  ok('costruzione e terreno', R.buildMs < 20000 && R.terrainVerts < 200000, `costruzione ${R.buildMs} ms, vertici del terreno ${R.terrainVerts} (LOW)`);
+  // soglia 30 s: in SwiftShader su questo container anche il commit precedente all'Urban Expansion impiegava 21,3 s
+  ok('costruzione e terreno', R.buildMs < 30000 && R.terrainVerts < 200000, `costruzione ${R.buildMs} ms, vertici del terreno ${R.terrainVerts} (LOW)`);
   console.log('     rendering dalla piazza (SwiftShader, non FPS): ' + R.render.calls + ' draw call, ' + Math.round(R.render.tris / 1000) + 'k triangoli');
   ok('nessun errore JavaScript', errs.length === 0, errs.slice(0, 3).join(' | '));
   await b.close(); console.log(fails ? `\n${fails} test FALLITI` : '\ntutti i test superati'); process.exit(fails ? 1 : 0);

@@ -1,0 +1,142 @@
+{
+ "id": "u1_bottega",
+ "formato": "omaha1944-urban-detail-1",
+ "generatore": "urban_house",
+ "blender": "5.2.3 LTS",
+ "cfg": {
+  "id": "u1_bottega",
+  "u": -70.5,
+  "w": 8,
+  "d": 7.2,
+  "piani": 3,
+  "mat": "mattoni",
+  "tetto": "ardesia",
+  "pitch": 0.78,
+  "porta": [
+   1
+  ],
+  "aperta": true,
+  "scala": true,
+  "fori": {
+   "s": [
+    [
+     3,
+     1
+    ],
+    [
+     0,
+     3
+    ],
+    [
+     2,
+     3
+    ],
+    [
+     0,
+     5
+    ],
+    [
+     3,
+     5
+    ]
+   ],
+   "n": [
+    [
+     2,
+     3
+    ],
+    [
+     1,
+     5
+    ]
+   ],
+   "o": [],
+   "e": []
+  },
+  "tipo": "bottega con abitazione (esplorabile, 3 piani)"
+ },
+ "gruppi": [
+  "g:-1",
+  "o:n:1:5",
+  "o:n:2:3",
+  "o:s:0:3",
+  "o:s:0:5",
+  "o:s:1:0",
+  "o:s:2:3",
+  "o:s:3:1",
+  "o:s:3:5",
+  "p:e:0:0",
+  "p:e:0:2",
+  "p:e:0:4",
+  "p:e:0:5",
+  "p:e:1:0",
+  "p:e:1:2",
+  "p:e:1:4",
+  "p:e:1:5",
+  "p:e:2:0",
+  "p:e:2:2",
+  "p:e:2:4",
+  "p:e:2:5",
+  "p:n:0:0",
+  "p:n:0:2",
+  "p:n:0:4",
+  "p:n:0:5",
+  "p:n:1:0",
+  "p:n:1:2",
+  "p:n:1:4",
+  "p:n:2:0",
+  "p:n:2:2",
+  "p:n:2:4",
+  "p:n:2:5",
+  "p:n:3:0",
+  "p:n:3:2",
+  "p:n:3:4",
+  "p:n:3:5",
+  "p:o:0:0",
+  "p:o:0:2",
+  "p:o:0:4",
+  "p:o:0:5",
+  "p:o:1:0",
+  "p:o:1:2",
+  "p:o:1:4",
+  "p:o:1:5",
+  "p:o:2:0",
+  "p:o:2:2",
+  "p:o:2:4",
+  "p:o:2:5",
+  "p:s:0:0",
+  "p:s:0:2",
+  "p:s:0:4",
+  "p:s:1:2",
+  "p:s:1:4",
+  "p:s:1:5",
+  "p:s:2:0",
+  "p:s:2:2",
+  "p:s:2:4",
+  "p:s:2:5",
+  "p:s:3:0",
+  "p:s:3:2",
+  "p:s:3:4"
+ ],
+ "triangoli": {
+  "LOD0": 19878
+ },
+ "materiali": [
+  "brick",
+  "clay",
+  "glass",
+  "glass_far",
+  "iron",
+  "oak_beam",
+  "quoin",
+  "stone",
+  "stone_wet",
+  "wood",
+  "wood_paint"
+ ],
+ "kb": 1492.4,
+ "validazione": {
+  "errori": []
+ },
+ "tempo_s": 1.2
+}

@@ -1,0 +1,897 @@
+{
+ "formato": "omaha1944-urban-1",
+ "nota": "Definizioni degli edifici dell'Urban Expansion 3.0: lette dal gioco (src/aaa/xdestruct.js) e dal generatore Blender (tools/asset-pipeline/blender/generators/urban_house.py)",
+ "isolato1": {
+  "front": 90,
+  "items": [
+   {
+    "id": "u1_casa_a",
+    "u": -84.4,
+    "w": 7.2,
+    "d": 6.8,
+    "piani": 2,
+    "mat": "pietra",
+    "tetto": "ardesia",
+    "pitch": 0.86,
+    "porta": [
+     1
+    ],
+    "aperta": true,
+    "scala": true,
+    "fori": {
+     "s": [
+      [
+       3,
+       1
+      ],
+      [
+       1,
+       3
+      ],
+      [
+       3,
+       3
+      ]
+     ],
+     "n": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       3
+      ]
+     ],
+     "o": [
+      [
+       1,
+       3
+      ]
+     ],
+     "e": []
+    },
+    "tipo": "casa a schiera (esplorabile)"
+   },
+   {
+    "id": "u1_casa_b",
+    "u": -77.65,
+    "w": 6.2,
+    "d": 6.4,
+    "piani": 2,
+    "mat": "intonaco:0xe8dcc0",
+    "tetto": "tegole",
+    "pitch": 0.8,
+    "porta": [
+     2
+    ],
+    "aperta": false,
+    "persiane": true,
+    "fori": {
+     "s": [
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       3
+      ],
+      [
+       2,
+       3
+      ]
+     ],
+     "n": [
+      [
+       1,
+       3
+      ]
+     ],
+     "o": [],
+     "e": []
+    },
+    "tipo": "casa a schiera"
+   },
+   {
+    "id": "u1_bottega",
+    "u": -70.5,
+    "w": 8,
+    "d": 7.2,
+    "piani": 3,
+    "mat": "mattoni",
+    "tetto": "ardesia",
+    "pitch": 0.78,
+    "porta": [
+     1
+    ],
+    "aperta": true,
+    "scala": true,
+    "fori": {
+     "s": [
+      [
+       3,
+       1
+      ],
+      [
+       0,
+       3
+      ],
+      [
+       2,
+       3
+      ],
+      [
+       0,
+       5
+      ],
+      [
+       3,
+       5
+      ]
+     ],
+     "n": [
+      [
+       2,
+       3
+      ],
+      [
+       1,
+       5
+      ]
+     ],
+     "o": [],
+     "e": []
+    },
+    "tipo": "bottega con abitazione (esplorabile, 3 piani)"
+   },
+   {
+    "id": "u1_casa_c",
+    "u": -62.75,
+    "w": 7.4,
+    "d": 6.6,
+    "piani": 2,
+    "mat": "intonaco:0xd8c49c",
+    "tetto": "tegole",
+    "pitch": 0.9,
+    "porta": [
+     0
+    ],
+    "aperta": false,
+    "persiane": true,
+    "fori": {
+     "s": [
+      [
+       2,
+       1
+      ],
+      [
+       0,
+       3
+      ],
+      [
+       2,
+       3
+      ]
+     ],
+     "n": [
+      [
+       1,
+       1
+      ]
+     ],
+     "o": [],
+     "e": [
+      [
+       1,
+       3
+      ]
+     ]
+    },
+    "tipo": "casa a schiera",
+    "danni": true
+   },
+   {
+    "id": "u1_rimessa",
+    "u": -55.3,
+    "w": 7.4,
+    "d": 6.2,
+    "piani": 1,
+    "mat": "pietra",
+    "tetto": "ardesia",
+    "pitch": 0.7,
+    "porta": [
+     1,
+     2
+    ],
+    "aperta": true,
+    "fori": {
+     "s": [],
+     "n": [],
+     "o": [],
+     "e": [
+      [
+       1,
+       1
+      ]
+     ]
+    },
+    "tipo": "rimessa (portone)"
+   }
+  ]
+ },
+ "file": [
+  {
+   "id": "u2",
+   "zona": "rue Neuve (lato sud)",
+   "fronte": "n",
+   "v": 97.2,
+   "u0": -91,
+   "gap": 0.1,
+   "items": [
+    {
+     "w": 6.8,
+     "d": 6.6,
+     "piani": 2,
+     "mat": "intonaco:0xe0d0a8",
+     "tetto": "tegole",
+     "porta": [
+      1
+     ],
+     "aperta": false,
+     "persiane": true,
+     "fori": {
+      "n": [
+       [
+        3,
+        1
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        3,
+        3
+       ]
+      ],
+      "s": [
+       [
+        1,
+        3
+       ]
+      ]
+     },
+     "tipo": "casa a schiera"
+    },
+    {
+     "w": 7.6,
+     "d": 7,
+     "piani": 2,
+     "mat": "pietra",
+     "tetto": "ardesia",
+     "porta": [
+      2
+     ],
+     "aperta": true,
+     "scala": true,
+     "fori": {
+      "n": [
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        3,
+        3
+       ]
+      ],
+      "s": [
+       [
+        2,
+        1
+       ]
+      ]
+     },
+     "tipo": "casa a schiera (esplorabile)"
+    },
+    {
+     "w": 6.4,
+     "d": 6.2,
+     "piani": 1,
+     "mat": "pietra",
+     "tetto": "ardesia",
+     "pitch": 0.9,
+     "porta": [
+      1
+     ],
+     "aperta": false,
+     "persiane": true,
+     "fori": {
+      "n": [
+       [
+        2,
+        1
+       ]
+      ]
+     },
+     "tipo": "casa rurale",
+     "danni": true
+    },
+    {
+     "w": 8,
+     "d": 6.8,
+     "piani": 2,
+     "mat": "mattoni",
+     "tetto": "tegole",
+     "porta": [
+      1
+     ],
+     "aperta": false,
+     "persiane": true,
+     "fori": {
+      "n": [
+       [
+        3,
+        1
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        2,
+        3
+       ]
+      ],
+      "e": [
+       [
+        1,
+        3
+       ]
+      ]
+     },
+     "tipo": "casa in mattoni"
+    }
+   ]
+  },
+  {
+   "id": "u3",
+   "zona": "rue de l'Église",
+   "fronte": "s",
+   "v": -38.6,
+   "u0": -119.4,
+   "gap": 0.1,
+   "items": [
+    {
+     "w": 6.4,
+     "d": 6.6,
+     "piani": 2,
+     "mat": "pietra",
+     "tetto": "ardesia",
+     "pitch": 0.9,
+     "porta": [
+      1
+     ],
+     "aperta": false,
+     "persiane": true,
+     "fori": {
+      "s": [
+       [
+        2,
+        1
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        2,
+        3
+       ]
+      ],
+      "n": [
+       [
+        1,
+        3
+       ]
+      ]
+     },
+     "tipo": "casa del sagrestano"
+    },
+    {
+     "w": 8.4,
+     "d": 7.2,
+     "piani": 2,
+     "mat": "mattoni",
+     "tetto": "ardesia",
+     "porta": [
+      2
+     ],
+     "aperta": true,
+     "scala": true,
+     "fori": {
+      "s": [
+       [
+        0,
+        1
+       ],
+       [
+        4,
+        1
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        2,
+        3
+       ],
+       [
+        4,
+        3
+       ]
+      ],
+      "n": [
+       [
+        1,
+        1
+       ]
+      ]
+     },
+     "tipo": "ufficio postale (PTT, esplorabile)"
+    }
+   ]
+  },
+  {
+   "id": "u4",
+   "zona": "Grande Rue (lato nord)",
+   "fronte": "s",
+   "v": -1.8,
+   "u0": -76,
+   "gap": 0.1,
+   "items": [
+    {
+     "w": 7.2,
+     "d": 7,
+     "piani": 2,
+     "mat": "intonaco:0xd8c8a4",
+     "tetto": "ardesia",
+     "porta": [
+      1
+     ],
+     "aperta": true,
+     "scala": true,
+     "fori": {
+      "s": [
+       [
+        3,
+        1
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        3,
+        3
+       ]
+      ],
+      "n": [
+       [
+        2,
+        1
+       ]
+      ]
+     },
+     "tipo": "caffè-tabacchi (esplorabile)"
+    },
+    {
+     "w": 6.4,
+     "d": 6.4,
+     "piani": 2,
+     "mat": "pietra",
+     "tetto": "tegole",
+     "porta": [
+      2
+     ],
+     "aperta": false,
+     "persiane": true,
+     "fori": {
+      "s": [
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        2,
+        3
+       ]
+      ]
+     },
+     "tipo": "casa a schiera",
+     "danni": true
+    },
+    {
+     "w": 8,
+     "d": 7.4,
+     "piani": 3,
+     "mat": "mattoni",
+     "tetto": "ardesia",
+     "porta": [
+      1
+     ],
+     "aperta": false,
+     "persiane": true,
+     "fori": {
+      "s": [
+       [
+        3,
+        1
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        2,
+        3
+       ],
+       [
+        0,
+        5
+       ],
+       [
+        3,
+        5
+       ]
+      ],
+      "n": [
+       [
+        1,
+        3
+       ]
+      ]
+     },
+     "tipo": "casa borghese a tre piani"
+    }
+   ]
+  },
+  {
+   "id": "u5",
+   "zona": "Grande Rue (lato sud)",
+   "fronte": "n",
+   "v": 8.6,
+   "u0": -70,
+   "gap": 0.1,
+   "items": [
+    {
+     "w": 6.4,
+     "d": 5.6,
+     "piani": 1,
+     "mat": "intonaco:0xe8dcc0",
+     "tetto": "tegole",
+     "porta": [
+      1
+     ],
+     "aperta": false,
+     "persiane": true,
+     "fori": {
+      "n": [
+       [
+        3,
+        1
+       ]
+      ]
+     },
+     "tipo": "casa rurale"
+    },
+    {
+     "w": 7,
+     "d": 5.8,
+     "piani": 2,
+     "mat": "pietra",
+     "tetto": "ardesia",
+     "porta": [
+      2
+     ],
+     "aperta": true,
+     "scala": true,
+     "fori": {
+      "n": [
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        3,
+        3
+       ]
+      ]
+     },
+     "tipo": "casa (esplorabile)"
+    },
+    {
+     "w": 6,
+     "d": 5.6,
+     "piani": 1,
+     "mat": "pietra",
+     "tetto": "ardesia",
+     "porta": [
+      0
+     ],
+     "aperta": false,
+     "persiane": true,
+     "fori": {
+      "n": [
+       [
+        2,
+        1
+       ]
+      ]
+     },
+     "tipo": "casa rurale"
+    }
+   ]
+  },
+  {
+   "id": "u6",
+   "zona": "Ferme de la Croix (agricola)",
+   "fronte": "s",
+   "v": 44,
+   "u0": 36.8,
+   "gap": 4.8,
+   "items": [
+    {
+     "w": 9.6,
+     "d": 7,
+     "piani": 2,
+     "mat": "pietra",
+     "tetto": "ardesia",
+     "pitch": 0.9,
+     "porta": [
+      2
+     ],
+     "aperta": true,
+     "scala": true,
+     "fori": {
+      "s": [
+       [
+        0,
+        1
+       ],
+       [
+        4,
+        1
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        2,
+        3
+       ],
+       [
+        4,
+        3
+       ]
+      ],
+      "n": [
+       [
+        2,
+        1
+       ]
+      ]
+     },
+     "tipo": "casa colonica (esplorabile)"
+    },
+    {
+     "w": 12,
+     "d": 8,
+     "piani": 1,
+     "mat": "pietra",
+     "tetto": "ardesia",
+     "pitch": 0.75,
+     "porta": [
+      2,
+      3
+     ],
+     "aperta": true,
+     "fori": {
+      "n": [
+       [
+        1,
+        1
+       ],
+       [
+        4,
+        1
+       ]
+      ]
+     },
+     "tipo": "fienile"
+    }
+   ]
+  },
+  {
+   "id": "u7",
+   "zona": "Ferme de la Croix (agricola)",
+   "fronte": "n",
+   "v": 52,
+   "u0": 36.8,
+   "gap": 4.8,
+   "items": [
+    {
+     "w": 9.6,
+     "d": 6,
+     "piani": 1,
+     "mat": "mattoni",
+     "tetto": "tegole",
+     "porta": [
+      1,
+      3
+     ],
+     "aperta": true,
+     "fori": {
+      "n": [
+       [
+        2,
+        1
+       ]
+      ],
+      "s": [
+       [
+        1,
+        1
+       ],
+       [
+        3,
+        1
+       ]
+      ]
+     },
+     "tipo": "stalla"
+    },
+    {
+     "w": 8,
+     "d": 6,
+     "piani": 1,
+     "mat": "pietra",
+     "tetto": "tegole",
+     "pitch": 0.7,
+     "porta": [
+      1,
+      2
+     ],
+     "aperta": true,
+     "fori": {},
+     "tipo": "rimessa dei carri"
+    }
+   ]
+  },
+  {
+   "id": "u8",
+   "zona": "rue des Ateliers (servizi)",
+   "fronte": "s",
+   "v": -40,
+   "u0": 48,
+   "gap": 0.3,
+   "items": [
+    {
+     "w": 9,
+     "d": 7,
+     "piani": 1,
+     "mat": "mattoni",
+     "tetto": "ardesia",
+     "pitch": 0.65,
+     "porta": [
+      1,
+      2
+     ],
+     "aperta": true,
+     "fori": {
+      "s": [
+       [
+        4,
+        1
+       ]
+      ],
+      "n": [
+       [
+        1,
+        1
+       ],
+       [
+        3,
+        1
+       ]
+      ]
+     },
+     "tipo": "officina meccanica"
+    },
+    {
+     "w": 11,
+     "d": 8,
+     "piani": 1,
+     "mat": "pietra",
+     "tetto": "ardesia",
+     "pitch": 0.62,
+     "porta": [
+      2,
+      3
+     ],
+     "aperta": true,
+     "fori": {
+      "n": [
+       [
+        1,
+        1
+       ],
+       [
+        4,
+        1
+       ]
+      ]
+     },
+     "tipo": "magazzino"
+    },
+    {
+     "w": 6,
+     "d": 5.6,
+     "piani": 1,
+     "mat": "pietra",
+     "tetto": "tegole",
+     "pitch": 0.8,
+     "porta": [
+      1
+     ],
+     "aperta": true,
+     "fori": {
+      "s": [
+       [
+        2,
+        1
+       ]
+      ]
+     },
+     "tipo": "forgia del maniscalco"
+    },
+    {
+     "w": 7.4,
+     "d": 6,
+     "piani": 1,
+     "mat": "mattoni",
+     "tetto": "tegole",
+     "porta": [
+      1,
+      2
+     ],
+     "aperta": false,
+     "fori": {
+      "e": [
+       [
+        1,
+        1
+       ]
+      ]
+     },
+     "tipo": "rimessa"
+    }
+   ]
+  }
+ ]
+}

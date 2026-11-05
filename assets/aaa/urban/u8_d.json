@@ -1,0 +1,77 @@
+{
+ "id": "u8_d",
+ "formato": "omaha1944-urban-detail-1",
+ "generatore": "urban_house",
+ "blender": "5.2.3 LTS",
+ "cfg": {
+  "w": 7.4,
+  "d": 6,
+  "piani": 1,
+  "mat": "mattoni",
+  "tetto": "tegole",
+  "porta": [
+   1,
+   2
+  ],
+  "aperta": false,
+  "fori": {
+   "e": [
+    [
+     1,
+     1
+    ]
+   ]
+  },
+  "tipo": "rimessa",
+  "id": "u8_d",
+  "fronte": "s"
+ },
+ "gruppi": [
+  "a:s:1:0",
+  "a:s:2:0",
+  "o:e:1:1",
+  "o:s:1:0",
+  "o:s:2:0",
+  "p:e:0:0",
+  "p:e:0:1",
+  "p:e:1:0",
+  "p:e:2:0",
+  "p:e:2:1",
+  "p:n:0:0",
+  "p:n:0:1",
+  "p:n:1:0",
+  "p:n:1:1",
+  "p:n:2:0",
+  "p:n:2:1",
+  "p:n:3:0",
+  "p:n:3:1",
+  "p:o:0:0",
+  "p:o:0:1",
+  "p:o:1:0",
+  "p:o:1:1",
+  "p:o:2:0",
+  "p:o:2:1",
+  "p:s:0:0",
+  "p:s:0:1",
+  "p:s:3:0",
+  "p:s:3:1"
+ ],
+ "triangoli": {
+  "LOD0": 6072
+ },
+ "materiali": [
+  "glass",
+  "glass_far",
+  "iron",
+  "oak_beam",
+  "quoin",
+  "stone_wet",
+  "wood",
+  "wood_paint"
+ ],
+ "kb": 464.2,
+ "validazione": {
+  "errori": []
+ },
+ "tempo_s": 0.4
+}

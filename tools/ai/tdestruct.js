@@ -16,7 +16,7 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   const R = await p.evaluate(async () => {
     for (let i = 0; i < 120 && !XDZ.ready; i++) await new Promise(r => setTimeout(r, 500)); GAME.running = false;
     const sim = s => { for (let i = 0; i < s * 30; i++) { GAME.time += 1 / 30; xdzTick(1 / 30); } }, out = { ready: XDZ.ready, kit: XDZ.kitMan.validazione.errori.length, set: XDZ.kitMan.set };
-    const H = () => XDZ.bldgs[0], Bn = () => XDZ.bldgs[1], removed = mat => XDZ.panels.filter(q => q.mat === mat).reduce((a, q) => a + q.cells.filter(c => !c.alive).length, 0);
+    const H = () => XDZ.bldgs[0], Bn = () => XDZ.bldgs[1], removed = mat => XDZ.panels.filter(q => q.mat === mat && /_lab$/.test(q.b.id)) /* solo gli edifici del laboratorio: le case urbane possono avere danni preesistenti */.reduce((a, q) => a + q.cells.filter(c => !c.alive).length, 0);
     out.parts = { pannelli: XDZ.panels.length, celle: XDZ.panels.reduce((a, q) => a + q.cells.length, 0), tetti: XDZ.roofs.length, solai: XDZ.floors.length, nonAppoggiati: XDZ.panels.filter(q => !xdzSupported(q)).length };
     // A: armi leggere — la pietra prende segni ma non perde celle; il legno sì
     xdzScenario('A'); sim(10); out.A = { pietra: removed('pietra'), legno: removed('legno'), segni: XDZ.decN, crolli: XDZ.st.collapses };
@@ -24,9 +24,9 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
     xdzReset({ terrain: true }); const h = H(), ox = h.x + h.w / 2 + 3, oz = h.z, ix = h.x + 1, iz = h.z;
     const before = xdzPath(ox, oz, ix, iz); const t = new V3(h.x + h.w / 2, h.base + 1.3, h.z), o = t.clone().add(new V3(4.5, .5, .3));   // fra la casa e il fienile (6 m)
     xdzShell(o, t.clone().sub(o).normalize()); const t2 = t.clone().add(new V3(0, -.8, 0)); xdzShell(o, t2.sub(o).normalize()); sim(6);   // due colpi bassi: varco per la fanteria
-    const wall = XDZ.panels.filter(q => q.face && q.face.ry === -PI / 2), gone = wall.reduce((a, q) => a + q.cells.filter(c => !c.alive).length, 0), tot = wall.reduce((a, q) => a + q.cells.length, 0);
+    const wall = XDZ.panels.filter(q => q.b.id === 'casa_lab' && q.face && q.face.ry === -PI / 2), gone = wall.reduce((a, q) => a + q.cells.filter(c => !c.alive).length, 0), tot = wall.reduce((a, q) => a + q.cells.length, 0);
     const after = xdzPath(ox, oz, ix, iz), cellsOff = XDZ.panels.every(q => q.cells.every(c => c.alive || !c.sol.on));
-    out.B = { prima: before && +before.len.toFixed(1), dopo: after && +after.len.toFixed(1), celleTolte: gone, totaliMuro: tot, colliderCoerenti: cellsOff, altriMuri: XDZ.panels.filter(q => !wall.includes(q) && q.mat === 'pietra').reduce((a, q) => a + q.cells.filter(c => !c.alive).length, 0) };
+    out.B = { prima: before && +before.len.toFixed(1), dopo: after && +after.len.toFixed(1), celleTolte: gone, totaliMuro: tot, colliderCoerenti: cellsOff, altriMuri: XDZ.panels.filter(q => !wall.includes(q) && q.mat === 'pietra' && /_lab$/.test(q.b.id)).reduce((a, q) => a + q.cells.filter(c => !c.alive).length, 0) };
     // C: crollo strutturale (pilastri del fienile, muro portante della casa) — eventi di cedimento, macerie
     xdzScenario('C'); sim(16); const evC = XDZ.events.map(e => e.type);
     out.C = { tetto: evC.includes('TETTO_CROLLATO'), trave: evC.includes('TRAVE_CEDUTA'), crolli: XDZ.st.collapses, corpi: XDZ.bodies.length, attivi: XDZ.bodies.filter(q => !q.sleep).length, macerieCollider: XDZ.bodies.filter(q => q.sol).length, coperture: covers.filter(c => c.xdz === true).length, solaiSpenti: FLOORS.filter(f => f.xdz && f.off).length };

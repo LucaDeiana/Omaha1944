@@ -1,0 +1,74 @@
+{
+ "id": "u5_c",
+ "formato": "omaha1944-urban-detail-1",
+ "generatore": "urban_house",
+ "blender": "5.2.3 LTS",
+ "cfg": {
+  "w": 6,
+  "d": 5.6,
+  "piani": 1,
+  "mat": "pietra",
+  "tetto": "ardesia",
+  "porta": [
+   0
+  ],
+  "aperta": false,
+  "persiane": true,
+  "fori": {
+   "n": [
+    [
+     2,
+     1
+    ]
+   ]
+  },
+  "tipo": "casa rurale",
+  "id": "u5_c",
+  "fronte": "n"
+ },
+ "gruppi": [
+  "a:n:0:0",
+  "a:n:2:1",
+  "g:-1",
+  "o:n:0:0",
+  "o:n:2:1",
+  "p:e:0:0",
+  "p:e:0:1",
+  "p:e:1:0",
+  "p:e:1:1",
+  "p:n:1:0",
+  "p:n:1:1",
+  "p:n:2:0",
+  "p:o:0:0",
+  "p:o:0:1",
+  "p:o:1:0",
+  "p:o:1:1",
+  "p:s:0:0",
+  "p:s:0:1",
+  "p:s:1:0",
+  "p:s:1:1",
+  "p:s:2:0",
+  "p:s:2:1"
+ ],
+ "triangoli": {
+  "LOD0": 7214
+ },
+ "materiali": [
+  "brick",
+  "clay",
+  "glass",
+  "glass_far",
+  "iron",
+  "oak_beam",
+  "quoin",
+  "stone",
+  "stone_wet",
+  "wood",
+  "wood_paint"
+ ],
+ "kb": 544.9,
+ "validazione": {
+  "errori": []
+ },
+ "tempo_s": 0.5
+}

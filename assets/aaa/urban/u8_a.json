@@ -1,0 +1,90 @@
+{
+ "id": "u8_a",
+ "formato": "omaha1944-urban-detail-1",
+ "generatore": "urban_house",
+ "blender": "5.2.3 LTS",
+ "cfg": {
+  "w": 9,
+  "d": 7,
+  "piani": 1,
+  "mat": "mattoni",
+  "tetto": "ardesia",
+  "pitch": 0.65,
+  "porta": [
+   1,
+   2
+  ],
+  "aperta": true,
+  "fori": {
+   "s": [
+    [
+     4,
+     1
+    ]
+   ],
+   "n": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     1
+    ]
+   ]
+  },
+  "tipo": "officina meccanica",
+  "id": "u8_a",
+  "fronte": "s"
+ },
+ "gruppi": [
+  "o:n:1:1",
+  "o:n:3:1",
+  "o:s:1:0",
+  "o:s:2:0",
+  "o:s:4:1",
+  "p:e:0:0",
+  "p:e:0:1",
+  "p:e:1:0",
+  "p:e:1:1",
+  "p:e:2:0",
+  "p:e:2:1",
+  "p:n:0:0",
+  "p:n:0:1",
+  "p:n:1:0",
+  "p:n:2:0",
+  "p:n:2:1",
+  "p:n:3:0",
+  "p:n:4:0",
+  "p:n:4:1",
+  "p:o:0:0",
+  "p:o:0:1",
+  "p:o:1:0",
+  "p:o:1:1",
+  "p:o:2:0",
+  "p:o:2:1",
+  "p:s:0:0",
+  "p:s:0:1",
+  "p:s:3:0",
+  "p:s:3:1",
+  "p:s:4:0"
+ ],
+ "triangoli": {
+  "LOD0": 10968
+ },
+ "materiali": [
+  "glass",
+  "glass_far",
+  "iron",
+  "oak_beam",
+  "quoin",
+  "stone_wet",
+  "wood",
+  "wood_paint"
+ ],
+ "kb": 826.6,
+ "validazione": {
+  "errori": []
+ },
+ "tempo_s": 0.6
+}

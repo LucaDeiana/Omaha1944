@@ -1,0 +1,92 @@
+{
+ "id": "u8_b",
+ "formato": "omaha1944-urban-detail-1",
+ "generatore": "urban_house",
+ "blender": "5.2.3 LTS",
+ "cfg": {
+  "w": 11,
+  "d": 8,
+  "piani": 1,
+  "mat": "pietra",
+  "tetto": "ardesia",
+  "pitch": 0.62,
+  "porta": [
+   2,
+   3
+  ],
+  "aperta": true,
+  "fori": {
+   "n": [
+    [
+     1,
+     1
+    ],
+    [
+     4,
+     1
+    ]
+   ]
+  },
+  "tipo": "magazzino",
+  "id": "u8_b",
+  "fronte": "s"
+ },
+ "gruppi": [
+  "o:n:1:1",
+  "o:n:4:1",
+  "o:s:2:0",
+  "o:s:3:0",
+  "p:e:0:0",
+  "p:e:0:1",
+  "p:e:1:0",
+  "p:e:1:1",
+  "p:e:2:0",
+  "p:e:2:1",
+  "p:e:3:0",
+  "p:e:3:1",
+  "p:n:0:0",
+  "p:n:0:1",
+  "p:n:1:0",
+  "p:n:2:0",
+  "p:n:2:1",
+  "p:n:3:0",
+  "p:n:3:1",
+  "p:n:4:0",
+  "p:n:5:0",
+  "p:n:5:1",
+  "p:o:0:0",
+  "p:o:0:1",
+  "p:o:1:0",
+  "p:o:1:1",
+  "p:o:2:0",
+  "p:o:2:1",
+  "p:o:3:0",
+  "p:o:3:1",
+  "p:s:0:0",
+  "p:s:0:1",
+  "p:s:1:0",
+  "p:s:1:1",
+  "p:s:4:0",
+  "p:s:4:1",
+  "p:s:5:0",
+  "p:s:5:1"
+ ],
+ "triangoli": {
+  "LOD0": 13316
+ },
+ "materiali": [
+  "glass",
+  "glass_far",
+  "iron",
+  "oak_beam",
+  "quoin",
+  "stone_wet",
+  "wood",
+  "wood_paint"
+ ],
+ "kb": 994.3,
+ "validazione": {
+  "errori": []
+ },
+ "tempo_s": 0.9
+}

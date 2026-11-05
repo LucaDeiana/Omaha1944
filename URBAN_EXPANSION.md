@@ -80,10 +80,41 @@ Strade nuove: rue de l'Église, accesso della fattoria, rue des Ateliers. Ogni z
 
 **Numero attuale di edifici nuovi dell'Urban Expansion 3.0: 25, più 3 gruppi di muretti.**
 
-## Limite principale (da risolvere)
-**Il dettaglio visivo NON è al livello della casa Blender** (`normandy_house_01`):
-- le finestre sono vani senza telai né davanzali;
-- persiane e porte sono tavole piatte;
-- i tetti non hanno comignoli, gronde né abbaini.
+## Dettaglio architettonico al livello della casa Blender (fatto)
+- **Generatore Blender** `tools/asset-pipeline/blender/generators/urban_house.py`: estende quello della casa Blender (`normandy_house.py`) e ne riusa le funzioni:
+  - mostre in pietra di Caen (stipiti a blocchi, architravi, davanzali con gocciolatoio);
+  - finestre a due ante con traverse e vetri;
+  - scuri a doghe con controvento a Z, bandelle e cardini;
+  - porte a doghe (aperte, oppure chiuse con bandelle e maniglia) con telaio di quercia e gradino;
+  - cantonali, zoccolo, marcapiano, cornicione, comignoli.
+- **Gruppi**: ogni pezzo appartiene al componente distruttibile che lo sostiene:
+  - `p` pannello di muro, `o` vano (riempimenti di pietra attorno), `a` anta di legno, `g` timpano;
+  - `r` campata del tetto, solo se il tetto è generato in Blender (opzione `tetto_blender`, non usata).
+- **Build**: `scripts/build_urban.py` produce un GLB per edificio (25, tutti validati) da `assets/aaa/urban/urban_defs.json`.
+  - Le definizioni si esportano dal gioco con `scripts/export_urban_defs.js`.
+  - Nel repository ci sono i `.js` (base64) e i manifest; i `.glb` si rigenerano.
+  - In tutto 354.804 triangoli.
+- **Vani di misura vera** nel sistema di distruzione: finestra 0,95 m, porta 1,05 × 2,15 m. Stipiti, davanzale e architrave sono **pannelli di pietra fratturati** (`riempimento`), appesi ai muri vicini, con collider e distruzione.
+- **Tetto generato nel gioco** con la logica di `roof()` della casa Blender, per campata, con le stesse texture e UV in metri:
+  - tavolato, puntoni, frontalino;
+  - ardesie (o tegole piane) posate una per una, con larghezza, rotazione e quota variabili e qualche mancante;
+  - colmo di coppi, grondaia di ghisa, bandinelle.
 
-Prossimo passo richiesto: facciate e tetti generati in Blender con il dettaglio della casa Blender, già divisi nei pannelli fratturati del sistema di distruzione.
+  Ogni campata resta una lastra del grafo dei supporti: crolla e cade come prima.
+- **Nel gioco** (`xdzDetailLoad`):
+  - caricamento progressivo, dal più vicino alla camera;
+  - pezzi uniti per materiale in una mesh per edificio, con i materiali PBR della casa Blender;
+  - una **maschera sulla GPU** (anche nelle ombre) nasconde i gruppi dei componenti rotti, e il pezzo **cade come detrito** con la sua geometria;
+  - dopo un ripristino il dettaglio si ricarica coerente con lo stato salvato.
+- **Test** `tools/ai/tdetail.js` (tutti superati):
+  - 25 GLB validati;
+  - caricamento progressivo, con ogni gruppo legato a un componente;
+  - edificio integro;
+  - colpo di carro: spariscono solo i gruppi dei pannelli colpiti, la maschera è coerente, ci sono detriti;
+  - crollo del timpano con il comignolo;
+  - ripristino.
+
+## Limiti residui
+- I muri sono i pannelli fratturati con le texture triplanari della demo, la stessa famiglia di texture della casa Blender. Non c'è la sbozzatura delle singole pietre.
+- Non ci sono abbaini né interni arredati come nella casa Blender: solo arredo essenziale al pianterreno delle case esplorabili.
+- Le varianti di colore degli scuri non sono ancora per edificio: il colore è unico.

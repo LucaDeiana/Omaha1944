@@ -1,0 +1,72 @@
+{
+ "id": "u8_c",
+ "formato": "omaha1944-urban-detail-1",
+ "generatore": "urban_house",
+ "blender": "5.2.3 LTS",
+ "cfg": {
+  "w": 6,
+  "d": 5.6,
+  "piani": 1,
+  "mat": "pietra",
+  "tetto": "tegole",
+  "pitch": 0.8,
+  "porta": [
+   1
+  ],
+  "aperta": true,
+  "fori": {
+   "s": [
+    [
+     2,
+     1
+    ]
+   ]
+  },
+  "tipo": "forgia del maniscalco",
+  "id": "u8_c",
+  "fronte": "s"
+ },
+ "gruppi": [
+  "g:-1",
+  "o:s:1:0",
+  "o:s:2:1",
+  "p:e:0:0",
+  "p:e:0:1",
+  "p:e:1:0",
+  "p:e:1:1",
+  "p:n:0:0",
+  "p:n:0:1",
+  "p:n:1:0",
+  "p:n:1:1",
+  "p:n:2:0",
+  "p:n:2:1",
+  "p:o:0:0",
+  "p:o:0:1",
+  "p:o:1:0",
+  "p:o:1:1",
+  "p:s:0:0",
+  "p:s:0:1",
+  "p:s:2:0"
+ ],
+ "triangoli": {
+  "LOD0": 8446
+ },
+ "materiali": [
+  "brick",
+  "clay",
+  "glass",
+  "glass_far",
+  "iron",
+  "oak_beam",
+  "quoin",
+  "stone",
+  "stone_wet",
+  "wood",
+  "wood_paint"
+ ],
+ "kb": 630.0,
+ "validazione": {
+  "errori": []
+ },
+ "tempo_s": 0.4
+}

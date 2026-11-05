@@ -11,3 +11,6 @@ dist/
 /local-assets/
 __pycache__/
 tools/asset-pipeline/.cache/
+
+# dettaglio Blender degli edifici urbani: il runtime usa i .js (base64); i .glb si rigenerano con build_urban.py
+assets/aaa/urban/*.glb

@@ -69,7 +69,7 @@ const _xm = new THREE.Matrix4(), _xq = new THREE.Quaternion(), _xs = new V3(), _
 // pannello fratturato: centro, rotazione attorno a y, dimensioni (w lungo il muro, h, t spessore), materiale, modello di frattura
 function xdzPanel(b, role, mat, tpl, cx, cy, cz, ry, w, h, t, o = {}) {
   const kit = XDZ.kit[tpl], M = XDZ_MAT[mat === 'trave' ? 'legno' : mat.split(':')[0]], p = { id: `${b.id}/${role}${b.parts.length}`, b, role, mat, tpl, c: new V3(cx, cy, cz), ry, w, h, t, cells: [], state: 0, supp: true, sup: [], lat: [], covers: [], structural: o.structural ?? true, dead: false, burn: 0, M, o };
-  p.mk = String(mat).startsWith('intonaco') ? 'intonaco' : mat; p.tint = new THREE.Color(String(mat).startsWith('intonaco') ? +(String(mat).split(':')[1] || 0xe2d6bc) : 0xffffff);   // intonaci: un materiale, colore per istanza
+  p.mk = String(mat).startsWith('intonaco') ? 'intonaco' : mat; p.tint = String(mat).startsWith('intonaco') ? new THREE.Color(+(String(mat).split(':')[1] || 0xe2d6bc)).multiplyScalar(1.55) : new THREE.Color(0xffffff);   // la texture d'intonaco è scura: il colore della calce la schiarisce   // intonaci: un materiale, colore per istanza
   _xq.setFromAxisAngle(_xp.set(0, 1, 0), ry); if (o.vertical) _xq.multiply(new THREE.Quaternion().setFromAxisAngle(_xp.set(0, 0, 1), PI / 2));   // pilastro: l'asse lungo del modello diventa verticale
   p.m = new THREE.Matrix4().compose(p.c, _xq.clone(), o.vertical ? new V3(h, w, t) : new V3(w, h, t));
   kit.forEach((K, k) => {
@@ -83,7 +83,7 @@ function xdzPanel(b, role, mat, tpl, cx, cy, cz, ry, w, h, t, o = {}) {
   // collider unico del pannello integro (pochi solidi a riposo: il giocatore e l'audio li scorrono a ogni fotogramma)
   { const bb = new THREE.Box3(); for (const c of p.cells) bb.union(c.bb); p.sol = addSolid(bb.min.x, bb.min.y, bb.min.z, bb.max.x, bb.max.y, bb.max.z, 'xdz_' + mat); p.sol.mat = mat === 'pietra' ? 'muratura' : 'legno'; p.sol.xdzPanel = p; }
   // pelle integra: una superficie unica (niente giunti di frattura visibili su un muro sano); le celle compaiono al primo distacco
-  const SK = xdzSkinPool(p.mk); if (SK.n < SK.cap) { p.skin = SK.n++; SK.im.count = SK.n; SK.im.setMatrixAt(p.skin, p.m); SK.im.setColorAt(p.skin, p.tint); SK.im.instanceColor.needsUpdate = true; SK.im.instanceMatrix.needsUpdate = true; p.SK = SK; }
+  const SK = xdzSkinPool(p.mk); if (o.noSkin) p.noSkin = true; else if (SK.n < SK.cap) { p.skin = SK.n++; SK.im.count = SK.n; SK.im.setMatrixAt(p.skin, p.m); SK.im.setColorAt(p.skin, p.tint); SK.im.instanceColor.needsUpdate = true; SK.im.instanceMatrix.needsUpdate = true; p.SK = SK; }
   p.n0 = p.cells.length; b.parts.push(p); XDZ.panels.push(p); return p;
 }
 function xdzSkinPool(mat) {
@@ -97,6 +97,14 @@ function xdzOpenPanel(p) {
   if (p.sol) { p.sol.on = false; const i = solids.indexOf(p.sol); if (i >= 0) solids.splice(i, 1); } for (const c of p.cells) if (c.alive) solids.push(c.sol);
   if (p.SK) { p.SK.im.setMatrixAt(p.skin, _xZ); p.SK.im.instanceMatrix.needsUpdate = true; }
   for (const c of p.cells) if (c.alive) { c.P.im.setMatrixAt(c.i, c.mi); c.P.im.instanceMatrix.needsUpdate = true; }
+}
+// vano reale dentro il riquadro di un pannello: misure (comuni con il generatore Blender urban_house.py) e pezzi di riempimento [a0, a1, y0, y1]
+const XDZ_WIN = { w: .95, sill: .3, top: .15 }, XDZ_DOOR = { w: 1.05, h: 2.15 };
+function xdzOpening(F, door, pw, ph, a, yb, base) {
+  const A0 = a - pw / 2, A1 = a + pw / 2;
+  if (door) { const w = Math.min(XDZ_DOOR.w, pw - .5), y0 = base, y1 = base + XDZ_DOOR.h, Y1 = yb + 2 * ph; return { a, w, y0, y1, fill: [[A0, a - w / 2, yb, Y1], [a + w / 2, A1, yb, Y1], [a - w / 2, a + w / 2, y1, Y1], [a - w / 2, a + w / 2, yb, y0]] }; }
+  const w = Math.min(XDZ_WIN.w, pw - .6), y0 = yb + XDZ_WIN.sill, y1 = yb + ph - XDZ_WIN.top, Y1 = yb + ph;
+  return { a, w, y0, y1, fill: [[A0, a - w / 2, yb, Y1], [a + w / 2, A1, yb, Y1], [a - w / 2, a + w / 2, yb, y0], [a - w / 2, a + w / 2, y1, Y1]] };
 }
 function xdzSplitRun(run) {
   run.sol.on = false; const i = solids.indexOf(run.sol); if (i >= 0) solids.splice(i, 1);
@@ -113,8 +121,8 @@ function xdzAlive(p) { return p.cells.reduce((a, c) => a + (c.alive ? 1 : 0), 0)
 function xdzState(p) { if (p.dead) return 4; const f = xdzAlive(p); return f <= 0 ? 4 : f < .5 ? 3 : f < .97 ? 2 : p.hits > 0 ? 1 : 0; }
 // tetto o solaio: segmento rigido (geometria unita), appoggiato su pannelli o travi; crolla in blocco
 function xdzSlab(b, role, geo, mat, supports, o = {}) {
-  const mesh = new THREE.Mesh(geo, xdzMat(mat)); mesh.castShadow = mesh.receiveShadow = true; scene.add(mesh); geo.computeBoundingBox();
-  const s = { id: `${b.id}/${role}${b.parts.length}`, b, role, mesh, mat, sup: supports, supp: true, dead: false, state: 0, bb: geo.boundingBox.clone(), sols: [], floors: [], o, structural: true, burn: 0 };
+  let mesh, bb; if (geo.isObject3D) { mesh = geo; scene.add(mesh); mesh.updateMatrixWorld(true); bb = new THREE.Box3().setFromObject(mesh); } else { mesh = new THREE.Mesh(geo, xdzMat(mat)); mesh.castShadow = mesh.receiveShadow = true; scene.add(mesh); geo.computeBoundingBox(); bb = geo.boundingBox.clone(); }
+  const s = { id: `${b.id}/${role}${b.parts.length}`, b, role, mesh, mat, sup: supports, supp: true, dead: false, state: 0, bb, sols: [], floors: [], o, structural: true, burn: 0 };
   if (o.solid !== false) { const B = s.bb, so = addSolid(B.min.x, B.min.y, B.min.z, B.max.x, B.min.y + Math.min(.4, B.max.y - B.min.y), B.max.z, 'xdz_' + role); so.mat = 'legno'; if (o.walk) so.walk = true; s.sols.push(so); }
   if (o.floor) { const F = Object.assign({ xdz: s.id }, o.floor); FLOORS.push(F); s.floors.push(F); }
   b.parts.push(s); (role === 'roof' ? XDZ.roofs : XDZ.floors).push(s); return s;
@@ -145,9 +153,13 @@ function xdzHouse(id, x, z, cfg = {}) {
     for (let c = 0; c < nc; c++) { const stack = []; for (let r = 0; r < nr; r++) {
       const a = F.a0 + (c + .5) * pw, yc = y0 + (r + .5) * ph, [px, pz] = F.ax === 'x' ? [a, F.fixed] : [F.fixed, a];
       if (holes.includes(c + ',' + r)) {
-        stack.push(null); const door = F.k === C.fronte && C.porta.includes(c) && r <= 1; b.openings.push({ face: F.k, c, r, door, px, pz, yc, w: pw, h: ph, ry: F.ry });
-        // porta chiusa o persiane: anta di legno nel vano (non portante, distruttibile, colpita prima del muro)
-        if ((door && !C.aperta && r === 0) || (!door && C.persiane)) { const hh = door ? ph * 2 - .3 : ph - .35, yy = door ? y0 + .35 + hh / 2 : yc; const q = xdzPanel(b, door ? 'porta' : 'persiana', 'legno', 'frac_wood', px, yy, pz, F.ry, pw - .5, hh, .06, { structural: false }); q.door = door; q.sup = []; q.hang = true; }
+        stack.push(null); const door = F.k === C.fronte && C.porta.includes(c) && r <= 1;
+        if (door && r === 1) continue;   // la porta occupa due file: già trattata con la fila 0
+        // vano di misura vera (finestra 0,95 × ph − 0,45; porta 1,05 × 2,15) con riempimenti di pietra fratturati attorno
+        const O = xdzOpening(F, door, pw, ph, a, y0 + r * ph, b.base); O.face = F.k; O.c = c; O.r = r; O.door = door; O.px = px; O.pz = pz; O.ry = F.ry; O.parts = []; b.openings.push(O);
+        for (const [ra, rb, ya, yb] of O.fill) { if (rb - ra < .04 || yb - ya < .04) continue; const ac = (ra + rb) / 2, [qx, qz] = F.ax === 'x' ? [ac, F.fixed] : [F.fixed, ac]; const q = xdzPanel(b, 'riempimento', C.mat, 'frac_stone', qx, (ya + yb) / 2, qz, F.ry, rb - ra + .01, yb - ya + .01, t, { structural: false }); q.hang = true; q.face = F; q.open = O; O.parts.push(q); }
+        // porta chiusa o persiane: anta di legno nel vano (non portante, distruttibile)
+        if ((door && !C.aperta) || (!door && C.persiane)) { const [qx, qz] = F.ax === 'x' ? [O.a, F.fixed] : [F.fixed, O.a]; const q = xdzPanel(b, door ? 'porta' : 'persiana', 'legno', 'frac_wood', qx, (O.y0 + O.y1) / 2, qz, F.ry, O.w - .04, O.y1 - O.y0 - .02, .06, { structural: false, noSkin: !!C.dettagli }); q.door = door; q.hang = true; q.open = O; O.leaf = q; }
         continue;
       }
       const p = xdzPanel(b, 'muro', C.mat, 'frac_stone', px, yc, pz, F.ry, pw + .01, ph + .01, t); p.face = F; p.col = c; p.row = r; stack.push(p);
@@ -156,7 +168,7 @@ function xdzHouse(id, x, z, cfg = {}) {
     b.grid.push(col);
   }
   // ante: appese ai pannelli vicini della stessa facciata
-  for (const q of b.parts.filter(q => q.hang)) q.sup = XDZ.panels.filter(p => p.b === b && p.role === 'muro' && p.c.distanceTo(q.c) < Math.max(q.w, q.h) + 1.3);
+  for (const q of b.parts.filter(q => q.hang)) q.sup = XDZ.panels.filter(p => p.b === b && p.role === 'muro' && p.c.distanceTo(q.c) < Math.max(q.w, q.h) / 2 + 2.2);
   const south = b.grid[0], north = b.grid[1], top = y0 + H, ix0 = x - b.w / 2 + t, ix1 = x + b.w / 2 - t, iz0 = z - b.d / 2 + t, iz1 = z + b.d / 2 - t;
   FLOORS.push({ x0: ix0, x1: ix1, z0: iz0, z1: iz1, y: b.base + .01, xdz: id });
   { const g = new THREE.BoxGeometry(b.w - 2 * t, .08, b.d - 2 * t); g.translate(x, b.base - .03, z); const m = new THREE.Mesh(g, aaaMats().stoneDark); m.receiveShadow = true; scene.add(m); b.ground = m; }
@@ -182,12 +194,12 @@ function xdzHouse(id, x, z, cfg = {}) {
   b.levels.push({ y: top, nome: 'soffitta (non accessibile)' });
   const pitch = C.pitch, W = b.d / 2 + .35, rh = (b.d / 2) * Math.tan(pitch), nb = Math.max(2, Math.round(b.w / 2.8));
   for (const sd of [-1, 1]) for (let k = 0; k < nb; k++) {
-    const u0 = x - b.w / 2 - .3 + k * (b.w + .6) / nb, u1 = u0 + (b.w + .6) / nb, g = xdzRoofGeo(u0, u1, z, sd, top, W, rh, pitch);
+    const u0 = x - b.w / 2 - .3 + k * (b.w + .6) / nb, u1 = u0 + (b.w + .6) / nb, g = C.dettagli ? xdzRoofBay(Math.max(u0, x - b.w / 2 - .14), Math.min(u1, x + b.w / 2 + .14), z, sd, top, W, rh, pitch, C.tetto === 'tegole' ? 'clay' : 'slate', [k === 0 ? -1 : 0, k === nb - 1 ? 1 : 0].filter(Boolean), (id.length * 131 + k * 17 + sd * 7) | 0, C.danni ? .6 : .35) : xdzRoofGeo(u0, u1, z, sd, top, W, rh, pitch);
     const wallRow = (sd > 0 ? south : north), sup = wallRow.map(c => c[nr - 1]).filter(p => p && Math.abs((p.c.x) - (u0 + u1) / 2) < (u1 - u0) / 2 + .6);
     const gab = b.grid[k === 0 ? 2 : k === nb - 1 ? 3 : -1]; if (gab) for (const c of gab) if (c[nr - 1]) sup.push(c[nr - 1]);
     xdzSlab(b, 'roof', g, C.tetto, sup, { solid: true });
   }
-  for (const sd of [-1, 1]) { const sh2 = new THREE.Shape(); sh2.moveTo(-b.d / 2, 0); sh2.lineTo(b.d / 2, 0); sh2.lineTo(0, rh); sh2.lineTo(-b.d / 2, 0); const g = new THREE.ExtrudeGeometry(sh2, { depth: t, bevelEnabled: false }); g.rotateY(PI / 2); g.translate(x + sd * (b.w / 2) - (sd > 0 ? t : 0), top, z); const sl = xdzSlab(b, 'timpano', g, C.mat, b.grid[sd < 0 ? 2 : 3].map(c => c[nr - 1]).filter(Boolean), { solid: true }); sl.isGable = true; }
+  for (const sd of [-1, 1]) { const sh2 = new THREE.Shape(); sh2.moveTo(-b.d / 2, 0); sh2.lineTo(b.d / 2, 0); sh2.lineTo(0, rh); sh2.lineTo(-b.d / 2, 0); const g = new THREE.ExtrudeGeometry(sh2, { depth: t, bevelEnabled: false }); g.rotateY(PI / 2); g.translate(x + sd * (b.w / 2) - (sd > 0 ? t : 0), top, z); const sl = xdzSlab(b, 'timpano', g, C.mat, b.grid[sd < 0 ? 2 : 3].map(c => c[nr - 1]).filter(Boolean), { solid: true }); sl.isGable = true; sl.side = sd; if (sl.mesh.isMesh && String(C.mat).startsWith('intonaco')) sl.mesh.material = xdzMat(C.mat); }
   xdzMakeRuns(b);
   aaaRoom(ix0, b.base - .3, iz0, ix1, top + rh, iz1); b.room = AAA.rooms[AAA.rooms.length - 1]; b.top = top + rh; b.M0 = M0;
   XDZ.bldgs.push(b); return b;
@@ -336,10 +348,12 @@ function xdzCollapsePanel(p) {
 }
 // tetto, solaio o trave che cede: diventa un corpo rigido che cade, poi maceria; la superficie percorribile sparisce
 function xdzSlabFail(s, why) {
-  if (s.dead) return; s.dead = true; s.pending = 0; XDZ.st.collapses++;
+  if (s.dead) return; s.dead = true; s.pending = 0; XDZ.st.collapses++; XDZ.dirty = true;
   for (const so of s.sols) so.on = false; for (const f of s.floors) f.off = true;
-  const c = s.bb.getCenter(new V3()), g = s.mesh.geometry.clone(); g.translate(-c.x, -c.y, -c.z); scene.remove(s.mesh);
-  const m = new THREE.Mesh(g, s.mesh.material); m.castShadow = m.receiveShadow = true; m.position.copy(c); scene.add(m);
+  const c = s.bb.getCenter(new V3()); scene.remove(s.mesh); let m;
+  if (s.mesh.isMesh) { const g = s.mesh.geometry.clone(); g.translate(-c.x, -c.y, -c.z); m = new THREE.Mesh(g, s.mesh.material); m.castShadow = m.receiveShadow = true; }
+  else { m = new THREE.Group(); for (const ch of s.mesh.children) { const g = ch.geometry.clone(); g.translate(-c.x, -c.y, -c.z); const q = new THREE.Mesh(g, ch.material); q.castShadow = true; m.add(q); } }
+  m.position.copy(c); scene.add(m);
   const sz = s.bb.getSize(new V3()); xdzBodyRaw(m, c, new V3(rnd(-.5, .5), -.5, rnd(-.5, .5)), sz, 'L', s.mat);
   if (s.role === 'roof' && s.b.room && !s.b.roofGone) { s.b.roofGone = true; const i = AAA.rooms.indexOf(s.b.room); if (i >= 0) { AAA.rooms.splice(i, 1); if (typeof aaaRoomTick === 'function') aaaRoomTick(); } }   // senza tetto: luce e acustica d'esterno
   xdzEvent(s.role === 'roof' ? 'TETTO_CROLLATO' : s.role === 'solaio' ? 'SOLAIO_CROLLATO' : s.role === 'scala' ? 'SCALA_CROLLATA' : s.role === 'timpano' ? 'TIMPANO_CROLLATO' : 'TRAVE_CEDUTA', s.id);
@@ -511,8 +525,9 @@ function xdzReset(o = {}) {
   XDZ.panels.length = 0; XDZ.roofs.length = 0; XDZ.floors.length = 0; XDZ.bldgs.length = 0; if (XDZ.decals) { XDZ.decN = 0; XDZ.decals.count = 0; }
   if (o.terrain) xdzResetTerrain();
   XDZ.rng = seeded(XDZ.seed = o.seed ?? XDZ.seed ?? 1944); XDZ.log.length = 0; XDZ.events.length = 0; XDZ.navDirty = []; for (const k in XDZ.st) XDZ.st[k] = 0;
+  if (typeof xdzDetailUnloadAll === 'function') xdzDetailUnloadAll();
   XDZ_REG.clear(); xdzRegister(xdzHouse('casa_lab', ...v2W(XDZ_LAB.house[0], XDZ_LAB.house[1]))); xdzRegister(xdzBarn('fienile_lab', ...v2W(XDZ_LAB.barn[0], XDZ_LAB.barn[1])));
-  xdzUrbanBuild(); xdzRowsBuild(); xdzCovers();
+  xdzUrbanBuild(); xdzRowsBuild(); xdzCovers(); xdzDetailLoadAll();
   for (const N of XDZ.navs || []) xdzNavUpdate(new THREE.Box3(new V3(N.x0, -1e3, N.z0), new V3(N.x0 + N.nx * N.s, 1e3, N.z0 + N.nz * N.s)));
   if (typeof AAA !== 'undefined') AAA.shadowDirty = 2; xdzEvent('RESET', o.terrain ? 'scenario' : 'edifici');
 }
@@ -565,7 +580,8 @@ function xdzTick(dt) {
   for (const s of XDZ.roofs.concat(XDZ.floors)) if (s.pending && GAME.time >= s.pending) xdzSlabFail(s, 'appoggio');
   xdzPhysics(dt); xdzFireTick(dt);
   if (XDZ.navDirty.length) { const bb = XDZ.navDirty.reduce((a, b) => a.union(b), XDZ.navDirty[0].clone()); XDZ.navDirty.length = 0; xdzNavUpdate(bb); if (typeof TL !== 'undefined') TL.ver = (TL.ver || 0) + 1; if (XDZ.agents) for (const A of XDZ.agents) if (A.ver !== XDZ.nav.ups) { A.path = xdzPath(...A.a, ...A.b); A.ver = XDZ.nav.ups; } }
-  if (XDZ.dirty) { XDZ.dirty = false; if (AAA.fixedSun) AAA.shadowDirty = Math.max(AAA.shadowDirty || 0, 1); }
+  if (XDZ.dirty) { XDZ.dirty = false; if (AAA.fixedSun) AAA.shadowDirty = Math.max(AAA.shadowDirty || 0, 1); for (const b of XDZ.bldgs) if (b.detail) xdzDetailSync(b); }
+  if ((XDZ.dT = (XDZ.dT || 0) - dt) <= 0) { XDZ.dT = .5; xdzDetailPump(); }
   XDZ.st.updMs = performance.now() - t0; XDZ.st.cells = XDZ.panels.reduce((a, p) => a + p.cells.filter(c => c.alive).length, 0);
   if (XDZ.ui && XDZ.ui.on && (XDZ.uiT = (XDZ.uiT || 0) - dt) <= 0) { XDZ.uiT = .3; xdzUi(); }
 }
@@ -662,7 +678,7 @@ function xdzUrbanPads() {
 function xdzUrbanBuild() {
   const out = [];
   for (const d of XDZ_URBAN.isolato1) {
-    const v = XDZ_URBAN.front - d.d / 2, [x, z] = v2W(d.u, v), b = xdzHouse(d.id, x, z, d); xdzRegister(b, { zona: 'isolato 1 (rue Neuve)' }); out.push(b);
+    const v = XDZ_URBAN.front - d.d / 2, [x, z] = v2W(d.u, v), b = xdzHouse(d.id, x, z, Object.assign({ dettagli: true }, d)); xdzRegister(b, { zona: 'isolato 1 (rue Neuve)' }); out.push(b);
     // arredo essenziale al pianterreno delle case esplorabili (tavolo, sedie, credenza, camino)
     if (d.aperta && d.piani > 1 && typeof v2Furn === 'function') { const G = new AGeo(), F = v2Furn(G, seeded(d.u * 7 | 0)), y = b.base + .01; F.table(x + .8, y, z + .4, 0, 1.5, .8); F.chair(x + .2, y, z + 1.1, PI); F.chair(x + 1.4, y, z + 1.1, PI); F.cupboard(x + b.w / 2 - 1.1, y, z - b.d / 2 + .9, 0, 1.2, 1.9); b.furn = G.build(); }
   }
@@ -729,7 +745,7 @@ function xdzRowsPads() {
 function xdzRowsBuild() {
   const out = [];
   for (const R_ of XDZ_ROWS) for (const d of R_.items) {
-    const [x, z] = v2W(d.u, d.v), b = xdzHouse(d.id, x, z, d); xdzRegister(b, { zona: d.zona }); out.push(b);
+    const [x, z] = v2W(d.u, d.v), b = xdzHouse(d.id, x, z, Object.assign({ dettagli: true }, d)); xdzRegister(b, { zona: d.zona }); out.push(b);
     if (d.aperta && d.piani > 1 && typeof v2Furn === 'function') { const G = new AGeo(), F = v2Furn(G, seeded(Math.abs(d.u * 7) | 0)), y = b.base + .01; F.table(x + .6, y, z + .3, 0, 1.4, .8); F.chair(x, y, z + 1, PI); F.cupboard(x + b.w / 2 - 1.1, y, z - b.d / 2 + .9, 0, 1.2, 1.9); b.furn = G.build(); }
     if (d.danni) xdzPreDamage(b);
   }
@@ -754,4 +770,147 @@ function xdzUrbanValidate() {
   for (let i = 0; i < all.length; i++) { for (let j = i + 1; j < all.length; j++) if (ov(all[i], all[j], -.02)) R.sovrapposizioni.push(all[i].id + '/' + all[j].id); for (const o of other) if (ov(all[i], o, .5)) R.sovrapposizioni.push(all[i].id + '/' + o.id); }
   for (const a of all) for (const [x, y] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0], [0, -1], [0, 1]]) { const u = a.u + x * a.w / 2, v = a.v + y * a.d / 2; if (Math.abs(v - avRoadV(u)) < 3.2 || v2RoadD(u, v) < -.02) R.suStrada.push(a.id); if (avBankD(u, v) < 2.2) R.suArgine.push(a.id); if (Math.max(Math.abs(u), Math.abs(v)) > AV.half - 3) R.fuoriMappa.push(a.id); }
   for (const k in R) R[k] = [...new Set(R[k])]; R.n = all.length; return R;
+}
+
+// ============================================================
+//  DETTAGLIO ARCHITETTONICO BLENDER (assets/aaa/urban/<id>.glb, generatore urban_house.py) legato alla distruzione
+//  Ogni nodo del GLB è «<gruppo>@LOD0»; i gruppi si uniscono per materiale in un'unica mesh per edificio con l'attributo
+//  xgrp (indice globale del gruppo); una maschera (texture 256×64) nasconde sulla GPU i gruppi dei componenti rotti
+//  (anche nell'ombra) e il pezzo cade come detrito con la sua geometria. Caricamento progressivo per distanza.
+// ============================================================
+const XDZD = { mats: {}, depth: {}, n: 1, tex: null, data: null, loading: null, queue: [], tris: 0, loaded: 0 };
+function xdzDMask() {
+  if (XDZD.tex) return XDZD.tex; XDZD.data = new Uint8Array(256 * 64 * 4).fill(255); XDZD.tex = new THREE.DataTexture(XDZD.data, 256, 64, THREE.RGBAFormat); XDZD.tex.needsUpdate = true; return XDZD.tex;
+}
+const XDZD_GLSL_V = `attribute float xgrp; uniform sampler2D uXdzMask;`, XDZD_GLSL_B = `{ vec2 mu = vec2((mod(xgrp, 256.) + .5) / 256., (floor(xgrp / 256.) + .5) / 64.); if (texture2D(uXdzMask, mu).r < .5) transformed = vec3(0.); }`;
+function xdzDPatch(m, key) {
+  m.onBeforeCompile = sh => { sh.uniforms.uXdzMask = { value: xdzDMask() }; sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\n' + XDZD_GLSL_V).replace('#include <begin_vertex>', '#include <begin_vertex>\n' + XDZD_GLSL_B); };
+  return m;
+}
+// materiali come quelli della casa Blender (pipeMat: texture CC0 della demo, scala nelle UV), con la maschera dei gruppi
+function xdzDMat(name) {
+  if (XDZD.mats[name]) return XDZD.mats[name]; const d = PIPE_MATS[name] || [null, [.6, .6, .6], .8, 0], T_ = d[0] && typeof TEXH !== 'undefined' ? TEXH[d[0]] : null;
+  const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(...d[1]), roughness: d[2], metalness: d[3] });
+  if (name === 'glass') { m.transparent = true; m.opacity = .4; m.depthWrite = false; m.side = THREE.DoubleSide; m.envMap = AAA.cube || null; m.roughness = .06; }
+  else if (T_) { m.map = T_.map; m.normalMap = T_.normal; m.aoMap = T_.arm; m.roughnessMap = T_.arm; m.metalnessMap = d[3] ? T_.arm : null; m.aoMapIntensity = .8; }
+  xdzDPatch(m); m.name = 'xdzd_' + name;
+  if (name !== 'glass' && typeof aaaPatch === 'function') aaaPatch(m, { baseY: 0, moss: d[4] || 0, damp: d[5] || 0, key: 'xdzd' });
+  const dm = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking }); xdzDPatch(dm); XDZD.depth[name] = dm;
+  return (XDZD.mats[name] = m);
+}
+function xdzDetailLoadAll() { for (const b of XDZ.bldgs) if (b.cfg && b.cfg.dettagli && !b.detail && !XDZD.queue.includes(b)) XDZD.queue.push(b); }
+// uno alla volta, il più vicino alla camera per primo
+async function xdzDetailPump() {
+  if (XDZD.loading || !XDZD.queue.length) return; const cp = camera.position; XDZD.queue.sort((a, c) => Math.hypot(a.x - cp.x, a.z - cp.z) - Math.hypot(c.x - cp.x, c.z - cp.z));
+  const b = XDZD.queue.shift(); if (!XDZ.bldgs.includes(b)) return; XDZD.loading = b;
+  try { await xdzDetailLoad(b); } catch (e) { b.detail = { err: String(e) }; } finally { XDZD.loading = null; }
+}
+async function xdzDetailLoad(b) {
+  xdzDMask(); const id = b.id; if (!(window.URBAN_GLB && URBAN_GLB[id] && URBAN_GLB[id].glb)) await aaaLoadScript('assets/aaa/urban/' + id + '.js?r=' + (XDZD.rel = (XDZD.rel || 0) + 1));   // dopo un reset i dati liberati si ricaricano dal file
+  if (!XDZ.bldgs.includes(b)) return;
+  const src = URBAN_GLB[id], bin = Uint8Array.from(atob(src.glb), c => c.charCodeAt(0)), gltf = await new Promise((res, rej) => new THREE.GLTFLoader().parse(bin.buffer, '', res, rej));
+  if (!XDZ.bldgs.includes(b)) return;
+  const byMat = {}, groups = {}; gltf.scene.updateMatrixWorld(true);
+  gltf.scene.traverse(o => {
+    if (!o.isMesh) return; let n = o; while (n && !/@LOD0$/.test(n.name || '')) n = n.parent; if (!n) return; const key = n.name.split('@')[0].replace(/_/g, ':');   // nel GLB «p_s_1_2»
+    const G = groups[key] || (groups[key] = { key, gi: XDZD.n++, parts: [], box: new THREE.Box3(), on: true });
+    const g = o.geometry.clone().applyMatrix4(o.matrixWorld).toNonIndexed(), cnt = g.attributes.position.count; g.setAttribute('xgrp', new THREE.BufferAttribute(new Float32Array(cnt).fill(G.gi), 1)); if (g.attributes.uv && !g.attributes.uv2) g.setAttribute('uv2', g.attributes.uv);
+    for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv', 'uv2', 'xgrp'].includes(k)) g.deleteAttribute(k);
+    if (!g.attributes.uv) { g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(cnt * 2), 2)); g.setAttribute('uv2', g.attributes.uv); }
+    const mn = o.material.name || 'stone'; (byMat[mn] || (byMat[mn] = [])).push({ g, G }); g.computeBoundingBox(); G.box.union(g.boundingBox);
+  });
+  const root = new THREE.Group(); root.position.set(b.x, b.base, b.z); root.name = 'xdzd_' + id;
+  for (const mn in byMat) {
+    let off = 0; const list = byMat[mn]; for (const { g, G } of list) { G.parts.push({ mat: mn, start: off, count: g.attributes.position.count }); off += g.attributes.position.count; }
+    const merged = THREE.BufferGeometryUtils ? THREE.BufferGeometryUtils.mergeBufferGeometries(list.map(q => q.g)) : aaaMerge(list.map(q => q.g)); for (const q of list) q.g.dispose();
+    const mesh = new THREE.Mesh(merged, xdzDMat(mn)); mesh.castShadow = mn !== 'glass'; mesh.receiveShadow = true; mesh.customDepthMaterial = XDZD.depth[mn]; root.add(mesh); XDZD.tris += merged.attributes.position.count / 3;
+    for (const { G } of list) G.parts.filter(p => p.mat === mn).forEach(p => p.mesh = mesh);
+  }
+  scene.add(root);
+  // legame gruppo → componente distruttibile
+  const fi = { s: 0, n: 1, o: 2, e: 3 };
+  for (const key in groups) {
+    const G = groups[key], k = key.split(':');
+    if (k[0] === 'p') G.own = [b.grid[fi[k[1]]] && b.grid[fi[k[1]]][+k[2]] && b.grid[fi[k[1]]][+k[2]][+k[3]]].filter(Boolean);
+    else if (k[0] === 'o' || k[0] === 'a') { const O = b.openings.find(q => q.face === k[1] && q.c === +k[2] && q.r === +k[3]); G.own = O ? (k[0] === 'o' ? O.parts.slice() : O.leaf ? [O.leaf] : O.parts.slice()) : []; }
+    else if (k[0] === 'g') G.own = b.parts.filter(p => p.isGable && p.side === +k[1]);
+    else G.own = [];
+  }
+  for (const O of b.openings) if (O.leaf && O.leaf.SK && !O.leaf.opened) { O.leaf.SK.im.setMatrixAt(O.leaf.skin, _xZ); O.leaf.SK.im.instanceMatrix.needsUpdate = true; O.leaf.noSkin = true; }
+  URBAN_GLB[id].glb = null; b.detail = { root, groups, man: src.manifest }; XDZD.loaded++;
+  xdzDetailSync(b, true); if (AAA.fixedSun) AAA.shadowDirty = Math.max(AAA.shadowDirty || 0, 1);
+}
+// visibilità dei gruppi dallo stato dei componenti; un gruppo che sparisce cade come detrito (salvo ripristino)
+function xdzDetailSync(b, quiet) {
+  const D = b.detail; if (!D || !D.groups) return; let ch = false;
+  for (const key in D.groups) {
+    const G = D.groups[key], on = G.own.every(p => !p.dead && !p.opened);
+    if (on === G.on) continue; G.on = on; ch = true; const i = G.gi * 4; XDZD.data[i] = XDZD.data[i + 1] = XDZD.data[i + 2] = on ? 255 : 0;
+    if (!on && !quiet && !XDZ.restoring) xdzDetailDebris(b, G);
+  }
+  if (ch) XDZD.tex.needsUpdate = true;
+}
+function xdzDetailDebris(b, G) {
+  if (XDZ.bodies.filter(q => !q.sleep).length >= XDZ.BODY_MAX) return; const grp = new THREE.Group(), c = G.box.getCenter(new V3()), sz = G.box.getSize(new V3());
+  for (const p of G.parts) { const src = p.mesh.geometry, g = new THREE.BufferGeometry(); for (const a of ['position', 'normal', 'uv', 'uv2']) { const A = src.attributes[a]; if (A) g.setAttribute(a, new THREE.BufferAttribute(A.array.slice(p.start * A.itemSize, (p.start + p.count) * A.itemSize), A.itemSize)); } g.translate(-c.x, -c.y, -c.z); const m = new THREE.Mesh(g, typeof pipeMat === 'function' ? pipeMat(p.mat) : xdzMat('pietra')); m.castShadow = true; grp.add(m); }
+  const w = new V3(b.x + c.x, b.base + c.y, b.z + c.z); grp.position.copy(w); scene.add(grp);
+  const out = new V3(c.x, 0, c.z).normalize(); xdzBodyRaw(grp, w, out.multiplyScalar(1.5 + XDZ.rng() * 2).add(new V3(0, 1, 0)), sz.clone().max(new V3(.1, .1, .1)), sz.length() > 1.2 ? 'L' : 'M', 'legno');
+}
+function xdzDetailUnloadAll() { for (const b of XDZ.bldgs) if (b.detail && b.detail.root) { scene.remove(b.detail.root); b.detail.root.traverse(o => o.geometry && o.geometry.dispose()); } XDZD.queue.length = 0; if (XDZD.data) { XDZD.data.fill(255); XDZD.tex.needsUpdate = true; } XDZD.n = 1; XDZD.tris = 0; XDZD.loaded = 0; }
+
+// ---------------------------------------------------------------- tetto come la casa Blender (roof() di normandy_house.py), generato nel gioco per campata
+const XDZ_TILE = { slate: 4.5, clay: 2, oak_beam: 2, wood: 1.6, iron: .6 };
+// scatola orientata con UV in metri / ripetizione (come Geo.poly), scritta direttamente negli array del materiale
+const XDZ_BOXF = [   // facce: normale locale, assi (u, v) in coordinate locali, indici delle dimensioni per le UV
+  [[1, 0, 0], [0, 0, -1], [0, 1, 0], 2, 1], [[-1, 0, 0], [0, 0, 1], [0, 1, 0], 2, 1], [[0, 1, 0], [1, 0, 0], [0, 0, -1], 0, 2],
+  [[0, -1, 0], [1, 0, 0], [0, 0, 1], 0, 2], [[0, 0, 1], [1, 0, 0], [0, 1, 0], 0, 1], [[0, 0, -1], [-1, 0, 0], [0, 1, 0], 0, 1]];
+const _xbP = new V3(), _xbN = new V3(), _xbM3 = new THREE.Matrix3();
+function xdzBoxUV(G, mat, M, sx, sy, sz, skipBottom) {
+  const A = G[mat] || (G[mat] = { p: [], n: [], u: [] }), t = XDZ_TILE[mat] || 1.5, S = [sx, sy, sz], h = [sx / 2, sy / 2, sz / 2], ou = Math.random() * 7, ov = Math.random() * 7; _xbM3.getNormalMatrix(M);
+  for (let f = 0; f < 6; f++) {
+    if (skipBottom && f === 5) continue; const [n, U, Vv, iu, iv] = XDZ_BOXF[f];
+    const pts = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b2]) => { const x = n[0] * h[0] + (U[0] * a + Vv[0] * b2) * h[0], y = n[1] * h[1] + (U[1] * a + Vv[1] * b2) * h[1], z = n[2] * h[2] + (U[2] * a + Vv[2] * b2) * h[2]; _xbP.set(x, y, z).applyMatrix4(M); return [_xbP.x, _xbP.y, _xbP.z, (a + 1) / 2 * S[iu] / t + ou, (b2 + 1) / 2 * S[iv] / t + ov]; });
+    _xbN.set(n[0], n[1], n[2]).applyMatrix3(_xbM3).normalize();
+    for (const k of [0, 1, 2, 0, 2, 3]) { const q = pts[k]; A.p.push(q[0], q[1], q[2]); A.n.push(_xbN.x, _xbN.y, _xbN.z); A.u.push(q[3], q[4]); }
+  }
+}
+function xdzGeoFrom(A) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(A.p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(A.n, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(A.u, 2)); g.setAttribute('uv2', g.attributes.uv); return g; }
+// mezzo cilindro (coppi del colmo, grondaia) lungo x, aperto verso il basso (coppo) o verso l'alto (grondaia)
+function xdzHalfCyl(G, mat, cx, cy, cz, r, len, seg, upward) {
+  const A = G[mat] || (G[mat] = { p: [], n: [], u: [] }), t = XDZ_TILE[mat] || 1.5;
+  for (let i = 0; i < seg; i++) {
+    const a0 = PI * i / seg, a1 = PI * (i + 1) / seg, s = upward ? -1 : 1, P_ = (a, x) => [cx + x, cy + s * Math.sin(a) * r, cz + Math.cos(a) * r];
+    const q = [P_(a0, -len / 2), P_(a0, len / 2), P_(a1, len / 2), P_(a1, -len / 2)], nm = a => [0, s * Math.sin(a), Math.cos(a)];
+    for (const [k, a] of [[0, a0], [1, a0], [2, a1], [0, a0], [2, a1], [3, a1]]) { A.p.push(...q[k]); const nn = nm(a); A.n.push(nn[0] * (upward ? -1 : 1), nn[1] * (upward ? -1 : 1), nn[2] * (upward ? -1 : 1)); A.u.push((k === 1 || k === 2 ? len : 0) / t, a * r / t); }
+  }
+}
+function xdzRoofBay(u0, u1, z, s, top, W, rh, pitch, rmat, ends, seed, wear = .35) {
+  const G = {}, sr = seeded(seed), tn = Math.tan(pitch), d2 = rh / tn, ov = W - d2, cs = Math.cos(pitch), sn = Math.sin(pitch);
+  const yE = top - ov * tn, yR = top + rh, zE = z + s * W, L = Math.hypot(W, yR - yE), up = new V3(0, sn, -s * cs), nrm = new V3(0, cs, s * sn), side = new V3(1, 0, 0);
+  const basis = (ang) => new THREE.Matrix4().makeBasis(side, up, nrm);
+  const at = (x, k, h) => new V3(x, yE + up.y * k + nrm.y * h, zE + up.z * k + nrm.z * h);
+  const Mb = basis(), put = (mat, p, sx, sy, sz, rx = 0, rz = 0, skip) => { const M = new THREE.Matrix4().makeTranslation(p.x, p.y, p.z).multiply(Mb).multiply(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rx, 0, rz))); xdzBoxUV(G, mat, M, sx, sy, sz, skip); };
+  // tavolato e puntoni
+  put('oak_beam', at((u0 + u1) / 2, L / 2, -.1), u1 - u0, L, .2);
+  const nr = Math.max(2, Math.round((u1 - u0) / .55)); for (let j = 0; j <= nr; j++) put('oak_beam', at(u0 + .15 + j * (u1 - u0 - .3) / nr, ov / 2 / cs * .5, -.26), .075, ov / cs + .05, .13);
+  put('wood', at((u0 + u1) / 2, 0, -.1), u1 - u0, .03, .22);   // frontalino
+  // corsi di ardesia (o tegole piane) posati uno per uno: larghezza, rotazione, quota variabili; qualche mancante se usurato
+  const ex = rmat === 'clay' ? .206 : .165, nc = Math.floor(L / ex) + 1;
+  for (let i = 0; i < nc; i++) {
+    const s0 = i * ex; if (s0 > L - .02) break; const Ls = Math.min(ex * 2.1, L - s0 + .02), tilt = Math.atan2(.011, Ls), lift = i ? .012 : .02;
+    let x = u0 - (i % 2 ? .05 + sr() * .09 : 0);
+    while (x < u1 - .02) {
+      const w = rmat === 'clay' ? .17 + sr() * .03 : .22 + sr() * .08, xa = Math.max(x, u0), xb = Math.min(x + w, u1); x += w + .006; if (xb - xa < .04) continue;
+      if (sr() < wear * .012 && i > 2 && i < nc - 3) continue;
+      put(rmat, at((xa + xb) / 2, s0 + Ls / 2, lift * .5 + (sr() - .5) * .004), xb - xa, Ls + (sr() - .5) * .015, rmat === 'clay' ? .014 : .009, tilt + (sr() - .5) * .02, (sr() - .5) * .04, true);
+    }
+  }
+  // grondaia di ghisa (mezzo tubo) e colmo di coppi (solo sul lato verso +z, per non raddoppiare)
+  { const p = at((u0 + u1) / 2, -.06, -.1); xdzHalfCyl(G, 'iron', p.x, p.y - .04, p.z + s * .06, .065, u1 - u0 - .04, 8, true); }
+  if (s > 0) { const n = Math.max(1, Math.round((u1 - u0) / .38)); for (let j = 0; j < n; j++) xdzHalfCyl(G, 'clay', u0 + (j + .5) * (u1 - u0) / n, yR + .02, z, .12, .4, 8, false); }
+  // bandinelle sui timpani
+  for (const e of ends) { const x = e < 0 ? u0 - .01 : u1 + .01; put('wood', at(x, L / 2, -.02), .035, L, .2); }
+  const grp = new THREE.Group();
+  for (const mat in G) { const merged = xdzGeoFrom(G[mat]); const m = new THREE.Mesh(merged, typeof pipeMat === 'function' ? pipeMat(mat) : xdzMat('ardesia')); m.castShadow = m.receiveShadow = true; grp.add(m); }
+  return grp;
 }
